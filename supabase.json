@@ -1,0 +1,7 @@
+{
+  "project_id": "oubyyinwprygyyrperfm",
+  "db_host": "db.oubyyinwprygyyrperfm.supabase.co",
+  "db_port": 5432,
+  "db_name": "postgres",
+  "db_user": "postgres"
+}
