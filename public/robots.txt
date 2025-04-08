@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nowme.fr/sitemap.xml
+
+Disallow: /partner/dashboard
+Disallow: /admin/*
+Disallow: /api/*
