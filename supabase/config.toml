@@ -1,0 +1,35 @@
+project_id = "dqfyuhwrjozoxadkccdj"
+
+[api]
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+port = 54323
+
+[auth]
+site_url = "https://club.nowme.fr"
+additional_redirect_urls = [
+  "https://club.nowme.fr",
+  "https://club.nowme.fr/reset-password",
+  "https://club.nowme.fr/dashboard",
+  "https://club.nowme.fr/auth/reset-password",
+  "https://club.nowme.fr/auth/signin",
+  "https://club.nowme.fr/auth/callback"
+]
+jwt_expiry = 36000
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[functions.stripe-webhook]
+verify_jwt = false
