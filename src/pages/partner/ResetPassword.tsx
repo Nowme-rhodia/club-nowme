@@ -18,7 +18,7 @@ export default function ResetPassword() {
     const accessToken = hash.split('access_token=')[1]?.split('&')[0];
 
     if (!accessToken) {
-      setError('Token de réinitialisation manquant ou invalide');
+      setError('Token de réinitialisation manquant ou invalide :/');
       return;
     }
 
