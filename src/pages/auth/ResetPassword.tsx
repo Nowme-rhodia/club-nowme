@@ -16,24 +16,29 @@ export default function ResetPassword() {
   useEffect(() => {
     const checkSession = async () => {
       const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Erreur getSession:', error.message);
+        setError('Erreur lors de la vérification de la session.');
+        return;
+      }
       if (data?.session) {
         setSessionReady(true);
       }
     };
-
+  
     const restoreSessionFromHash = async () => {
       const hash = window.location.hash;
       const params = new URLSearchParams(hash.substring(1));
-
+  
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
-
+  
       if (access_token && refresh_token) {
         const { error } = await supabase.auth.setSession({
           access_token,
           refresh_token,
         });
-
+  
         if (error) {
           console.error('❌ Erreur setSession :', error.message);
           setError("Lien invalide ou expiré. Merci de redemander un lien a max.");
@@ -45,7 +50,7 @@ export default function ResetPassword() {
         await checkSession();
       }
     };
-
+  
     restoreSessionFromHash();
   }, []);
 
