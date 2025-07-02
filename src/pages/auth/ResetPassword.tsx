@@ -142,7 +142,7 @@ export default function ResetPassword() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Nouveau mot de passe
+                Nouveau mot de passe club
               </label>
               <div className="mt-1 relative">
                 <input
