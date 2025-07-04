@@ -124,7 +124,7 @@ export default function ResetPassword() {
           Nouveau mot de passe club
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Choisissez un nouveau mot de passe sécurisé.
+          Choisissez un nouveau mot de passe sécurisé !
         </p>
       </div>
 
