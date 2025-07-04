@@ -76,10 +76,10 @@ export default function UpdatePassword() {
       
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-          Nouveau mot de passe
+          Nouveau mot de passe club
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Choisissez un nouveau mot de passe sécurisé
+          Choisissez un nouveau mot de passe sécurisé !
         </p>
       </div>
 
