@@ -253,3 +253,4 @@ const animations = `
   .animate-subtle-zoom { animation: subtle-zoom 10s infinite alternate; }
   .animate-pulse { animation: pulse 1.5s infinite; }
 `;
+// petit changement pour forcer le build Netlify
