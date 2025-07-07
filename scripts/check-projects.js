@@ -1,27 +1,26 @@
 #!/usr/bin/env node
 
-import { createClient } from '@supabase/supabase-js';
-import { program } from 'commander';
-import dotenv from 'dotenv';
+import pkg from '@supabase/supabase-js';
+const { createClient } = pkg;
+
+import cmdPkg from 'commander';
+const { program } = cmdPkg;
+
+import dotenvPkg from 'dotenv';
+const dotenv = dotenvPkg;
 
 program
   .version('1.0.0')
   .description('Vérification des projets Supabase')
   .parse(process.argv);
 
+// Projet actuel
 const projects = {
   production: {
-    id: 'dctakpdkhcwsuaklzqmt',
-    url: 'https://dctakpdkhcwsuaklzqmt.supabase.co'
-  },
-  staging: {
-    id: 'uqoeutrolppjajpcvhiq',
-    url: 'https://uqoeutrolppjajpcvhiq.supabase.co'
-  },
-  dev: {
-    id: 'hwpylnvoeayhztucxpdj',
-    url: 'https://hwpylnvoeayhztucxpdj.supabase.co'
+    id: 'dqfyuhwrjozoxadkccdj',
+    url: 'https://dqfyuhwrjozoxadkccdj.supabase.co'
   }
+  // Vous pouvez ajouter d'autres projets si nécessaire
 };
 
 async function checkProjects() {

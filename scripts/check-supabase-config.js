@@ -1,27 +1,23 @@
 #!/usr/bin/env node
 
-import { createClient } from '@supabase/supabase-js';
-import { program } from 'commander';
-import dotenv from 'dotenv';
+import pkg from '@supabase/supabase-js';
+const { createClient } = pkg;
+
+import cmdPkg from 'commander';
+const { program } = cmdPkg;
+
+import dotenvPkg from 'dotenv';
+const dotenv = dotenvPkg;
 
 program
   .version('1.0.0')
   .description('Vérification complète de la configuration Supabase')
   .parse(process.argv);
 
-const projects = {
-  production: {
-    id: 'dctakpdkhcwsuaklzqmt',
-    url: 'https://dctakpdkhcwsuaklzqmt.supabase.co'
-  },
-  staging: {
-    id: 'uqoeutrolppjajpcvhiq',
-    url: 'https://uqoeutrolppjajpcvhiq.supabase.co'
-  },
-  dev: {
-    id: 'hwpylnvoeayhztucxpdj',
-    url: 'https://hwpylnvoeayhztucxpdj.supabase.co'
-  }
+// Projet actuel
+const currentProject = {
+  id: 'dqfyuhwrjozoxadkccdj',
+  url: 'https://dqfyuhwrjozoxadkccdj.supabase.co'
 };
 
 const requiredTables = [
@@ -45,14 +41,14 @@ const requiredFunctions = [
   'send-partner-submission'
 ];
 
-async function checkProject(env, project) {
-  console.log(`\n🔍 Vérification du projet ${env.toUpperCase()}`);
+async function checkProject(project) {
+  console.log(`\n🔍 Vérification du projet ${project.id}`);
   console.log('----------------------------------------');
 
   try {
     const supabase = createClient(
       project.url,
-      process.env[`SUPABASE_${env.toUpperCase()}_SERVICE_KEY`] || process.env.SUPABASE_SERVICE_ROLE_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
     // 1. Vérification de la connexion
@@ -94,14 +90,9 @@ async function checkProject(env, project) {
     console.log(`📋 Nombre de politiques RLS: ${policies.length}`);
 
   } catch (error) {
-    console.error(`❌ Erreur lors de la vérification de ${env}:`, error.message);
+    console.error(`❌ Erreur lors de la vérification du projet:`, error.message);
   }
 }
 
-async function checkAllProjects() {
-  for (const [env, project] of Object.entries(projects)) {
-    await checkProject(env, project);
-  }
-}
-
-checkAllProjects();
+// Vérifier uniquement le projet actuel
+checkProject(currentProject);
