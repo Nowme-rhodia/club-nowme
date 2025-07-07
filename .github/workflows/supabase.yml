@@ -1,4 +1,4 @@
-name: Supabase Configuration and Migration Check
+name: Supabase Configuration, Migration and Edge Functions Deployment
 
 on:
   push:
@@ -47,3 +47,22 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run migrate
+
+  deploy-edge-functions:
+    runs-on: ubuntu-latest
+    needs: apply-migrations
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Edge Functions
+        run: |
+          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          supabase functions deploy --project-ref dqfyuhwrjozoxadkccdj
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
