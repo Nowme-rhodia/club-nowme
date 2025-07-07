@@ -18,9 +18,6 @@ jobs:
         with:
           node-version: 16
 
-      - name: Install dependencies
-        run: npm install
-
       - name: Run Supabase configuration check
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

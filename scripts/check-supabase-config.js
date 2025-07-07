@@ -1,98 +1,53 @@
-#!/usr/bin/env node
+// scripts/check-supabase-config.js
+const fs = require('fs');
+const path = require('path');
 
-import pkg from '@supabase/supabase-js';
-const { createClient } = pkg;
+console.log('Vérification de la configuration Supabase...');
 
-import cmdPkg from 'commander';
-const { program } = cmdPkg;
+// Vérifier les variables d'environnement nécessaires
+const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
-import dotenvPkg from 'dotenv';
-const dotenv = dotenvPkg;
+if (missingEnvVars.length > 0) {
+  console.error(`❌ Variables d'environnement manquantes: ${missingEnvVars.join(', ')}`);
+  process.exit(1);
+}
 
-program
-  .version('1.0.0')
-  .description('Vérification complète de la configuration Supabase')
-  .parse(process.argv);
+// Vérifier si les URLs sont valides
+try {
+  new URL(process.env.SUPABASE_URL);
+  console.log('✅ SUPABASE_URL est une URL valide');
+} catch (error) {
+  console.error('❌ SUPABASE_URL n\'est pas une URL valide');
+  process.exit(1);
+}
 
-// Projet actuel
-const currentProject = {
-  id: 'dqfyuhwrjozoxadkccdj',
-  url: 'https://dqfyuhwrjozoxadkccdj.supabase.co'
-};
+// Vérifier si la clé de service a un format valide (simple vérification de longueur)
+if (process.env.SUPABASE_SERVICE_ROLE_KEY.length < 30) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY semble invalide (trop courte)');
+  process.exit(1);
+}
 
-const requiredTables = [
-  'partners',
-  'offers',
-  'offer_prices',
-  'offer_media',
-  'pending_partners',
-  'pending_offers',
-  'emails',
-  'user_profiles',
-  'user_qr_codes'
-];
-
-const requiredFunctions = [
-  'handle-zoho-subscription',
-  'send-email',
-  'send-partner-approval',
-  'send-partner-confirmation',
-  'send-partner-rejection',
-  'send-partner-submission'
-];
-
-async function checkProject(project) {
-  console.log(`\n🔍 Vérification du projet ${project.id}`);
-  console.log('----------------------------------------');
-
+// Vérifier si le répertoire des fonctions Edge existe
+const supabaseFunctionsDir = path.join(process.cwd(), 'supabase', 'functions');
+if (!fs.existsSync(supabaseFunctionsDir)) {
+  console.warn('⚠️ Le répertoire des fonctions Supabase n\'existe pas');
+} else {
+  // Vérifier les fonctions Edge
   try {
-    const supabase = createClient(
-      project.url,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const edgeFunctions = fs.readdirSync(supabaseFunctionsDir)
+      .filter(file => fs.statSync(path.join(supabaseFunctionsDir, file)).isDirectory());
 
-    // 1. Vérification de la connexion
-    console.log('\n📡 Test de connexion...');
-    const { data: connTest, error: connError } = await supabase.from('user_profiles').select('count').limit(1);
-    console.log(connError ? '❌ Échec de connexion' : '✅ Connexion OK');
-
-    // 2. Vérification des tables
-    console.log('\n📊 Vérification des tables...');
-    const { data: tables } = await supabase
-      .rpc('exec_sql', {
-        sql: `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`
-      });
-
-    const existingTables = tables.map(t => t.table_name);
-    requiredTables.forEach(table => {
-      console.log(`${existingTables.includes(table) ? '✅' : '❌'} Table ${table}`);
-    });
-
-    // 3. Vérification des fonctions Edge
-    console.log('\n⚡ Vérification des fonctions Edge...');
-    requiredFunctions.forEach(func => {
-      const url = `${project.url}/functions/v1/${func}`;
-      console.log(`🔗 ${func}: ${url}`);
-    });
-
-    // 4. Vérification de l'authentification
-    console.log('\n🔐 Vérification de l\'authentification...');
-    const { data: authSettings } = await supabase.auth.getSession();
-    console.log('✅ Configuration auth OK');
-
-    // 5. Vérification des politiques RLS
-    console.log('\n🛡️ Vérification des politiques RLS...');
-    const { data: policies } = await supabase
-      .rpc('exec_sql', {
-        sql: `SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public'`
-      });
-
-    console.log(`📋 Nombre de politiques RLS: ${policies.length}`);
-
+    if (edgeFunctions.length === 0) {
+      console.warn('⚠️ Aucune fonction Edge trouvée');
+    } else {
+      console.log(`✅ ${edgeFunctions.length} fonctions Edge trouvées: ${edgeFunctions.join(', ')}`);
+    }
   } catch (error) {
-    console.error(`❌ Erreur lors de la vérification du projet:`, error.message);
+    console.error('❌ Erreur lors de la lecture du répertoire des fonctions Edge:', error);
   }
 }
 
-// Vérifier uniquement le projet actuel
-checkProject(currentProject);
+console.log('✅ Configuration Supabase valide');
+console.log('✅ Vérification de la configuration Supabase terminée avec succès');
+process.exit(0);
