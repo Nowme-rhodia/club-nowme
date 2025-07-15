@@ -3,12 +3,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
 // Logging utilities
 const logger = {
-  success: (message, details)=>console.log(`✅ ${message}`, details || ""),
-  error: (message, error, details)=>console.error(`❌ ${message}`, {
-      error: error ? String(error) : undefined,
-      ...details
-    }),
-  info: (message, details)=>console.log(`ℹ️ ${message}`, details || "")
+  success: (message, details) => console.log(`✅ ${message}`, details || ""),
+  error: (message, error, details) => console.error(`❌ ${message}`, {
+    error: error ? String(error) : undefined,
+    ...details
+  }),
+  info: (message, details) => console.log(`ℹ️ ${message}`, details || "")
 };
 
 // Define CORS headers specifically for Stripe webhooks
@@ -23,9 +23,11 @@ const corsHeaders = {
 function createSupabaseClient() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     throw new Error("Missing Supabase environment variables");
   }
+  
   return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false
@@ -36,8 +38,6 @@ function createSupabaseClient() {
 // Load environment variables
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
 const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-
-// Removed USER_CREATION_API_URL as it's not configured
 
 logger.info("Environment variables loaded", {
   stripeSecretKey: stripeSecretKey ? "[present]" : "[missing]",
@@ -56,13 +56,17 @@ const stripe = new Stripe(stripeSecretKey, {
 /**
  * Extract email from Stripe data
  */
-const extractEmailFromStripeData = async (stripeData)=>{
+const extractEmailFromStripeData = async (stripeData) => {
   const directEmail = stripeData.customer_email ?? stripeData.customer_details?.email ?? null;
+  
   if (directEmail) return directEmail;
+  
   const customerId = stripeData.customer ?? null;
+  
   if (customerId) {
     try {
       const customer = await stripe.customers.retrieve(customerId);
+      
       if (customer && typeof customer === "object" && "email" in customer) {
         return customer.email || null;
       }
@@ -72,10 +76,11 @@ const extractEmailFromStripeData = async (stripeData)=>{
       });
     }
   }
+  
   return null;
 };
 
-Deno.serve(async (req)=>{
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -85,6 +90,7 @@ Deno.serve(async (req)=>{
 
   // Verify Stripe signature
   const sig = req.headers.get("Stripe-Signature");
+  
   if (!sig) {
     return new Response(JSON.stringify({
       error: "Missing Stripe-Signature header"
@@ -94,26 +100,30 @@ Deno.serve(async (req)=>{
     });
   }
 
-  // Get request body as buffer for Stripe verification
-  const bodyArrayBuffer = await req.arrayBuffer();
-  const bodyBuffer = new Uint8Array(bodyArrayBuffer);
-
-  // Initialize Supabase client
-  const supabase = createSupabaseClient();
+  // Get raw body text for signature verification
+  const bodyText = await req.text();
 
   let event;
   try {
     // Verify webhook signature
-    event = await stripe.webhooks.constructEventAsync(bodyBuffer, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(bodyText, sig, webhookSecret);
+    
+    logger.info("Verified Stripe Event", { 
+      type: event.type, 
+      id: event.id 
+    });
   } catch (err) {
     logger.error("Invalid Stripe signature", err);
     return new Response(JSON.stringify({
-      error: err instanceof Error ? err.message : "Unknown error"
+      error: err instanceof Error ? err.message : "Unknown signature verification error"
     }), {
       status: 400,
       headers: corsHeaders
     });
   }
+
+  // Initialize Supabase client
+  const supabase = createSupabaseClient();
 
   // Extract data from event
   const stripeData = event.data.object;
@@ -135,7 +145,12 @@ Deno.serve(async (req)=>{
   }
 
   // Find user by email
-  const { data: user, error: userError } = await supabase.from("user_profiles").select("*").eq("email", email).maybeSingle();
+  const { data: user, error: userError } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
+
   if (userError) {
     logger.error("Error retrieving user profile", userError, {
       email
@@ -160,9 +175,13 @@ Deno.serve(async (req)=>{
   });
 
   // Helper function to update user profile
-  const updateProfile = async (fields)=>{
+  const updateProfile = async (fields) => {
     if (user) {
-      const { error } = await supabase.from("user_profiles").update(fields).eq("id", user.id);
+      const { error } = await supabase
+        .from("user_profiles")
+        .update(fields)
+        .eq("id", user.id);
+      
       if (error) {
         logger.error("Error updating user profile", error, {
           userId: user.id,
@@ -170,6 +189,7 @@ Deno.serve(async (req)=>{
         });
         throw error;
       }
+      
       logger.success("Profile updated", {
         userId: user.id,
         fields
@@ -178,7 +198,7 @@ Deno.serve(async (req)=>{
   };
 
   try {
-    switch(event.type){
+    switch(event.type) {
       case "checkout.session.completed":
         if (!user) {
           // Create user profile
@@ -193,26 +213,30 @@ Deno.serve(async (req)=>{
           });
         }
         break;
-
+      
       case "customer.subscription.created":
         if (user) {
           await updateProfile({
             subscription_status: "created",
             stripe_subscription_id: subscriptionId
           });
-          logger.success("Subscription initially created", { email });
+          logger.success("Subscription initially created", {
+            email
+          });
         }
         break;
-
+      
       case "customer.subscription.paused":
         if (user) {
           await updateProfile({
             subscription_status: "paused"
           });
-          logger.info("Subscription paused", { email });
+          logger.info("Subscription paused", {
+            email
+          });
         }
         break;
-
+      
       case "invoice.payment_succeeded":
         if (user) {
           await updateProfile({
@@ -225,7 +249,7 @@ Deno.serve(async (req)=>{
           });
         }
         break;
-
+      
       case "invoice.payment_failed":
         if (user) {
           await updateProfile({
@@ -236,7 +260,7 @@ Deno.serve(async (req)=>{
           });
         }
         break;
-
+      
       case "customer.subscription.deleted":
         if (user) {
           await updateProfile({
@@ -247,7 +271,7 @@ Deno.serve(async (req)=>{
           });
         }
         break;
-
+      
       default:
         logger.info("Unhandled event type", {
           type: event.type
@@ -258,6 +282,7 @@ Deno.serve(async (req)=>{
     await supabase.from("stripe_webhook_events").update({
       status: "completed"
     }).eq("stripe_event_id", event.id);
+
   } catch (err) {
     logger.error("Error processing event", err, {
       eventType: event.type,
