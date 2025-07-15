@@ -1,5 +1,6 @@
 import Stripe from 'npm:stripe@14.5.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
+
 // Logging utilities
 const logger = {
   success: (message, details)=>console.log(`✅ ${message}`, details || ""),
@@ -9,6 +10,7 @@ const logger = {
     }),
   info: (message, details)=>console.log(`ℹ️ ${message}`, details || "")
 };
+
 // Define CORS headers specifically for Stripe webhooks
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +18,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Stripe-Signature, Content-Type",
   "Content-Type": "application/json"
 };
+
 // Create Supabase client
 function createSupabaseClient() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -29,25 +32,31 @@ function createSupabaseClient() {
     }
   });
 }
+
 // Load environment variables
-const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || Deno.env.get("MY_STRIPE_SECRET_KEY");
-const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") || Deno.env.get("MY_STRIPE_WEBHOOK_SECRET");
-const userCreationApiUrl = Deno.env.get("USER_CREATION_API_URL");
+const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+
+// Removed USER_CREATION_API_URL as it's not configured
+
 logger.info("Environment variables loaded", {
   stripeSecretKey: stripeSecretKey ? "[present]" : "[missing]",
-  webhookSecret: webhookSecret ? "[present]" : "[missing]",
-  userCreationApiUrl: userCreationApiUrl ? "[present]" : "[missing]"
+  webhookSecret: webhookSecret ? "[present]" : "[missing]"
 });
+
 if (!stripeSecretKey || !webhookSecret) {
   throw new Error("Missing required environment variables for Stripe");
 }
+
 // Initialize Stripe
 const stripe = new Stripe(stripeSecretKey, {
   apiVersion: "2023-10-16"
 });
+
 /**
  * Extract email from Stripe data
- */ const extractEmailFromStripeData = async (stripeData)=>{
+ */
+const extractEmailFromStripeData = async (stripeData)=>{
   const directEmail = stripeData.customer_email ?? stripeData.customer_details?.email ?? null;
   if (directEmail) return directEmail;
   const customerId = stripeData.customer ?? null;
@@ -65,6 +74,7 @@ const stripe = new Stripe(stripeSecretKey, {
   }
   return null;
 };
+
 Deno.serve(async (req)=>{
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -72,6 +82,7 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+
   // Verify Stripe signature
   const sig = req.headers.get("Stripe-Signature");
   if (!sig) {
@@ -82,11 +93,14 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+
   // Get request body as buffer for Stripe verification
   const bodyArrayBuffer = await req.arrayBuffer();
   const bodyBuffer = new Uint8Array(bodyArrayBuffer);
+
   // Initialize Supabase client
   const supabase = createSupabaseClient();
+
   let event;
   try {
     // Verify webhook signature
@@ -100,11 +114,13 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+
   // Extract data from event
   const stripeData = event.data.object;
   const email = await extractEmailFromStripeData(stripeData);
   const customerId = stripeData.customer ?? null;
   const subscriptionId = stripeData.subscription ?? null;
+
   if (!email) {
     logger.error("Missing email in event", null, {
       eventType: event.type,
@@ -117,6 +133,7 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+
   // Find user by email
   const { data: user, error: userError } = await supabase.from("user_profiles").select("*").eq("email", email).maybeSingle();
   if (userError) {
@@ -130,6 +147,7 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+
   // Log webhook event
   await supabase.from("stripe_webhook_events").insert({
     stripe_event_id: event.id,
@@ -140,6 +158,7 @@ Deno.serve(async (req)=>{
     raw_event: event,
     status: "processing"
   });
+
   // Helper function to update user profile
   const updateProfile = async (fields)=>{
     if (user) {
@@ -157,36 +176,11 @@ Deno.serve(async (req)=>{
       });
     }
   };
+
   try {
     switch(event.type){
       case "checkout.session.completed":
         if (!user) {
-          // Create user via external API if configured
-          if (userCreationApiUrl) {
-            try {
-              const res = await fetch(userCreationApiUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  email
-                })
-              });
-              if (!res.ok) {
-                const errorText = await res.text();
-                logger.error("Error calling user creation API", errorText);
-              } else {
-                logger.success("User inserted in auth.users via external API", {
-                  email
-                });
-              }
-            } catch (err) {
-              logger.error("Exception calling external API", err, {
-                email
-              });
-            }
-          }
           // Create user profile
           await supabase.from("user_profiles").insert({
             email,
@@ -199,6 +193,26 @@ Deno.serve(async (req)=>{
           });
         }
         break;
+
+      case "customer.subscription.created":
+        if (user) {
+          await updateProfile({
+            subscription_status: "created",
+            stripe_subscription_id: subscriptionId
+          });
+          logger.success("Subscription initially created", { email });
+        }
+        break;
+
+      case "customer.subscription.paused":
+        if (user) {
+          await updateProfile({
+            subscription_status: "paused"
+          });
+          logger.info("Subscription paused", { email });
+        }
+        break;
+
       case "invoice.payment_succeeded":
         if (user) {
           await updateProfile({
@@ -211,6 +225,7 @@ Deno.serve(async (req)=>{
           });
         }
         break;
+
       case "invoice.payment_failed":
         if (user) {
           await updateProfile({
@@ -221,6 +236,7 @@ Deno.serve(async (req)=>{
           });
         }
         break;
+
       case "customer.subscription.deleted":
         if (user) {
           await updateProfile({
@@ -231,11 +247,13 @@ Deno.serve(async (req)=>{
           });
         }
         break;
+
       default:
         logger.info("Unhandled event type", {
           type: event.type
         });
     }
+
     // Mark webhook event as completed
     await supabase.from("stripe_webhook_events").update({
       status: "completed"
@@ -252,6 +270,7 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+
   return new Response(JSON.stringify({
     received: true
   }), {
