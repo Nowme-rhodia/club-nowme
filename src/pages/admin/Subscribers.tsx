@@ -262,12 +262,6 @@ export default function Subscribers() {
                         </span>
                       </dd>
                     </div>
-                    {selectedSubscriber.zoho_customer_id && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">ID Client Zoho</dt>
-                        <dd className="mt-1 text-sm text-gray-900">{selectedSubscriber.zoho_customer_id}</dd>
-                      </div>
-                    )}
                   </dl>
                 </div>
 

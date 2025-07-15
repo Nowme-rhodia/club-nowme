@@ -17,7 +17,6 @@ export interface Database {
           last_name: string;
           phone: string;
           photo_url?: string;
-          subscription_status: 'pending' | 'active' | 'cancelled';
           created_at: string;
           updated_at: string;
           stripe_customer_id?: string;
@@ -31,7 +30,6 @@ export interface Database {
           phone: string;
           photo_url?: string;
           subscription_status?: 'pending' | 'active' | 'cancelled';
-          created_at?: string;
           updated_at?: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
@@ -43,7 +41,6 @@ export interface Database {
           last_name?: string;
           phone?: string;
           photo_url?: string;
-          subscription_status?: 'pending' | 'active' | 'cancelled';
           created_at?: string;
           updated_at?: string;
           stripe_customer_id?: string;
