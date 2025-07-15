@@ -16,3 +16,4 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
 });
+// force rebuild for Stackblitz
