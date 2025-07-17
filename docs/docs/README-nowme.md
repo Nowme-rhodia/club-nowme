@@ -4,12 +4,32 @@
 ## 🎯 Objectif du projet
 
 Ce projet met en place un **serveur webhook Stripe** tournant sur **Deno**, qui :
-- Reçoit des événements Stripe (paiements, abonnements, sessions de checkout, etc.)
-- Valide et traite ces événements
+- Reçoit des événements Stripe (abonnements principalement géré)
+- Valide et traite ces événements pour gérer des comptes club nowme
 - Met à jour une base de données **Supabase**
 - Logge les actions pour faciliter le suivi et le débogage
+  
+---
+
+
+##  TODO
+
+Actuellement le projet prend bien compte l'arrivée d'evenement stripe de type souscription. 
+Il créé dans la table auth.user et public.user_profiles les comptes et gere bien le statut de souscription. 
+Reste a faire : 
+  Gerer le mail d'invitation a créer son compte et set son mot de passe. Dans la version actuelle le mail qui est recu donne un lien vers des références locales. Il faut lier la gestion du reset de mot de passe avec une  page dédiée sur un hebergement nowme. ==> J'étais en train de travailler sur cette partie mais toutes les modification faite sur stackblitz ne se repercutaient pas dans le code du club nowme.  
+  Tester la connexion et l'acces aux services nowme  une fois le compte créé 
 
 ---
+
+##  Info importante 
+
+La derniere version du code est directement déposée dans supabse ICI : https://supabase.com/dashboard/project/eerkksxhwgbwovzurgfx/functions/stripe-webhook/code
+C'est bien sur le projet Nowme-Test 
+!!!!!!!!! La structure de base de données qui fonctionne avec le code est aussi sur le serveur de test. Si vous voulez tester en PROD il faudra aussi exporter/importer la base de données.
+
+---
+
 
 ## ⚙️ Prérequis
 
