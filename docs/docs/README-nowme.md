@@ -21,7 +21,7 @@ Reste a faire :
   **Gerer le mail d'invitation** : Le but est qu'a la reception d'une premiere souscription via stripe un compte supabase est créé. Ce compte va servir pour acceder aux pages et services du club Nowme. 
   Dans la version actuelle le mail s'envoi bien mais les lienl pour reset le mot de passe sont inopérant car ils redirigent vers du localhost. J'étais en train d'essayer de configurer le lien du mail pour qu'il redirige vers une page web hebergée dans le club nowme (ce git). Pour ce faire il faut modifier le code dans staclblitz et le push mais quand je faisait ces manipulation je ne voyait pas de changement sur clubnowme.com.
   Pour moi il faut donc : 
-  1) Modifier les données dans la fonction de reset password du club nowme
+  1) Modifier la fonction de reset password du club nowme pour qu'elle récupere bien le token envoyé par supabase ==> Normalement j'ai déjà fait ce changement dans le code stackblitz mais je n'arrive pas a voir mes modifications quand je test. Je ne connais pas assez l'environement. 
   2) Ajouter une reference au club nowme dans le mail dinvitation géré par subapase.  
   3) Tester la connexion et l'acces aux services nowme  une fois le compte créé 
 J'ai utilisé les fonction de service de mail de base proposé par supabase, peut etre faudra t-il géré un serveur de mail propre a Nowme ?
