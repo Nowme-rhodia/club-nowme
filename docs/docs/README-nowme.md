@@ -4,9 +4,10 @@
 ## 🎯 Objectif du projet
 
 Ce projet met en place un **serveur webhook Stripe** tournant sur **Deno**, qui :
-- Reçoit des événements Stripe (abonnements principalement géré)
+- Reçoit des événements Stripe (abonnements)
 - Valide et traite ces événements pour gérer des comptes club nowme
-- Met à jour une base de données **Supabase**
+- Toute la gestion des comptes dans la BDD supabase est lié aux event de souscription dans stripe
+- Met à jour une base de données **Supabase** utilisée pour faire fonctionner le site club Nowme
 - Logge les actions pour faciliter le suivi et le débogage
   
 ---
@@ -25,8 +26,9 @@ Reste a faire :
 ##  Info importante 
 
 La derniere version du code est directement déposée dans supabse ICI : https://supabase.com/dashboard/project/eerkksxhwgbwovzurgfx/functions/stripe-webhook/code
-C'est bien sur le projet Nowme-Test 
+C'est bien sur le projet **Nowme-Test** La PROD n'est pas a jour. 
 !!!!!!!!! La structure de base de données qui fonctionne avec le code est aussi sur le serveur de test. Si vous voulez tester en PROD il faudra aussi exporter/importer la base de données.
+Le projet peut actuellement se run avec supabase/stripe online. Tout est configuré. 
 
 ---
 
@@ -34,8 +36,9 @@ C'est bien sur le projet Nowme-Test
 ## ⚙️ Prérequis
 
 - Environnement Deno (v1.35+ recommandé) : https://deno.land/
-- Un projet Supabase (avec tables `users`, `subscriptions`, etc.)
-- Un compte Stripe configuré avec un endpoint webhook
+- Le projet Supabase
+- Un compte Stripe configuré avec un endpoint webhook (déjà confuguré)
+- Un compte avec aces a stackblitz pour le déploiement des pages HTML
 
 ---
 
