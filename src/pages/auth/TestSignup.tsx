@@ -40,6 +40,7 @@ export default function TestSignup() {
         const { error: profileError } = await supabase
           .from('user_profiles')
           .insert({
+            user_id: authData.user.id,
             email: formData.email,
             first_name: formData.firstName,
             last_name: formData.lastName,
