@@ -9,26 +9,22 @@ export default function UpdatePassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(true); // État pour suivre la vérification initiale
+  const [verifying, setVerifying] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [hasValidTokens, setHasValidTokens] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const restoreSessionFromUrl = async () => {
+    const parseTokensFromUrl = () => {
       try {
-        console.log("=== DÉBOGAGE TOKENS DE RÉINITIALISATION ===");
-        console.log("URL complète:", window.location.href);
+        console.log("URL hash:", window.location.hash);
         
-        // Récupérer le hash et le traiter correctement
+        // Récupérer le hash et le traiter
         let hash = window.location.hash;
-        console.log("Hash brut:", hash);
-        
-        // S'assurer que le hash est correctement formaté
         if (hash.startsWith('#')) {
           hash = hash.slice(1);
         }
-        console.log("Hash traité:", hash);
         
         // Extraire les tokens avec URLSearchParams
         const params = new URLSearchParams(hash);
@@ -36,10 +32,9 @@ export default function UpdatePassword() {
         const refresh_token = params.get("refresh_token");
         const type = params.get("type");
         
-        console.log("Access token trouvé:", !!access_token);
-        console.log("Refresh token trouvé:", !!refresh_token);
-        console.log("Type:", type);
-
+        console.log("Access token exists:", !!access_token);
+        console.log("Refresh token exists:", !!refresh_token);
+        
         if (!access_token || !refresh_token) {
           console.error("Tokens manquants dans l'URL");
           setError("Lien invalide ou expiré. Merci de redemander un lien de réinitialisation.");
@@ -47,35 +42,22 @@ export default function UpdatePassword() {
           setVerifying(false);
           return;
         }
-
-        // Essayer de restaurer la session avec les tokens
-        console.log("Tentative de restauration de session...");
-        const { data, error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
-
-        if (error) {
-          console.error("Erreur de session:", error);
-          setError("Session invalide ou expirée. Merci de redemander un lien.");
-          setHasValidTokens(false);
-        } else {
-          console.log("Session restaurée avec succès:", !!data.session);
-          setHasValidTokens(true);
-        }
+        
+        // Stocker le token pour l'utiliser plus tard
+        setAccessToken(access_token);
+        setHasValidTokens(true);
+        setVerifying(false);
       } catch (err) {
-        console.error("Erreur inattendue lors de la vérification des tokens:", err);
+        console.error("Erreur lors de l'analyse des tokens:", err);
         setError("Une erreur est survenue lors de la vérification du lien.");
         setHasValidTokens(false);
-      } finally {
-        // Toujours terminer la vérification, même en cas d'erreur
         setVerifying(false);
       }
     };
 
     // Ajouter un délai pour s'assurer que l'URL est complètement chargée
     const timer = setTimeout(() => {
-      restoreSessionFromUrl();
+      parseTokensFromUrl();
     }, 500);
 
     return () => clearTimeout(timer);
@@ -97,66 +79,68 @@ export default function UpdatePassword() {
     }
 
     setLoading(true);
-    console.log("Début de la mise à jour du mot de passe...");
+    console.log("Updating password...");
+    console.log("Current URL hash:", window.location.hash);
+    
+    // Récupérer à nouveau les tokens pour être sûr
+    let hash = window.location.hash;
+    if (hash.startsWith('#')) {
+      hash = hash.slice(1);
+    }
+    
+    const params = new URLSearchParams(hash);
+    const access_token = params.get("access_token") || accessToken;
+    const refresh_token = params.get("refresh_token");
+    
+    console.log("Access token found:", !!access_token);
+    console.log("Refresh token found:", !!refresh_token);
+    
+    if (!access_token) {
+      setError("Token d'accès manquant. Veuillez réessayer avec un nouveau lien.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Vérifier que la session est toujours valide avant de mettre à jour
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("Session actuelle:", sessionData.session ? "Valide" : "Invalide");
+      // Utiliser l'API REST directement au lieu du SDK
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${access_token}`
+        },
+        body: JSON.stringify({
+          password: password
+        })
+      });
       
-      if (!sessionData.session) {
-        console.error("Session invalide avant la mise à jour du mot de passe");
-        setError("Votre session a expiré. Veuillez demander un nouveau lien de réinitialisation.");
-        setLoading(false);
-        return;
+      console.log("API response status:", response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API error:", errorData);
+        throw new Error(errorData.message || `Erreur ${response.status}: La mise à jour a échoué`);
       }
-
-      // Mettre à jour le mot de passe avec un timeout
-      console.log("Envoi de la requête de mise à jour du mot de passe...");
       
-      // Créer une promesse avec timeout
-      const updatePasswordWithTimeout = () => {
-        return Promise.race([
-          supabase.auth.updateUser({ password }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("La requête a expiré après 10 secondes")), 10000)
-          )
-        ]);
-      };
+      const data = await response.json();
+      console.log("Password update successful:", !!data);
       
-      const { data, error } = await updatePasswordWithTimeout() as { 
-        data: { user: any } | null, 
-        error: Error | null 
-      };
-
-      if (error) {
-        throw error;
-      }
-
-      console.log("Réponse de mise à jour reçue:", data ? "Succès" : "Échec");
-      
-      if (!data || !data.user) {
-        throw new Error("Aucune donnée utilisateur retournée");
-      }
-
-      console.log("Mot de passe mis à jour avec succès");
       setSuccess(true);
       
       // Attendre un peu avant de rediriger
       setTimeout(() => {
-        console.log("Redirection vers la page de connexion...");
         navigate('/auth/signin', {
           state: { message: 'Votre mot de passe a été mis à jour avec succès' }
         });
       }, 2000);
     } catch (err: any) {
-      console.error('Erreur détaillée lors de la mise à jour du mot de passe:', err);
+      console.error('Erreur lors de la mise à jour du mot de passe:', err);
       setError(err.message || 'Une erreur est survenue lors de la mise à jour du mot de passe');
       
-      // Tenter de se déconnecter et rediriger vers la page de demande de réinitialisation
+      // Tenter de se déconnecter
       try {
         await supabase.auth.signOut();
-        console.log("Déconnexion effectuée après erreur");
       } catch (signOutErr) {
         console.error("Erreur lors de la déconnexion:", signOutErr);
       }
