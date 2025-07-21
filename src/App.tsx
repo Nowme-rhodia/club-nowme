@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
 const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('./pages/auth/ResetPassword'));
+const TestSignup = React.lazy(() => import('./pages/auth/TestSignup'));
 
 // Partner auth pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
@@ -102,6 +103,7 @@ function App() {
                   <Route path="/auth/signin" element={<SignIn />} />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
                   <Route path="/auth/reset-password" element={<ResetPassword />} />
+                  <Route path="/auth/test-signup" element={<TestSignup />} />
 
                   {/* Partner routes */}
                   <Route path="/partner/signin" element={<PartnerSignIn />} />

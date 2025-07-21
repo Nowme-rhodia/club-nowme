@@ -356,7 +356,7 @@ export default function Subscription() {
             className="rounded-xl shadow-lg max-w-full h-64 object-cover mx-auto animate-slide-up" 
           />
           <button 
-            className="mt-8 px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-all animate-pulse"
+            to="/auth/test-signup"
             onClick={() => alert('Rejoins-nous après ton inscription !')}
           >
             <MessageCircle className="w-5 h-5 inline mr-2" />
