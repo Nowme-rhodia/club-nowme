@@ -90,10 +90,8 @@ export default function UpdatePassword() {
     
     const params = new URLSearchParams(hash);
     const access_token = params.get("access_token") || accessToken;
-    const refresh_token = params.get("refresh_token");
     
     console.log("Access token found:", !!access_token);
-    console.log("Refresh token found:", !!refresh_token);
     
     if (!access_token) {
       setError("Token d'accès manquant. Veuillez réessayer avec un nouveau lien.");
@@ -102,29 +100,32 @@ export default function UpdatePassword() {
     }
 
     try {
-      // Utiliser l'API REST directement au lieu du SDK
+      // Utiliser l'Edge Function pour réinitialiser le mot de passe
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-      const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        method: 'PUT',
+      console.log("Calling Edge Function...");
+      
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${access_token}`
+          // Pas besoin d'Authorization header car l'Edge Function utilise le rôle de service
         },
         body: JSON.stringify({
+          accessToken: access_token,
           password: password
         })
       });
       
-      console.log("API response status:", response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API error:", errorData);
-        throw new Error(errorData.message || `Erreur ${response.status}: La mise à jour a échoué`);
-      }
+      console.log("Edge Function response status:", response.status);
       
       const data = await response.json();
-      console.log("Password update successful:", !!data);
+      console.log("Edge Function response:", data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || `Erreur ${response.status}: La mise à jour a échoué`);
+      }
+      
+      console.log("Password update successful:", data.success);
       
       setSuccess(true);
       
@@ -137,13 +138,6 @@ export default function UpdatePassword() {
     } catch (err: any) {
       console.error('Erreur lors de la mise à jour du mot de passe:', err);
       setError(err.message || 'Une erreur est survenue lors de la mise à jour du mot de passe');
-      
-      // Tenter de se déconnecter
-      try {
-        await supabase.auth.signOut();
-      } catch (signOutErr) {
-        console.error("Erreur lors de la déconnexion:", signOutErr);
-      }
     } finally {
       setLoading(false);
     }
