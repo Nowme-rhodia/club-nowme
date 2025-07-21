@@ -40,7 +40,6 @@ export default function TestSignup() {
         const { error: profileError } = await supabase
           .from('user_profiles')
           .insert({
-            user_id: authData.user.id,
             email: formData.email,
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -50,22 +49,6 @@ export default function TestSignup() {
           });
 
         if (profileError) throw profileError;
-
-        // 3. Créer les récompenses automatiquement
-        const { error: rewardsError } = await supabase
-          .from('member_rewards')
-          .insert({
-            user_id: authData.user.id,
-            points_earned: 0,
-            points_spent: 0,
-            points_balance: 0,
-            tier_level: 'bronze'
-          });
-
-        if (rewardsError) {
-          console.warn('Erreur création récompenses:', rewardsError);
-          // Ne pas bloquer l'inscription pour ça
-        }
 
         setSuccess(true);
         
