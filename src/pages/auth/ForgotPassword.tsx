@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
@@ -10,6 +10,7 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cooldownTime, setCooldownTime] = useState<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,13 +21,38 @@ export default function ForgotPassword() {
       await resetPassword(email);
       console.log('Reset password email sent successfully');
       setSuccess(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error sending reset password email:', err);
-      setError('Une erreur est survenue. Veuillez réessayer.');
+      
+      // Vérifier si c'est une erreur de limitation de taux (rate limiting)
+      if (err.message && err.message.includes('you can only request this after')) {
+        // Extraire le nombre de secondes à attendre
+        const secondsMatch = err.message.match(/after (\d+) seconds/);
+        const seconds = secondsMatch ? parseInt(secondsMatch[1]) : 60;
+        
+        setCooldownTime(seconds);
+        setError(`Pour des raisons de sécurité, veuillez attendre ${seconds} secondes avant de réessayer.`);
+      } else {
+        setError('Une erreur est survenue. Veuillez réessayer.');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Gérer le compte à rebours
+  useEffect(() => {
+    if (cooldownTime && cooldownTime > 0) {
+      const timer = setTimeout(() => {
+        setCooldownTime(cooldownTime - 1);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    } else if (cooldownTime === 0) {
+      setCooldownTime(null);
+      setError(null);
+    }
+  }, [cooldownTime]);
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -74,6 +100,11 @@ export default function ForgotPassword() {
                     <AlertCircle className="h-5 w-5 text-red-400" />
                     <div className="ml-3">
                       <p className="text-sm text-red-700">{error}</p>
+                      {cooldownTime && cooldownTime > 0 && (
+                        <p className="text-sm text-red-700 mt-1">
+                          Vous pourrez réessayer dans {cooldownTime} secondes.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -92,6 +123,7 @@ export default function ForgotPassword() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading || cooldownTime !== null}
                     className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
                   />
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -101,16 +133,16 @@ export default function ForgotPassword() {
               <div>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || cooldownTime !== null}
                   className={`
                     flex w-full justify-center items-center rounded-full border border-transparent px-4 py-3 text-base font-medium text-white shadow-sm
-                    ${loading
+                    ${loading || cooldownTime !== null
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
                     }
                   `}
                 >
-                  {loading ? 'Envoi en cours...' : 'Envoyer le lien'}
+                  {loading ? 'Envoi en cours...' : cooldownTime !== null ? `Attente (${cooldownTime}s)` : 'Envoyer le lien'}
                 </button>
               </div>
 
