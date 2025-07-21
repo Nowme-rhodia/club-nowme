@@ -31,5 +31,8 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
+[auth.url]
+default_password_reset_url = "https://club.nowme.fr/auth/reset-password"
+
 [functions.stripe-webhook]
 verify_jwt = false
