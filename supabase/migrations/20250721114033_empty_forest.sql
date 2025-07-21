@@ -9,7 +9,6 @@
     - `masterclasses` - Masterclass exclusives
     - `masterclass_attendees` - Participants aux masterclasses
     - `wellness_consultations` - Consultations bien-être
-    - `member_rewards` - Programme de fidélité
     - `community_challenges` - Défis communautaires
     - `challenge_participations` - Participations aux défis
 
@@ -99,10 +98,10 @@ CREATE TABLE IF NOT EXISTS club_boxes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   description text NOT NULL,
-  quarter text NOT NULL, -- 'Q1-2024', 'Q2-2024', etc.
+  quarter text NOT NULL,
   year integer NOT NULL,
   estimated_value decimal(10,2) NOT NULL,
-  contents jsonb NOT NULL, -- Liste des produits
+  contents jsonb NOT NULL,
   image_url text,
   shipping_start_date date,
   shipping_end_date date,
@@ -151,10 +150,10 @@ CREATE TABLE IF NOT EXISTS masterclasses (
   duration_minutes integer DEFAULT 90,
   max_participants integer DEFAULT 50,
   current_participants integer DEFAULT 0,
-  meeting_link text, -- Zoom, Teams, etc.
+  meeting_link text,
   recording_url text,
-  materials jsonb, -- Documents, liens, etc.
-  category text NOT NULL, -- 'bien-être', 'business', 'créativité', etc.
+  materials jsonb,
+  category text NOT NULL,
   status text DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'live', 'completed', 'cancelled')),
   created_at timestamptz DEFAULT now()
 );
@@ -193,14 +192,14 @@ CREATE TABLE IF NOT EXISTS wellness_consultations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
   consultant_name text NOT NULL,
-  consultant_specialty text NOT NULL, -- 'nutrition', 'psychologie', 'coaching', etc.
+  consultant_specialty text NOT NULL,
   consultation_type text NOT NULL CHECK (consultation_type IN ('phone', 'video', 'in_person')),
   scheduled_date timestamptz NOT NULL,
   duration_minutes integer DEFAULT 45,
   status text DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled', 'rescheduled')),
   notes text,
   follow_up_date timestamptz,
-  quarter_used text NOT NULL, -- Pour limiter à 1 par trimestre
+  quarter_used text NOT NULL,
   created_at timestamptz DEFAULT now()
 );
 
@@ -213,32 +212,12 @@ CREATE POLICY "Users can manage their consultations"
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
--- Table du programme de fidélité
-CREATE TABLE IF NOT EXISTS member_rewards (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES user_profiles(id) ON DELETE CASCADE,
-  points_earned integer DEFAULT 0,
-  points_spent integer DEFAULT 0,
-  points_balance integer DEFAULT 0,
-  last_activity_date timestamptz DEFAULT now(),
-  tier_level text DEFAULT 'bronze' CHECK (tier_level IN ('bronze', 'silver', 'gold', 'platinum')),
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE member_rewards ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their rewards"
-  ON member_rewards
-  FOR SELECT
-  TO authenticated
-  USING (user_id = auth.uid());
-
 -- Table des défis communautaires
 CREATE TABLE IF NOT EXISTS community_challenges (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   description text NOT NULL,
-  challenge_type text NOT NULL, -- 'monthly', 'weekly', 'special'
+  challenge_type text NOT NULL,
   start_date date NOT NULL,
   end_date date NOT NULL,
   reward_points integer DEFAULT 100,
@@ -350,23 +329,8 @@ CREATE TRIGGER update_challenge_participants_trigger
   AFTER INSERT OR DELETE ON challenge_participations
   FOR EACH ROW EXECUTE FUNCTION update_challenge_participants();
 
--- Fonction pour créer automatiquement les récompenses
-CREATE OR REPLACE FUNCTION create_member_rewards()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO member_rewards (user_id, points_balance)
-  VALUES (NEW.user_id, 100); -- Points de bienvenue
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER create_member_rewards_trigger
-  AFTER INSERT ON user_profiles
-  FOR EACH ROW EXECUTE FUNCTION create_member_rewards();
-
 -- Index pour les performances
 CREATE INDEX IF NOT EXISTS idx_club_events_date ON club_events(date_time);
 CREATE INDEX IF NOT EXISTS idx_club_events_type ON club_events(event_type);
 CREATE INDEX IF NOT EXISTS idx_masterclasses_date ON masterclasses(date_time);
 CREATE INDEX IF NOT EXISTS idx_wellness_consultations_user ON wellness_consultations(user_id);
-CREATE INDEX IF NOT EXISTS idx_member_rewards_user ON member_rewards(user_id);
