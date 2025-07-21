@@ -38,6 +38,11 @@ const NotFound = React.lazy(() => import('./pages/NotFound'));
 const Subscription = React.lazy(() => import('./pages/Subscription'));
 const PricingComparison = React.lazy(() => import('./pages/PricingComparison'));
 
+// Club pages
+const ClubEvents = React.lazy(() => import('./pages/club/Events'));
+const ClubMasterclasses = React.lazy(() => import('./pages/club/Masterclasses'));
+const ClubWellness = React.lazy(() => import('./pages/club/Wellness'));
+
 // Admin routes
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const Partners = React.lazy(() => import('./pages/admin/Partners'));
@@ -66,6 +71,32 @@ function App() {
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
                   <Route path="/subscription" element={<Subscription />} />
                   <Route path="/pricing" element={<PricingComparison />} />
+
+                  {/* Club routes */}
+                  <Route
+                    path="/club/events"
+                    element={
+                      <PrivateRoute allowedRoles={['subscriber']}>
+                        <ClubEvents />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/club/masterclasses"
+                    element={
+                      <PrivateRoute allowedRoles={['subscriber']}>
+                        <ClubMasterclasses />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/club/wellness"
+                    element={
+                      <PrivateRoute allowedRoles={['subscriber']}>
+                        <ClubWellness />
+                      </PrivateRoute>
+                    }
+                  />
 
                   {/* Auth routes */}
                   <Route path="/auth/signin" element={<SignIn />} />
