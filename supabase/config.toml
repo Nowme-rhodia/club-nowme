@@ -17,6 +17,8 @@ port = 54323
 site_url = "https://club.nowme.fr"
 additional_redirect_urls = [
   "https://club.nowme.fr",
+  "https://club.nowme.fr/auth/reset-password",
+  "https://club.nowme.fr/auth/update-password",
   "https://club.nowme.fr/reset-password",
   "https://club.nowme.fr/dashboard",
   "https://club.nowme.fr/auth/reset-password",

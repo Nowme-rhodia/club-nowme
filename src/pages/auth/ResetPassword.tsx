@@ -14,23 +14,45 @@ export default function ResetPassword() {
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // Vérifier la session au chargement
-    const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      console.log('🔍 Session initiale :', data, error);
-      if (error) {
-        setError('Erreur lors de la vérification de la session : ' + error.message);
-        return;
-      }
-      if (data?.session) {
-        console.log('✅ Session trouvée, access_token :', data.session.access_token);
-        setSessionReady(true);
-      } else {
-        setError('Aucune session trouvée. Veuillez demander un nouveau lien de réinitialisation.');
+    // Récupérer les paramètres de l'URL
+    const handlePasswordRecovery = async () => {
+      try {
+        // Vérifier d'abord les paramètres d'URL
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+        
+        console.log('🔍 URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+        
+        if (type === 'recovery' && accessToken && refreshToken) {
+          console.log('✅ Tokens de récupération trouvés');
+          
+          // Définir la session avec les tokens
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            console.error('❌ Erreur lors de la définition de la session:', error);
+            setError('Lien de réinitialisation invalide ou expiré');
+            return;
+          }
+          
+          console.log('✅ Session définie avec succès');
+          setSessionReady(true);
+        } else {
+          console.log('❌ Paramètres manquants ou invalides');
+          setError('Lien de réinitialisation invalide. Veuillez demander un nouveau lien.');
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors du traitement:', error);
+        setError('Une erreur est survenue. Veuillez réessayer.');
       }
     };
 
-    checkSession();
+    handlePasswordRecovery();
 
     // Écouter les changements d'état d'authentification
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -44,7 +66,7 @@ export default function ResetPassword() {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,15 +92,6 @@ export default function ResetPassword() {
     }
 
     try {
-      // Vérifier à nouveau la session avant de faire l'appel
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData?.session) {
-        console.log('❌ Aucune session valide trouvée avant updateUser');
-        setError('Session invalide. Veuillez demander un nouveau lien de réinitialisation.');
-        setLoading(false);
-        return;
-      }
-
       console.log('🔄 Appel à supabase.auth.updateUser avec le mot de passe :', password);
       const { error: updateError } = await supabase.auth.updateUser({ password });
 

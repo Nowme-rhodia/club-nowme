@@ -144,13 +144,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Sending reset password email to:', email);
       
       // Construire l'URL de redirection complète
-      const redirectTo = import.meta.env.VITE_REDIRECT_URL;
+      const redirectTo = `${window.location.origin}/auth/reset-password`;
       console.log('Redirect URL:', redirectTo);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-        // Forcer l'utilisation de l'URL de redirection
-        emailRedirectTo: redirectTo
+        redirectTo
       });
       
       if (error) {

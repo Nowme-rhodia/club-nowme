@@ -1,34 +1,48 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Lock, Phone, Camera, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../lib/auth';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { User, Lock, Phone, Camera, AlertCircle, CheckCircle } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { SEO } from '../../components/SEO';
 
 export default function CompleteProfile() {
   const navigate = useNavigate();
-  const { completeProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     phone: '',
-    password: '',
-    confirmPassword: '',
     photo_url: ''
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Vérifier si l'utilisateur est connecté
+    const checkUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        navigate('/auth/signin');
+        return;
+      }
+      setUser(user);
+      
+      // Pré-remplir l'email si disponible
+      if (user.email) {
+        setFormData(prev => ({ ...prev, email: user.email }));
+      }
+    };
+
+    checkUser();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
-    }
-
     // Validation du numéro de téléphone
     const phoneRegex = /^\+?[0-9]{10,15}$/;
-    if (!phoneRegex.test(formData.phone)) {
+    if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
       setError('Numéro de téléphone invalide');
       return;
     }
@@ -36,15 +50,24 @@ export default function CompleteProfile() {
     setLoading(true);
 
     try {
-      await completeProfile({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        phone: formData.phone,
-        photo_url: formData.photo_url
-      });
+      // Créer le profil utilisateur
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: user.id,
+          email: user.email,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+          photo_url: formData.photo_url,
+          subscription_status: 'pending', // En attente de paiement
+          subscription_type: 'discovery'
+        });
 
-      // Rediriger vers la page d'accueil
-      navigate('/');
+      if (profileError) throw profileError;
+
+      // Rediriger vers la page d'abonnement
+      navigate('/subscription');
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -62,6 +85,11 @@ export default function CompleteProfile() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <SEO 
+        title="Finaliser votre inscription"
+        description="Complétez votre profil Nowme"
+      />
+
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
           Finaliser votre inscription
@@ -161,42 +189,6 @@ export default function CompleteProfile() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Mot de passe
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                />
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirmer le mot de passe
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                />
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
-            <div>
               <button
                 type="submit"
                 disabled={loading}
@@ -208,7 +200,7 @@ export default function CompleteProfile() {
                   }
                 `}
               >
-                {loading ? 'Création du compte...' : 'Créer mon compte'}
+                {loading ? 'Création du profil...' : 'Finaliser mon inscription'}
               </button>
             </div>
           </form>
