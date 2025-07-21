@@ -27,7 +27,7 @@ CREATE POLICY "Users can update own profile"
   ON public.user_profiles
   FOR UPDATE
   TO authenticated
-  USING (user.id = auth.uid())
+  USING (id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Allow Insert from Webhook"
