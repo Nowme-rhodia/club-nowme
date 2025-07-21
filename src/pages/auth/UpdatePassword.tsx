@@ -34,9 +34,11 @@ export default function UpdatePassword() {
         const params = new URLSearchParams(hash);
         const access_token = params.get("access_token");
         const refresh_token = params.get("refresh_token");
+        const type = params.get("type");
         
         console.log("Access token trouvé:", !!access_token);
         console.log("Refresh token trouvé:", !!refresh_token);
+        console.log("Type:", type);
 
         if (!access_token || !refresh_token) {
           console.error("Tokens manquants dans l'URL");
@@ -82,7 +84,7 @@ export default function UpdatePassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
+    
     // Validation du mot de passe
     if (password.length < 8) {
       setError('Le mot de passe doit contenir au moins 8 caractères');
@@ -95,28 +97,69 @@ export default function UpdatePassword() {
     }
 
     setLoading(true);
+    console.log("Début de la mise à jour du mot de passe...");
 
     try {
-      const { data, error } = await supabase.auth.updateUser({
-        password: password
-      });
+      // Vérifier que la session est toujours valide avant de mettre à jour
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Session actuelle:", sessionData.session ? "Valide" : "Invalide");
+      
+      if (!sessionData.session) {
+        console.error("Session invalide avant la mise à jour du mot de passe");
+        setError("Votre session a expiré. Veuillez demander un nouveau lien de réinitialisation.");
+        setLoading(false);
+        return;
+      }
+
+      // Mettre à jour le mot de passe avec un timeout
+      console.log("Envoi de la requête de mise à jour du mot de passe...");
+      
+      // Créer une promesse avec timeout
+      const updatePasswordWithTimeout = () => {
+        return Promise.race([
+          supabase.auth.updateUser({ password }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("La requête a expiré après 10 secondes")), 10000)
+          )
+        ]);
+      };
+      
+      const { data, error } = await updatePasswordWithTimeout() as { 
+        data: { user: any } | null, 
+        error: Error | null 
+      };
 
       if (error) {
         throw error;
       }
 
-      console.log("Mot de passe mis à jour avec succès:", !!data.user);
+      console.log("Réponse de mise à jour reçue:", data ? "Succès" : "Échec");
+      
+      if (!data || !data.user) {
+        throw new Error("Aucune donnée utilisateur retournée");
+      }
+
+      console.log("Mot de passe mis à jour avec succès");
       setSuccess(true);
       
       // Attendre un peu avant de rediriger
       setTimeout(() => {
+        console.log("Redirection vers la page de connexion...");
         navigate('/auth/signin', {
           state: { message: 'Votre mot de passe a été mis à jour avec succès' }
         });
       }, 2000);
     } catch (err: any) {
-      console.error('Erreur lors de la mise à jour du mot de passe:', err);
+      console.error('Erreur détaillée lors de la mise à jour du mot de passe:', err);
       setError(err.message || 'Une erreur est survenue lors de la mise à jour du mot de passe');
+      
+      // Tenter de se déconnecter et rediriger vers la page de demande de réinitialisation
+      try {
+        await supabase.auth.signOut();
+        console.log("Déconnexion effectuée après erreur");
+      } catch (signOutErr) {
+        console.error("Erreur lors de la déconnexion:", signOutErr);
+      }
     } finally {
       setLoading(false);
     }
