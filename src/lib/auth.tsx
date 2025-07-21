@@ -153,14 +153,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('Reset password error:', error);
-        throw error;
+        
+        // Vérifier si c'est une erreur de limitation de taux (rate limiting)
+        if (error.message && error.message.includes('you can only request this after')) {
+          // Ne pas afficher de toast ici, car nous voulons gérer cette erreur spécifique dans le composant
+          throw error;
+        } else {
+          toast.error('Une erreur est survenue lors de l\'envoi de l\'email');
+          throw error;
+        }
       }
       
       console.log('Reset password email sent successfully');
       toast.success('Un email de réinitialisation vous a été envoyé');
     } catch (error) {
       console.error('Reset password error:', error);
-      toast.error('Une erreur est survenue lors de l\'envoi de l\'email');
+      // Ne pas afficher de toast ici pour permettre au composant de gérer l'erreur
       throw error;
     }
   };
@@ -173,18 +181,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hash = window.location.hash;
       console.log('Current URL hash:', hash);
 
-      // Extraire le token d'accès
+      // Extraire le token d'accès et le refresh token
       const accessToken = hash.split('access_token=')[1]?.split('&')[0];
+      const refreshToken = hash.split('refresh_token=')[1]?.split('&')[0];
+      
       console.log('Access token found:', !!accessToken);
+      console.log('Refresh token found:', !!refreshToken);
 
-      if (!accessToken) {
-        throw new Error('Token de réinitialisation manquant');
+      if (!accessToken || !refreshToken) {
+        throw new Error('Tokens de réinitialisation manquants');
       }
 
-      // Mettre à jour la session avec le token
+      // Mettre à jour la session avec les tokens
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
-        refresh_token: ''
+        refresh_token: refreshToken
       });
 
       if (sessionError) {
@@ -209,6 +220,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Session refresh error:', refreshError);
         throw refreshError;
       }
+
+      // Rediriger vers la page de connexion après un court délai
+      setTimeout(() => {
+        navigate('/auth/signin');
+      }, 2000);
 
     } catch (error) {
       console.error('Update password error:', error);
