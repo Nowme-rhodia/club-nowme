@@ -5,9 +5,9 @@
 ### Étape 1 : Aller dans SQL Editor
 **Supabase Dashboard** → **SQL Editor** → **New query**
 
-### Étape 2 : Exécuter cette requête
+### Étape 2 : Créer l'utilisateur directement dans auth.users
 ```sql
--- 1. Créer l'utilisateur auth (avec mot de passe)
+-- 1. Créer l'utilisateur auth directement
 INSERT INTO auth.users (
   instance_id,
   id,
@@ -16,35 +16,39 @@ INSERT INTO auth.users (
   email,
   encrypted_password,
   email_confirmed_at,
+  email_change_confirm_status,
+  banned_until,
+  confirmation_sent_at,
   created_at,
   updated_at,
-  confirmation_token,
-  email_change,
-  email_change_token_new,
-  recovery_token
+  raw_app_meta_data,
+  raw_user_meta_data,
+  is_super_admin,
+  last_sign_in_at
 ) VALUES (
   '00000000-0000-0000-0000-000000000000',
   gen_random_uuid(),
   'authenticated',
   'authenticated',
-  'test-nouveau@nowme.fr',
+  'test-simple@nowme.fr',
   crypt('motdepasse123', gen_salt('bf')),
   now(),
+  0,
+  null,
   now(),
   now(),
-  '',
-  '',
-  '',
-  ''
+  now(),
+  '{}',
+  '{}',
+  false,
+  now()
 );
-
--- 2. Récupérer l'ID de l'utilisateur créé
-SELECT id, email FROM auth.users WHERE email = 'test-nouveau@nowme.fr';
 ```
 
-### Étape 3 : Créer le profil utilisateur
-```sql
--- Remplacez USER_ID_ICI par l'ID récupéré à l'étape 2
+-- 1. Récupérer l'ID de l'utilisateur créé
+SELECT id, email FROM auth.users WHERE email = 'test-simple@nowme.fr';
+
+-- 2. Créer le profil (remplacez USER_ID_ICI par l'ID récupéré)
 INSERT INTO public.user_profiles (
   user_id,
   email,
@@ -54,8 +58,8 @@ INSERT INTO public.user_profiles (
   subscription_status,
   subscription_type
 ) VALUES (
-  'USER_ID_ICI', -- Remplacez par l'ID réel
-  'test-nouveau@nowme.fr',
+  'USER_ID_ICI',
+  'test-simple@nowme.fr',
   'Sophie',
   'Test',
   '+33612345678',
@@ -64,15 +68,53 @@ INSERT INTO public.user_profiles (
 );
 ```
 
-## 🔧 **MÉTHODE 2 : Plus simple - Utiliser la fonction admin**
+## 🔧 **MÉTHODE 2 : Alternative plus simple**
 
 ```sql
--- Créer l'utilisateur avec la fonction admin
-SELECT auth.admin_create_user(
-  'test-nouveau@nowme.fr',
-  'motdepasse123',
-  true -- email confirmé
-);
+-- Méthode alternative : insertion directe simplifiée
+DO $$
+DECLARE
+    user_uuid uuid;
+BEGIN
+    -- Générer un UUID
+    user_uuid := gen_random_uuid();
+    
+    -- Insérer dans auth.users
+    INSERT INTO auth.users (
+        instance_id, id, aud, role, email, encrypted_password, 
+        email_confirmed_at, created_at, updated_at, raw_app_meta_data, 
+        raw_user_meta_data, is_super_admin
+    ) VALUES (
+        '00000000-0000-0000-0000-000000000000',
+        user_uuid,
+        'authenticated',
+        'authenticated', 
+        'test-simple@nowme.fr',
+        crypt('motdepasse123', gen_salt('bf')),
+        now(),
+        now(),
+        now(),
+        '{}',
+        '{}',
+        false
+    );
+    
+    -- Insérer dans user_profiles
+    INSERT INTO public.user_profiles (
+        user_id, email, first_name, last_name, phone,
+        subscription_status, subscription_type
+    ) VALUES (
+        user_uuid,
+        'test-simple@nowme.fr',
+        'Sophie',
+        'Test', 
+        '+33612345678',
+        'active',
+        'premium'
+    );
+    
+    RAISE NOTICE 'Utilisateur créé avec ID: %', user_uuid;
+END $$;
 ```
 
 ## 🎯 **APRÈS CRÉATION :**
@@ -80,7 +122,7 @@ SELECT auth.admin_create_user(
 ### Testez la connexion :
 ```
 URL: /auth/signin
-Email: test-nouveau@nowme.fr
+Email: test-simple@nowme.fr
 Password: motdepasse123
 ```
 
