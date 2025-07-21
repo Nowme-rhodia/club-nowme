@@ -2,8 +2,8 @@
 
 ## 🔧 **MÉTHODE MISE À JOUR :**
 
-### Étape 1 : Exécuter la nouvelle migration
-**Supabase Dashboard** → **SQL Editor** → Copier le fichier `20250721143228_square_pebble.sql`
+### Étape 1 : Exécuter la migration corrigée
+**Supabase Dashboard** → **SQL Editor** → Copier le fichier `20250721143530_restless_pebble.sql`
 
 ### Étape 2 : Utiliser la fonction helper
 **Supabase Dashboard** → **SQL Editor** → **New query**
@@ -32,6 +32,13 @@ SELECT create_test_user(
   'discovery'
 );
 ```
+
+## 🎯 **LA FONCTION GÈRE MAINTENANT :**
+
+- ✅ **Utilisateurs existants** : Met à jour le profil au lieu de créer
+- ✅ **Profils existants** : Met à jour les informations
+- ✅ **Récompenses manquantes** : Les crée automatiquement
+- ✅ **Pas d'erreurs de doublons** : Vérifie avant de créer
 
 ## 🔍 **SI VOUS AVEZ ENCORE DES ERREURS :**
 
