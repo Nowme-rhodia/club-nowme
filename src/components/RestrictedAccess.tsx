@@ -46,15 +46,15 @@ export const RestrictedAccess = ({
           <div className="space-y-4">
             <div className="flex items-start space-x-3">
               <span className="flex-shrink-0 w-6 h-6 text-primary">✨</span>
-              <p className="text-gray-700">Premier mois à seulement 4,99€ avec le code <span className="font-semibold">MOIS5</span></p>
+              <p className="text-gray-700">Premier mois à seulement 12,99€ pour tout découvrir</p>
             </div>
             <div className="flex items-start space-x-3">
               <span className="flex-shrink-0 w-6 h-6 text-primary">🎯</span>
-              <p className="text-gray-700">Jusqu'à -50% sur toutes nos offres bien-être et loisirs</p>
+              <p className="text-gray-700">Puis accès premium complet à 39,99€ (valeur 120€+)</p>
             </div>
             <div className="flex items-start space-x-3">
               <span className="flex-shrink-0 w-6 h-6 text-primary">🎁</span>
-              <p className="text-gray-700">Dès ton premier kiff, ton abonnement est déjà rentabilisé !</p>
+              <p className="text-gray-700">Événements, masterclass, box, consultations incluses !</p>
             </div>
           </div>
 
@@ -70,7 +70,7 @@ export const RestrictedAccess = ({
                 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
             >
               <Sparkles className="w-5 h-5 mr-3 animate-[sparkle_2s_ease-in-out_infinite]" />
-              Je veux tester maintenant !
+              Je teste à 12,99€ maintenant !
             </button>
 
             <p className="text-center text-sm text-gray-500">

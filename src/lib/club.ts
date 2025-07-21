@@ -78,39 +78,72 @@ export async function getUpcomingEvents(): Promise<ClubEvent[]> {
 }
 
 export async function registerToEvent(eventId: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('manage-club-events', {
-    body: {
-      action: 'register_user',
-      eventData: { eventId },
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  // Récupérer l'ID du profil utilisateur
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { error } = await supabase
+    .from('event_registrations')
+    .insert({
+      event_id: eventId,
+      user_id: profile.id
+    });
 
   if (error) throw error;
 }
 
 export async function cancelEventRegistration(eventId: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('manage-club-events', {
-    body: {
-      action: 'cancel_registration',
-      eventData: { eventId },
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { error } = await supabase
+    .from('event_registrations')
+    .delete()
+    .eq('event_id', eventId)
+    .eq('user_id', profile.id);
 
   if (error) throw error;
 }
 
 export async function getUserEvents(): Promise<any[]> {
-  const { data, error } = await supabase.functions.invoke('manage-club-events', {
-    body: {
-      action: 'get_user_events',
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { data, error } = await supabase
+    .from('event_registrations')
+    .select(`
+      *,
+      event:club_events(*)
+    `)
+    .eq('user_id', profile.id)
+    .order('registration_date', { ascending: false });
 
   if (error) throw error;
-  return data?.events || [];
+  return data || [];
 }
 
 // Fonctions pour les masterclasses
@@ -127,40 +160,92 @@ export async function getUpcomingMasterclasses(): Promise<Masterclass[]> {
 }
 
 export async function registerToMasterclass(masterclassId: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('manage-masterclasses', {
-    body: {
-      action: 'register_user',
-      masterclassData: { masterclassId },
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { error } = await supabase
+    .from('masterclass_attendees')
+    .insert({
+      masterclass_id: masterclassId,
+      user_id: profile.id
+    });
 
   if (error) throw error;
 }
 
 export async function getUserMasterclasses(): Promise<any[]> {
-  const { data, error } = await supabase.functions.invoke('manage-masterclasses', {
-    body: {
-      action: 'get_user_masterclasses',
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { data, error } = await supabase
+    .from('masterclass_attendees')
+    .select(`
+      *,
+      masterclass:masterclasses(*)
+    `)
+    .eq('user_id', profile.id)
+    .order('registration_date', { ascending: false });
 
   if (error) throw error;
-  return data?.masterclasses || [];
+  return data || [];
 }
 
 // Fonctions pour les consultations bien-être
 export async function checkConsultationEligibility(): Promise<{ eligible: boolean; quarter: string; message: string }> {
-  const { data, error } = await supabase.functions.invoke('manage-wellness-consultations', {
-    body: {
-      action: 'check_quarterly_eligibility',
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
 
-  if (error) throw error;
-  return data;
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id, subscription_type')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  if (profile.subscription_type !== 'premium') {
+    return {
+      eligible: false,
+      quarter: getCurrentQuarter(),
+      message: 'Consultations réservées aux membres premium'
+    };
+  }
+
+  const currentQuarter = getCurrentQuarter();
+  
+  const { data: existingConsultation, error } = await supabase
+    .from('wellness_consultations')
+    .select('id')
+    .eq('user_id', profile.id)
+    .eq('quarter_used', currentQuarter)
+    .eq('status', 'completed')
+    .single();
+
+  const eligible = !existingConsultation;
+
+  return {
+    eligible,
+    quarter: currentQuarter,
+    message: eligible 
+      ? 'Vous pouvez réserver votre consultation gratuite'
+      : 'Consultation déjà utilisée ce trimestre'
+  };
 }
 
 export async function bookWellnessConsultation(consultationData: {
@@ -170,98 +255,162 @@ export async function bookWellnessConsultation(consultationData: {
   scheduledDate: string;
   duration?: number;
 }): Promise<void> {
-  const { error } = await supabase.functions.invoke('manage-wellness-consultations', {
-    body: {
-      action: 'book_consultation',
-      consultationData,
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { error } = await supabase
+    .from('wellness_consultations')
+    .insert({
+      user_id: profile.id,
+      consultant_name: consultationData.consultantName,
+      consultant_specialty: consultationData.specialty,
+      consultation_type: consultationData.type,
+      scheduled_date: consultationData.scheduledDate,
+      duration_minutes: consultationData.duration || 45,
+      quarter_used: getCurrentQuarter()
+    });
 
   if (error) throw error;
 }
 
 export async function getUserConsultations(): Promise<WellnessConsultation[]> {
-  const { data, error } = await supabase.functions.invoke('manage-wellness-consultations', {
-    body: {
-      action: 'get_user_consultations',
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { data, error } = await supabase
+    .from('wellness_consultations')
+    .select('*')
+    .eq('user_id', profile.id)
+    .order('scheduled_date', { ascending: false });
 
   if (error) throw error;
-  return data?.consultations || [];
+  return data || [];
 }
 
 // Fonctions pour les box
 export async function getUserBoxes(): Promise<any[]> {
-  const { data, error } = await supabase.functions.invoke('manage-club-boxes', {
-    body: {
-      action: 'get_user_boxes',
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { data, error } = await supabase
+    .from('box_shipments')
+    .select(`
+      *,
+      box:club_boxes(*)
+    `)
+    .eq('user_id', profile.id)
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data?.boxes || [];
+  return data || [];
 }
 
 export async function trackBoxShipment(shipmentId: string): Promise<any> {
-  const { data, error } = await supabase.functions.invoke('manage-club-boxes', {
-    body: {
-      action: 'track_shipment',
-      boxData: { shipmentId }
-    }
-  });
+  const { data, error } = await supabase
+    .from('box_shipments')
+    .select(`
+      *,
+      box:club_boxes(*)
+    `)
+    .eq('id', shipmentId)
+    .single();
 
   if (error) throw error;
-  return data?.shipment;
+  return data;
 }
 
 // Fonctions pour les récompenses
 export async function getUserRewards(): Promise<MemberRewards & { tier_benefits: any; next_tier: string; points_to_next_tier: number }> {
-  const { data, error } = await supabase.functions.invoke('manage-rewards', {
-    body: {
-      action: 'get_user_rewards',
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError) throw profileError;
+
+  const { data, error } = await supabase
+    .from('member_rewards')
+    .select('*')
+    .eq('user_id', profile.id)
+    .single();
 
   if (error) throw error;
-  return data?.rewards;
+
+  // Calculer les informations du niveau
+  const tierBenefits = getTierBenefits(data.tier_level);
+  const nextTier = getNextTier(data.tier_level);
+  const pointsToNextTier = nextTier ? getTierThreshold(nextTier) - data.points_earned : 0;
+
+  return {
+    ...data,
+    tier_benefits: tierBenefits,
+    next_tier: nextTier,
+    points_to_next_tier: pointsToNextTier
+  };
 }
 
 export async function addRewardPoints(points: number, reason: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('manage-rewards', {
-    body: {
-      action: 'add_points',
-      rewardData: { points, reason },
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
 
-  if (error) throw error;
-}
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
 
-export async function getAvailableRewards(): Promise<any[]> {
-  const { data, error } = await supabase.functions.invoke('manage-rewards', {
-    body: {
-      action: 'get_available_rewards'
-    }
-  });
+  if (profileError) throw profileError;
 
-  if (error) throw error;
-  return data?.rewards || [];
-}
+  // Récupérer les récompenses actuelles
+  const { data: currentRewards, error: rewardsError } = await supabase
+    .from('member_rewards')
+    .select('*')
+    .eq('user_id', profile.id)
+    .single();
 
-export async function redeemReward(rewardId: string): Promise<void> {
-  const { error } = await supabase.functions.invoke('manage-rewards', {
-    body: {
-      action: 'redeem_reward',
-      rewardData: { rewardId },
-      userId: (await supabase.auth.getUser()).data.user?.id
-    }
-  });
+  if (rewardsError) throw rewardsError;
+
+  const newPointsEarned = currentRewards.points_earned + points;
+  const newPointsBalance = currentRewards.points_balance + points;
+  const newTier = calculateTier(newPointsEarned);
+
+  const { error } = await supabase
+    .from('member_rewards')
+    .update({
+      points_earned: newPointsEarned,
+      points_balance: newPointsBalance,
+      tier_level: newTier,
+      last_activity_date: new Date().toISOString()
+    })
+    .eq('user_id', profile.id);
 
   if (error) throw error;
 }
@@ -285,4 +434,38 @@ export function isEventAccessible(event: ClubEvent, userSubscriptionType: 'disco
 
 export function calculateEventPrice(event: ClubEvent, userSubscriptionType: 'discovery' | 'premium'): number {
   return userSubscriptionType === 'premium' ? event.price_premium : event.price_discovery;
+}
+
+// Fonctions pour le système de récompenses
+function getTierBenefits(tier: string) {
+  const benefits = {
+    bronze: { discount: 0, description: "Bienvenue dans le club !" },
+    silver: { discount: 5, description: "5% de réduction supplémentaire" },
+    gold: { discount: 10, description: "10% de réduction supplémentaire + accès prioritaire" },
+    platinum: { discount: 15, description: "15% de réduction supplémentaire + avantages VIP" }
+  };
+  return benefits[tier] || benefits.bronze;
+}
+
+function getNextTier(currentTier: string): string | null {
+  const tiers = ['bronze', 'silver', 'gold', 'platinum'];
+  const currentIndex = tiers.indexOf(currentTier);
+  return currentIndex < tiers.length - 1 ? tiers[currentIndex + 1] : null;
+}
+
+function getTierThreshold(tier: string): number {
+  const thresholds = {
+    bronze: 0,
+    silver: 500,
+    gold: 1500,
+    platinum: 3000
+  };
+  return thresholds[tier] || 0;
+}
+
+function calculateTier(pointsEarned: number): string {
+  if (pointsEarned >= 3000) return 'platinum';
+  if (pointsEarned >= 1500) return 'gold';
+  if (pointsEarned >= 500) return 'silver';
+  return 'bronze';
 }
