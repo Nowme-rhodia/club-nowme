@@ -16,6 +16,7 @@
     "@react-google-maps/api": "^2.20.5",
     "@stripe/stripe-js": "^2.4.0",
     "@supabase/supabase-js": "^2.39.7",
+    "caniuse-lite": "^1.0.30001727",
     "commander": "^14.0.0",
     "date-fns": "^3.3.1",
     "dotenv": "^16.6.1",
