@@ -253,6 +253,8 @@ export default function TestSignup() {
             <div className="bg-blue-50 rounded-lg p-4">
               <p className="text-sm text-blue-700">
                 <strong>Mode test :</strong> Votre compte sera créé avec un abonnement actif sans paiement réel.
+                <br />
+                <strong>Important :</strong> Utilisez un email unique pour chaque test.
               </p>
             </div>
 
