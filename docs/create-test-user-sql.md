@@ -1,9 +1,9 @@
 # Créer un utilisateur test via SQL
 
-## 🔧 **NOUVELLE MÉTHODE SIMPLE :**
+## 🔧 **MÉTHODE MISE À JOUR :**
 
-### Étape 1 : Exécuter la migration
-**Supabase Dashboard** → **SQL Editor** → Copier le fichier `20250721142843_proud_boat.sql`
+### Étape 1 : Exécuter la nouvelle migration
+**Supabase Dashboard** → **SQL Editor** → Copier le fichier `20250721143228_square_pebble.sql`
 
 ### Étape 2 : Utiliser la fonction helper
 **Supabase Dashboard** → **SQL Editor** → **New query**
@@ -31,6 +31,17 @@ SELECT create_test_user(
   '+33612345679',
   'discovery'
 );
+```
+
+## 🔍 **SI VOUS AVEZ ENCORE DES ERREURS :**
+
+### Vérifiez les politiques existantes :
+```sql
+-- Voir toutes les politiques sur user_profiles
+SELECT policyname, cmd, roles FROM pg_policies WHERE tablename = 'user_profiles';
+
+-- Voir toutes les politiques sur member_rewards  
+SELECT policyname, cmd, roles FROM pg_policies WHERE tablename = 'member_rewards';
 ```
 
 ## 🔧 **MÉTHODE ALTERNATIVE : Si la fonction ne marche pas**
