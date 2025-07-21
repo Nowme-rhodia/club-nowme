@@ -5,90 +5,25 @@
 ### Étape 1 : Aller dans SQL Editor
 **Supabase Dashboard** → **SQL Editor** → **New query**
 
-### Étape 2 : Créer l'utilisateur directement dans auth.users
+### Étape 2 : Méthode simple qui fonctionne
 ```sql
--- 1. Créer l'utilisateur auth directement
-INSERT INTO auth.users (
-  instance_id,
-  id,
-  aud,
-  role,
-  email,
-  encrypted_password,
-  email_confirmed_at,
-  email_change_confirm_status,
-  banned_until,
-  confirmation_sent_at,
-  created_at,
-  updated_at,
-  raw_app_meta_data,
-  raw_user_meta_data,
-  is_super_admin,
-  last_sign_in_at
-) VALUES (
-  '00000000-0000-0000-0000-000000000000',
-  gen_random_uuid(),
-  'authenticated',
-  'authenticated',
-  'test-simple@nowme.fr',
-  crypt('motdepasse123', gen_salt('bf')),
-  now(),
-  0,
-  null,
-  now(),
-  now(),
-  now(),
-  '{}',
-  '{}',
-  false,
-  now()
-);
-```
-
--- 1. Récupérer l'ID de l'utilisateur créé
-SELECT id, email FROM auth.users WHERE email = 'test-simple@nowme.fr';
-
--- 2. Créer le profil (remplacez USER_ID_ICI par l'ID récupéré)
-INSERT INTO public.user_profiles (
-  user_id,
-  email,
-  first_name,
-  last_name,
-  phone,
-  subscription_status,
-  subscription_type
-) VALUES (
-  'USER_ID_ICI',
-  'test-simple@nowme.fr',
-  'Sophie',
-  'Test',
-  '+33612345678',
-  'active',
-  'premium'
-);
-```
-
-## 🔧 **MÉTHODE 2 : Alternative plus simple**
-
-```sql
--- Méthode alternative : insertion directe simplifiée
+-- Méthode qui fonctionne avec les nouvelles politiques
 DO $$
 DECLARE
     user_uuid uuid;
 BEGIN
-    -- Générer un UUID
     user_uuid := gen_random_uuid();
     
-    -- Insérer dans auth.users
+    -- Créer l'utilisateur auth
     INSERT INTO auth.users (
-        instance_id, id, aud, role, email, encrypted_password, 
-        email_confirmed_at, created_at, updated_at, raw_app_meta_data, 
-        raw_user_meta_data, is_super_admin
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, created_at, updated_at, 
+        raw_app_meta_data, raw_user_meta_data, is_super_admin
     ) VALUES (
         '00000000-0000-0000-0000-000000000000',
         user_uuid,
         'authenticated',
-        'authenticated', 
+        'authenticated',
         'test-simple@nowme.fr',
         crypt('motdepasse123', gen_salt('bf')),
         now(),
@@ -99,15 +34,15 @@ BEGIN
         false
     );
     
-    -- Insérer dans user_profiles
+    -- Créer le profil utilisateur
     INSERT INTO public.user_profiles (
-        user_id, email, first_name, last_name, phone,
+        user_id, email, first_name, last_name, phone, 
         subscription_status, subscription_type
     ) VALUES (
         user_uuid,
         'test-simple@nowme.fr',
         'Sophie',
-        'Test', 
+        'Test',
         '+33612345678',
         'active',
         'premium'
@@ -115,6 +50,46 @@ BEGIN
     
     RAISE NOTICE 'Utilisateur créé avec ID: %', user_uuid;
 END $$;
+```
+
+## 🔧 **MÉTHODE 2 : Si la première ne marche pas**
+
+```sql
+-- Temporairement désactiver RLS pour créer l'utilisateur
+ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
+
+-- Créer l'utilisateur (même code que ci-dessus)
+DO $$
+DECLARE
+    user_uuid uuid;
+BEGIN
+    user_uuid := gen_random_uuid();
+    
+    INSERT INTO auth.users (
+        instance_id, id, aud, role, email, encrypted_password,
+        email_confirmed_at, created_at, updated_at, 
+        raw_app_meta_data, raw_user_meta_data, is_super_admin
+    ) VALUES (
+        '00000000-0000-0000-0000-000000000000',
+        user_uuid, 'authenticated', 'authenticated',
+        'test-simple@nowme.fr',
+        crypt('motdepasse123', gen_salt('bf')),
+        now(), now(), now(), '{}', '{}', false
+    );
+    
+    INSERT INTO public.user_profiles (
+        user_id, email, first_name, last_name, phone,
+        subscription_status, subscription_type
+    ) VALUES (
+        user_uuid, 'test-simple@nowme.fr', 'Sophie', 'Test', 
+        '+33612345678', 'active', 'premium'
+    );
+    
+    RAISE NOTICE 'Utilisateur créé avec ID: %', user_uuid;
+END $$;
+
+-- Réactiver RLS
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ```
 
 ## 🎯 **APRÈS CRÉATION :**
