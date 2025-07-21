@@ -19,9 +19,7 @@ additional_redirect_urls = [
   "https://club.nowme.fr",
   "https://club.nowme.fr/auth/reset-password",
   "https://club.nowme.fr/auth/update-password",
-  "https://club.nowme.fr/reset-password",
   "https://club.nowme.fr/dashboard",
-  "https://club.nowme.fr/auth/reset-password",
   "https://club.nowme.fr/auth/signin",
   "https://club.nowme.fr/auth/callback"
 ]

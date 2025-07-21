@@ -103,6 +103,7 @@ function App() {
                   <Route path="/auth/signin" element={<SignIn />} />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
                   <Route path="/auth/reset-password" element={<ResetPassword />} />
+                  <Route path="/auth/update-password" element={<ResetPassword />} />
                   <Route path="/auth/test-signup" element={<TestSignup />} />
 
                   {/* Partner routes */}

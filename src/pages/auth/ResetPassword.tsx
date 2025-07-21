@@ -14,11 +14,18 @@ export default function ResetPassword() {
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // Récupérer les paramètres de l'URL
     const handlePasswordRecovery = async () => {
       try {
-        // Vérifier d'abord les paramètres d'URL
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        // Récupérer les paramètres du fragment d'URL (#access_token=...)
+        const hash = window.location.hash;
+        console.log('🔍 URL hash:', hash);
+        
+        if (!hash) {
+          setError('Lien de réinitialisation invalide. Veuillez demander un nouveau lien.');
+          return;
+        }
+        
+        const hashParams = new URLSearchParams(hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
         const type = hashParams.get('type');
@@ -42,6 +49,9 @@ export default function ResetPassword() {
           
           console.log('✅ Session définie avec succès');
           setSessionReady(true);
+          
+          // Nettoyer l'URL pour éviter les problèmes de navigation
+          window.history.replaceState({}, document.title, window.location.pathname);
         } else {
           console.log('❌ Paramètres manquants ou invalides');
           setError('Lien de réinitialisation invalide. Veuillez demander un nouveau lien.');
@@ -114,6 +124,22 @@ export default function ResetPassword() {
     }
   };
 
+  // Si pas de session prête et pas d'erreur, afficher le chargement
+  if (!sessionReady && !error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Vérification du lien de récupération...
+          </h2>
+          <p className="text-gray-600">
+            Veuillez patienter pendant que nous vérifions votre lien.
+          </p>
+        </div>
+      </div>
+    );
+  }
   if (success) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
