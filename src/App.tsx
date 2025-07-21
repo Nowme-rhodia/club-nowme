@@ -1,6 +1,5 @@
-// ... imports existants ...
-import React, { Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { Suspense, useEffect } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './lib/auth';
@@ -9,6 +8,29 @@ import { Footer } from './components/Footer';
 import { PrivateRoute } from './components/PrivateRoute';
 import { LoadingFallback } from './components/LoadingFallback';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Fonction d'aide pour intercepter les liens de récupération
+function AuthRedirectHandler() {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Vérifier si l'URL contient un fragment d'authentification
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      // Extraire les paramètres du fragment
+      const params = new URLSearchParams(hash.substring(1));
+      const type = params.get('type');
+      
+      if (type === 'recovery') {
+        // Rediriger vers la page de réinitialisation de mot de passe
+        // tout en conservant le hash pour que la page puisse l'utiliser
+        navigate('/auth/reset-password');
+      }
+    }
+  }, [navigate]);
+  
+  return null;
+}
 
 // Auth pages
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
@@ -62,8 +84,10 @@ function App() {
             <main className="flex-grow">
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
+                  {/* Ajoutez ce composant pour intercepter les redirections d'authentification */}
+                  <Route path="/" element={<><AuthRedirectHandler /><Home /></>} />
+                  
                   {/* Public routes */}
-                  <Route path="/" element={<Home />} />
                   <Route path="/categories" element={<Categories />} />
                   <Route path="/tous-les-kiffs" element={<TousLesKiffs />} />
                   <Route path="/offres/:id" element={<OfferPage />} />
