@@ -1,11 +1,14 @@
-// scripts/check-supabase-config.js
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 console.log('Vérification de la configuration Supabase...');
 
 // Vérifier les variables d'environnement nécessaires
-const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const requiredEnvVars = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
@@ -15,16 +18,16 @@ if (missingEnvVars.length > 0) {
 
 // Vérifier si les URLs sont valides
 try {
-  new URL(process.env.SUPABASE_URL);
-  console.log('✅ SUPABASE_URL est une URL valide');
+  new URL(process.env.VITE_SUPABASE_URL);
+  console.log('✅ VITE_SUPABASE_URL est une URL valide');
 } catch (error) {
-  console.error('❌ SUPABASE_URL n\'est pas une URL valide');
+  console.error('❌ VITE_SUPABASE_URL n\'est pas une URL valide');
   process.exit(1);
 }
 
-// Vérifier si la clé de service a un format valide (simple vérification de longueur)
-if (process.env.SUPABASE_SERVICE_ROLE_KEY.length < 30) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY semble invalide (trop courte)');
+// Vérifier si la clé anon a un format valide
+if (process.env.VITE_SUPABASE_ANON_KEY.length < 30) {
+  console.error('❌ VITE_SUPABASE_ANON_KEY semble invalide (trop courte)');
   process.exit(1);
 }
 

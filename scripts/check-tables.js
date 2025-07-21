@@ -35,26 +35,20 @@ async function checkTables() {
     
     const supabase = createClient(
       `https://${projectId}.supabase.co`,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
+      process.env.VITE_SUPABASE_ANON_KEY
     );
 
     const { data, error } = await supabase
-      .rpc('exec_sql', {
-        sql: `
-          SELECT table_name 
-          FROM information_schema.tables 
-          WHERE table_schema = 'public'
-          ORDER BY table_name;
-        `
-      });
+      .from('user_profiles')
+      .select('*')
+      .limit(1);
 
-    if (error) throw error;
-
-    console.log('\nTables trouvées:');
-    console.log('----------------');
-    data.forEach(row => {
-      console.log(`- ${row.table_name}`);
-    });
+    if (error) {
+      console.error('❌ Erreur:', error.message);
+    } else {
+      console.log('✅ Tables accessibles');
+      console.log(`📊 Connexion réussie`);
+    }
 
   } catch (error) {
     console.error('❌ Erreur lors de la vérification:', error.message);

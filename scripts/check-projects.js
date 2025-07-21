@@ -1,13 +1,8 @@
 #!/usr/bin/env node
 
-import pkg from '@supabase/supabase-js';
-const { createClient } = pkg;
-
-import cmdPkg from 'commander';
-const { program } = cmdPkg;
-
-import dotenvPkg from 'dotenv';
-const dotenv = dotenvPkg;
+import { createClient } from '@supabase/supabase-js';
+import { program } from 'commander';
+import dotenv from 'dotenv';
 
 program
   .version('1.0.0')
@@ -32,10 +27,10 @@ async function checkProjects() {
       try {
         const supabase = createClient(
           project.url,
-          process.env[`SUPABASE_${env.toUpperCase()}_SERVICE_KEY`] || process.env.SUPABASE_SERVICE_ROLE_KEY
+          process.env[`SUPABASE_${env.toUpperCase()}_SERVICE_KEY`] || process.env.VITE_SUPABASE_ANON_KEY
         );
 
-        const { data, error } = await supabase.from('_prisma_migrations').select('*').limit(1);
+        const { data, error } = await supabase.from('user_profiles').select('count');
         
         if (error && error.code === '42P01') {
           console.log(`✓ ${env.padEnd(12)} (${project.id}) - Connexion OK`);

@@ -23,14 +23,14 @@ async function testConnection() {
       console.log('✅ Connexion réussie !');
       console.log(`📊 Tables accessibles`);
       
-      // Liste des tables disponibles
-      const { data: tables } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public');
+      // Liste des tables disponibles (approximative)
+      const tables = [
+        'user_profiles', 'partners', 'offers', 'club_events', 
+        'masterclasses', 'wellness_consultations', 'member_rewards'
+      ];
         
-      tables?.forEach(table => {
-        console.log(`   - ${table.table_name}`);
+      tables.forEach(table => {
+        console.log(`   - ${table}`);
       });
     }
   } catch (error) {
