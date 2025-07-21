@@ -83,18 +83,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Tentative de connexion avec:', email);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur de connexion:', error);
+        throw error;
+      }
+
+      console.log('Connexion réussie, utilisateur:', user);
 
       // Redirection basée sur le rôle
       const { data: partnerData } = await supabase
         .from('partners')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id || '')
         .single();
 
       if (partnerData) {
@@ -103,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: userData } = await supabase
           .from('user_profiles')
           .select('*')
-          .eq('user_id', user?.id)
+          .eq('user_id', user?.id || '')
           .single();
 
         if (userData?.is_admin) {
@@ -116,7 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Email ou mot de passe incorrect');
+      const errorMessage = error instanceof Error ? error.message : 'Email ou mot de passe incorrect';
+      toast.error(errorMessage);
       throw error; // Important: propager l'erreur pour la gestion dans le composant
     }
   };
