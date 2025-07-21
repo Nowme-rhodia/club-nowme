@@ -24,7 +24,7 @@ export default function QuiSommesNous() {
         <div className="mt-6 animate-bounce-slow">
           <Link to="/subscription" className="inline-flex items-center px-6 py-3 bg-pink-500 text-white font-semibold rounded-full hover:bg-pink-600 transition-all">
             <ChevronRight className="w-5 h-5 mr-2" />
-            Je veux kiffer maintenant
+            Je commence mon aventure !
           </Link>
         </div>
       </section>
@@ -76,7 +76,7 @@ export default function QuiSommesNous() {
         <div className="max-w-3xl mx-auto text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4 animate-fade-in">Moi, Rhodia, ta complice du kiff 💕</h2>
           <p className="text-lg text-gray-600 animate-fade-in-up">
-            Une meuf comme toi : j’ai galéré, ri, pleuré, et maintenant je veux qu’on kiffe ensemble.
+            Teste à 12,99€, puis accès premium complet à 39,99€. Plus de 120€ de valeur chaque mois !
           </p>
         </div>
         <ul className="timeline space-y-12 relative border-l-4 border-pink-500 pl-8">

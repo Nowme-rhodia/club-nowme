@@ -200,16 +200,29 @@ Deno.serve(async (req) => {
   try {
     switch(event.type) {
       case "checkout.session.completed":
+        const sessionData = stripeData;
+        const isDiscoveryPrice = sessionData.amount_total === 1299; // 12,99€ en centimes
+        
         if (!user) {
           // Create user profile
           await supabase.from("user_profiles").insert({
             email,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            subscription_status: "active"
+            subscription_status: "active",
+            subscription_type: isDiscoveryPrice ? "discovery" : "premium"
           });
           logger.success("New user created from Checkout", {
-            email
+            email,
+            type: isDiscoveryPrice ? "discovery" : "premium"
+          });
+        } else {
+          // Update existing user
+          await updateProfile({
+            subscription_status: "active",
+            subscription_type: isDiscoveryPrice ? "discovery" : "premium",
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId
           });
         }
         break;
@@ -218,10 +231,29 @@ Deno.serve(async (req) => {
         if (user) {
           await updateProfile({
             subscription_status: "created",
-            stripe_subscription_id: subscriptionId
+            stripe_subscription_id: subscriptionId,
+            subscription_type: "discovery" // Par défaut, sera mis à jour au premier paiement
           });
           logger.success("Subscription initially created", {
             email
+          });
+        }
+        break;
+      
+      case "customer.subscription.updated":
+        if (user) {
+          // Vérifier si c'est un passage de discovery à premium
+          const subscription = stripeData;
+          const isPremiumPrice = subscription.items?.data?.[0]?.price?.unit_amount === 3999;
+          
+          await updateProfile({
+            subscription_status: "active",
+            subscription_type: isPremiumPrice ? "premium" : "discovery"
+          });
+          
+          logger.success("Subscription updated", {
+            email,
+            newType: isPremiumPrice ? "premium" : "discovery"
           });
         }
         break;
@@ -238,14 +270,21 @@ Deno.serve(async (req) => {
         break;
       
       case "invoice.payment_succeeded":
+        const invoice = stripeData;
+        const amount = invoice.amount_paid;
+        const isPremiumPayment = amount === 3999; // 39,99€ en centimes
+        
         if (user) {
           await updateProfile({
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            subscription_status: "active"
+            subscription_status: "active",
+            subscription_type: isPremiumPayment ? "premium" : "discovery"
           });
-          logger.success("Subscription status set to 'active'", {
-            email
+          logger.success("Payment succeeded - subscription updated", {
+            email,
+            amount: amount / 100,
+            type: isPremiumPayment ? "premium" : "discovery"
           });
         }
         break;

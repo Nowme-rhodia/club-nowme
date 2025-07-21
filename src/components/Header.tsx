@@ -57,7 +57,7 @@ export function Header() {
               to="/subscription"
               className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
             >
-              S'abonner au kiff
+              Tester à 12,99€
             </Link>
 
             <Link
@@ -118,7 +118,7 @@ export function Header() {
                 className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 transform hover:scale-105 w-full text-center active:scale-95"
                 onClick={() => setIsMenuOpen(false)}
               >
-                S'abonner au kiff
+                Tester à 12,99€
               </Link>
               <Link
                 to="/soumettre-offre"

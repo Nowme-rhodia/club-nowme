@@ -94,8 +94,34 @@ export default function Account() {
               </h1>
               <p className="text-gray-500 mb-2">Membre depuis janvier 2024</p>
               <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                Abonnement actif
+                {profile?.subscription_type === 'discovery' ? 'Découverte active' : 'Premium actif'}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Informations d'abonnement détaillées */}
+        <div className="bg-white rounded-xl shadow-soft p-6 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-2">Mon abonnement</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Type :</span>
+                <span className="font-medium">
+                  {profile?.subscription_type === 'discovery' ? 'Découverte (12,99€)' : 'Premium (39,99€)'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Statut :</span>
+                <span className="text-green-600 font-medium">Actif</span>
+              </div>
+              {profile?.subscription_type === 'discovery' && (
+                <div className="mt-3 p-3 bg-primary/5 rounded-lg">
+                  <p className="text-sm text-primary font-medium">
+                    🎉 Prochain mois : Accès premium complet pour 39,99€
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

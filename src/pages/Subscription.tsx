@@ -165,9 +165,22 @@ export default function Subscription() {
   ];
 
   const faqItems = [
-    { question: "Comment je profite des avantages ?", answer: "Ton abonnement te donne un QR code pour débloquer des réductions jusqu’à -50% chez nos partenaires. Easy !" },
-    { question: "C’est flexible ?", answer: "Carrément ! Résilie en 1 clic, zéro prise de tête." },
-    { question: "C’est partout en France ?", answer: "Paris et banlieue pour l’instant, mais on grandit vite. Dis-nous où tu es !" },
+    { 
+      question: "Pourquoi 12,99€ puis 39,99€ ?", 
+      answer: "Le 1er mois à 12,99€ te permet de découvrir la communauté et les premiers avantages. Ensuite, 39,99€ te donne accès à TOUT : événements premium, box trimestrielle, masterclass, consultations... Plus de 120€ de valeur réelle !" 
+    },
+    { 
+      question: "Qu'est-ce que j'ai concrètement chaque mois ?", 
+      answer: "Dès le 1er mois : réductions partenaires + 1 événement + groupe WhatsApp + newsletter. À partir du 2ème : 2-3 événements premium + box tous les 3 mois + masterclass + consultation bien-être + réductions majorées + conciergerie." 
+    },
+    { 
+      question: "Je peux annuler quand ?", 
+      answer: "Quand tu veux ! Résiliation en 1 clic depuis ton compte, sans justification. Tu gardes l'accès jusqu'à la fin de ton mois payé." 
+    },
+    { 
+      question: "C'est où exactement ?", 
+      answer: "Paris et Île-de-France pour l'instant. Mais on s'étend vite ! Dis-nous ta région pour être prévenue en priorité." 
+    },
   ];
 
   const categories = [
@@ -356,52 +369,101 @@ export default function Subscription() {
       <div id="plans" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-12 animate-fade-in">
-            Ton pass pour kiffer à fond !
+            Rejoins le Nowme Club !
           </h2>
           <p className="text-xl text-gray-600 text-center mb-8 animate-fade-in-up">
-            Offre spéciale lancement jusqu’au 15 avril : deviens une pionnière du kiff !
+            Teste d'abord, kiffe ensuite ! Premier mois découverte puis accès à tout le premium.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-xl transition-shadow animate-slide-up">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Mensuel</h3>
-              <div className="mb-6">
-                <div className="flex items-baseline">
-                  <span className="text-4xl font-bold text-gray-900 animate-pulse-price">9,99€</span>
-                  <span className="text-gray-500 ml-2">/mois</span>
-                </div>
-                <p className="text-primary font-semibold mt-2">1er mois à 4,99€ – teste sans pression !</p>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />Résilie quand tu veux</li>
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />-50% sur massages, sorties, ateliers</li>
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />Soirées exclusives entre filles</li>
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />Bons plans à gogo</li>
-              </ul>
-              <Link to="/checkout?plan=monthly" className="block w-full text-center px-6 py-3 rounded-full bg-primary text-white font-semibold hover:bg-primary-dark transition-all animate-bounce-slow">
-                Je teste le kiff
-              </Link>
-            </div>
-            <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-primary relative hover:shadow-xl transition-shadow animate-slide-up">
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-primary relative hover:shadow-2xl transition-shadow animate-slide-up">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="px-4 py-1 bg-primary text-white rounded-full text-sm font-medium animate-pulse">Économise 20,88€</span>
+                <span className="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-full text-sm font-bold animate-pulse">
+                  ✨ OFFRE DÉCOUVERTE ✨
+                </span>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Annuel</h3>
+              <div className="text-center mb-8">
+                <h3 className="text-3xl font-bold text-gray-900 mb-4">Nowme Club Premium</h3>
+                <p className="text-gray-600">Tout l'accès, tarif progressif</p>
+              </div>
               <div className="mb-6">
-                <div className="flex items-baseline">
-                  <span className="text-4xl font-bold text-gray-900 animate-pulse-price">99€</span>
-                  <span className="text-gray-500 ml-2">/an</span>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-4 mb-4">
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500 uppercase tracking-wide mb-1">1er mois</div>
+                      <div className="flex items-baseline justify-center">
+                        <span className="text-4xl font-bold text-primary animate-pulse-price">12,99€</span>
+                      </div>
+                      <div className="text-xs text-gray-500">Pour tout découvrir</div>
+                    </div>
+                    <div className="text-2xl text-gray-400">→</div>
+                    <div className="text-center">
+                      <div className="text-sm text-gray-500 uppercase tracking-wide mb-1">Puis</div>
+                      <div className="flex items-baseline justify-center">
+                        <span className="text-4xl font-bold text-gray-900">39,99€</span>
+                        <span className="text-gray-500 ml-1">/mois</span>
+                      </div>
+                      <div className="text-xs text-gray-500">Accès premium complet</div>
+                    </div>
+                  </div>
+                  <p className="text-primary font-semibold text-center bg-primary/10 rounded-lg p-3">
+                    🎯 Teste sans risque, résilie quand tu veux !
+                  </p>
                 </div>
-                <p className="text-gray-500 line-through mt-2">119,88€ – 2 mois gratos !</p>
               </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />2 mois offerts pour kiffer plus</li>
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />-50% sur tout, toute l’année</li>
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />Soirées VIP qui déchirent</li>
-                <li className="flex items-center"><Check className="w-5 h-5 text-primary mr-3" />Priorité sur les nouveaux plans</li>
-              </ul>
-              <Link to="/checkout?plan=yearly" className="block w-full text-center px-6 py-3 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-semibold hover:shadow-lg transition-all animate-bounce-slow">
-                Je kiffe à fond
+              
+              <div className="space-y-6 mb-8">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center text-primary text-sm font-bold mr-2">1</span>
+                    Dès le 1er mois (12,99€)
+                  </h4>
+                  <ul className="space-y-2 ml-8">
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Réductions jusqu'à -50% chez nos partenaires</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Accès au groupe WhatsApp communautaire</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />1 événement découverte par mois</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Newsletter hebdo avec bons plans</li>
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <span className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center text-primary text-sm font-bold mr-2">2</span>
+                    À partir du 2ème mois (39,99€)
+                  </h4>
+                  <ul className="space-y-2 ml-8">
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Tout du niveau découverte +</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />2-3 événements premium par mois</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Box surprise trimestrielle (valeur 30€)</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Masterclass exclusives avec expertes</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Consultation bien-être gratuite/trimestre</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Réductions majorées (-70% vs -50%)</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Service conciergerie pour tes réservations</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Accès prioritaire aux nouveautés</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-r from-primary/5 to-secondary/5 rounded-lg p-4 mb-6">
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-gray-900 mb-1">💰 Valeur réelle du premium :</p>
+                  <div className="flex justify-center items-center gap-4 text-xs text-gray-600">
+                    <span>Événements: 25€</span>
+                    <span>Box: 10€</span>
+                    <span>Masterclass: 20€</span>
+                    <span>Consultation: 15€</span>
+                    <span>Réductions: 50€+</span>
+                  </div>
+                  <p className="text-primary font-bold mt-1">= Plus de 120€ de valeur pour 39,99€ !</p>
+                </div>
+              </div>
+              
+              <Link to="/checkout?plan=discovery" className="block w-full text-center px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg hover:shadow-lg transition-all animate-bounce-slow">
+                🚀 Je commence mon aventure Nowme !
               </Link>
+              
+              <p className="text-center text-xs text-gray-500 mt-4">
+                Sans engagement • Résiliation en 1 clic • Support 7j/7
+              </p>
             </div>
           </div>
         </div>
@@ -415,15 +477,15 @@ export default function Subscription() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-[#FDF8F4] p-6 rounded-xl shadow animate-slide-up" style={{ animationDelay: '0.1s' }}>
-              <p className="text-gray-700 mb-4">"Un massage à -30% après le boulot, et des copines pour rire : je revis !"</p>
+              <p className="text-gray-700 mb-4">"Les masterclass m'ont ouvert les yeux, et les copines du groupe me boostent chaque jour !"</p>
               <p className="font-semibold text-primary">— Amandine, jeune pro</p>
             </div>
             <div className="bg-[#FDF8F4] p-6 rounded-xl shadow animate-slide-up" style={{ animationDelay: '0.2s' }}>
-              <p className="text-gray-700 mb-4">"Les apéros à 5 €, c’est mon moment à moi. Plus de culpabilité !"</p>
+              <p className="text-gray-700 mb-4">"La box trimestrielle + les événements premium : je me sens chouchoutée !"</p>
               <p className="font-semibold text-primary">— Samira, maman active</p>
             </div>
             <div className="bg-[#FDF8F4] p-6 rounded-xl shadow animate-slide-up" style={{ animationDelay: '0.3s' }}>
-              <p className="text-gray-700 mb-4">"Un atelier peinture et des bons plans partout : je kiffe à fond."</p>
+              <p className="text-gray-700 mb-4">"12,99€ pour tester, puis j'ai vu la valeur : 39,99€ c'est donné pour tout ça !"</p>
               <p className="font-semibold text-primary">— Julie, chasseuse de deals</p>
             </div>
           </div>

@@ -118,22 +118,22 @@ const Community: React.FC = () => {
             <motion.section className="py-16 bg-[#BF2778]/5" {...fadeInUp}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-12">
-            Ce que tu peux faire ici
+            Ce que tu auras dans le club
           </motion.h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
-              { title: 'Proposer un moment', icon: 'M5 13l4 4L19 7' },
-              { title: 'Participer à un défi', icon: 'M12 8v4l3 3' },
+              { title: 'Événements premium', icon: 'M5 13l4 4L19 7' },
+              { title: 'Box trimestrielle', icon: 'M12 8v4l3 3' },
               {
-                title: 'Rejoindre un groupe',
+                title: 'Masterclass expertes',
                 icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197',
               },
               {
-                title: 'Poser une question',
+                title: 'Consultations bien-être',
                 icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
               },
               {
-                title: 'Idées de kiff',
+                title: 'Service conciergerie',
                 icon: 'M13 10V3L4 14h7v7l9-11h-7z',
               },
             ].map((item, idx) => (
@@ -210,12 +210,13 @@ const Community: React.FC = () => {
             Tu veux faire partie de tout ça ?
           </motion.h2>
           <motion.p className="text-lg text-gray-600 mb-8">C’est simple, abonne-toi pour 9,99 €/mois !</motion.p>
+          <motion.p className="text-lg text-gray-600 mb-8">C'est simple : 12,99€ pour découvrir, puis 39,99€ pour l'accès premium complet !</motion.p>
           <motion.a
             href="#subscribe"
-            className="inline-flex items-center px-8 py-4 rounded-full bg-[#E4D44C] text-gray-900 font-semibold text-lg hover:bg-[#D6C63F] transform hover:scale-105 transition-all duration-300 shadow-md mb-6"
+            className="inline-flex items-center px-8 py-4 rounded-full bg-[#BF2778] text-white font-semibold text-lg hover:bg-[#A62266] transform hover:scale-105 transition-all duration-300 shadow-md mb-6"
             whileHover={{ scale: 1.05 }}
           >
-            Je m’abonne pour rejoindre
+            Je teste à 12,99€ maintenant
           </motion.a>
           <p className="text-gray-600">
             Déjà membre ?{' '}

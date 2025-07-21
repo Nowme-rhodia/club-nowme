@@ -21,6 +21,7 @@ export interface Database {
           updated_at: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
+          subscription_type?: 'discovery' | 'premium';
         };
         Insert: {
           id?: string;
@@ -33,6 +34,7 @@ export interface Database {
           updated_at?: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
+          subscription_type?: 'discovery' | 'premium';
         };
         Update: {
           id?: string;
@@ -45,6 +47,7 @@ export interface Database {
           updated_at?: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
+          subscription_type?: 'discovery' | 'premium';
         };
       };
       partners: {

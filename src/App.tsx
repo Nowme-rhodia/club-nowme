@@ -36,6 +36,7 @@ const Community = React.lazy(() => import('./pages/Community'));
 const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const Subscription = React.lazy(() => import('./pages/Subscription'));
+const PricingComparison = React.lazy(() => import('./pages/PricingComparison'));
 
 // Admin routes
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
@@ -64,6 +65,7 @@ function App() {
                   <Route path="/soumettre-offre" element={<SubmitOffer />} />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
                   <Route path="/subscription" element={<Subscription />} />
+                  <Route path="/pricing" element={<PricingComparison />} />
 
                   {/* Auth routes */}
                   <Route path="/auth/signin" element={<SignIn />} />

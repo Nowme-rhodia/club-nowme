@@ -3,10 +3,19 @@ import { supabase } from './supabase';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
+// Nouveaux prix Stripe pour le modèle découverte
+export const STRIPE_PRICES = {
+  discovery: 'price_discovery_1299', // 12,99€ pour le 1er mois
+  premium: 'price_premium_3999',     // 39,99€ à partir du 2ème mois
+};
+
 export const createCheckoutSession = async (priceId: string) => {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('You must be logged in to subscribe');
+
+    // Utiliser le prix découverte par défaut
+    const finalPriceId = priceId === 'discovery' ? STRIPE_PRICES.discovery : priceId;
 
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
       method: 'POST',
@@ -14,7 +23,10 @@ export const createCheckoutSession = async (priceId: string) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
       },
-      body: JSON.stringify({ priceId })
+      body: JSON.stringify({ 
+        priceId: finalPriceId,
+        isDiscovery: priceId === 'discovery'
+      })
     });
 
     if (!response.ok) {
@@ -42,12 +54,16 @@ export const getSubscriptionStatus = async () => {
 
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('subscription_status, stripe_subscription_id')
+      .select('subscription_status, stripe_subscription_id, subscription_type, created_at')
       .eq('user_id', session.user.id)
       .single();
 
     if (error) throw error;
-    return data?.subscription_status;
+    return {
+      status: data?.subscription_status,
+      type: data?.subscription_type,
+      isFirstMonth: data?.created_at && new Date(data.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    };
 
   } catch (error) {
     console.error('Error checking subscription:', error);

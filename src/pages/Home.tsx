@@ -16,7 +16,7 @@ export function Home() {
     <div className="min-h-screen bg-white">
       <SEO 
         title="Nowme - Ton kiff commence ici"
-        description="Massages, sorties, ateliers : l’abonnement qui te redonne le contrôle en Île-de-France."
+        description="Massages, sorties, ateliers : l'abonnement qui te redonne le contrôle en Île-de-France."
       />
 
       {/* Hero Section */}
@@ -29,10 +29,10 @@ export function Home() {
               <span className="text-pink-500 block">Kiffe enfin TA vie !</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto animate-fade-in-up">
-              Massages à -30%, apéros entre meufs à 5 €, ateliers qui te réveillent : Nowme, c’est TON abonnement pour reprendre le contrôle en Île-de-France.
+              Communauté premium, événements exclusifs, masterclass expertes : Nowme Club, c'est TON abonnement pour reprendre le contrôle en Île-de-France.
             </p>
             <p className="text-lg text-pink-600 font-semibold mb-12 animate-pulse">
-              Offre lancement : 1er mois à 4,99 €, jusqu’au 15 avril !
+              Découverte : 1er mois à 12,99€, puis accès premium à 39,99€ !
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -65,22 +65,22 @@ export function Home() {
               {
                 icon: Users,
                 title: "Validé par des meufs comme toi",
-                description: "Chaque massage, chaque apéro : testé et approuvé par notre communauté."
+                description: "Chaque événement, chaque partenaire : testé et approuvé par notre communauté premium."
               },
               {
                 icon: Star,
-                title: "Économise jusqu’à -50%",
-                description: "Spa, sorties, ateliers : ton portefeuille respire, toi aussi."
+                title: "Plus de 120€ de valeur",
+                description: "Événements, box, masterclass, consultations : tout inclus pour 39,99€."
               },
               {
                 icon: Shield,
                 title: "Zéro stress, 100% liberté",
-                description: "Résilie en 1 clic, kiffe quand tu veux, sans pression."
+                description: "Teste à 12,99€, résilie en 1 clic, kiffe quand tu veux."
               },
               {
                 icon: Search,
-                title: "Ton kiff à deux pas",
-                description: "Des plans géniaux en Île-de-France, trouvés en un clin d’œil."
+                title: "Communauté premium",
+                description: "Masterclass, événements exclusifs, groupe privé : ta tribu t'attend."
               }
             ].map((feature, index) => (
               <div
@@ -112,12 +112,12 @@ export function Home() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { title: "Bien-être", description: "Massages à -30%, yoga doux", image: "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&q=80&w=800" },
-              { title: "Sorties", description: "Apéros à 5 €, soirées fun", image: "https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&q=80&w=800" },
-              { title: "Créativité", description: "Peinture, poterie", image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&q=80&w=800" },
-              { title: "Développement perso", description: "Coaching, méditation", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800" },
-              { title: "Shopping", description: "Ventes privées, mode", image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800" },
-              { title: "Beauté", description: "Soins, lifestyle", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=80&w=800" },
+              { title: "Événements Premium", description: "Brunchs, masterclass, networking", image: "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&q=80&w=800" },
+              { title: "Communauté", description: "Groupes privés, parrainage", image: "https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&q=80&w=800" },
+              { title: "Box & Surprises", description: "Produits bien-être, lifestyle", image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&q=80&w=800" },
+              { title: "Développement", description: "Coaching, consultations", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800" },
+              { title: "Réductions", description: "Jusqu'à -70% chez nos partenaires", image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800" },
+              { title: "Conciergerie", description: "On s'occupe de tes réservations", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=80&w=800" },
             ].map((category, index) => (
               <Link
                 key={index}
@@ -147,7 +147,7 @@ export function Home() {
             On dit stop au train-train, oui au kiff !
           </h2>
           <p className="text-lg text-gray-600 mb-8 animate-fade-in-up">
-            Fini de courir après des miettes de bonheur entre deux corvées. Nowme, c’est la révolution des meufs qui veulent vivre, vibrer, et kiffer sans se justifier.
+            Fini de courir après des miettes de bonheur entre deux corvées. Nowme, c'est la révolution des meufs qui veulent vivre, vibrer, et kiffer sans se justifier.
           </p>
           <p className="text-lg text-gray-600 font-semibold">
             Une plateforme faite par nous, pour nous. Rejoins le mouvement !
@@ -163,9 +163,9 @@ export function Home() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
-              { name: "Marie L.", role: "Entrepreneuse", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150", quote: "Un apéro à 5 € qui m’a fait rire aux larmes. Nowme, c’est ma bouffée d’air !" },
+              { name: "Marie L.", role: "Entrepreneuse", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150", quote: "Un apéro à 5 € qui m'a fait rire aux larmes. Nowme, c'est ma bouffée d'air !" },
               { name: "Sophie D.", role: "Maman active", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150", quote: "Enfin du temps pour moi sans culpabiliser. Les massages à -30%, un rêve !" },
-              { name: "Léa P.", role: "Créative", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150", quote: "Un atelier poterie qui m’a reconnectée à moi-même. Merci Nowme !" },
+              { name: "Léa P.", role: "Créative", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150", quote: "Un atelier poterie qui m'a reconnectée à moi-même. Merci Nowme !" },
             ].map((testimonial, index) => (
               <div
                 key={index}
@@ -196,7 +196,7 @@ export function Home() {
             Prête à rejoindre les pionnières du kiff ?
           </h2>
           <p className="text-xl mb-8 animate-fade-in-up">
-            Jusqu’au 15 avril : 1er mois à 4,99 € + accès VIP aux premiers événements. Ne rate pas le départ !
+            Teste à 12,99€, puis accès premium complet à 39,99€. Plus de 120€ de valeur chaque mois !
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -204,7 +204,7 @@ export function Home() {
               className="inline-flex items-center px-8 py-4 rounded-full bg-white text-pink-500 font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all animate-bounce-slow"
             >
               <Sparkles className="w-5 h-5 mr-2" />
-              Je m’abonne maintenant
+              Je m'abonne maintenant
             </Link>
             <Link
               to="/tous-les-kiffs"
