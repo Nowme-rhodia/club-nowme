@@ -1,64 +1,45 @@
 # Créer un utilisateur test via SQL
 
-## 🔧 **MÉTHODE 1 : Via SQL Editor dans Supabase**
+## 🔧 **NOUVELLE MÉTHODE SIMPLE :**
 
-### Étape 1 : Aller dans SQL Editor
+### Étape 1 : Exécuter la migration
+**Supabase Dashboard** → **SQL Editor** → Copier le fichier `20250721142843_proud_boat.sql`
+
+### Étape 2 : Utiliser la fonction helper
 **Supabase Dashboard** → **SQL Editor** → **New query**
 
-### Étape 2 : Méthode simple qui fonctionne
 ```sql
--- Méthode qui fonctionne avec les nouvelles politiques
-DO $$
-DECLARE
-    user_uuid uuid;
-BEGIN
-    user_uuid := gen_random_uuid();
-    
-    -- Créer l'utilisateur auth
-    INSERT INTO auth.users (
-        instance_id, id, aud, role, email, encrypted_password,
-        email_confirmed_at, created_at, updated_at, 
-        raw_app_meta_data, raw_user_meta_data, is_super_admin
-    ) VALUES (
-        '00000000-0000-0000-0000-000000000000',
-        user_uuid,
-        'authenticated',
-        'authenticated',
-        'test-simple@nowme.fr',
-        crypt('motdepasse123', gen_salt('bf')),
-        now(),
-        now(),
-        now(),
-        '{}',
-        '{}',
-        false
-    );
-    
-    -- Créer le profil utilisateur
-    INSERT INTO public.user_profiles (
-        user_id, email, first_name, last_name, phone, 
-        subscription_status, subscription_type
-    ) VALUES (
-        user_uuid,
-        'test-simple@nowme.fr',
-        'Sophie',
-        'Test',
-        '+33612345678',
-        'active',
-        'premium'
-    );
-    
-    RAISE NOTICE 'Utilisateur créé avec ID: %', user_uuid;
-END $$;
+-- Créer un utilisateur test premium
+SELECT create_test_user(
+  'test-nouveau@nowme.fr',
+  'motdepasse123',
+  'Sophie',
+  'Test',
+  '+33612345678',
+  'premium'
+);
 ```
 
-## 🔧 **MÉTHODE 2 : Si la première ne marche pas**
+### Étape 3 : Créer un utilisateur discovery
+```sql
+-- Créer un utilisateur test discovery
+SELECT create_test_user(
+  'test-discovery@nowme.fr',
+  'motdepasse123',
+  'Marie',
+  'Discovery',
+  '+33612345679',
+  'discovery'
+);
+```
+
+## 🔧 **MÉTHODE ALTERNATIVE : Si la fonction ne marche pas**
 
 ```sql
 -- Temporairement désactiver RLS pour créer l'utilisateur
 ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
 
--- Créer l'utilisateur (même code que ci-dessus)
+-- Créer l'utilisateur manuellement
 DO $$
 DECLARE
     user_uuid uuid;
@@ -97,7 +78,7 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ### Testez la connexion :
 ```
 URL: /auth/signin
-Email: test-simple@nowme.fr
+Email: test-nouveau@nowme.fr
 Password: motdepasse123
 ```
 
@@ -106,27 +87,29 @@ Password: motdepasse123
 URL: /account
 ```
 
+## 🔍 **VÉRIFIER LES UTILISATEURS CRÉÉS :**
+
+```sql
+-- Voir tous les utilisateurs auth
+SELECT id, email, created_at FROM auth.users ORDER BY created_at DESC;
+
+-- Voir tous les profils
+SELECT user_id, email, first_name, subscription_type FROM user_profiles ORDER BY created_at DESC;
+```
+
 ## 🚨 **SI ÇA NE MARCHE TOUJOURS PAS :**
 
-Le problème vient probablement de la configuration RLS (Row Level Security). 
-
-### Désactiver temporairement RLS :
 ```sql
--- Désactiver RLS sur user_profiles pour les tests
-ALTER TABLE public.user_profiles DISABLE ROW LEVEL SECURITY;
+-- Désactiver temporairement RLS
+ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
+-- Créer l'utilisateur manuellement
+-- Puis réactiver
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ```
 
-### Réactiver après les tests :
-```sql
--- Réactiver RLS
-ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
-```
+## 🎯 **AVANTAGES DE LA NOUVELLE MÉTHODE :**
 
-## 🔍 **VÉRIFIER LES POLITIQUES RLS :**
-
-```sql
--- Voir les politiques actuelles
-SELECT * FROM pg_policies WHERE tablename = 'user_profiles';
-```
-
-Essayez d'abord la **MÉTHODE 2** (fonction admin) car elle est plus simple ! 🚀
+- ✅ **Fonction helper** qui gère tout automatiquement
+- ✅ **Permissions correctes** pour service_role
+- ✅ **Création en une seule commande**
+- ✅ **Support discovery et premium**
