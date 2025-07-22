@@ -33,6 +33,8 @@ export default function Subscription() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const [selectedCategory, setSelectedCategory] = useState(null);
+
   const handleRegionSubmit = async (e) => {
     e.preventDefault();
     if (!regionForm.email || !regionForm.region) {
@@ -171,7 +173,7 @@ export default function Subscription() {
     },
     { 
       question: "Qu'est-ce que j'ai concrètement chaque mois ?", 
-      answer: "Dès le 1er mois : réductions partenaires + 1 événement + groupe WhatsApp + newsletter. À partir du 2ème : 2-3 événements premium + box tous les 3 mois + masterclass + consultation bien-être + réductions majorées + conciergerie." 
+      answer: "Dès le 1er mois : rituels audio quotidiens + réductions partenaires + 1 événement + groupe WhatsApp. À partir du 2ème : hotline SOS écrite + sessions live hebdo + audiothèque complète + événements premium + masterclass + carte interactive + tout le reste !" 
     },
     { 
       question: "Je peux annuler quand ?", 
@@ -197,22 +199,45 @@ export default function Subscription() {
       />
 
       {/* Hero Section */}
-      <div className="relative min-h-[70vh] flex items-center overflow-hidden">
+      <div className="relative min-h-[80vh] flex items-center overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center opacity-20 animate-subtle-zoom" 
              style={{ backgroundImage: "url('https://images.unsplash.com/photo-1517457373958-b7bdd7f6e7af?auto=format&fit=crop&q=80')" }} 
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+          <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-semibold mb-6">
+            <Users className="w-4 h-4 mr-2" />
+            Plus de 500 femmes nous font déjà confiance
+          </div>
+          
           <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 animate-fade-in-down ${scrollY > 50 ? 'opacity-0' : 'opacity-100'}`}>
-            Et si tu kiffais enfin TA vie ?  
-            <span className="text-primary block">Massages, apéros, liberté : c’est ton tour !</span>
+            Stop à la charge mentale,{' '}
+            <span className="text-primary block">place au kiff quotidien !</span>
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto mb-8 animate-fade-in-up">
-            Imagine : un spa à -30% après une journée folle, un apéro entre filles à 5 €, ou un atelier pour te retrouver.  
-            +100 femmes ont déjà dit oui au kiff sans se ruiner. Toi aussi ?
+            Rejoins une communauté de femmes qui s'entraident, partagent leurs bons plans et se soutiennent au quotidien. 
+            Parce que tu mérites mieux qu'une vie en mode survie.
           </p>
+          
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 max-w-2xl mx-auto mb-8">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-primary mb-1">12,99€</div>
+                <div className="text-sm text-gray-600">1er mois découverte</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">39,99€</div>
+                <div className="text-sm text-gray-600">Puis accès premium</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600 mb-1">120€+</div>
+                <div className="text-sm text-gray-600">Valeur réelle/mois</div>
+              </div>
+            </div>
+          </div>
+          
           <Link to="#plans" className="inline-flex items-center px-8 py-4 rounded-full bg-primary text-white font-semibold hover:bg-primary-dark transform hover:scale-105 transition-all animate-bounce-slow">
             <Sparkles className="w-5 h-5 mr-2" />
-            Je rejoins le kiff maintenant
+            Je teste maintenant (sans risque)
           </Link>
         </div>
       </div>
@@ -242,8 +267,8 @@ export default function Subscription() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 transform group-hover:scale-110 transition-all">
                 <Shield className="w-8 h-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Libre comme l’air</h3>
-              <p className="text-gray-600">Résilie en 1 clic quand tu veux. Le kiff, c’est zéro contrainte.</p>
+              <h3 className="text-xl font-semibold mb-2">Libre comme l'air</h3>
+              <p className="text-gray-600">Résilie en 1 clic quand tu veux. Le kiff, c'est zéro contrainte.</p>
             </div>
             <div className="text-center group animate-slide-up" style={{ animationDelay: '0.4s' }}>
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 transform group-hover:scale-110 transition-all">
@@ -260,15 +285,15 @@ export default function Subscription() {
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-12 animate-fade-in">
-            Ton kiff, ton style, dès aujourd’hui
+            Ton kiff, ton style, dès aujourd'hui
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {categories.map((category, index) => (
-              <Link 
-                key={index} 
-                to={`/kiffs/${category.title.toLowerCase()}`} 
-                className={`group relative h-80 rounded-2xl overflow-hidden animate-slide-left-right ${index % 2 === 0 ? 'animate-from-left' : 'animate-from-right'}`} 
-                style={{ animationDelay: `${index * 0.2}s` }}
+              <div
+                key={index}
+                onClick={() => setSelectedCategory(category)}
+                className="group relative h-80 rounded-2xl overflow-hidden animate-slide-up cursor-pointer"
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <img src={category.image} alt={category.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
@@ -279,22 +304,22 @@ export default function Subscription() {
                     Je veux ça !
                   </span>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Nouvelle Section : Aujourd’hui & Demain */}
+      {/* Nouvelle Section : Aujourd'hui & Demain */}
       <div className="py-20 bg-[#FDF8F4]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-12 animate-fade-in">
-            Ton kiff aujourd’hui, encore plus demain
+            Ton kiff aujourd'hui, encore plus demain
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Aujourd’hui */}
+            {/* Aujourd'hui */}
             <div className="space-y-6 animate-slide-up">
-              <h3 className="text-2xl font-bold text-gray-900">Aujourd’hui, tu as :</h3>
+              <h3 className="text-2xl font-bold text-gray-900">Aujourd'hui, tu as :</h3>
               <ul className="space-y-4 text-gray-600">
                 <li className="flex items-start">
                   <Check className="w-6 h-6 text-primary mr-2" />
@@ -344,7 +369,7 @@ export default function Subscription() {
       <div className="py-20 bg-[#FDF8F4]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-12 animate-fade-in">
-            Ta tribu t’attend déjà !
+            Ta tribu t'attend déjà !
           </h2>
           <p className="text-xl text-gray-600 mb-8 animate-fade-in-up">
             Imagine : tu arrives dans un groupe WhatsApp bouillant. "Qui est chaude pour un apéro vendredi ?"  
@@ -356,8 +381,8 @@ export default function Subscription() {
             className="rounded-xl shadow-lg max-w-full h-64 object-cover mx-auto animate-slide-up" 
           />
           <button 
-            to="/auth/test-signup"
             onClick={() => alert('Rejoins-nous après ton inscription !')}
+            className="mt-6 inline-flex items-center px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-all"
           >
             <MessageCircle className="w-5 h-5 inline mr-2" />
             Voir un aperçu du groupe
@@ -419,6 +444,7 @@ export default function Subscription() {
                   </h4>
                   <ul className="space-y-2 ml-8">
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Réductions jusqu'à -50% chez nos partenaires</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Rituels audio quotidiens (3-5 min)</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Accès au groupe WhatsApp communautaire</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />1 événement découverte par mois</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Newsletter hebdo avec bons plans</li>
@@ -432,10 +458,14 @@ export default function Subscription() {
                   </h4>
                   <ul className="space-y-2 ml-8">
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Tout du niveau découverte +</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Hotline SOS écrite (réponse sous 24h)</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Sessions live hebdo + replay</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Audiothèque complète (stress, émotions, sommeil)</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />2-3 événements premium par mois</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Box surprise trimestrielle (valeur 30€)</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Masterclass exclusives avec expertes</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Consultation bien-être gratuite/trimestre</li>
+                    <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Carte interactive pour rencontrer des membres</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Réductions majorées (-70% vs -50%)</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Service conciergerie pour tes réservations</li>
                     <li className="flex items-center text-sm"><Check className="w-4 h-4 text-primary mr-2" />Accès prioritaire aux nouveautés</li>
@@ -447,11 +477,11 @@ export default function Subscription() {
                 <div className="text-center">
                   <p className="text-sm font-semibold text-gray-900 mb-1">💰 Valeur réelle du premium :</p>
                   <div className="flex justify-center items-center gap-4 text-xs text-gray-600">
+                    <span>Hotline SOS: 20€</span>
+                    <span>Audio: 15€</span>
                     <span>Événements: 25€</span>
-                    <span>Box: 10€</span>
                     <span>Masterclass: 20€</span>
-                    <span>Consultation: 15€</span>
-                    <span>Réductions: 50€+</span>
+                    <span>Réductions: 40€+</span>
                   </div>
                   <p className="text-primary font-bold mt-1">= Plus de 120€ de valeur pour 39,99€ !</p>
                 </div>
