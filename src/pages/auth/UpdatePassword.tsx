@@ -10,10 +10,10 @@ export default function UpdatePassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [hasValidTokens, setHasValidTokens] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState(null);
 
   useEffect(() => {
     const parseTokensFromUrl = () => {
@@ -63,7 +63,7 @@ export default function UpdatePassword() {
     return () => clearTimeout(timer);
   }, [navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     
@@ -80,7 +80,6 @@ export default function UpdatePassword() {
 
     setLoading(true);
     console.log("Updating password...");
-    console.log("Current URL hash:", window.location.hash);
     
     // Récupérer à nouveau les tokens pour être sûr
     let hash = window.location.hash;
@@ -102,13 +101,12 @@ export default function UpdatePassword() {
     try {
       // Utiliser l'Edge Function pour réinitialiser le mot de passe
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-      console.log("Calling Edge Function...");
+      console.log("Calling Edge Function at:", `${SUPABASE_URL}/functions/v1/reset-password`);
       
       const response = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Pas besoin d'Authorization header car l'Edge Function utilise le rôle de service
         },
         body: JSON.stringify({
           accessToken: access_token,
@@ -122,7 +120,7 @@ export default function UpdatePassword() {
       console.log("Edge Function response:", data);
       
       if (!response.ok) {
-        throw new Error(data.error || `Erreur ${response.status}: La mise à jour a échoué`);
+        throw new Error(data.error || data.details || `Erreur ${response.status}: La mise à jour a échoué`);
       }
       
       console.log("Password update successful:", data.success);
@@ -135,7 +133,7 @@ export default function UpdatePassword() {
           state: { message: 'Votre mot de passe a été mis à jour avec succès' }
         });
       }, 2000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erreur lors de la mise à jour du mot de passe:', err);
       setError(err.message || 'Une erreur est survenue lors de la mise à jour du mot de passe');
     } finally {
