@@ -11,21 +11,22 @@ export const STRIPE_PRICES = {
 
 export const createCheckoutSession = async (priceId: string) => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('You must be logged in to subscribe');
-
     // Utiliser le prix découverte par défaut
     const finalPriceId = priceId === 'discovery' ? STRIPE_PRICES.discovery : priceId;
 
+    const origin = window.location.origin;
+    
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Origin': origin
       },
       body: JSON.stringify({ 
         priceId: finalPriceId,
-        isDiscovery: priceId === 'discovery'
+        isDiscovery: priceId === 'discovery',
+        origin: origin
       })
     });
 

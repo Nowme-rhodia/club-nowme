@@ -60,6 +60,8 @@ const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const Subscription = React.lazy(() => import('./pages/Subscription'));
 const PricingComparison = React.lazy(() => import('./pages/PricingComparison'));
+const Checkout = React.lazy(() => import('./pages/Checkout'));
+const SubscriptionSuccess = React.lazy(() => import('./pages/SubscriptionSuccess'));
 
 // Club pages
 const ClubEvents = React.lazy(() => import('./pages/club/Events'));
@@ -96,6 +98,8 @@ function App() {
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
                   <Route path="/subscription" element={<Subscription />} />
                   <Route path="/pricing" element={<PricingComparison />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/subscription-success" element={<SubscriptionSuccess />} />
 
                   {/* Club routes */}
                   <Route

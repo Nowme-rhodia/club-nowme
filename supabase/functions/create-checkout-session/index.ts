@@ -16,7 +16,11 @@ serve(async (req) => {
   }
 
   try {
-    const { priceId } = await req.json();
+    const { priceId, origin } = await req.json();
+    
+    if (!priceId) {
+      throw new Error('Price ID is required');
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -27,11 +31,13 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get('origin')}/subscription`,
+      success_url: `${origin || req.headers.get('origin')}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin || req.headers.get('origin')}/subscription`,
       allow_promotion_codes: true,
       billing_address_collection: 'required',
-      customer_email: req.headers.get('X-Customer-Email'),
+      automatic_tax: {
+        enabled: true,
+      },
     });
 
     return new Response(
