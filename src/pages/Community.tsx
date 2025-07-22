@@ -13,6 +13,7 @@ import {
   Sparkles,
   Coffee,
   MapPin,
+  MapPin,
   Shield,
   X,
   Play,
