@@ -33,7 +33,8 @@ export const PRICING_TIERS: PricingTier[] = [
       'Réductions jusqu\'à -50% chez nos partenaires',
       'Accès au groupe WhatsApp communautaire',
       '1 événement découverte par mois',
-      'Newsletter hebdomadaire avec bons plans',
+      'Bons plans exclusifs hebdomadaires',
+      'Newsletter avec les pépites de la semaine',
       'Support par email',
       'Résiliation en 1 clic'
     ]
@@ -50,18 +51,44 @@ export const PRICING_TIERS: PricingTier[] = [
       'Tout du niveau Découverte +',
       '2-3 événements premium par mois',
       'Box surprise trimestrielle (valeur 30€)',
+      'Apéro en ligne mensuel entre membres',
+      'Tarifs réduits sur séjours entre filles',
+      'Accès prioritaire aux événements exclusifs',
       'Masterclass exclusives avec expertes',
       'Consultation bien-être gratuite/trimestre',
+      'Carte interactive pour rencontrer des membres',
       'Réductions majorées (jusqu\'à -70%)',
       'Service conciergerie pour réservations',
-      'Accès prioritaire aux nouveautés',
-      'Groupes WhatsApp spécialisés',
-      'Programme de parrainage'
+      'Invitations aux séjours Nowme',
+      'Communauté premium modérée'
     ]
   }
 ];
 
 export const SERVICE_OFFERINGS: ServiceOffering[] = [
+  {
+    category: 'Expériences & Découvertes',
+    items: [
+      {
+        name: 'Activités inédites',
+        description: 'Expériences testées et approuvées par la communauté',
+        value: 25,
+        frequency: '2-3 par mois'
+      },
+      {
+        name: 'Réductions exclusives',
+        description: 'Jusqu\'à -70% chez nos partenaires sélectionnés',
+        value: 20,
+        frequency: 'Permanent'
+      },
+      {
+        name: 'Bons plans en avant-première',
+        description: 'Accès prioritaire aux nouveautés et offres limitées',
+        value: 15,
+        frequency: 'Hebdomadaire'
+      }
+    ]
+  },
   {
     category: 'Événements & Communauté',
     items: [
@@ -72,39 +99,39 @@ export const SERVICE_OFFERINGS: ServiceOffering[] = [
         frequency: '2-3 par mois'
       },
       {
-        name: 'Masterclass expertes',
-        description: 'Sessions avec des professionnelles reconnues',
+        name: 'Soirées thématiques',
+        description: 'Apéros, ateliers créatifs, sorties culturelles',
         value: 20,
         frequency: '1 par mois'
       },
       {
-        name: 'Groupes WhatsApp spécialisés',
-        description: 'Par centres d\'intérêt et localisation',
+        name: 'Carte interactive membres',
+        description: 'Trouve des copines près de chez toi pour te rencontrer',
         value: 5,
         frequency: 'Accès permanent'
       }
     ]
   },
   {
-    category: 'Bien-être & Développement',
+    category: 'Avantages Premium',
     items: [
       {
-        name: 'Consultation bien-être',
-        description: 'Séance individuelle avec une experte',
-        value: 15,
-        frequency: '1 par trimestre'
+        name: 'Service conciergerie',
+        description: 'On s\'occupe de tes réservations et conseils perso',
+        value: 20,
+        frequency: 'Illimité'
       },
       {
         name: 'Box surprise',
-        description: 'Produits bien-être et lifestyle sélectionnés',
+        description: 'Produits lifestyle et bons plans découverte',
         value: 30,
         frequency: '1 par trimestre'
       },
       {
-        name: 'Méditations guidées',
-        description: 'Contenu audio exclusif',
+        name: 'Accès VIP',
+        description: 'Événements exclusifs et rencontres privilégiées',
         value: 10,
-        frequency: 'Nouveau contenu mensuel'
+        frequency: 'Mensuel'
       }
     ]
   },
