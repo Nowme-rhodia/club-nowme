@@ -1,8 +1,9 @@
 // reset-password.ts
-import { createClient } from 'npm:@supabase/supabase-js@2'
+// deno-lint-ignore-file no-explicit-any
 
-// Cette fonction Edge permet de réinitialiser le mot de passe d'un utilisateur
-// en utilisant directement l'API Supabase avec le rôle de service
+// Utilisation de l'import compatible avec Deno
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+
 Deno.serve(async (req) => {
   try {
     // Vérifier que la méthode est POST
@@ -15,6 +16,8 @@ Deno.serve(async (req) => {
 
     // Récupérer les données du corps de la requête
     const { accessToken, password } = await req.json()
+
+    console.log("Edge Function appelée avec token:", accessToken ? "présent" : "absent")
 
     // Vérifier que les paramètres requis sont présents
     if (!accessToken || !password) {
@@ -44,16 +47,20 @@ Deno.serve(async (req) => {
       }
     )
 
+    console.log("Client Supabase créé avec URL:", Deno.env.get('SUPABASE_URL'))
+
     // Vérifier d'abord que le token est valide
     const { data: userData, error: verifyError } = await supabaseAdmin.auth.getUser(accessToken)
     
     if (verifyError || !userData) {
       console.error('Erreur de vérification du token:', verifyError)
       return new Response(
-        JSON.stringify({ error: 'Token invalide ou expiré' }),
+        JSON.stringify({ error: 'Token invalide ou expiré', details: verifyError }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log("Token vérifié avec succès pour l'utilisateur:", userData.user.email)
 
     // Mettre à jour le mot de passe de l'utilisateur
     const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
@@ -64,10 +71,12 @@ Deno.serve(async (req) => {
     if (error) {
       console.error('Erreur lors de la mise à jour du mot de passe:', error)
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: error.message, details: error }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log("Mot de passe mis à jour avec succès pour:", data.user.email)
 
     // Réponse réussie
     return new Response(
@@ -87,7 +96,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error('Erreur serveur:', err)
     return new Response(
-      JSON.stringify({ error: 'Erreur serveur interne' }),
+      JSON.stringify({ error: 'Erreur serveur interne', details: String(err) }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
