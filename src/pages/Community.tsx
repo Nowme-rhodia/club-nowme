@@ -38,7 +38,7 @@ const fadeInUp = {
   transition: { duration: 0.6 },
 };
 
-export default function Subscription() {
+export default function Community() {
   const [regionForm, setRegionForm] = useState({ email: '', region: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -190,7 +190,7 @@ export default function Subscription() {
               "{testimonial.fullStory}"
             </p>
             <Link
-              to="/checkout?plan=discovery"
+              to="/subscription"
               className="block w-full text-center px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-colors"
             >
               Moi aussi je veux cette vie ! (12,99€)
@@ -204,7 +204,7 @@ export default function Subscription() {
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       <SEO 
-        title="Nowme Club - Kiffe ta vie à prix mini"
+        title="Communauté Nowme - Rejoins la tribu qui kiffe"
         description="Rejoins une communauté de femmes qui découvrent, partagent et kiffent ensemble !"
       />
 
@@ -268,7 +268,7 @@ export default function Subscription() {
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  to="/checkout?plan=discovery"
+                  to="/subscription"
                   className="inline-flex items-center px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-semibold text-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
@@ -324,475 +324,6 @@ export default function Subscription() {
         </div>
       </motion.section>
 
-      {/* Section "Avant/Après" - Design en zigzag */}
-      <motion.section className="py-20 bg-gray-50" {...fadeInUp}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Tu te reconnais dans ces situations ?
-            </motion.h2>
-            <motion.p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              On a toutes vécu ça... Mais maintenant, on a trouvé la solution ensemble.
-            </motion.p>
-          </div>
-
-          <div className="space-y-20">
-            {/* Problème 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <motion.div {...fadeInUp}>
-                <div className="transform -rotate-2 hover:rotate-0 transition-transform duration-500">
-                  <img
-                    src="https://images.unsplash.com/photo-1551836022-deb4988cc6c0?auto=format&fit=crop&q=80&w=600"
-                    alt="Femme qui s'ennuie"
-                    className="rounded-2xl shadow-lg"
-                  />
-                </div>
-              </motion.div>
-              <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  😩 "Je galère à trouver des plans sympas"
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Entre les avis bidons sur internet et les recommandations de ta belle-mère, 
-                  tu ne sais plus où donner de la tête. Tu finis toujours dans les mêmes endroits...
-                </p>
-                <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded transform rotate-1">
-                  <p className="text-red-700 font-semibold">
-                    ✗ Résultat : Tu t'ennuies et tu passes à côté de pépites près de chez toi
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Solution 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <motion.div className="lg:order-2" {...fadeInUp}>
-                <div className="transform rotate-2 hover:rotate-0 transition-transform duration-500">
-                  <img
-                    src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80&w=600"
-                    alt="Femmes heureuses découvrant"
-                    className="rounded-2xl shadow-lg"
-                  />
-                </div>
-              </motion.div>
-              <motion.div className="lg:order-1" {...fadeInUp} transition={{ delay: 0.2 }}>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  ✨ Avec Nowme : Des expériences testées et approuvées
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  500+ femmes qui partagent leurs découvertes et te donnent les vrais bons plans. 
-                  Chaque expérience est validée par la communauté !
-                </p>
-                <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded transform -rotate-1">
-                  <p className="text-green-700 font-semibold">
-                    ✓ Résultat : Tu découvres des pépites et tu kiffes à chaque sortie
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Problème 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <motion.div {...fadeInUp}>
-                <div className="transform -rotate-1 hover:rotate-0 transition-transform duration-500">
-                  <img
-                    src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600"
-                    alt="Femme seule"
-                    className="rounded-2xl shadow-lg"
-                  />
-                </div>
-              </motion.div>
-              <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  😔 "Je n'ai personne avec qui sortir"
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Tes copines sont occupées, ton mec n'est pas chaud pour tes activités... 
-                  Tu finis par rester chez toi et scroller sur ton canapé.
-                </p>
-                <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded transform rotate-1">
-                  <p className="text-red-700 font-semibold">
-                    ✗ Résultat : Tu t'isoles et tu rates des moments de bonheur
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Solution 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <motion.div className="lg:order-2" {...fadeInUp}>
-                <div className="transform rotate-1 hover:rotate-0 transition-transform duration-500">
-                  <img
-                    src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&q=80&w=600"
-                    alt="Groupe d'amies"
-                    className="rounded-2xl shadow-lg"
-                  />
-                </div>
-              </motion.div>
-              <motion.div className="lg:order-1" {...fadeInUp} transition={{ delay: 0.2 }}>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  🎉 Avec Nowme : Toujours des copines dispo
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Communauté active, apéros mensuels, carte interactive pour trouver 
-                  des membres près de chez toi... Fini la galère pour trouver quelqu'un !
-                </p>
-                <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded transform -rotate-1">
-                  <p className="text-green-700 font-semibold">
-                    ✓ Résultat : Tu as toujours des copines pour t'accompagner
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* Section "Ce que tu auras" - Cartes flottantes */}
-      <motion.section className="py-20 bg-white relative overflow-hidden" {...fadeInUp}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Concrètement, qu'est-ce que tu auras ?
-            </motion.h2>
-            <motion.p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Pas de blabla, que du concret pour transformer ton quotidien.
-            </motion.p>
-          </div>
-
-          {/* Disposition libre des cartes */}
-          <div className="relative min-h-[800px]">
-            {/* Carte 1 - Découverte */}
-            <motion.div
-              className="absolute top-0 left-0 w-80 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 shadow-xl transform rotate-3 hover:rotate-0 transition-all duration-500 hover:scale-105"
-              {...fadeInUp}
-            >
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-white font-bold">1</span>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">Dès le 1er mois</h3>
-              </div>
-              <div className="text-center mb-4">
-                <span className="text-3xl font-bold text-blue-600">12,99€</span>
-              </div>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />Réductions jusqu'à -50%</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />1 événement découverte</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />Groupe WhatsApp actif</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />Newsletter bons plans</li>
-              </ul>
-            </motion.div>
-
-            {/* Carte 2 - Premium */}
-            <motion.div
-              className="absolute top-20 right-0 w-96 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-6 shadow-xl transform -rotate-2 hover:rotate-0 transition-all duration-500 hover:scale-105"
-              {...fadeInUp}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center mr-3">
-                  <span className="text-white font-bold">2</span>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">À partir du 2ème mois</h3>
-              </div>
-              <div className="text-center mb-4">
-                <span className="text-3xl font-bold text-primary">39,99€</span>
-                <div className="text-sm text-gray-600">Valeur réelle : 120€+</div>
-              </div>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Tout du niveau découverte +</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />2-3 événements premium/mois</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Box partenaires trimestrielle</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Apéros mensuels en ligne</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Carte interactive membres</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Séjours entre filles à prix réduits</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Service conciergerie</li>
-              </ul>
-            </motion.div>
-
-            {/* Carte 3 - Box */}
-            <motion.div
-              className="absolute top-80 left-20 w-72 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 shadow-xl transform rotate-1 hover:rotate-0 transition-all duration-500 hover:scale-105"
-              {...fadeInUp}
-              transition={{ delay: 0.4 }}
-            >
-              <div className="flex items-center mb-4">
-                <Gift className="w-8 h-8 text-yellow-600 mr-3" />
-                <h3 className="text-lg font-bold text-gray-900">Box Surprise</h3>
-              </div>
-              <p className="text-gray-600 mb-4 text-sm">
-                Produits lifestyle, bons de réduction, découvertes locales... 30€ de valeur livrés chez toi !
-              </p>
-              <div className="bg-yellow-200 rounded-lg p-3">
-                <p className="text-yellow-800 font-semibold text-sm">
-                  📦 Tous les 3 mois dans ta boîte aux lettres
-                </p>
-              </div>
-            </motion.div>
-
-            {/* Carte 4 - Communauté */}
-            <motion.div
-              className="absolute top-60 right-20 w-80 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 shadow-xl transform -rotate-1 hover:rotate-0 transition-all duration-500 hover:scale-105"
-              {...fadeInUp}
-              transition={{ delay: 0.6 }}
-            >
-              <div className="flex items-center mb-4">
-                <Users className="w-8 h-8 text-green-600 mr-3" />
-                <h3 className="text-lg font-bold text-gray-900">Communauté Active</h3>
-              </div>
-              <p className="text-gray-600 mb-4 text-sm">
-                Apéros mensuels, carte interactive, séjours entre filles... Trouve ta tribu !
-              </p>
-              <div className="bg-green-200 rounded-lg p-3">
-                <p className="text-green-800 font-semibold text-sm">
-                  👭 500+ femmes qui partagent et s'entraident
-                </p>
-              </div>
-            </motion.div>
-
-            {/* Spacer pour éviter le chevauchement */}
-            <div className="h-96"></div>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* Témoignages - Mosaïque cliquable */}
-      <motion.section className="py-20 bg-gradient-to-br from-primary/5 to-secondary/5" {...fadeInUp}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Elles ont osé franchir le pas...
-            </motion.h2>
-            <motion.p className="text-xl text-gray-600">
-              Et maintenant, elles kiffent leur vie ! Clique pour lire leur histoire complète.
-            </motion.p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                className={`
-                  bg-white p-6 rounded-2xl shadow-lg cursor-pointer relative
-                  ${index === 1 ? 'md:transform md:translate-y-8' : ''}
-                  ${index === 2 ? 'lg:transform lg:-translate-y-4' : ''}
-                `}
-                {...fadeInUp}
-                transition={{ delay: index * 0.2 }}
-                whileHover={{ scale: 1.02, rotate: index % 2 === 0 ? 1 : -1 }}
-                onClick={() => setSelectedTestimonial(index)}
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <img 
-                    src={testimonial.image} 
-                    alt={testimonial.name} 
-                    className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-md" 
-                  />
-                  <div>
-                    <h3 className="font-bold text-gray-900">{testimonial.name}</h3>
-                    <p className="text-sm text-gray-600">{testimonial.role}</p>
-                    <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full mt-1">
-                      {testimonial.highlight}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-700 italic leading-relaxed">"{testimonial.quote}"</p>
-                <div className="absolute top-4 right-4 text-4xl text-primary/20">"</div>
-                <div className="mt-4 text-center">
-                  <span className="text-primary text-sm font-medium">Cliquer pour lire l'histoire complète →</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {/* Section Pricing - Design central avec éléments flottants */}
-      <motion.section id="plans" className="py-20 bg-white relative overflow-hidden" {...fadeInUp}>
-        {/* Éléments décoratifs */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-primary/5 rounded-full blur-xl"></div>
-        <div className="absolute bottom-10 right-10 w-32 h-32 bg-secondary/5 rounded-full blur-2xl"></div>
-        
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
-            Prête à rejoindre l'aventure ?
-          </motion.h2>
-          <motion.p className="text-xl text-gray-600 mb-12">
-            Teste d'abord, kiffe ensuite ! Premier mois découverte puis accès à tout le premium.
-          </motion.p>
-          
-          {/* Carte de pricing unique */}
-          <motion.div 
-            className="bg-white rounded-3xl shadow-2xl p-8 border-2 border-primary/20 relative transform hover:scale-105 transition-all duration-500"
-            {...fadeInUp}
-          >
-            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-              <span className="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-full text-sm font-bold animate-pulse">
-                ✨ OFFRE DÉCOUVERTE ✨
-              </span>
-            </div>
-            
-            <div className="text-center mb-8">
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Nowme Club Premium</h3>
-              <p className="text-gray-600">Tout l'accès, tarif progressif</p>
-            </div>
-            
-            {/* Pricing visuel */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              <div className="bg-blue-50 rounded-2xl p-6 transform rotate-1">
-                <div className="text-center">
-                  <div className="text-sm text-blue-600 uppercase tracking-wide mb-2">Mois 1 - Découverte</div>
-                  <div className="text-4xl font-bold text-blue-600 mb-2">12,99€</div>
-                  <div className="text-sm text-gray-600 mb-4">Pour tout tester sans risque</div>
-                  <ul className="space-y-2 text-sm text-left">
-                    <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />Réductions jusqu'à -50%</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />1 événement découverte</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />Groupe WhatsApp</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-blue-500 mr-2" />Newsletter bons plans</li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-6 transform -rotate-1">
-                <div className="text-center">
-                  <div className="text-sm text-primary uppercase tracking-wide mb-2">Dès le mois 2 - Premium</div>
-                  <div className="text-4xl font-bold text-primary mb-2">39,99€</div>
-                  <div className="text-sm text-gray-600 mb-4">Valeur réelle : 120€+</div>
-                  <ul className="space-y-2 text-sm text-left">
-                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Tout du niveau découverte +</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />2-3 événements premium/mois</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Box trimestrielle (30€)</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Apéros mensuels en ligne</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Carte interactive</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Séjours entre filles</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 mb-6">
-              <div className="text-center">
-                <p className="text-sm font-semibold text-gray-900 mb-1">💰 Calcul de la valeur premium :</p>
-                <div className="flex justify-center items-center gap-2 text-xs text-gray-600 flex-wrap">
-                  <span>Événements: 25€</span>
-                  <span>•</span>
-                  <span>Box: 30€</span>
-                  <span>•</span>
-                  <span>Apéros: 15€</span>
-                  <span>•</span>
-                  <span>Réductions: 50€+</span>
-                </div>
-                <p className="text-primary font-bold mt-1">= Plus de 120€ de valeur pour 39,99€ !</p>
-              </div>
-            </div>
-            
-            <Link 
-              to="/checkout?plan=discovery" 
-              className="block w-full text-center px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg hover:shadow-lg transition-all transform hover:scale-105"
-            >
-              🚀 Je commence mon aventure Nowme !
-            </Link>
-            
-            <p className="text-center text-xs text-gray-500 mt-4">
-              Sans engagement • Résiliation en 1 clic • Support 7j/7
-            </p>
-          </motion.div>
-        </div>
-      </motion.section>
-
-      {/* FAQ Section */}
-      <motion.section className="py-20 bg-gray-50" {...fadeInUp}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <motion.h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
-              Tes questions ? On te dit tout !
-            </motion.h2>
-          </div>
-          <div className="space-y-4">
-            {faqItems.map((item, index) => (
-              <motion.div 
-                key={index} 
-                className="bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-102 transition-all duration-300"
-                {...fadeInUp} 
-                transition={{ delay: index * 0.1 }}
-              >
-                <button
-                  className="w-full text-left flex justify-between items-center p-6 text-lg font-semibold hover:text-primary transition-colors"
-                  onClick={() => setActiveFaq(activeFaq === index ? null : index)}
-                >
-                  {item.question}
-                  <ChevronDown className={`w-5 h-5 transition-transform ${activeFaq === index ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {activeFaq === index && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-6 pb-6">
-                        <p className="text-gray-600 leading-relaxed">{item.answer}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {/* Section Région */}
-      <motion.section className="py-20 bg-primary/5" {...fadeInUp}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
-            Pas encore chez toi ? Fais-le venir !
-          </motion.h2>
-          <motion.p className="text-xl text-gray-600 mb-8">
-            On commence à Paris et banlieue, mais ton kiff arrive bientôt partout. Dis-nous où tu es !
-          </motion.p>
-          
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md mx-auto transform hover:scale-105 transition-all duration-300">
-            <form onSubmit={handleRegionSubmit} className="space-y-4">
-              <input
-                type="email"
-                value={regionForm.email}
-                onChange={(e) => setRegionForm({ ...regionForm, email: e.target.value })}
-                placeholder="Ton email"
-                className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
-                required
-              />
-              <select
-                value={regionForm.region}
-                onChange={(e) => setRegionForm({ ...regionForm, region: e.target.value })}
-                className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
-                required
-              >
-                <option value="">Ta région ?</option>
-                {regions.map((region) => (
-                  <option key={region.value} value={region.value}>{region.label}</option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-all disabled:opacity-50"
-              >
-                {isSubmitting ? "Envoi..." : "Je veux être prévenue !"}
-              </button>
-            </form>
-          </div>
-        </div>
-      </motion.section>
-
       {/* CTA Final */}
       <motion.section className="py-20 bg-gradient-to-r from-primary to-secondary text-white relative overflow-hidden" {...fadeInUp}>
         <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
@@ -800,7 +331,7 @@ export default function Subscription() {
         
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Prête à reprendre le contrôle de ta vie ?
+            Prête à rejoindre l'aventure ?
           </motion.h2>
           
           <motion.p className="text-xl mb-8 opacity-90">
@@ -809,7 +340,7 @@ export default function Subscription() {
 
           <motion.div className="space-y-6">
             <Link
-              to="/checkout?plan=discovery"
+              to="/subscription"
               className="inline-flex items-center px-8 py-4 bg-white text-primary rounded-full font-bold text-lg hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-lg"
             >
               <Heart className="w-5 h-5 mr-2" />
