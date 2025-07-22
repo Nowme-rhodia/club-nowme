@@ -1,9 +1,7 @@
 // customize-auth-email.ts
 // deno-lint-ignore-file no-explicit-any
 
-// Utilisation de l'import compatible avec Deno
-import { serve } from "https://deno.land/std@0.188.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
+import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
 // Types pour les événements d'authentification
 interface WebhookPayload {
@@ -14,7 +12,7 @@ interface WebhookPayload {
   [key: string]: any
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   try {
     // Vérifier que la méthode est POST
     if (req.method !== 'POST') {
