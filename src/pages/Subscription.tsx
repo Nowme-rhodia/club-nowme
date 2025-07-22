@@ -587,15 +587,15 @@ export default function Subscription() {
             <div className="flex items-center justify-center space-x-6 text-sm opacity-90">
               <div className="flex items-center">
                 <Shield className="w-4 h-4 mr-2" />
-                Sans engagement
+                <span>Sans engagement</span>
               </div>
               <div className="flex items-center">
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Résiliation en 1 clic
+                <span>Résiliation en 1 clic</span>
               </div>
               <div className="flex items-center">
                 <Users className="w-4 h-4 mr-2" />
-                500+ membres actives
+                <span>Plus de 500 femmes nous font déjà confiance</span>
               </div>
             </div>
           </motion.div>
