@@ -9,26 +9,19 @@ export default function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(true); // État pour suivre la vérification initiale
+  const [verifying, setVerifying] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasTokens, setHasTokens] = useState(false);
   const navigate = useNavigate();
 
-  // Vérifier la présence des tokens dans l'URL au chargement
   useEffect(() => {
     const checkTokens = () => {
       try {
-        const hash = window.location.hash;
-        console.log("URL hash:", hash); // Pour le débogage
-        
-        // Extraire les tokens
-        const accessToken = hash.split('access_token=')[1]?.split('&')[0];
-        const refreshToken = hash.split('refresh_token=')[1]?.split('&')[0];
-        
-        console.log("Access token exists:", !!accessToken);
-        console.log("Refresh token exists:", !!refreshToken);
-        
+        const params = new URLSearchParams(window.location.hash.replace('#', ''));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+
         if (!accessToken || !refreshToken) {
           setError('Lien de réinitialisation invalide ou expiré. Veuillez demander un nouveau lien.');
           setHasTokens(false);
@@ -36,15 +29,13 @@ export default function ResetPassword() {
           setHasTokens(true);
         }
       } catch (err) {
-        console.error("Erreur lors de la vérification des tokens:", err);
         setError('Une erreur est survenue lors de la vérification du lien.');
         setHasTokens(false);
       } finally {
-        setVerifying(false); // Fin de la vérification dans tous les cas
+        setVerifying(false);
       }
     };
 
-    // Attendre un court instant pour s'assurer que le hash est disponible
     const timer = setTimeout(() => {
       checkTokens();
     }, 500);
@@ -61,35 +52,31 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation des mots de passe
+
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
       return;
     }
-    
+
     if (password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
 
     try {
       await updatePassword(password);
       setSuccess(true);
-      // La redirection est gérée dans updatePassword
     } catch (err: any) {
-      console.error('Error updating password:', err);
       setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Afficher un indicateur de chargement pendant la vérification initiale
   if (verifying) {
     return (
       <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -195,60 +182,4 @@ export default function ResetPassword() {
                       />
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Minimum 8 caractères
-                    </p>
-                  </div>
-
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                      Confirmer le mot de passe
-                    </label>
-                    <div className="mt-1 relative">
-                      <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        autoComplete="new-password"
-                        required
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                      />
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className={`
-                        flex w-full justify-center items-center rounded-full border border-transparent px-4 py-3 text-base font-medium text-white shadow-sm
-                        ${loading
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
-                        }
-                      `}
-                    >
-                      {loading ? 'Mise à jour...' : 'Réinitialiser le mot de passe'}
-                    </button>
-                  </div>
-                </>
-              )}
-
-              <div className="text-center">
-                <Link
-                  to="/auth/signin"
-                  className="text-sm font-medium text-primary hover:text-primary-dark"
-                >
-                  Retour à la connexion
-                </Link>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+                    <p className="mt
