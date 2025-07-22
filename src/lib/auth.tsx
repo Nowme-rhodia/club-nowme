@@ -147,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // MODIFICATION ICI
   const updatePassword = async (password: string) => {
     try {
       console.log('updatePassword appelé avec:', { passwordLength: password.length });
@@ -170,36 +171,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Tokens de réinitialisation manquants');
       }
 
-      // Utiliser directement updateUser avec le token d'accès
-      console.log('Mise à jour du mot de passe via Supabase...');
-      const { data, error } = await supabase.auth.updateUser(
-        { password },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        }
-      );
-      
-      if (error) {
-        console.error('Erreur Supabase updateUser:', error);
-        throw error;
-      }
-      
-      console.log('Mot de passe mis à jour avec succès:', data);
-      
-      // Optionnel : établir la session avec les nouveaux tokens
+      // 1. Établir la session avec les tokens
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
+      if (sessionError) throw sessionError;
 
-      if (sessionError) {
-        console.warn('Avertissement session:', sessionError);
-        // Ne pas faire échouer si c'est juste la session
-      }
+      // 2. Mettre à jour le mot de passe
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
 
-      console.log('updatePassword terminé avec succès');
+      console.log('Mot de passe mis à jour avec succès');
       return { success: true };
 
     } catch (error) {
@@ -207,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   };
+  // FIN MODIFICATION
 
   const isAdmin = profile?.role === 'admin';
   const isPartner = profile?.role === 'partner';
