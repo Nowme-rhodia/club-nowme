@@ -231,13 +231,13 @@ export default function ResetPassword() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className={
+                      className={`
                         flex w-full justify-center items-center rounded-full border border-transparent px-4 py-3 text-base font-medium text-white shadow-sm
                         ${loading
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
                         }
-                      }
+                      `}
                     >
                       {loading ? 'Mise à jour...' : 'Réinitialiser le mot de passe'}
                     </button>
@@ -259,3 +259,4 @@ export default function ResetPassword() {
       </div>
     </div>
   );
+}
