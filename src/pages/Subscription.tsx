@@ -67,7 +67,9 @@ export default function Subscription() {
       toast.error('Oups, réessaie !');
     } finally {
       setIsSubmitting(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const regions = [

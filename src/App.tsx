@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './lib/auth';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { ScrollToTop } from './components/ScrollToTop';
 import { PrivateRoute } from './components/PrivateRoute';
 import { LoadingFallback } from './components/LoadingFallback';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -80,6 +81,7 @@ function App() {
   return (
     <HelmetProvider>
       <AuthProvider>
+        <ScrollToTop />
         <ErrorBoundary>
           <div className="min-h-screen flex flex-col">
             <Header />
