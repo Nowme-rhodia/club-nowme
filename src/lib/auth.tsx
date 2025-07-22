@@ -149,42 +149,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (password: string) => {
     try {
-      // Extraction sécurisée des tokens
-      const params = new URLSearchParams(window.location.hash.replace('#', ''));
+      console.log('updatePassword appelé avec:', { passwordLength: password.length });
+      
+      // Extraction des tokens depuis l'URL
+      const hash = window.location.hash;
+      console.log('Hash URL:', hash);
+      
+      const params = new URLSearchParams(hash.replace('#', ''));
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+      
+      console.log('Tokens extraits:', { 
+        hasAccessToken: !!accessToken, 
+        hasRefreshToken: !!refreshToken, 
+        type 
+      });
 
       if (!accessToken || !refreshToken) {
         throw new Error('Tokens de réinitialisation manquants');
       }
 
+      // Utiliser directement updateUser avec le token d'accès
+      console.log('Mise à jour du mot de passe via Supabase...');
+      const { data, error } = await supabase.auth.updateUser(
+        { password },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        }
+      );
+      
+      if (error) {
+        console.error('Erreur Supabase updateUser:', error);
+        throw error;
+      }
+      
+      console.log('Mot de passe mis à jour avec succès:', data);
+      
+      // Optionnel : établir la session avec les nouveaux tokens
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
 
       if (sessionError) {
-        throw sessionError;
+        console.warn('Avertissement session:', sessionError);
+        // Ne pas faire échouer si c'est juste la session
       }
 
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) {
-        throw error;
-      }
-
-      toast.success('Votre mot de passe a été mis à jour');
-
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        throw refreshError;
-      }
-
-      setTimeout(() => {
-        navigate('/auth/signin');
-      }, 2000);
+      console.log('updatePassword terminé avec succès');
+      return { success: true };
 
     } catch (error) {
-      toast.error('Une erreur est survenue lors de la mise à jour du mot de passe');
+      console.error('Erreur dans updatePassword:', error);
       throw error;
     }
   };

@@ -6,15 +6,27 @@ import { SEO } from '../../components/SEO';
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Vérifier s'il y a un message de succès depuis la réinitialisation
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Nettoyer le state après affichage
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
@@ -47,6 +59,19 @@ export default function SignIn() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {successMessage && (
+              <div className="rounded-md bg-green-50 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <CheckCircle className="h-5 w-5 text-green-400" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-green-700">{successMessage}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="rounded-md bg-red-50 p-4">
                 <div className="flex">

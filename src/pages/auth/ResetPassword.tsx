@@ -61,6 +61,7 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     // Validation des mots de passe
     const passwordError = validatePassword(password);
@@ -75,12 +76,19 @@ export default function ResetPassword() {
     }
     
     setLoading(true);
-    setError(null);
 
     try {
-      await updatePassword(password);
+      console.log('Début de la mise à jour du mot de passe...');
+      const result = await updatePassword(password);
+      console.log('Résultat de la mise à jour:', result);
       setSuccess(true);
-      // La redirection est gérée dans updatePassword
+      
+      // Redirection manuelle après succès
+      setTimeout(() => {
+        navigate('/auth/signin', {
+          state: { message: 'Votre mot de passe a été mis à jour avec succès' }
+        });
+      }, 2000);
     } catch (err: any) {
       console.error('Error updating password:', err);
       setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
