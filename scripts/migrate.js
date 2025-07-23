@@ -18,9 +18,9 @@ const envFile = `.env.${options.environment}`;
 dotenv.config({ path: envFile });
 
 const projectIds = {
-  dev: 'hwpylnvoeayhztucxpdj',
-  staging: 'uqoeutrolppjajpcvhiq',
-  production: 'dctakpdkhcwsuaklzqmt'
+  dev: 'dqfyuhwrjozoxadkccdj',
+  staging: 'dqfyuhwrjozoxadkccdj',
+  production: 'dqfyuhwrjozoxadkccdj'
 };
 
 const projectId = projectIds[options.environment];
