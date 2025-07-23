@@ -11,6 +11,7 @@ export interface PricingTier {
   stripePriceId: string;
   yearlyPrice?: number;
   yearlyStripePriceId?: string;
+  bonusValue?: number;
 }
 
 export interface ServiceOffering {
@@ -55,8 +56,10 @@ export const PRICING_TIERS: PricingTier[] = [
     description: 'Tout inclus + bonus exclusifs pour un engagement annuel',
     highlighted: true,
     stripePriceId: 'price_yearly_39900',
+    bonusValue: 80,
     features: [
       'Tout du plan mensuel inclus',
+      '80€ de crédit bonus par mois (960€/an)',
       '100€ de réduction sur tous les séjours',
       'Accès prioritaire aux événements exclusifs',
       'Box premium avec produits haut de gamme',

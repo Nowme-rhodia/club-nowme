@@ -62,6 +62,13 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
                 💰 Économie de {savings.toFixed(0)}€ vs mensuel
               </p>
             </div>
+            {tier.bonusValue && (
+              <div className="p-3 bg-primary/5 rounded-lg">
+                <p className="text-sm text-primary font-semibold">
+                  🎁 + {tier.bonusValue}€ de bonus chaque mois
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
