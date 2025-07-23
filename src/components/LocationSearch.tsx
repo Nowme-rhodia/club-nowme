@@ -4,7 +4,7 @@ import usePlacesAutocomplete, {
   getLatLng,
 } from "use-places-autocomplete";
 import { MapPin, X } from 'lucide-react';
-import { useLoadScript } from '@react-google-maps/api';
+import { useGoogleMapsScript, libraries } from '../hooks/useGoogleMapsScript';
 
 interface LocationSearchProps {
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
@@ -12,22 +12,10 @@ interface LocationSearchProps {
   error?: string;
 }
 
-// Define libraries outside component to prevent unnecessary re-renders
-const libraries: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = ["places"];
-
-// Create a singleton for script loading state
-let scriptLoadingPromise: Promise<void> | null = null;
-
 export function LocationSearch({ onLocationSelect, initialValue, error }: LocationSearchProps) {
   const [selectedAddress, setSelectedAddress] = useState(initialValue || '');
   
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
-    libraries,
-    language: 'fr',
-    region: 'FR',
-    preventGoogleFontsLoading: true // Prevent loading unnecessary fonts
-  });
+  const { isLoaded, loadError } = useGoogleMapsScript();
 
   const {
     ready,
