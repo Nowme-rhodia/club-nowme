@@ -68,11 +68,13 @@ const SubscriptionSuccess = React.lazy(() => import('./pages/SubscriptionSuccess
 const ClubEvents = React.lazy(() => import('./pages/club/Events'));
 const ClubMasterclasses = React.lazy(() => import('./pages/club/Masterclasses'));
 const ClubWellness = React.lazy(() => import('./pages/club/Wellness'));
+const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
 
 // Admin routes
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const Partners = React.lazy(() => import('./pages/admin/Partners'));
 const Subscribers = React.lazy(() => import('./pages/admin/Subscribers'));
+const Newsletter = React.lazy(() => import('./pages/admin/Newsletter'));
 
 // 🆕 Qui sommes-nous
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
@@ -102,6 +104,14 @@ function App() {
                   <Route path="/pricing" element={<PricingComparison />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+                  <Route
+                    path="/community-space"
+                    element={
+                      <PrivateRoute allowedRoles={['subscriber']}>
+                        <CommunitySpace />
+                      </PrivateRoute>
+                    }
+                  />
 
                   {/* Club routes */}
                   <Route
@@ -203,6 +213,7 @@ function App() {
                   >
                     <Route path="partners" element={<Partners />} />
                     <Route path="subscribers" element={<Subscribers />} />
+                    <Route path="newsletter" element={<Newsletter />} />
                   </Route>
 
                   {/* 404 route */}

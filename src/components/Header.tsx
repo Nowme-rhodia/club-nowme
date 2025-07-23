@@ -12,7 +12,7 @@ export function Header() {
     { name: 'Accueil', path: '/' },
     { name: 'Catégories', path: '/categories' },
     { name: 'Tous les kiffs', path: '/tous-les-kiffs' },
-    { name: 'Communauté', path: '/communaute' },
+    { name: 'Communauté', path: '/community-space', requiresAuth: true },
     { name: 'Club', path: '/club', requiresAuth: true },
     { name: 'Abonnement', path: '/subscription' }
   ];
