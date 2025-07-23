@@ -25,7 +25,8 @@ import {
   Music,
   Palette,
   Utensils,
-  Plane
+  Plane,
+  Video
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { submitRegionRequest } from '../lib/regions';
