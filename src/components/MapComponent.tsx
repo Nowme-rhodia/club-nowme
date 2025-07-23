@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import { AlertCircle } from 'lucide-react';
+import { useGoogleMapsScript } from '../hooks/useGoogleMapsScript';
 
 interface MapComponentProps {
   center?: { lat: number; lng: number };
@@ -27,16 +28,11 @@ const options = {
   mapTypeControl: false,
 };
 
-const libraries: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = ["places"];
-
 export function MapComponent({ center = defaultCenter, onLoad, onError }: MapComponentProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
-    libraries,
-  });
+  const { isLoaded, loadError } = useGoogleMapsScript();
 
   useEffect(() => {
     if (loadError) {
@@ -90,10 +86,14 @@ export function MapComponent({ center = defaultCenter, onLoad, onError }: MapCom
         options={options}
         onLoad={onMapLoad}
       >
-        <Marker
-          position={center}
-          animation={google.maps.Animation.DROP}
-        />
+        {center && (
+          <Marker
+            position={center}
+            options={{
+              animation: google.maps.Animation.DROP
+            }}
+          />
+        )}
       </GoogleMap>
     </div>
   );
