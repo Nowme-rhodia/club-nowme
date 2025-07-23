@@ -26,7 +26,7 @@ import {
   Palette,
   Utensils,
   Plane,
-  Video
+  MonitorPlay
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { submitRegionRequest } from '../lib/regions';
@@ -246,7 +246,7 @@ export default function Subscription() {
                 value: "25€/mois"
               },
               {
-                icon: Video,
+                icon: MonitorPlay,
                 title: "Masterclass expertes",
                 description: "Sessions exclusives développement personnel et business",
                 value: "30€/mois"
