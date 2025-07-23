@@ -1,12 +1,33 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-// Charger le fichier .env
-import 'dotenv/config';
+import { readFileSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Fonction pour charger les variables d'environnement depuis .env
+function loadEnvFile() {
+  try {
+    const envPath = path.join(process.cwd(), '.env');
+    const envContent = readFileSync(envPath, 'utf8');
+    
+    envContent.split('\n').forEach(line => {
+      const [key, ...valueParts] = line.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=').trim();
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      }
+    });
+  } catch (error) {
+    console.warn('⚠️ Fichier .env non trouvé, utilisation des variables d\'environnement système');
+  }
+}
+
+// Charger les variables d'environnement
+loadEnvFile();
 
 console.log('Vérification de la configuration Supabase...');
 
