@@ -156,8 +156,7 @@ export default function Subscription() {
               </h1>
               
               <p className="text-lg sm:text-xl text-gray-700 mb-8 leading-relaxed">
-                Accès complet dès le 1er mois : événements, masterclass, consultations, box, communauté... 
-                Plus de 185€ de valeur !
+                Accès complet dès le 1er mois : événements, masterclass, consultations, box, communauté...
               </p>
               
               {/* Comparaison des plans */}
@@ -174,7 +173,7 @@ export default function Subscription() {
                     <h3 className="font-bold text-primary mb-2">Plan Annuel ⭐</h3>
                     <div className="text-3xl font-bold text-primary mb-1">399€</div>
                     <div className="text-sm text-primary mb-2">Économie de {YEARLY_SAVINGS.savings.toFixed(0)}€</div>
-                    <div className="text-xs text-gray-600">+ 960€ de bonus/an</div>
+                    <div className="text-xs text-gray-600">+ 100€ réduction séjours</div>
                   </div>
                 </div>
               </div>
