@@ -486,8 +486,8 @@ L'équipe Nowme 💕
               </form>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
