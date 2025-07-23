@@ -30,7 +30,7 @@ import {
 import { SEO } from '../components/SEO';
 import { submitRegionRequest } from '../lib/regions';
 import { PricingCard } from '../components/PricingCard';
-import { PRICING_TIERS } from '../data/pricing';
+import { PRICING_TIERS, YEARLY_SAVINGS, calculateTotalValue } from '../data/pricing';
 import toast from 'react-hot-toast';
 
 const fadeInUp = {
@@ -67,9 +67,7 @@ export default function Subscription() {
       toast.error('Oups, réessaie !');
     } finally {
       setIsSubmitting(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const regions = [
@@ -93,29 +91,31 @@ export default function Subscription() {
   const faqItems = [
     { 
       question: "Pourquoi 12,99€ puis 39,99€ ?", 
-      answer: "Le 1er mois à 12,99€ te permet de découvrir la communauté et les premiers avantages sans risque. Ensuite, 39,99€ te donne accès à TOUT : événements premium, box trimestrielle, apéros mensuels, carte interactive, séjours entre filles, service conciergerie... Plus de 120€ de valeur réelle !" 
+      answer: "Le 1er mois à 12,99€ te permet de découvrir TOUT sans risque : événements, masterclass, box, consultations... Ensuite, 39,99€ pour continuer à profiter de tous ces services premium. Tu as accès à tout dès le premier jour !" 
     },
     { 
       question: "Qu'est-ce que j'ai concrètement chaque mois ?", 
-      answer: "Dès le 1er mois : réductions jusqu'à -50% + 1 événement découverte + groupe WhatsApp + newsletter. À partir du 2ème : tout ça PLUS événements premium + box trimestrielle + apéros mensuels + carte interactive + séjours entre filles + service conciergerie !" 
+      answer: "Dès le 1er mois : 2-3 événements premium + masterclass + consultation bien-être + box trimestrielle + communauté + réductions jusqu'à -70% + service conciergerie + accès séjours. Plus de 185€ de valeur pour 12,99€ le premier mois !" 
+    },
+    { 
+      question: "Pourquoi choisir l'abonnement annuel ?", 
+      answer: "L'annuel à 399€ te fait économiser 80€ vs le mensuel, PLUS tu reçois 80€ de crédit bonus chaque mois (960€/an) et 100€ de réduction sur tous les séjours. C'est le plan le plus avantageux !" 
     },
     { 
       question: "Je peux annuler quand ?", 
-      answer: "Quand tu veux ! Résiliation en 1 clic depuis ton compte, sans justification. Tu gardes l'accès jusqu'à la fin de ton mois payé. Aucun engagement, aucune contrainte." 
+      answer: "Quand tu veux ! Résiliation en 1 clic depuis ton compte, sans justification. Tu gardes l'accès jusqu'à la fin de ton mois/année payé. Aucun engagement, aucune contrainte." 
     },
     { 
       question: "C'est où exactement ?", 
       answer: "Paris et Île-de-France pour l'instant, avec extension prévue dans toute la France ! Dis-nous ta région pour être prévenue en priorité quand on arrive chez toi." 
     },
     { 
-      question: "Et si je ne connais personne ?", 
-      answer: "C'est fait pour ça ! 90% de nos membres ne connaissaient personne au début. Les apéros mensuels et la carte interactive sont parfaits pour rencontrer des femmes qui te ressemblent près de chez toi." 
-    },
-    { 
-      question: "Les séjours entre filles, comment ça marche ?", 
-      answer: "2-3 fois par an, on organise des weekends ou séjours dans toute la France. Hébergement, activités, repas : tout est inclus à prix membre. Tu peux venir seule, tu repartiras avec des copines !" 
+      question: "Les 80€ de bonus annuel, comment ça marche ?", 
+      answer: "Avec l'abonnement annuel, tu reçois 80€ de crédit chaque mois à utiliser chez nos partenaires, pour des événements premium ou des services exclusifs. Soit 960€ de bonus sur l'année !" 
     }
   ];
+
+  const totalValue = calculateTotalValue();
 
   return (
     <div className="min-h-screen bg-white overflow-hidden">
@@ -155,44 +155,49 @@ export default function Subscription() {
               </h1>
               
               <p className="text-lg sm:text-xl text-gray-700 mb-8 leading-relaxed">
-                Accède à des expériences exclusives, une communauté bienveillante et des réductions incroyables. 
-                Teste d'abord, kiffe ensuite !
+                Accès complet dès le 1er mois : événements, masterclass, consultations, box, communauté... 
+                Plus de 185€ de valeur !
               </p>
               
-              {/* Prix en évidence */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-lg max-w-lg mx-auto">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-4 mb-4">
-                    <div className="text-center">
-                      <div className="text-sm text-gray-500 uppercase tracking-wide mb-1">1er mois</div>
-                      <div className="text-4xl font-bold text-primary">12,99€</div>
-                      <div className="text-xs text-gray-500">Pour tout découvrir</div>
-                    </div>
-                    <div className="text-2xl text-gray-400">→</div>
-                    <div className="text-center">
-                      <div className="text-sm text-gray-500 uppercase tracking-wide mb-1">Puis</div>
-                      <div className="text-4xl font-bold text-gray-900">39,99€</div>
-                      <div className="text-xs text-gray-500">Accès premium complet</div>
-                    </div>
+              {/* Comparaison des plans */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-lg max-w-2xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="text-center bg-blue-50 rounded-xl p-4">
+                    <h3 className="font-bold text-blue-900 mb-2">Plan Mensuel</h3>
+                    <div className="text-3xl font-bold text-blue-600 mb-1">12,99€</div>
+                    <div className="text-sm text-blue-700 mb-2">1er mois, puis 39,99€</div>
+                    <div className="text-xs text-gray-600">Accès complet immédiat</div>
                   </div>
-                  <p className="text-primary font-semibold bg-primary/10 rounded-lg p-3">
-                    🎯 Plus de 120€ de valeur pour 39,99€ !
-                  </p>
+                  
+                  <div className="text-center bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl p-4 border-2 border-primary/20">
+                    <h3 className="font-bold text-primary mb-2">Plan Annuel ⭐</h3>
+                    <div className="text-3xl font-bold text-primary mb-1">399€</div>
+                    <div className="text-sm text-primary mb-2">Économie de {YEARLY_SAVINGS.savings.toFixed(0)}€</div>
+                    <div className="text-xs text-gray-600">+ 960€ de bonus/an</div>
+                  </div>
                 </div>
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  to="/checkout?plan=discovery"
+                  to="/checkout?plan=monthly"
                   className="inline-flex items-center px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-semibold text-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Je teste maintenant !
+                  Je commence à 12,99€
                 </Link>
-                <p className="text-sm text-gray-600 self-center">
-                  ✨ Sans engagement • Résiliation en 1 clic
-                </p>
+                <Link
+                  to="/checkout?plan=yearly"
+                  className="inline-flex items-center px-8 py-4 rounded-full bg-white text-primary border-2 border-primary font-semibold text-lg hover:bg-primary/5 transform hover:scale-105 transition-all duration-300"
+                >
+                  <Star className="w-5 h-5 mr-2" />
+                  Je choisis l'annuel
+                </Link>
               </div>
+              
+              <p className="text-sm text-gray-600 mt-4">
+                ✨ Sans engagement • Résiliation en 1 clic • Accès complet dès le 1er jour
+              </p>
             </motion.div>
           </div>
         </div>
@@ -203,11 +208,11 @@ export default function Subscription() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Choisis ton niveau de kiff
+              Choisis ton plan
             </motion.h2>
             <motion.p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Commence par découvrir à 12,99€, puis accède à tout le premium à 39,99€. 
-              Résilie quand tu veux, sans engagement.
+              Accès complet dès le premier jour, peu importe ton choix. 
+              La seule différence : les bonus du plan annuel !
             </motion.p>
           </div>
           
@@ -224,10 +229,10 @@ export default function Subscription() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Concrètement, qu'est-ce que tu auras ?
+              Tout ce que tu auras dès le 1er mois
             </motion.h2>
             <motion.p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Pas de blabla, que du concret pour transformer ton quotidien.
+              Plus de 185€ de valeur pour 12,99€ le premier mois !
             </motion.p>
           </div>
 
@@ -235,27 +240,27 @@ export default function Subscription() {
             {[
               {
                 icon: Calendar,
-                title: "Événements exclusifs",
-                description: "Apéros, ateliers, masterclass avec des expertes reconnues",
-                value: "2-3 par mois"
+                title: "Événements premium",
+                description: "2-3 événements par mois : apéros, ateliers, masterclass",
+                value: "25€/mois"
+              },
+              {
+                icon: Video,
+                title: "Masterclass expertes",
+                description: "Sessions exclusives développement personnel et business",
+                value: "30€/mois"
               },
               {
                 icon: Gift,
                 title: "Box surprise trimestrielle",
                 description: "Produits lifestyle et bien-être livrés chez toi",
-                value: "30€ de valeur"
-              },
-              {
-                icon: Users,
-                title: "Communauté active",
-                description: "Groupe WhatsApp, carte interactive, parrainage",
-                value: "500+ membres"
+                value: "30€/trimestre"
               },
               {
                 icon: Heart,
-                title: "Consultations bien-être",
+                title: "Consultation bien-être",
                 description: "1 consultation gratuite par trimestre avec nos expertes",
-                value: "45 min"
+                value: "45€/trimestre"
               },
               {
                 icon: Star,
@@ -267,21 +272,39 @@ export default function Subscription() {
                 icon: Coffee,
                 title: "Service conciergerie",
                 description: "On s'occupe de tes réservations et conseils perso",
-                value: "Illimité"
+                value: "20€/mois"
+              },
+              {
+                icon: Users,
+                title: "Communauté active",
+                description: "Groupe privé, carte interactive, partage de bons plans",
+                value: "10€/mois"
+              },
+              {
+                icon: Send,
+                title: "Newsletter quotidienne",
+                description: "\"Kiff du jour\" avec les meilleurs bons plans",
+                value: "5€/mois"
+              },
+              {
+                icon: Plane,
+                title: "Séjours entre filles",
+                description: "Accès aux weekends et séjours organisés",
+                value: "Variable"
               }
             ].map((feature, index) => (
               <motion.div
                 key={index}
-                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
                 {...fadeInUp}
                 transition={{ delay: index * 0.1 }}
               >
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mr-4">
-                    <feature.icon className="w-6 h-6 text-primary" />
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                    <feature.icon className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900">{feature.title}</h3>
+                    <h3 className="font-bold text-gray-900 mb-1">{feature.title}</h3>
                     <span className="text-sm text-primary font-medium">{feature.value}</span>
                   </div>
                 </div>
@@ -393,31 +416,40 @@ export default function Subscription() {
             Rejoins les 500+ femmes qui ont déjà dit STOP à la routine et OUI au kiff !
           </motion.p>
 
-          <motion.div className="space-y-6">
+          <motion.div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/checkout?plan=discovery"
+              to="/checkout?plan=monthly"
               className="inline-flex items-center px-8 py-4 bg-white text-primary rounded-full font-bold text-lg hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-lg"
             >
               <Heart className="w-5 h-5 mr-2" />
-              Je teste maintenant à 12,99€
+              Je commence à 12,99€
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
             
-            <div className="flex items-center justify-center space-x-6 text-sm opacity-90">
-              <div className="flex items-center">
-                <Shield className="w-4 h-4 mr-2" />
-                <span>Sans engagement</span>
-              </div>
-              <div className="flex items-center">
-                <CheckCircle className="w-4 h-4 mr-2" />
-                <span>Résiliation en 1 clic</span>
-              </div>
-              <div className="flex items-center">
-                <Users className="w-4 h-4 mr-2" />
-                <span>500+ membres actives</span>
-              </div>
-            </div>
+            <Link
+              to="/checkout?plan=yearly"
+              className="inline-flex items-center px-8 py-4 bg-primary-dark text-white rounded-full font-bold text-lg hover:bg-primary transform hover:scale-105 transition-all duration-300 shadow-lg"
+            >
+              <Star className="w-5 h-5 mr-2" />
+              Je choisis l'annuel (960€ bonus)
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Link>
           </motion.div>
+          
+          <div className="flex items-center justify-center space-x-6 text-sm opacity-90 mt-6">
+            <div className="flex items-center">
+              <Shield className="w-4 h-4 mr-2" />
+              <span>Sans engagement</span>
+            </div>
+            <div className="flex items-center">
+              <CheckCircle className="w-4 h-4 mr-2" />
+              <span>Résiliation en 1 clic</span>
+            </div>
+            <div className="flex items-center">
+              <Users className="w-4 h-4 mr-2" />
+              <span>500+ membres actives</span>
+            </div>
+          </div>
         </div>
       </motion.section>
     </div>

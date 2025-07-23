@@ -9,6 +9,9 @@ export interface PricingTier {
   features: string[];
   highlighted?: boolean;
   stripePriceId: string;
+  yearlyPrice?: number;
+  yearlyStripePriceId?: string;
+  bonusValue?: number;
 }
 
 export interface ServiceOffering {
@@ -23,44 +26,50 @@ export interface ServiceOffering {
 
 export const PRICING_TIERS: PricingTier[] = [
   {
-    id: 'discovery',
-    name: 'Découverte',
+    id: 'monthly',
+    name: 'Mensuel',
     price: 12.99,
-    period: '1er mois',
-    description: 'Pour découvrir la communauté et les premiers avantages',
-    stripePriceId: 'price_discovery_1299',
+    period: '1er mois, puis 39,99€/mois',
+    description: 'Accès complet dès le premier mois, puis tarif normal',
+    stripePriceId: 'price_monthly_1299',
     features: [
-      'Réductions jusqu\'à -50% chez nos partenaires',
-      'Accès au groupe WhatsApp communautaire',
-      '1 événement découverte par mois',
-      'Bons plans exclusifs hebdomadaires',
-      'Newsletter avec les pépites de la semaine',
-      'Support par email',
+      'Accès complet à tous les services dès le 1er mois',
+      '2-3 événements premium par mois',
+      'Box surprise trimestrielle (valeur 30€)',
+      'Apéros mensuels en ligne',
+      'Masterclass exclusives avec expertes',
+      'Consultation bien-être gratuite/trimestre',
+      'Carte interactive pour rencontrer des membres',
+      'Réductions jusqu\'à -70% chez nos partenaires',
+      'Service conciergerie pour réservations',
+      'Accès aux séjours entre filles',
+      'Communauté premium modérée',
+      'Newsletter quotidienne "Kiff du jour"',
       'Résiliation en 1 clic'
     ]
   },
   {
-    id: 'premium',
-    name: 'Premium',
-    price: 39.99,
-    period: 'à partir du 2ème mois',
-    description: 'Accès complet à tous les services premium',
+    id: 'yearly',
+    name: 'Annuel',
+    price: 399,
+    period: 'par an',
+    description: 'Tout inclus + bonus exclusifs pour un engagement annuel',
     highlighted: true,
-    stripePriceId: 'price_premium_3999',
+    stripePriceId: 'price_yearly_39900',
+    bonusValue: 80,
     features: [
-      'Tout du niveau Découverte +',
-      '2-3 événements premium par mois',
-      'Box surprise trimestrielle (valeur 30€)',
-      'Apéro en ligne mensuel entre membres',
-      'Tarifs réduits sur séjours entre filles',
+      'Tout du plan mensuel inclus',
+      '80€ de crédit bonus par mois (960€/an)',
+      '100€ de réduction sur tous les séjours',
       'Accès prioritaire aux événements exclusifs',
-      'Masterclass exclusives avec expertes',
-      'Consultation bien-être gratuite/trimestre',
-      'Carte interactive pour rencontrer des membres',
-      'Réductions majorées (jusqu\'à -70%)',
-      'Service conciergerie pour réservations',
-      'Invitations aux séjours Nowme',
-      'Communauté premium modérée'
+      'Box premium avec produits haut de gamme',
+      'Consultation bien-être supplémentaire',
+      'Invitation aux événements VIP',
+      'Cadeaux d\'anniversaire personnalisés',
+      'Support prioritaire',
+      'Accès anticipé aux nouveautés',
+      'Réductions majorées chez les partenaires',
+      'Économie de 80€ vs plan mensuel'
     ]
   }
 ];
@@ -70,7 +79,7 @@ export const SERVICE_OFFERINGS: ServiceOffering[] = [
     category: 'Expériences & Découvertes',
     items: [
       {
-        name: 'Activités inédites',
+        name: 'Activités premium',
         description: 'Expériences testées et approuvées par la communauté',
         value: 25,
         frequency: '2-3 par mois'
@@ -78,7 +87,7 @@ export const SERVICE_OFFERINGS: ServiceOffering[] = [
       {
         name: 'Réductions exclusives',
         description: 'Jusqu\'à -70% chez nos partenaires sélectionnés',
-        value: 20,
+        value: 50,
         frequency: 'Permanent'
       },
       {
@@ -99,39 +108,16 @@ export const SERVICE_OFFERINGS: ServiceOffering[] = [
         frequency: '2-3 par mois'
       },
       {
-        name: 'Soirées thématiques',
-        description: 'Apéros, ateliers créatifs, sorties culturelles',
-        value: 20,
+        name: 'Masterclass expertes',
+        description: 'Sessions exclusives développement personnel',
+        value: 30,
         frequency: '1 par mois'
       },
       {
-        name: 'Carte interactive membres',
-        description: 'Trouve des copines près de chez toi pour te rencontrer',
-        value: 5,
-        frequency: 'Accès permanent'
-      }
-    ]
-  },
-  {
-    category: 'Avantages Premium',
-    items: [
-      {
-        name: 'Service conciergerie',
-        description: 'On s\'occupe de tes réservations et conseils perso',
-        value: 20,
-        frequency: 'Illimité'
-      },
-      {
-        name: 'Box surprise',
-        description: 'Produits lifestyle et bons plans découverte',
-        value: 30,
-        frequency: '1 par trimestre'
-      },
-      {
-        name: 'Accès VIP',
-        description: 'Événements exclusifs et rencontres privilégiées',
+        name: 'Communauté active',
+        description: 'Groupe privé, carte interactive, parrainage',
         value: 10,
-        frequency: 'Mensuel'
+        frequency: 'Accès permanent'
       }
     ]
   },
@@ -139,47 +125,30 @@ export const SERVICE_OFFERINGS: ServiceOffering[] = [
     category: 'Services Premium',
     items: [
       {
-        name: 'Réductions majorées',
-        description: 'Jusqu\'à -70% vs -50% niveau découverte',
-        value: 50,
-        frequency: 'Sur tous les partenaires'
+        name: 'Box surprise trimestrielle',
+        description: 'Produits lifestyle et bons plans découverte',
+        value: 30,
+        frequency: '1 par trimestre'
+      },
+      {
+        name: 'Consultation bien-être',
+        description: 'Séance gratuite avec nos expertes',
+        value: 45,
+        frequency: '1 par trimestre'
       },
       {
         name: 'Service conciergerie',
-        description: 'Aide pour réservations et conseils personnalisés',
-        value: 15,
+        description: 'Aide pour réservations et conseils perso',
+        value: 20,
         frequency: 'Illimité'
-      },
-      {
-        name: 'Accès prioritaire',
-        description: 'Premiers informés des nouveautés',
-        value: 5,
-        frequency: 'Permanent'
       }
     ]
   }
 ];
 
-export const TOTAL_VALUE_CALCULATION = {
-  discovery: {
-    services: 45, // Événement + newsletter + réductions
-    cost: 12.99,
-    savings: 32.01
-  },
-  premium: {
-    services: 125, // Tous les services combinés
-    cost: 39.99,
-    savings: 85.01
-  }
-};
-
 // Calcul automatique de la valeur totale
-export const calculateTotalValue = (tier: 'discovery' | 'premium'): number => {
-  const relevantOfferings = tier === 'discovery' 
-    ? SERVICE_OFFERINGS.slice(0, 1) // Seulement événements de base
-    : SERVICE_OFFERINGS; // Tout
-
-  return relevantOfferings.reduce((total, category) => {
+export const calculateTotalValue = (): number => {
+  return SERVICE_OFFERINGS.reduce((total, category) => {
     return total + category.items.reduce((categoryTotal, item) => {
       return categoryTotal + item.value;
     }, 0);
@@ -188,19 +157,20 @@ export const calculateTotalValue = (tier: 'discovery' | 'premium'): number => {
 
 // Messages marketing
 export const MARKETING_MESSAGES = {
-  discovery: {
-    headline: "Teste sans risque !",
-    subheadline: "Découvre la communauté et les premiers avantages",
-    cta: "Je teste à 12,99€"
+  monthly: {
+    headline: "Accès complet dès le 1er mois !",
+    subheadline: "12,99€ pour découvrir, puis 39,99€ pour continuer à kiffer",
+    cta: "Je commence à 12,99€"
   },
-  premium: {
-    headline: "Plus de 120€ de valeur pour 39,99€",
-    subheadline: "Accès complet à tous les services premium",
-    cta: "J'accède au premium"
-  },
-  transition: {
-    headline: "Prête pour l'expérience complète ?",
-    subheadline: "Passe au premium et débloquer tous les avantages",
-    cta: "Je passe au premium"
+  yearly: {
+    headline: "960€ de bonus + 100€ de réduction séjours",
+    subheadline: "L'abonnement annuel le plus avantageux",
+    cta: "Je choisis l'annuel"
   }
+};
+
+export const YEARLY_SAVINGS = {
+  monthlyTotal: 12.99 + (39.99 * 11), // 1er mois + 11 mois à 39,99€
+  yearlyPrice: 399,
+  savings: (12.99 + (39.99 * 11)) - 399 // Économie réelle
 };

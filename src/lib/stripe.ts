@@ -3,16 +3,16 @@ import { supabase } from './supabase';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-// Nouveaux prix Stripe pour le modèle découverte
+// Prix Stripe pour les nouveaux plans
 export const STRIPE_PRICES = {
-  discovery: 'price_discovery_1299', // 12,99€ pour le 1er mois
-  premium: 'price_premium_3999',     // 39,99€ à partir du 2ème mois
+  monthly: 'price_monthly_1299',     // 12,99€ 1er mois puis 39,99€
+  yearly: 'price_yearly_39900',      // 399€ par an
 };
 
 export const createCheckoutSession = async (priceId: string) => {
   try {
-    // Utiliser le prix découverte par défaut
-    const finalPriceId = priceId === 'discovery' ? STRIPE_PRICES.discovery : priceId;
+    // Utiliser les nouveaux prix
+    const finalPriceId = STRIPE_PRICES[priceId] || priceId;
 
     const origin = window.location.origin;
     
@@ -25,7 +25,7 @@ export const createCheckoutSession = async (priceId: string) => {
       },
       body: JSON.stringify({ 
         priceId: finalPriceId,
-        isDiscovery: priceId === 'discovery',
+        planType: priceId, // 'monthly' ou 'yearly'
         origin: origin
       })
     });
@@ -63,7 +63,7 @@ export const getSubscriptionStatus = async () => {
     return {
       status: data?.subscription_status,
       type: data?.subscription_type,
-      isFirstMonth: data?.created_at && new Date(data.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      isAnnual: data?.subscription_type === 'yearly'
     };
 
   } catch (error) {

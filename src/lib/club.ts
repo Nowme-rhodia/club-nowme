@@ -308,12 +308,14 @@ export function getCurrentQuarter(): string {
   return `Q${quarter}-${year}`;
 }
 
-export function isEventAccessible(event: ClubEvent, subscription: 'discovery' | 'premium') {
-  return event.event_type === 'discovery' || subscription === 'premium';
+export function isEventAccessible(event: ClubEvent, subscription: 'monthly' | 'yearly') {
+  // Tous les événements sont accessibles dès le 1er mois
+  return true;
 }
 
-export function calculateEventPrice(event: ClubEvent, subscription: 'discovery' | 'premium') {
-  return subscription === 'premium' ? event.price_premium : event.price_discovery;
+export function calculateEventPrice(event: ClubEvent, subscription: 'monthly' | 'yearly') {
+  // Prix membre pour tous (gratuit ou réduit)
+  return event.price_premium; // Prix membre
 }
 
 // ---------- HELPERS ----------

@@ -1,17 +1,17 @@
 import React from 'react';
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Sparkles, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { PricingTier } from '../data/pricing';
+import { YEARLY_SAVINGS } from '../data/pricing';
 
 interface PricingCardProps {
   tier: PricingTier;
   isCurrentPlan?: boolean;
-  showTransition?: boolean;
 }
 
-export function PricingCard({ tier, isCurrentPlan, showTransition }: PricingCardProps) {
-  const totalValue = tier.id === 'premium' ? 125 : 45;
-  const savings = totalValue - tier.price;
+export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
+  const totalValue = 185; // Valeur totale des services
+  const savings = tier.id === 'yearly' ? YEARLY_SAVINGS.savings : 0;
 
   return (
     <div className={`
@@ -23,7 +23,7 @@ export function PricingCard({ tier, isCurrentPlan, showTransition }: PricingCard
       {tier.highlighted && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
           <span className="px-4 py-1 bg-gradient-to-r from-primary to-secondary text-white rounded-full text-sm font-bold">
-            ✨ RECOMMANDÉ ✨
+            ⭐ MEILLEUR PLAN ⭐
           </span>
         </div>
       )}
@@ -47,14 +47,28 @@ export function PricingCard({ tier, isCurrentPlan, showTransition }: PricingCard
           <span className="text-gray-500 ml-2">/{tier.period}</span>
         </div>
         
-        {tier.id === 'premium' && (
-          <div className="mt-2 p-3 bg-primary/5 rounded-lg">
-            <p className="text-sm text-primary font-semibold">
-              💰 Valeur réelle : {totalValue}€
+        {tier.id === 'monthly' && (
+          <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-700 font-semibold">
+              🎯 Puis 39,99€/mois - Accès complet maintenu
             </p>
-            <p className="text-xs text-gray-600">
-              Tu économises {savings.toFixed(2)}€ chaque mois !
-            </p>
+          </div>
+        )}
+
+        {tier.id === 'yearly' && (
+          <div className="mt-2 space-y-2">
+            <div className="p-3 bg-green-50 rounded-lg">
+              <p className="text-sm text-green-700 font-semibold">
+                💰 Économie de {savings.toFixed(0)}€ vs mensuel
+              </p>
+            </div>
+            {tier.bonusValue && (
+              <div className="p-3 bg-primary/5 rounded-lg">
+                <p className="text-sm text-primary font-semibold">
+                  🎁 + {tier.bonusValue}€ de bonus chaque mois
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -73,14 +87,6 @@ export function PricingCard({ tier, isCurrentPlan, showTransition }: PricingCard
           <div className="w-full px-6 py-3 rounded-full bg-gray-100 text-gray-600 font-semibold text-center">
             Plan actuel
           </div>
-        ) : showTransition ? (
-          <Link
-            to={`/upgrade?to=${tier.id}`}
-            className="block w-full px-6 py-3 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-semibold text-center hover:shadow-lg transition-all"
-          >
-            <Sparkles className="w-5 h-5 inline mr-2" />
-            Passer au premium
-          </Link>
         ) : (
           <Link
             to={`/checkout?plan=${tier.id}`}
@@ -92,7 +98,17 @@ export function PricingCard({ tier, isCurrentPlan, showTransition }: PricingCard
               }
             `}
           >
-            {tier.id === 'discovery' ? 'Je teste maintenant' : 'Je veux tout ça'}
+            {tier.id === 'monthly' ? (
+              <>
+                <Sparkles className="w-5 h-5 inline mr-2" />
+                Je commence à 12,99€
+              </>
+            ) : (
+              <>
+                <Star className="w-5 h-5 inline mr-2" />
+                Je choisis l'annuel
+              </>
+            )}
           </Link>
         )}
         

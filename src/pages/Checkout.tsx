@@ -14,7 +14,7 @@ export default function Checkout() {
 
   useEffect(() => {
     const plan = searchParams.get('plan');
-    if (plan && ['discovery', 'premium'].includes(plan)) {
+    if (plan && ['monthly', 'yearly'].includes(plan)) {
       setSelectedPlan(plan);
     }
   }, [searchParams]);
@@ -94,7 +94,16 @@ export default function Checkout() {
               <div className="bg-blue-50 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">🎯 Offre découverte</h4>
                 <p className="text-blue-700 text-sm">
-                  Premier mois à 12,99€ pour tout tester. Puis accès premium automatique à 39,99€/mois.
+                  Premier mois à 12,99€ pour tout découvrir. Puis 39,99€/mois pour continuer à kiffer.
+                </p>
+              </div>
+            )}
+            
+            {selectedPlan === 'yearly' && (
+              <div className="bg-green-50 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-green-900 mb-2">⭐ Plan annuel avantageux</h4>
+                <p className="text-green-700 text-sm">
+                  399€ pour l'année + 960€ de bonus + 100€ de réduction séjours. Économie de 80€ !
                 </p>
               </div>
             )}
@@ -178,7 +187,9 @@ export default function Checkout() {
               <p className="text-gray-600">
                 {selectedPlan === 'discovery' 
                   ? 'Aujourd\'hui 12,99€, puis 39,99€ le mois prochain.'
-                  : 'Aujourd\'hui, puis tous les mois à la même date.'
+                  : selectedPlan === 'yearly'
+                    ? 'Paiement unique de 399€ pour toute l\'année.'
+                    : 'Paiement selon votre plan choisi.'
                 }
               </p>
             </div>
