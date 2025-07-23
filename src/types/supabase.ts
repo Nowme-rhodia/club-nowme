@@ -21,7 +21,7 @@ export interface Database {
           updated_at: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
-          subscription_type?: 'discovery' | 'premium';
+          subscription_type?: 'monthly' | 'yearly';
         };
         Insert: {
           id?: string;
@@ -34,7 +34,7 @@ export interface Database {
           updated_at?: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
-          subscription_type?: 'discovery' | 'premium';
+          subscription_type?: 'monthly' | 'yearly';
         };
         Update: {
           id?: string;
@@ -47,7 +47,7 @@ export interface Database {
           updated_at?: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
-          subscription_type?: 'discovery' | 'premium';
+          subscription_type?: 'monthly' | 'yearly';
         };
       };
       partners: {

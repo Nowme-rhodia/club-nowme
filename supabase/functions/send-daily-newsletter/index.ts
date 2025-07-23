@@ -94,83 +94,29 @@ serve(async (req) => {
 
     console.log(`📧 Envoi à ${subscribers?.length || 0} abonnées...`);
 
-    // 5. Enregistrer la newsletter
-    const { data: newsletter, error: newsletterError } = await supabase
-      .from('newsletters')
-      .insert({
-        title,
-        content,
-        scheduled_date: today.toISOString(),
-        sent_date: today.toISOString(),
-        status: 'sent',
-        recipients_count: subscribers?.length || 0,
-        template_type: 'daily_kiff',
-        featured_posts: finalBonPlans.map(p => p.id)
-      })
-      .select()
-      .single();
-
-    if (newsletterError) throw newsletterError;
-
-    // 6. Envoyer les emails
-    const client = new SmtpClient();
-    const config = {
-      hostname: "smtp.gmail.com",
-      port: 465,
-      username: "contact@nowme.fr",
-      password: Deno.env.get('GMAIL_PASSWORD'),
-      tls: true,
-    };
-
-    await client.connectTLS(config);
-
-    let sentCount = 0;
-    const batchSize = 50; // Envoyer par batch pour éviter les limites
-
-    for (let i = 0; i < (subscribers?.length || 0); i += batchSize) {
-      const batch = subscribers!.slice(i, i + batchSize);
+    // 5. Envoyer les emails via la table emails (traitement asynchrone)
+    const emailPromises = subscribers?.map(subscriber => {
+      const personalizedContent = content.replace('{{first_name}}', subscriber.first_name || 'ma belle');
       
-      for (const subscriber of batch) {
-        try {
-          const personalizedContent = content.replace('{{first_name}}', subscriber.first_name || 'ma belle');
-          
-          await client.send({
-            from: config.username,
-            to: subscriber.email,
-            subject: title,
-            content: personalizedContent,
-            html: true
-          });
+      return supabase
+        .from('emails')
+        .insert({
+          to_address: subscriber.email,
+          subject: title,
+          content: personalizedContent,
+          status: 'pending'
+        });
+    }) || [];
 
-          // Enregistrer l'analytics
-          await supabase
-            .from('newsletter_analytics')
-            .insert({
-              newsletter_id: newsletter.id,
-              user_id: null, // On pourrait lier si on a l'ID
-              event_type: 'sent'
-            });
-
-          sentCount++;
-          
-        } catch (emailError) {
-          console.error(`Erreur envoi email à ${subscriber.email}:`, emailError);
-        }
-      }
-
-      // Pause entre les batches
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    await client.close();
-
-    console.log(`✅ Newsletter envoyée à ${sentCount} abonnées`);
+    // Attendre que tous les emails soient ajoutés à la queue
+    await Promise.all(emailPromises);
+    
+    console.log(`✅ Newsletter ajoutée à la queue d'envoi pour ${subscribers?.length || 0} abonnées`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        newsletter_id: newsletter.id,
-        sent_count: sentCount,
+        queued_count: subscribers?.length || 0,
         total_subscribers: subscribers?.length || 0,
         featured_posts: finalBonPlans.length
       }),

@@ -309,13 +309,20 @@ export function getCurrentQuarter(): string {
 }
 
 export function isEventAccessible(event: ClubEvent, subscription: 'monthly' | 'yearly') {
-  // Tous les événements sont accessibles dès le 1er mois
+  // Tous les événements sont accessibles pour tous les membres actifs
   return true;
 }
 
 export function calculateEventPrice(event: ClubEvent, subscription: 'monthly' | 'yearly') {
-  // Prix membre pour tous (gratuit ou réduit)
-  return event.price_premium; // Prix membre
+  // Prix membre pour tous, avec bonus pour les membres annuels
+  const basePrice = event.price_premium || 0;
+  
+  // Les membres annuels ont des réductions supplémentaires
+  if (subscription === 'yearly') {
+    return Math.max(0, basePrice * 0.8); // 20% de réduction supplémentaire
+  }
+  
+  return basePrice;
 }
 
 // ---------- HELPERS ----------
