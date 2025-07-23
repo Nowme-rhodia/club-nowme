@@ -10,7 +10,8 @@
     "start": "vite",
     "test:connection": "node scripts/test-connection.js",
     "supabase": "supabase",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "migrate": "node scripts/supabase-migrate.js"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",
