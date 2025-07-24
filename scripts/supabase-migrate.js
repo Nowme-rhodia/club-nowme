@@ -32,7 +32,7 @@ function colorize(color, text) {
 
 program
   .version('1.0.0')
-  .description('Outil de gestion des migrations Supabase')
+  .description('Outil de gestion des migrations Supabase (sans CLI)')
   .option('-c, --create <name>', 'Créer une nouvelle migration')
   .option('-p, --push', 'Pousser les migrations vers la base de données')
   .option('-r, --reset', 'Réinitialiser la base de données (DANGER)')
@@ -42,15 +42,10 @@ program
   .parse(process.argv);
 
 const options = program.opts();
-const projectId = 'dqfyuhwrjozoxadkccdj';
 
 // Vérifier si le répertoire des migrations existe, le créer si nécessaire
 function ensureMigrationsDir() {
-  const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
-  
-  if (!fs.existsSync(path.join(process.cwd(), 'supabase'))) {
-    fs.mkdirSync(path.join(process.cwd(), 'supabase'));
-  }
+  const migrationsDir = path.join(process.cwd(), 'migrations');
   
   if (!fs.existsSync(migrationsDir)) {
     fs.mkdirSync(migrationsDir);
@@ -110,7 +105,7 @@ COMMIT;
 
 // Lister les migrations existantes
 function listMigrations() {
-  const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
+  const migrationsDir = path.join(process.cwd(), 'migrations');
   
   if (!fs.existsSync(migrationsDir)) {
     console.log(colorize('yellow', '⚠️ Aucun répertoire de migrations trouvé'));
@@ -148,20 +143,16 @@ function listMigrations() {
 
 // Créer une connexion à la base de données
 async function createDbConnection() {
-  // Vérifier si le mot de passe est disponible
-  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
-  if (!dbPassword) {
-    console.error(colorize('red', '❌ Variable SUPABASE_DB_PASSWORD non trouvée dans .env'));
+  // Vérifier si l'URL de connexion est disponible
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    console.error(colorize('red', '❌ Variable DATABASE_URL non trouvée dans .env'));
     process.exit(1);
   }
   
-  const dbUrl = `postgresql://postgres:${dbPassword}@db.${projectId}.supabase.co:5432/postgres`;
-  
   const pool = new pg.Pool({
     connectionString: dbUrl,
-    ssl: {
-      rejectUnauthorized: false // Nécessaire pour Supabase
-    }
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   });
   
   try {
@@ -177,7 +168,7 @@ async function createDbConnection() {
 
 // Pousser les migrations vers la base de données
 async function pushMigrations(dryRun = false) {
-  const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
+  const migrationsDir = path.join(process.cwd(), 'migrations');
   
   if (!fs.existsSync(migrationsDir)) {
     console.log(colorize('yellow', '⚠️ Aucun répertoire de migrations trouvé'));
@@ -216,7 +207,7 @@ async function pushMigrations(dryRun = false) {
   try {
     // Créer la table de suivi des migrations si elle n'existe pas
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS _migrations (
+      CREATE TABLE IF NOT EXISTS migrations (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL UNIQUE,
         applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -224,7 +215,7 @@ async function pushMigrations(dryRun = false) {
     `);
     
     // Récupérer les migrations déjà appliquées
-    const { rows: appliedMigrations } = await pool.query('SELECT name FROM _migrations');
+    const { rows: appliedMigrations } = await pool.query('SELECT name FROM migrations');
     const appliedMigrationNames = appliedMigrations.map(row => row.name);
     
     // Filtrer les migrations non appliquées
@@ -252,7 +243,7 @@ async function pushMigrations(dryRun = false) {
         await client.query(content);
         
         // Enregistrer la migration comme appliquée
-        await client.query('INSERT INTO _migrations (name) VALUES ($1)', [migration]);
+        await client.query('INSERT INTO migrations (name) VALUES ($1)', [migration]);
         
         await client.query('COMMIT');
         console.log(colorize('green', `✅ Migration ${migration} appliquée avec succès`));
@@ -308,14 +299,14 @@ async function resetDatabase(autoConfirm = false) {
       
       // Supprimer toutes les tables
       for (const table of tables) {
-        if (table.tablename !== '_migrations') {
+        if (table.tablename !== 'migrations') {
           await client.query(`DROP TABLE IF EXISTS "${table.tablename}" CASCADE`);
           console.log(colorize('yellow', `🗑️ Table supprimée: ${table.tablename}`));
         }
       }
       
       // Supprimer la table de migrations
-      await client.query('DROP TABLE IF EXISTS _migrations CASCADE');
+      await client.query('DROP TABLE IF EXISTS migrations CASCADE');
       console.log(colorize('yellow', '🗑️ Table de migrations supprimée'));
       
       // Réactiver les contraintes de clé étrangère
@@ -345,7 +336,7 @@ async function resetDatabase(autoConfirm = false) {
 
 // Fonction principale
 async function main() {
-  console.log(colorize('blue', '🔧 Outil de gestion des migrations Supabase'));
+  console.log(colorize('blue', '🔧 Outil de gestion des migrations Supabase (sans CLI)'));
   console.log(colorize('blue', '═'.repeat(50)));
   
   // Exécuter la commande appropriée
