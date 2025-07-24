@@ -1,3 +1,4 @@
+-- Ce n'est pas du SQL mais un script Node.js modifié
 #!/usr/bin/env node
 
 import { createClient } from '@supabase/supabase-js';
@@ -7,29 +8,18 @@ import dotenv from 'dotenv';
 program
   .version('1.0.0')
   .description('Vérification des tables Supabase')
-  .option('-e, --environment <type>', 'Environnement cible (dev, staging, production)', 'dev')
+  .option('-e, --environment <type>', 'Environnement cible (production)', 'production')
   .parse(process.argv);
 
 const options = program.opts();
 
 // Charger les variables d'environnement
-const envFile = `.env.${options.environment}`;
+const envFile = `.env${options.environment === 'production' ? '' : '.' + options.environment}`;
 dotenv.config({ path: envFile });
 
-const projectIds = {
-  dev: 'dqfyuhwrjozoxadkccdj',
-  staging: 'dqfyuhwrjozoxadkccdj',
-  production: 'dqfyuhwrjozoxadkccdj'
-};
+const projectId = 'dqfyuhwrjozoxadkccdj';
 
 async function checkTables() {
-  const projectId = projectIds[options.environment];
-  
-  if (!projectId) {
-    console.error('Environnement invalide. Utilisez dev, staging, ou production');
-    process.exit(1);
-  }
-
   try {
     console.log(`🔍 Vérification des tables pour l'environnement ${options.environment}`);
     
