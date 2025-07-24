@@ -13,7 +13,7 @@ program
 
 const options = program.opts();
 
-// Configuration des projets
+// Configuration des projets - CORRIGÉ
 const projectConfig = {
   dev: {
     id: 'dqfyuhwrjozoxadkccdj',
@@ -76,15 +76,12 @@ async function runMigrations() {
       process.exit(1);
     }
 
-    const sqlFiles = files.filter(f => f.endsWith('.sql'));
+    const sqlFiles = files.filter(f => f.endsWith('.sql')).sort();
     
     if (sqlFiles.length === 0) {
       console.log('ℹ️ Aucun fichier de migration trouvé');
       return;
     }
-
-    // Trier les fichiers par nom (qui contient la date)
-    sqlFiles.sort();
 
     console.log(`📦 ${sqlFiles.length} fichiers de migration trouvés`);
 
@@ -97,62 +94,73 @@ async function runMigrations() {
       .select('name');
 
     if (migrationsError) {
-      console.error('❌ Erreur lors de la récupération des migrations appliquées:', migrationsError.message);
-      process.exit(1);
+      console.log('⚠️ Table de migrations non accessible, on continue...');
     }
 
     const appliedNames = new Set(appliedMigrations?.map(m => m.name) || []);
 
-    // Exécuter chaque migration non appliquée
+    // Afficher les instructions pour chaque migration
+    console.log('\n📋 INSTRUCTIONS POUR APPLIQUER LES MIGRATIONS :');
+    console.log('=' .repeat(60));
+    
     for (const file of sqlFiles) {
       if (appliedNames.has(file)) {
         console.log(`⏭️ Migration ${file} déjà appliquée`);
         continue;
       }
 
-      console.log(`📦 Exécution de la migration: ${file}`);
+      console.log(`\n📦 Migration à appliquer : ${file}`);
+      console.log('-'.repeat(40));
       
       try {
         const sql = await fs.readFile(path.join(migrationsDir, file), 'utf8');
         
-        // Exécuter le SQL via l'API REST directement
-        const response = await fetch(`${config.url}/rest/v1/rpc/exec`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${serviceRoleKey}`,
-            'apikey': serviceRoleKey
-          },
-          body: JSON.stringify({ sql })
-        });
-
-        if (!response.ok) {
-          // Si exec n'existe pas, essayer une approche alternative
-          console.log(`⚠️ Fonction exec non disponible, tentative d'approche alternative...`);
-          
-          // Pour les migrations simples, on peut essayer de les décomposer
-          await executeMigrationAlternative(supabase, sql, file);
+        // Extraire le commentaire de description
+        const lines = sql.split('\n');
+        const commentLines = [];
+        let inComment = false;
+        
+        for (const line of lines) {
+          if (line.trim().startsWith('/*')) {
+            inComment = true;
+          }
+          if (inComment) {
+            commentLines.push(line.replace(/^\/\*|\*\/$/g, '').trim());
+          }
+          if (line.trim().endsWith('*/')) {
+            inComment = false;
+            break;
+          }
         }
 
-        // Marquer la migration comme appliquée
-        const { error: insertError } = await supabase
-          .from('__supabase_migrations')
-          .insert({ name: file });
-
-        if (insertError) {
-          console.error(`⚠️ Impossible de marquer la migration ${file} comme appliquée:`, insertError.message);
-        } else {
-          console.log(`✅ Migration ${file} appliquée avec succès`);
+        if (commentLines.length > 0) {
+          console.log('📝 Description:');
+          commentLines.forEach(line => {
+            if (line.trim()) console.log(`   ${line}`);
+          });
         }
+
+        console.log('\n🔧 Instructions:');
+        console.log('   1. Ouvrir le dashboard Supabase');
+        console.log('   2. Aller dans SQL Editor');
+        console.log('   3. Copier-coller le contenu du fichier:');
+        console.log(`      supabase/migrations/${file}`);
+        console.log('   4. Exécuter la requête');
+        console.log('\n🌐 Dashboard: https://supabase.com/dashboard/project/dqfyuhwrjozoxadkccdj/sql');
+
+        // Marquer comme "à faire manuellement"
+        console.log(`\n⚠️ Migration ${file} nécessite une application manuelle`);
 
       } catch (error) {
-        console.error(`❌ Erreur lors de l'exécution de ${file}:`, error.message);
-        // Continuer avec les autres migrations au lieu de s'arrêter
-        console.log(`⏭️ Passage à la migration suivante...`);
+        console.error(`❌ Erreur lors de la lecture de ${file}:`, error.message);
       }
     }
 
-    console.log('✅ Migrations terminées');
+    console.log('\n✅ Instructions générées pour toutes les migrations');
+    console.log('\n💡 CONSEIL: Appliquez les migrations dans l\'ordre chronologique');
+    console.log('💡 Vérifiez que chaque migration s\'exécute sans erreur avant de passer à la suivante');
+    console.log('\n🔗 Lien direct: https://supabase.com/dashboard/project/dqfyuhwrjozoxadkccdj/sql');
+
   } catch (error) {
     console.error('❌ Erreur lors des migrations:', error.message);
     process.exit(1);
@@ -160,40 +168,21 @@ async function runMigrations() {
 }
 
 async function ensureMigrationsTable(supabase) {
-  // Vérifier si la table existe déjà
-  const { data, error } = await supabase
-    .from('__supabase_migrations')
-    .select('id')
-    .limit(1);
+  try {
+    // Vérifier si la table existe déjà
+    const { data, error } = await supabase
+      .from('__supabase_migrations')
+      .select('id')
+      .limit(1);
 
-  if (error && error.code === '42P01') {
-    console.log('📋 Création de la table de suivi des migrations...');
-    // La table n'existe pas, mais on ne peut pas la créer via l'API REST
-    // Elle devrait être créée manuellement ou via le dashboard Supabase
-    console.log('ℹ️ Veuillez créer la table __supabase_migrations manuellement si elle n\'existe pas');
-  }
-}
-
-async function executeMigrationAlternative(supabase, sql, filename) {
-  console.log(`🔄 Tentative d'exécution alternative pour ${filename}`);
-  
-  // Pour les migrations simples, on peut essayer de les décomposer
-  // Ceci est une approche limitée qui ne fonctionnera que pour certains types de migrations
-  
-  // Diviser le SQL en statements individuels
-  const statements = sql
-    .split(';')
-    .map(s => s.trim())
-    .filter(s => s.length > 0 && !s.startsWith('--'));
-
-  for (const statement of statements) {
-    if (statement.toLowerCase().includes('create table') || 
-        statement.toLowerCase().includes('alter table') ||
-        statement.toLowerCase().includes('create index')) {
-      
-      console.log(`⚠️ Statement SQL complexe détecté: ${statement.substring(0, 50)}...`);
-      console.log(`ℹ️ Cette migration doit être appliquée manuellement via le dashboard Supabase`);
+    if (error && error.code === '42P01') {
+      console.log('📋 Table de suivi des migrations non trouvée');
+      console.log('💡 Vous devrez peut-être la créer manuellement si nécessaire');
+    } else {
+      console.log('✅ Table de suivi des migrations accessible');
     }
+  } catch (error) {
+    console.log('⚠️ Impossible de vérifier la table de migrations');
   }
 }
 
