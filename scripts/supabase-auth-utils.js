@@ -1,266 +1,197 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
+// supabase-auth-utils.js - Compatible avec StackBlitz
+// Utilitaires pour gérer l'authentification Supabase
 
-// Fonction principale qui gère les requêtes
-Deno.serve(async (req) => {
+import { createClient } from '@supabase/supabase-js';
+
+// Configuration Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+// Initialiser le client Supabase
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+/**
+ * S'inscrire avec email et mot de passe
+ * @param {string} email - Email de l'utilisateur
+ * @param {string} password - Mot de passe
+ * @param {Object} metadata - Métadonnées utilisateur (optionnel)
+ * @returns {Promise<Object>} - Résultat de l'opération
+ */
+async function signUp(email, password, metadata = {}) {
   try {
-    // Vérifier si la méthode est POST
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-        status: 405,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Récupérer le corps de la requête
-    const body = await req.json();
-    const { action, ...params } = body;
-
-    // Initialiser le client Supabase avec le token d'autorisation
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Vérifier l'authentification de l'utilisateur si nécessaire
-    let userId = null;
-    const authHeader = req.headers.get('Authorization');
-    
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-      
-      if (authError) {
-        return new Response(JSON.stringify({ error: 'Erreur d\'authentification', details: authError }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: metadata
       }
-      
-      userId = user?.id;
-    }
-
-    // Traiter les différentes actions
-    let result;
-    
-    switch (action) {
-      case 'getUserInfo':
-        result = await getUserInfo(supabaseClient, userId || params.userId);
-        break;
-        
-      case 'listUsers':
-        // Cette action nécessite des privilèges d'administrateur
-        result = await listUsers(supabaseClient, params.page, params.perPage);
-        break;
-        
-      case 'createUser':
-        result = await createUser(supabaseClient, params);
-        break;
-        
-      case 'updateUser':
-        result = await updateUser(supabaseClient, params);
-        break;
-        
-      case 'deleteUser':
-        result = await deleteUser(supabaseClient, params.userId);
-        break;
-        
-      case 'generateResetPasswordLink':
-        result = await generateResetPasswordLink(supabaseClient, params.email, params.redirectTo);
-        break;
-        
-      case 'inviteUser':
-        result = await inviteUser(supabaseClient, params.email, params.redirectTo);
-        break;
-        
-      case 'assignRoleToUser':
-        result = await assignRoleToUser(supabaseClient, params.userId, params.role);
-        break;
-        
-      default:
-        return new Response(JSON.stringify({ error: 'Action non reconnue' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-    }
-
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
     
+    if (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
   } catch (error) {
     console.error('Erreur:', error);
-    
-    return new Response(JSON.stringify({ 
-      error: 'Erreur interne du serveur', 
-      message: error.message 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
+    return { success: false, error };
+  }
+}
+
+/**
+ * Se connecter avec email et mot de passe
+ * @param {string} email - Email de l'utilisateur
+ * @param {string} password - Mot de passe
+ * @returns {Promise<Object>} - Résultat de l'opération
+ */
+async function signIn(email, password) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
+    
+    if (error) {
+      console.error('Erreur lors de la connexion:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Erreur:', error);
+    return { success: false, error };
   }
-});
-
-// Fonction pour obtenir les informations d'un utilisateur
-async function getUserInfo(supabase, userId) {
-  if (!userId) {
-    return { error: 'ID utilisateur requis' };
-  }
-
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
-  
-  if (error) {
-    return { error: error.message };
-  }
-  
-  // Récupérer les données de profil supplémentaires si nécessaire
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-  
-  return {
-    user: data.user,
-    profile: profileError ? null : profileData
-  };
 }
 
-// Fonction pour lister les utilisateurs (pagination)
-async function listUsers(supabase, page = 0, perPage = 10) {
-  const { data: { users }, error } = await supabase.auth.admin.listUsers({
-    page: page,
-    perPage: perPage
-  });
-  
-  if (error) {
-    return { error: error.message };
+/**
+ * Se déconnecter
+ * @returns {Promise<Object>} - Résultat de l'opération
+ */
+async function signOut() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Erreur:', error);
+    return { success: false, error };
   }
-  
-  return { users };
 }
 
-// Fonction pour créer un nouvel utilisateur
-async function createUser(supabase, { email, password, userData = {}, autoConfirm = false }) {
-  if (!email || !password) {
-    return { error: 'Email et mot de passe requis' };
+/**
+ * Récupérer l'utilisateur actuellement connecté
+ * @returns {Promise<Object>} - Utilisateur actuel ou null
+ */
+async function getCurrentUser() {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+      return null;
+    }
+    
+    return user;
+  } catch (error) {
+    console.error('Erreur:', error);
+    return null;
   }
-
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: autoConfirm,
-    user_metadata: userData
-  });
-  
-  if (error) {
-    return { error: error.message };
-  }
-  
-  return { user: data.user };
 }
 
-// Fonction pour mettre à jour un utilisateur
-async function updateUser(supabase, { userId, userData = {}, email, password }) {
-  if (!userId) {
-    return { error: 'ID utilisateur requis' };
+/**
+ * Mettre à jour les métadonnées de l'utilisateur
+ * @param {Object} metadata - Nouvelles métadonnées
+ * @returns {Promise<Object>} - Résultat de l'opération
+ */
+async function updateUserMetadata(metadata) {
+  try {
+    const { data, error } = await supabase.auth.updateUser({
+      data: metadata
+    });
+    
+    if (error) {
+      console.error('Erreur lors de la mise à jour des métadonnées:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Erreur:', error);
+    return { success: false, error };
   }
-
-  const updateData = {};
-  
-  if (email) updateData.email = email;
-  if (password) updateData.password = password;
-  if (Object.keys(userData).length > 0) updateData.user_metadata = userData;
-
-  const { data, error } = await supabase.auth.admin.updateUserById(
-    userId,
-    updateData
-  );
-  
-  if (error) {
-    return { error: error.message };
-  }
-  
-  return { user: data.user };
 }
 
-// Fonction pour supprimer un utilisateur
-async function deleteUser(supabase, userId) {
-  if (!userId) {
-    return { error: 'ID utilisateur requis' };
+/**
+ * Envoyer un lien de réinitialisation de mot de passe
+ * @param {string} email - Email de l'utilisateur
+ * @returns {Promise<Object>} - Résultat de l'opération
+ */
+async function resetPassword(email) {
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+    
+    if (error) {
+      console.error('Erreur lors de l\'envoi du lien de réinitialisation:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Erreur:', error);
+    return { success: false, error };
   }
-
-  const { error } = await supabase.auth.admin.deleteUser(userId);
-  
-  if (error) {
-    return { error: error.message };
-  }
-  
-  return { success: true, message: 'Utilisateur supprimé avec succès' };
 }
 
-// Fonction pour générer un lien de réinitialisation de mot de passe
-async function generateResetPasswordLink(supabase, email, redirectTo) {
-  if (!email) {
-    return { error: 'Email requis' };
+/**
+ * Se connecter avec un fournisseur OAuth
+ * @param {string} provider - Fournisseur OAuth (google, facebook, github, etc.)
+ * @returns {Promise<void>}
+ */
+async function signInWithProvider(provider) {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    
+    if (error) {
+      console.error(`Erreur lors de la connexion avec ${provider}:`, error);
+    }
+  } catch (error) {
+    console.error('Erreur:', error);
   }
-
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: redirectTo || undefined
-  });
-  
-  if (error) {
-    return { error: error.message };
-  }
-  
-  return { success: true, message: 'Email de réinitialisation envoyé' };
 }
 
-// Fonction pour inviter un utilisateur
-async function inviteUser(supabase, email, redirectTo) {
-  if (!email) {
-    return { error: 'Email requis' };
-  }
-
-  const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo: redirectTo || undefined
-  });
+/**
+ * Vérifier si l'utilisateur a un rôle spécifique
+ * @param {string} role - Rôle à vérifier
+ * @returns {Promise<boolean>} - true si l'utilisateur a le rôle, false sinon
+ */
+async function hasRole(role) {
+  const user = await getCurrentUser();
+  if (!user) return false;
   
-  if (error) {
-    return { error: error.message };
-  }
-  
-  return { success: true, message: 'Invitation envoyée' };
+  // Vérifier dans app_metadata.roles (tableau de rôles)
+  const roles = user.app_metadata?.roles || [];
+  return roles.includes(role);
 }
 
-// Fonction pour attribuer un rôle à un utilisateur
-async function assignRoleToUser(supabase, userId, role) {
-  if (!userId || !role) {
-    return { error: 'ID utilisateur et rôle requis' };
-  }
-
-  // Récupérer l'utilisateur actuel
-  const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-  
-  if (userError) {
-    return { error: userError.message };
-  }
-  
-  // Mettre à jour les métadonnées avec le nouveau rôle
-  const currentMetadata = userData.user.app_metadata || {};
-  currentMetadata.role = role;
-  
-  const { data, error } = await supabase.auth.admin.updateUserById(
-    userId,
-    { app_metadata: currentMetadata }
-  );
-  
-  if (error) {
-    return { error: error.message };
-  }
-  
-  return { 
-    success: true, 
-    message: `Rôle ${role} attribué à l'utilisateur`,
-    user: data.user
-  };
-}
+// Exporter les fonctions
+export {
+  signUp,
+  signIn,
+  signOut,
+  getCurrentUser,
+  updateUserMetadata,
+  resetPassword,
+  signInWithProvider,
+  hasRole
+};
