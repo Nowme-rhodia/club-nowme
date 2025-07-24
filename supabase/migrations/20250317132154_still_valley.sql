@@ -34,14 +34,14 @@ CREATE POLICY "Allow Insert from Webhook"
   ON public.user_profiles
   FOR INSERT
   TO service_role
-  WITH CHECK (role() = 'service_role');
+  WITH CHECK (true); 
 
 CREATE POLICY "Allow Update only for Service Role"
   ON public.user_profiles
   FOR UPDATE
   TO service_role
-  USING (role() = 'service_role')
-  WITH CHECK (role() = 'service_role');
+  USING (true)  -- La clause TO service_role est suffisante
+  WITH CHECK (true);
 
 -- Add comments
 COMMENT ON POLICY "Users can view own profile" ON public.user_profiles IS 'Allow users to view their own profile';
