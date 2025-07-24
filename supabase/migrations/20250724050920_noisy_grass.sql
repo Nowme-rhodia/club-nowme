@@ -12,11 +12,11 @@ DROP POLICY IF EXISTS "Service role can read profiles" ON public.user_profiles;
 -- Recréer les politiques proprement
 CREATE POLICY "Admin webhook events access" ON public.stripe_webhook_events
 FOR SELECT TO authenticated
-USING (((jwt() ->> 'app_metadata'::text))::jsonb ? 'is_admin'::text);
+USING (((auth.jwt() ->> 'app_metadata'::text))::jsonb ? 'is_admin'::text);
 
 CREATE POLICY "Users can view their rewards" ON public.member_rewards
 FOR SELECT TO authenticated
-USING (user_id = uid());
+USING (user_id = auth.uid());
 
 -- Politique pour les profils utilisateur
 CREATE POLICY "Service role can read profiles" ON public.user_profiles
