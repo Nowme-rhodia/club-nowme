@@ -7,6 +7,7 @@ import { program } from 'commander';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import dotenv from 'dotenv';
+import pg from 'pg';
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -24,19 +25,6 @@ program
 
 const options = program.opts();
 const projectId = 'dqfyuhwrjozoxadkccdj';
-
-// Vérifier si la CLI Supabase est installée
-function checkSupabaseCLI() {
-  try {
-    const version = execSync('supabase --version', { stdio: 'pipe' }).toString().trim();
-    console.log(chalk.green(`✅ Supabase CLI détectée: ${version}`));
-    return true;
-  } catch (error) {
-    console.error(chalk.red('❌ Supabase CLI non trouvée. Veuillez l\'installer:'));
-    console.log(chalk.yellow('npm install -g supabase'));
-    return false;
-  }
-}
 
 // Vérifier si le répertoire des migrations existe, le créer si nécessaire
 function ensureMigrationsDir() {
@@ -140,8 +128,8 @@ function listMigrations() {
   });
 }
 
-// Pousser les migrations vers la base de données
-async function pushMigrations(dryRun = false) {
+// Créer une connexion à la base de données
+async function createDbConnection() {
   // Vérifier si le mot de passe est disponible
   const dbPassword = process.env.SUPABASE_DB_PASSWORD;
   if (!dbPassword) {
@@ -149,30 +137,123 @@ async function pushMigrations(dryRun = false) {
     process.exit(1);
   }
   
-  // Construire la commande
   const dbUrl = `postgresql://postgres:${dbPassword}@db.${projectId}.supabase.co:5432/postgres`;
-  let command = `supabase db push --db-url "${dbUrl}"`;
   
-  if (dryRun) {
-    command += ' --dry-run';
-    console.log(chalk.yellow('🔍 Mode simulation activé (dry-run)'));
-  }
+  const pool = new pg.Pool({
+    connectionString: dbUrl,
+    ssl: {
+      rejectUnauthorized: false // Nécessaire pour Supabase
+    }
+  });
   
   try {
-    console.log(chalk.blue('🚀 Exécution des migrations...'));
-    // Masquer le mot de passe dans l'affichage
-    console.log(chalk.gray(command.replace(dbPassword, '********')));
-    
-    execSync(command, { stdio: 'inherit' });
-    
-    if (!dryRun) {
-      console.log(chalk.green('✅ Migrations appliquées avec succès'));
-    } else {
-      console.log(chalk.yellow('⏭️ Simulation terminée (aucune modification appliquée)'));
-    }
+    // Tester la connexion
+    await pool.query('SELECT NOW()');
+    console.log(chalk.green('✅ Connexion à la base de données établie'));
+    return pool;
   } catch (error) {
-    console.error(chalk.red('❌ Erreur lors de l\'application des migrations'));
+    console.error(chalk.red(`❌ Erreur de connexion à la base de données: ${error.message}`));
     process.exit(1);
+  }
+}
+
+// Pousser les migrations vers la base de données
+async function pushMigrations(dryRun = false) {
+  const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
+  
+  if (!fs.existsSync(migrationsDir)) {
+    console.log(chalk.yellow('⚠️ Aucun répertoire de migrations trouvé'));
+    return;
+  }
+  
+  const migrations = fs.readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.sql'))
+    .sort();
+  
+  if (migrations.length === 0) {
+    console.log(chalk.yellow('⚠️ Aucune migration trouvée'));
+    return;
+  }
+  
+  console.log(chalk.blue(`📋 ${migrations.length} migrations trouvées`));
+  
+  if (dryRun) {
+    console.log(chalk.yellow('🔍 Mode simulation activé (dry-run)'));
+    console.log(chalk.blue('Les migrations suivantes seraient appliquées:'));
+    
+    migrations.forEach((migration, index) => {
+      const content = fs.readFileSync(path.join(migrationsDir, migration), 'utf8');
+      const firstLine = content.split('\n')[0];
+      
+      console.log(chalk.green(`${index + 1}. ${migration} - ${firstLine.replace('--', '').trim()}`));
+    });
+    
+    console.log(chalk.yellow('⏭️ Simulation terminée (aucune modification appliquée)'));
+    return;
+  }
+  
+  // Connexion à la base de données
+  const pool = await createDbConnection();
+  
+  try {
+    // Créer la table de suivi des migrations si elle n'existe pas
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS _migrations (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+    
+    // Récupérer les migrations déjà appliquées
+    const { rows: appliedMigrations } = await pool.query('SELECT name FROM _migrations');
+    const appliedMigrationNames = appliedMigrations.map(row => row.name);
+    
+    // Filtrer les migrations non appliquées
+    const pendingMigrations = migrations.filter(migration => !appliedMigrationNames.includes(migration));
+    
+    if (pendingMigrations.length === 0) {
+      console.log(chalk.green('✅ Toutes les migrations sont déjà appliquées'));
+      await pool.end();
+      return;
+    }
+    
+    console.log(chalk.blue(`🔄 ${pendingMigrations.length} migrations à appliquer`));
+    
+    // Exécuter chaque migration dans une transaction
+    for (const migration of pendingMigrations) {
+      console.log(chalk.blue(`🔄 Application de la migration: ${migration}`));
+      
+      const content = fs.readFileSync(path.join(migrationsDir, migration), 'utf8');
+      const client = await pool.connect();
+      
+      try {
+        await client.query('BEGIN');
+        
+        // Exécuter le script SQL
+        await client.query(content);
+        
+        // Enregistrer la migration comme appliquée
+        await client.query('INSERT INTO _migrations (name) VALUES ($1)', [migration]);
+        
+        await client.query('COMMIT');
+        console.log(chalk.green(`✅ Migration ${migration} appliquée avec succès`));
+      } catch (error) {
+        await client.query('ROLLBACK');
+        console.error(chalk.red(`❌ Erreur lors de l'application de la migration ${migration}:`));
+        console.error(chalk.red(error.message));
+        process.exit(1);
+      } finally {
+        client.release();
+      }
+    }
+    
+    console.log(chalk.green('✅ Toutes les migrations ont été appliquées avec succès'));
+  } catch (error) {
+    console.error(chalk.red(`❌ Erreur lors de l'application des migrations: ${error.message}`));
+    process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 
@@ -194,27 +275,61 @@ async function resetDatabase(autoConfirm = false) {
     }
   }
   
-  // Vérifier si le mot de passe est disponible
-  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
-  if (!dbPassword) {
-    console.error(chalk.red('❌ Variable SUPABASE_DB_PASSWORD non trouvée dans .env'));
-    process.exit(1);
-  }
-  
-  // Construire la commande
-  const dbUrl = `postgresql://postgres:${dbPassword}@db.${projectId}.supabase.co:5432/postgres`;
-  const command = `supabase db reset --db-url "${dbUrl}"`;
+  // Connexion à la base de données
+  const pool = await createDbConnection();
   
   try {
     console.log(chalk.red('🔄 Réinitialisation de la base de données...'));
-    // Masquer le mot de passe dans l'affichage
-    console.log(chalk.gray(command.replace(dbPassword, '********')));
     
-    execSync(command, { stdio: 'inherit' });
-    console.log(chalk.green('✅ Base de données réinitialisée avec succès'));
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Récupérer toutes les tables du schéma public
+      const { rows: tables } = await client.query(`
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public'
+      `);
+      
+      // Désactiver temporairement les contraintes de clé étrangère
+      await client.query('SET session_replication_role = replica;');
+      
+      // Supprimer toutes les tables
+      for (const table of tables) {
+        if (table.tablename !== '_migrations') {
+          await client.query(`DROP TABLE IF EXISTS "${table.tablename}" CASCADE`);
+          console.log(chalk.yellow(`🗑️ Table supprimée: ${table.tablename}`));
+        }
+      }
+      
+      // Supprimer la table de migrations
+      await client.query('DROP TABLE IF EXISTS _migrations CASCADE');
+      console.log(chalk.yellow('🗑️ Table de migrations supprimée'));
+      
+      // Réactiver les contraintes de clé étrangère
+      await client.query('SET session_replication_role = DEFAULT;');
+      
+      await client.query('COMMIT');
+      console.log(chalk.green('✅ Base de données réinitialisée avec succès'));
+      
+      // Réappliquer toutes les migrations
+      console.log(chalk.blue('🔄 Réapplication de toutes les migrations...'));
+      await pushMigrations(false);
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error(chalk.red(`❌ Erreur lors de la réinitialisation: ${error.message}`));
+      process.exit(1);
+    } finally {
+      client.release();
+    }
   } catch (error) {
-    console.error(chalk.red('❌ Erreur lors de la réinitialisation de la base de données'));
+    console.error(chalk.red(`❌ Erreur lors de la réinitialisation de la base de données: ${error.message}`));
     process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 
@@ -222,11 +337,6 @@ async function resetDatabase(autoConfirm = false) {
 async function main() {
   console.log(chalk.blue('🔧 Outil de gestion des migrations Supabase'));
   console.log(chalk.blue('═'.repeat(50)));
-  
-  // Vérifier la CLI Supabase
-  if (!checkSupabaseCLI()) {
-    process.exit(1);
-  }
   
   // Exécuter la commande appropriée
   if (options.create) {
@@ -242,4 +352,7 @@ async function main() {
   }
 }
 
-main();
+main().catch(error => {
+  console.error(chalk.red(`❌ Erreur non gérée: ${error.message}`));
+  process.exit(1);
+});
