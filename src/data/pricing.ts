@@ -159,7 +159,7 @@ export const MARKETING_MESSAGES = {
     cta: "Je commence à 12,99€"
   },
   yearly: {
-    headline: "960€ de bonus + 100€ de réduction séjours",
+    headline: "Presque 2 mois OFFERTS + 100€ de réduction séjours",
     subheadline: "L'abonnement annuel le plus avantageux",
     cta: "Je choisis l'annuel"
   }
