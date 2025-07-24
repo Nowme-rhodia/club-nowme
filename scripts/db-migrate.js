@@ -1,10 +1,19 @@
 // scripts/db-migrate.js
 // Script amélioré pour créer et exécuter des migrations depuis StackBlitz vers Supabase
 
-const fs = require('fs');
-const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
+import fs from 'fs';
+import path from 'path';
+import { createClient } from '@supabase/supabase-js';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import dotenv from 'dotenv';
+
+// Configuration pour ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Charger les variables d'environnement
+dotenv.config();
 
 // Configuration Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -209,6 +218,31 @@ async function runPendingMigrations() {
   }
 }
 
+// Fonction pour réinitialiser la base de données (supprimer toutes les tables)
+async function resetDatabase() {
+  console.log('⚠️ ATTENTION: Cette opération va réinitialiser la base de données ⚠️');
+  console.log('Toutes les tables seront supprimées et les migrations seront marquées comme non exécutées.');
+  
+  // Demander confirmation (simulé ici, dans un environnement Node.js réel, utilisez readline)
+  const confirmation = process.argv.includes('--confirm');
+  
+  if (!confirmation) {
+    console.log('Opération annulée. Pour confirmer, ajoutez --confirm à la commande.');
+    return;
+  }
+  
+  try {
+    // Supprimer la table des migrations
+    const dropMigrationsSQL = `DROP TABLE IF EXISTS migrations;`;
+    await supabase.rpc('exec_sql', { sql_query: dropMigrationsSQL });
+    
+    console.log('Base de données réinitialisée avec succès.');
+    console.log('Vous pouvez maintenant exécuter npm run db:push pour réappliquer toutes les migrations.');
+  } catch (error) {
+    console.error('Erreur lors de la réinitialisation de la base de données:', error);
+  }
+}
+
 // Fonction pour créer une fonction RPC exec_sql si elle n'existe pas
 async function createExecSqlFunction() {
   const createFunctionSQL = `
@@ -275,6 +309,7 @@ async function main() {
     console.log('  --run nom     - Exécute une migration spécifique');
     console.log('  --list        - Liste toutes les migrations et leur statut');
     console.log('  --push        - Exécute toutes les migrations en attente');
+    console.log('  --reset       - Réinitialise la base de données (supprime toutes les tables)');
     console.log('  ');
     return;
   }
@@ -289,6 +324,8 @@ async function main() {
     await listMigrations();
   } else if (command === '--push') {
     await runPendingMigrations();
+  } else if (command === '--reset') {
+    await resetDatabase();
   } else {
     console.error(`Commande inconnue: ${command}`);
     process.exit(1);
