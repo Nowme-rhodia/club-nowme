@@ -100,7 +100,7 @@ export default function Subscription() {
     },
     { 
       question: "Pourquoi choisir l'abonnement annuel ?", 
-      answer: "L'annuel à 399€ te fait économiser 80€ vs le mensuel, PLUS tu reçois 80€ de crédit bonus chaque mois (960€/an) et 100€ de réduction sur tous les séjours. C'est le plan le plus avantageux !" 
+      answer: "L'annuel à 399€ te fait économiser 80€ vs le mensuel presque 2 mois OFFERTS, PLUS tu reçois 100€ de réduction sur tous les séjours. C'est le plan le plus avantageux !" 
     },
     { 
       question: "Je peux annuler quand ?", 
@@ -109,10 +109,6 @@ export default function Subscription() {
     { 
       question: "C'est où exactement ?", 
       answer: "Paris et Île-de-France pour l'instant, avec extension prévue dans toute la France ! Dis-nous ta région pour être prévenue en priorité quand on arrive chez toi." 
-    },
-    { 
-      question: "Les 80€ de bonus annuel, comment ça marche ?", 
-      answer: "Avec l'abonnement annuel, tu reçois 80€ de crédit chaque mois à utiliser chez nos partenaires, pour des événements premium ou des services exclusifs. Soit 960€ de bonus sur l'année !" 
     }
   ];
 
