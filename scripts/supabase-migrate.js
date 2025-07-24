@@ -4,13 +4,31 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { program } from 'commander';
-import chalk from 'chalk';
-import inquirer from 'inquirer';
-import dotenv from 'dotenv';
 import pg from 'pg';
 
 // Charger les variables d'environnement
-dotenv.config();
+try {
+  // Essayer d'importer dotenv si disponible
+  const dotenv = await import('dotenv').then(module => module.default);
+  dotenv.config();
+  console.log('✅ Variables d\'environnement chargées depuis .env');
+} catch (error) {
+  console.log('ℹ️ Module dotenv non trouvé, utilisation des variables d\'environnement système');
+}
+
+// Fonction simple pour colorer le texte (sans dépendance chalk)
+const colors = {
+  reset: '\x1b[0m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  gray: '\x1b[90m'
+};
+
+function colorize(color, text) {
+  return `${colors[color]}${text}${colors.reset}`;
+}
 
 program
   .version('1.0.0')
@@ -36,7 +54,7 @@ function ensureMigrationsDir() {
   
   if (!fs.existsSync(migrationsDir)) {
     fs.mkdirSync(migrationsDir);
-    console.log(chalk.blue('📁 Répertoire des migrations créé'));
+    console.log(colorize('blue', '📁 Répertoire des migrations créé'));
   }
   
   return migrationsDir;
@@ -74,7 +92,7 @@ COMMIT;
 `;
 
   fs.writeFileSync(filePath, template);
-  console.log(chalk.green(`✅ Migration créée: ${fileName}`));
+  console.log(colorize('green', `✅ Migration créée: ${fileName}`));
   
   // Ouvrir dans l'éditeur par défaut si disponible
   try {
@@ -86,7 +104,7 @@ COMMIT;
       execSync(`xdg-open ${filePath}`);
     }
   } catch (error) {
-    console.log(chalk.yellow(`ℹ️ Vous pouvez éditer le fichier manuellement: ${filePath}`));
+    console.log(colorize('yellow', `ℹ️ Vous pouvez éditer le fichier manuellement: ${filePath}`));
   }
 }
 
@@ -95,7 +113,7 @@ function listMigrations() {
   const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
   
   if (!fs.existsSync(migrationsDir)) {
-    console.log(chalk.yellow('⚠️ Aucun répertoire de migrations trouvé'));
+    console.log(colorize('yellow', '⚠️ Aucun répertoire de migrations trouvé'));
     return;
   }
   
@@ -104,11 +122,11 @@ function listMigrations() {
     .sort();
   
   if (migrations.length === 0) {
-    console.log(chalk.yellow('⚠️ Aucune migration trouvée'));
+    console.log(colorize('yellow', '⚠️ Aucune migration trouvée'));
     return;
   }
   
-  console.log(chalk.blue(`📋 ${migrations.length} migrations trouvées:`));
+  console.log(colorize('blue', `📋 ${migrations.length} migrations trouvées:`));
   
   migrations.forEach((migration, index) => {
     // Extraire la date et le nom
@@ -124,7 +142,7 @@ function listMigrations() {
     
     const formattedDate = `${year}-${month}-${day} ${hour}:${minute}`;
     
-    console.log(chalk.green(`${index + 1}. [${formattedDate}] ${name}`));
+    console.log(colorize('green', `${index + 1}. [${formattedDate}] ${name}`));
   });
 }
 
@@ -133,7 +151,7 @@ async function createDbConnection() {
   // Vérifier si le mot de passe est disponible
   const dbPassword = process.env.SUPABASE_DB_PASSWORD;
   if (!dbPassword) {
-    console.error(chalk.red('❌ Variable SUPABASE_DB_PASSWORD non trouvée dans .env'));
+    console.error(colorize('red', '❌ Variable SUPABASE_DB_PASSWORD non trouvée dans .env'));
     process.exit(1);
   }
   
@@ -149,10 +167,10 @@ async function createDbConnection() {
   try {
     // Tester la connexion
     await pool.query('SELECT NOW()');
-    console.log(chalk.green('✅ Connexion à la base de données établie'));
+    console.log(colorize('green', '✅ Connexion à la base de données établie'));
     return pool;
   } catch (error) {
-    console.error(chalk.red(`❌ Erreur de connexion à la base de données: ${error.message}`));
+    console.error(colorize('red', `❌ Erreur de connexion à la base de données: ${error.message}`));
     process.exit(1);
   }
 }
@@ -162,7 +180,7 @@ async function pushMigrations(dryRun = false) {
   const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
   
   if (!fs.existsSync(migrationsDir)) {
-    console.log(chalk.yellow('⚠️ Aucun répertoire de migrations trouvé'));
+    console.log(colorize('yellow', '⚠️ Aucun répertoire de migrations trouvé'));
     return;
   }
   
@@ -171,24 +189,24 @@ async function pushMigrations(dryRun = false) {
     .sort();
   
   if (migrations.length === 0) {
-    console.log(chalk.yellow('⚠️ Aucune migration trouvée'));
+    console.log(colorize('yellow', '⚠️ Aucune migration trouvée'));
     return;
   }
   
-  console.log(chalk.blue(`📋 ${migrations.length} migrations trouvées`));
+  console.log(colorize('blue', `📋 ${migrations.length} migrations trouvées`));
   
   if (dryRun) {
-    console.log(chalk.yellow('🔍 Mode simulation activé (dry-run)'));
-    console.log(chalk.blue('Les migrations suivantes seraient appliquées:'));
+    console.log(colorize('yellow', '🔍 Mode simulation activé (dry-run)'));
+    console.log(colorize('blue', 'Les migrations suivantes seraient appliquées:'));
     
     migrations.forEach((migration, index) => {
       const content = fs.readFileSync(path.join(migrationsDir, migration), 'utf8');
       const firstLine = content.split('\n')[0];
       
-      console.log(chalk.green(`${index + 1}. ${migration} - ${firstLine.replace('--', '').trim()}`));
+      console.log(colorize('green', `${index + 1}. ${migration} - ${firstLine.replace('--', '').trim()}`));
     });
     
-    console.log(chalk.yellow('⏭️ Simulation terminée (aucune modification appliquée)'));
+    console.log(colorize('yellow', '⏭️ Simulation terminée (aucune modification appliquée)'));
     return;
   }
   
@@ -213,16 +231,16 @@ async function pushMigrations(dryRun = false) {
     const pendingMigrations = migrations.filter(migration => !appliedMigrationNames.includes(migration));
     
     if (pendingMigrations.length === 0) {
-      console.log(chalk.green('✅ Toutes les migrations sont déjà appliquées'));
+      console.log(colorize('green', '✅ Toutes les migrations sont déjà appliquées'));
       await pool.end();
       return;
     }
     
-    console.log(chalk.blue(`🔄 ${pendingMigrations.length} migrations à appliquer`));
+    console.log(colorize('blue', `🔄 ${pendingMigrations.length} migrations à appliquer`));
     
     // Exécuter chaque migration dans une transaction
     for (const migration of pendingMigrations) {
-      console.log(chalk.blue(`🔄 Application de la migration: ${migration}`));
+      console.log(colorize('blue', `🔄 Application de la migration: ${migration}`));
       
       const content = fs.readFileSync(path.join(migrationsDir, migration), 'utf8');
       const client = await pool.connect();
@@ -237,20 +255,20 @@ async function pushMigrations(dryRun = false) {
         await client.query('INSERT INTO _migrations (name) VALUES ($1)', [migration]);
         
         await client.query('COMMIT');
-        console.log(chalk.green(`✅ Migration ${migration} appliquée avec succès`));
+        console.log(colorize('green', `✅ Migration ${migration} appliquée avec succès`));
       } catch (error) {
         await client.query('ROLLBACK');
-        console.error(chalk.red(`❌ Erreur lors de l'application de la migration ${migration}:`));
-        console.error(chalk.red(error.message));
+        console.error(colorize('red', `❌ Erreur lors de l'application de la migration ${migration}:`));
+        console.error(colorize('red', error.message));
         process.exit(1);
       } finally {
         client.release();
       }
     }
     
-    console.log(chalk.green('✅ Toutes les migrations ont été appliquées avec succès'));
+    console.log(colorize('green', '✅ Toutes les migrations ont été appliquées avec succès'));
   } catch (error) {
-    console.error(chalk.red(`❌ Erreur lors de l'application des migrations: ${error.message}`));
+    console.error(colorize('red', `❌ Erreur lors de l'application des migrations: ${error.message}`));
     process.exit(1);
   } finally {
     await pool.end();
@@ -260,26 +278,18 @@ async function pushMigrations(dryRun = false) {
 // Réinitialiser la base de données
 async function resetDatabase(autoConfirm = false) {
   if (!autoConfirm) {
-    const { confirm } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'confirm',
-        message: chalk.red('⚠️ ATTENTION: Cette action va réinitialiser TOUTES les données. Êtes-vous sûr?'),
-        default: false
-      }
-    ]);
-    
-    if (!confirm) {
-      console.log(chalk.blue('🛑 Opération annulée'));
-      return;
-    }
+    // Version simplifiée sans inquirer
+    console.log(colorize('red', '⚠️ ATTENTION: Cette action va réinitialiser TOUTES les données.'));
+    console.log(colorize('red', 'Pour confirmer, ajoutez l\'option --yes ou -y à votre commande.'));
+    console.log(colorize('blue', '🛑 Opération annulée'));
+    return;
   }
   
   // Connexion à la base de données
   const pool = await createDbConnection();
   
   try {
-    console.log(chalk.red('🔄 Réinitialisation de la base de données...'));
+    console.log(colorize('red', '🔄 Réinitialisation de la base de données...'));
     
     const client = await pool.connect();
     
@@ -300,33 +310,33 @@ async function resetDatabase(autoConfirm = false) {
       for (const table of tables) {
         if (table.tablename !== '_migrations') {
           await client.query(`DROP TABLE IF EXISTS "${table.tablename}" CASCADE`);
-          console.log(chalk.yellow(`🗑️ Table supprimée: ${table.tablename}`));
+          console.log(colorize('yellow', `🗑️ Table supprimée: ${table.tablename}`));
         }
       }
       
       // Supprimer la table de migrations
       await client.query('DROP TABLE IF EXISTS _migrations CASCADE');
-      console.log(chalk.yellow('🗑️ Table de migrations supprimée'));
+      console.log(colorize('yellow', '🗑️ Table de migrations supprimée'));
       
       // Réactiver les contraintes de clé étrangère
       await client.query('SET session_replication_role = DEFAULT;');
       
       await client.query('COMMIT');
-      console.log(chalk.green('✅ Base de données réinitialisée avec succès'));
+      console.log(colorize('green', '✅ Base de données réinitialisée avec succès'));
       
       // Réappliquer toutes les migrations
-      console.log(chalk.blue('🔄 Réapplication de toutes les migrations...'));
+      console.log(colorize('blue', '🔄 Réapplication de toutes les migrations...'));
       await pushMigrations(false);
       
     } catch (error) {
       await client.query('ROLLBACK');
-      console.error(chalk.red(`❌ Erreur lors de la réinitialisation: ${error.message}`));
+      console.error(colorize('red', `❌ Erreur lors de la réinitialisation: ${error.message}`));
       process.exit(1);
     } finally {
       client.release();
     }
   } catch (error) {
-    console.error(chalk.red(`❌ Erreur lors de la réinitialisation de la base de données: ${error.message}`));
+    console.error(colorize('red', `❌ Erreur lors de la réinitialisation de la base de données: ${error.message}`));
     process.exit(1);
   } finally {
     await pool.end();
@@ -335,8 +345,8 @@ async function resetDatabase(autoConfirm = false) {
 
 // Fonction principale
 async function main() {
-  console.log(chalk.blue('🔧 Outil de gestion des migrations Supabase'));
-  console.log(chalk.blue('═'.repeat(50)));
+  console.log(colorize('blue', '🔧 Outil de gestion des migrations Supabase'));
+  console.log(colorize('blue', '═'.repeat(50)));
   
   // Exécuter la commande appropriée
   if (options.create) {
@@ -353,6 +363,6 @@ async function main() {
 }
 
 main().catch(error => {
-  console.error(chalk.red(`❌ Erreur non gérée: ${error.message}`));
+  console.error(colorize('red', `❌ Erreur non gérée: ${error.message}`));
   process.exit(1);
 });
