@@ -1,4 +1,3 @@
--- Voici le package.json modifié que vous devriez utiliser :
 {
   "name": "club-nowme",
   "version": "1.0.0",
@@ -10,7 +9,12 @@
     "preview": "vite preview",
     "start": "vite",
     "test:connection": "node scripts/test-connection.js",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "db:migrate": "node scripts/db-migrate.js",
+    "db:create": "node scripts/db-migrate.js --create",
+    "db:push": "node scripts/db-migrate.js --push",
+    "db:list": "node scripts/db-migrate.js --list",
+    "db:reset": "node scripts/db-migrate.js --reset"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",
