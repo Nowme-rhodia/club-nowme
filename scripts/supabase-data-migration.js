@@ -1,19 +1,32 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.39.3';
+// data-migration.ts - Edge Function pour les migrations de données
+// Cette fonction remplace supabase-data-migration.js pour une utilisation dans StackBlitz
 
-/**
- * Edge Function pour gérer les migrations de données entre tables
- * Permet de copier, transformer et déplacer des données
- */
-Deno.serve(async (req) => {
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+
+// Configuration
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const MIGRATIONS_BUCKET = 'migrations';
+const MIGRATIONS_TABLE = 'migrations';
+
+// Créer un client Supabase avec la clé de service
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// Interface pour les migrations
+interface Migration {
+  id: string;
+  name: string;
+  description: string;
+  sql: string;
+  batch: number;
+  applied_at?: string;
+  status: 'pending' | 'applied' | 'failed';
+  error?: string;
+}
+
+serve(async (req: Request) => {
   try {
-    // Vérifier si la méthode est POST
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-        status: 405,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     // Vérifier l'authentification
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -22,108 +35,318 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // Initialiser le client Supabase avec la clé de service
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Récupérer les paramètres de la requête
-    const params = await req.json();
-    const { 
-      operation, 
-      sourceTable, 
-      targetTable,
-      sourceColumns = '*',
-      targetColumns,
-      mappings = {},
-      filters = {},
-      batchSize = 100,
-      dryRun = false,
-      transformFunction
-    } = params;
-
-    // Vérifier les paramètres obligatoires
-    if (!operation || !sourceTable) {
-      return new Response(JSON.stringify({ 
-        error: 'Paramètres manquants', 
-        details: 'Les paramètres operation et sourceTable sont requis' 
-      }), {
-        status: 400,
+    
+    // Extraire et vérifier le token
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Non autorisé' }), {
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // Exécuter l'opération demandée
-    let result;
-    switch (operation) {
-      case 'copy':
-        if (!targetTable) {
+    
+    // Vérifier si l'utilisateur est administrateur
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (profileError || profile?.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Accès refusé' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Créer la table de migrations si elle n'existe pas
+    await supabase.rpc('create_migrations_table_if_not_exists');
+    
+    // Créer le bucket de migrations si nécessaire
+    const { error: bucketError } = await supabase.storage.createBucket(MIGRATIONS_BUCKET, {
+      public: false
+    });
+    
+    if (bucketError && !bucketError.message.includes('already exists')) {
+      throw new Error(`Erreur lors de la création du bucket: ${bucketError.message}`);
+    }
+    
+    // Analyser la requête
+    const url = new URL(req.url);
+    const action = url.pathname.split('/').pop();
+    
+    if (req.method === 'GET') {
+      // Liste des migrations
+      const { data: migrations, error } = await supabase
+        .from(MIGRATIONS_TABLE)
+        .select('*')
+        .order('batch', { ascending: true })
+        .order('name', { ascending: true });
+      
+      if (error) {
+        throw new Error(`Erreur lors de la récupération des migrations: ${error.message}`);
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        migrations
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } 
+    else if (req.method === 'POST' && action === 'upload') {
+      // Téléverser une nouvelle migration
+      const formData = await req.formData();
+      const migrationFile = formData.get('file') as File;
+      const name = formData.get('name') as string;
+      const description = formData.get('description') as string;
+      
+      if (!migrationFile || !name) {
+        return new Response(JSON.stringify({ error: 'Fichier ou nom manquant' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Lire le contenu du fichier
+      const sql = await migrationFile.text();
+      
+      // Générer un ID unique
+      const id = crypto.randomUUID();
+      
+      // Sauvegarder le fichier SQL dans Storage
+      const { error: uploadError } = await supabase
+        .storage
+        .from(MIGRATIONS_BUCKET)
+        .upload(`${id}.sql`, sql, {
+          contentType: 'text/plain',
+          cacheControl: '3600'
+        });
+      
+      if (uploadError) {
+        throw new Error(`Erreur lors du téléversement: ${uploadError.message}`);
+      }
+      
+      // Déterminer le prochain numéro de batch
+      const { data: maxBatch } = await supabase
+        .from(MIGRATIONS_TABLE)
+        .select('batch')
+        .order('batch', { ascending: false })
+        .limit(1)
+        .single();
+      
+      const nextBatch = maxBatch ? maxBatch.batch + 1 : 1;
+      
+      // Enregistrer la migration dans la base de données
+      const { error: insertError } = await supabase
+        .from(MIGRATIONS_TABLE)
+        .insert({
+          id,
+          name,
+          description,
+          sql,
+          batch: nextBatch,
+          status: 'pending'
+        });
+      
+      if (insertError) {
+        throw new Error(`Erreur lors de l'enregistrement: ${insertError.message}`);
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Migration téléversée avec succès',
+        id
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } 
+    else if (req.method === 'POST' && action === 'apply') {
+      // Appliquer une migration spécifique ou toutes les migrations en attente
+      const body = await req.json();
+      const migrationId = body.id;
+      
+      let migrationsToApply: Migration[] = [];
+      
+      if (migrationId) {
+        // Récupérer une migration spécifique
+        const { data, error } = await supabase
+          .from(MIGRATIONS_TABLE)
+          .select('*')
+          .eq('id', migrationId)
+          .eq('status', 'pending')
+          .single();
+        
+        if (error || !data) {
           return new Response(JSON.stringify({ 
-            error: 'Paramètre manquant', 
-            details: 'Le paramètre targetTable est requis pour l\'opération copy' 
+            error: 'Migration non trouvée ou déjà appliquée' 
           }), {
-            status: 400,
+            status: 404,
             headers: { 'Content-Type': 'application/json' }
           });
         }
-        result = await copyData(
-          supabase, 
-          sourceTable, 
-          targetTable, 
-          sourceColumns, 
-          targetColumns, 
-          mappings, 
-          filters, 
-          batchSize, 
-          dryRun,
-          transformFunction
-        );
-        break;
         
-      case 'transform':
-        result = await transformData(
-          supabase, 
-          sourceTable, 
-          filters, 
-          mappings, 
-          batchSize, 
-          dryRun,
-          transformFunction
-        );
-        break;
+        migrationsToApply = [data];
+      } else {
+        // Récupérer toutes les migrations en attente
+        const { data, error } = await supabase
+          .from(MIGRATIONS_TABLE)
+          .select('*')
+          .eq('status', 'pending')
+          .order('batch', { ascending: true })
+          .order('name', { ascending: true });
         
-      case 'delete':
-        result = await deleteData(
-          supabase, 
-          sourceTable, 
-          filters, 
-          batchSize, 
-          dryRun
-        );
-        break;
+        if (error) {
+          throw new Error(`Erreur lors de la récupération des migrations: ${error.message}`);
+        }
         
-      default:
+        migrationsToApply = data || [];
+      }
+      
+      if (migrationsToApply.length === 0) {
         return new Response(JSON.stringify({ 
-          error: 'Opération non reconnue', 
-          details: 'Les opérations supportées sont: copy, transform, delete' 
+          success: true, 
+          message: 'Aucune migration en attente' 
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Appliquer les migrations
+      const results = [];
+      
+      for (const migration of migrationsToApply) {
+        try {
+          // Exécuter le SQL
+          const { error: sqlError } = await supabase.rpc('execute_sql', {
+            sql_string: migration.sql
+          });
+          
+          if (sqlError) {
+            throw new Error(sqlError.message);
+          }
+          
+          // Mettre à jour le statut de la migration
+          const { error: updateError } = await supabase
+            .from(MIGRATIONS_TABLE)
+            .update({
+              status: 'applied',
+              applied_at: new Date().toISOString()
+            })
+            .eq('id', migration.id);
+          
+          if (updateError) {
+            throw new Error(updateError.message);
+          }
+          
+          results.push({
+            id: migration.id,
+            name: migration.name,
+            success: true
+          });
+        } catch (error) {
+          // Enregistrer l'erreur
+          await supabase
+            .from(MIGRATIONS_TABLE)
+            .update({
+              status: 'failed',
+              error: error.message
+            })
+            .eq('id', migration.id);
+          
+          results.push({
+            id: migration.id,
+            name: migration.name,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        results
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } 
+    else if (req.method === 'DELETE' && action === 'delete') {
+      // Supprimer une migration
+      const body = await req.json();
+      const migrationId = body.id;
+      
+      if (!migrationId) {
+        return new Response(JSON.stringify({ error: 'ID de migration manquant' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Vérifier que la migration existe et n'est pas appliquée
+      const { data: migration, error: fetchError } = await supabase
+        .from(MIGRATIONS_TABLE)
+        .select('*')
+        .eq('id', migrationId)
+        .single();
+      
+      if (fetchError || !migration) {
+        return new Response(JSON.stringify({ error: 'Migration non trouvée' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      if (migration.status === 'applied') {
+        return new Response(JSON.stringify({ 
+          error: 'Impossible de supprimer une migration déjà appliquée' 
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+      
+      // Supprimer le fichier de Storage
+      await supabase
+        .storage
+        .from(MIGRATIONS_BUCKET)
+        .remove([`${migrationId}.sql`]);
+      
+      // Supprimer l'enregistrement de la base de données
+      const { error: deleteError } = await supabase
+        .from(MIGRATIONS_TABLE)
+        .delete()
+        .eq('id', migrationId);
+      
+      if (deleteError) {
+        throw new Error(`Erreur lors de la suppression: ${deleteError.message}`);
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Migration supprimée avec succès'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } 
+    else {
+      return new Response(JSON.stringify({ error: 'Méthode non supportée' }), {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
   } catch (error) {
     console.error('Erreur:', error);
     
-    return new Response(JSON.stringify({ 
-      error: 'Erreur interne du serveur', 
-      message: error.message 
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -131,395 +354,63 @@ Deno.serve(async (req) => {
   }
 });
 
-/**
- * Copie des données d'une table à une autre avec transformation optionnelle
- */
-async function copyData(
-  supabase, 
-  sourceTable, 
-  targetTable, 
-  sourceColumns = '*', 
-  targetColumns, 
-  mappings = {}, 
-  filters = {}, 
-  batchSize = 100, 
-  dryRun = false,
-  transformFunctionStr
-) {
-  // Récupérer les données de la source avec filtres
-  let query = supabase.from(sourceTable).select(sourceColumns);
-  
-  // Appliquer les filtres
-  Object.entries(filters).forEach(([column, value]) => {
-    if (typeof value === 'object' && value !== null) {
-      // Gérer les opérateurs spéciaux comme gt, lt, etc.
-      Object.entries(value).forEach(([operator, operatorValue]) => {
-        switch(operator) {
-          case 'gt': query = query.gt(column, operatorValue); break;
-          case 'gte': query = query.gte(column, operatorValue); break;
-          case 'lt': query = query.lt(column, operatorValue); break;
-          case 'lte': query = query.lte(column, operatorValue); break;
-          case 'neq': query = query.neq(column, operatorValue); break;
-          case 'in': query = query.in(column, operatorValue); break;
-          case 'contains': query = query.contains(column, operatorValue); break;
-          case 'ilike': query = query.ilike(column, operatorValue); break;
-          // Ajouter d'autres opérateurs au besoin
-        }
-      });
-    } else {
-      // Filtre d'égalité simple
-      query = query.eq(column, value);
-    }
-  });
-  
-  const { data: sourceData, error: sourceError } = await query;
-  
-  if (sourceError) {
-    return { 
-      success: false, 
-      error: sourceError.message,
-      operation: 'copy',
-      source: sourceTable,
-      target: targetTable
-    };
-  }
-  
-  if (sourceData.length === 0) {
-    return { 
-      success: true, 
-      message: 'Aucune donnée à copier',
-      operation: 'copy',
-      source: sourceTable,
-      target: targetTable,
-      count: 0
-    };
-  }
-  
-  // Transformer les données si nécessaire
-  let transformedData = sourceData;
-  
-  // Appliquer les mappings de colonnes
-  if (Object.keys(mappings).length > 0 || transformFunctionStr) {
-    transformedData = sourceData.map(row => {
-      // Créer un nouvel objet pour la ligne transformée
-      const transformedRow = { ...row };
-      
-      // Appliquer les mappings de colonnes
-      Object.entries(mappings).forEach(([targetCol, sourceCol]) => {
-        if (typeof sourceCol === 'string') {
-          // Mapping simple de colonne à colonne
-          transformedRow[targetCol] = row[sourceCol];
-        } else if (typeof sourceCol === 'object' && sourceCol.formula) {
-          // Mapping avec formule simple (à évaluer avec précaution)
-          try {
-            // Créer une fonction qui évalue la formule avec la ligne comme contexte
-            const formula = new Function('row', `return ${sourceCol.formula}`);
-            transformedRow[targetCol] = formula(row);
-          } catch (error) {
-            console.error(`Erreur dans la formule pour ${targetCol}:`, error);
-            transformedRow[targetCol] = null;
-          }
-        }
-      });
-      
-      // Appliquer la fonction de transformation personnalisée si fournie
-      if (transformFunctionStr) {
-        try {
-          const transformFunction = new Function('row', transformFunctionStr);
-          return transformFunction(transformedRow) || transformedRow;
-        } catch (error) {
-          console.error('Erreur dans la fonction de transformation:', error);
-          return transformedRow;
-        }
-      }
-      
-      return transformedRow;
-    });
-  }
-  
-  // En mode dry run, retourner les données qui seraient insérées
-  if (dryRun) {
-    return {
-      success: true,
-      operation: 'copy (dry run)',
-      source: sourceTable,
-      target: targetTable,
-      count: transformedData.length,
-      sample: transformedData.slice(0, 5) // Retourner un échantillon des données
-    };
-  }
-  
-  // Insérer les données par lots
-  const results = {
-    success: true,
-    operation: 'copy',
-    source: sourceTable,
-    target: targetTable,
-    totalCount: transformedData.length,
-    insertedCount: 0,
-    errors: []
-  };
-  
-  // Traiter par lots pour éviter les limitations
-  for (let i = 0; i < transformedData.length; i += batchSize) {
-    const batch = transformedData.slice(i, i + batchSize);
+// Fonction SQL à créer dans Supabase
+/*
+CREATE OR REPLACE FUNCTION create_migrations_table_if_not_exists()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT FROM pg_tables
+    WHERE schemaname = 'public'
+    AND tablename = 'migrations'
+  ) THEN
+    CREATE TABLE public.migrations (
+      id UUID PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      sql TEXT NOT NULL,
+      batch INTEGER NOT NULL,
+      applied_at TIMESTAMP WITH TIME ZONE,
+      status TEXT NOT NULL,
+      error TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    );
     
-    // Insérer le lot dans la table cible
-    const { error: insertError, count } = await supabase
-      .from(targetTable)
-      .insert(batch)
-      .select('count');
+    -- Ajouter RLS
+    ALTER TABLE public.migrations ENABLE ROW LEVEL SECURITY;
     
-    if (insertError) {
-      results.errors.push({
-        batch: i / batchSize + 1,
-        error: insertError.message
-      });
-    } else {
-      results.insertedCount += count || batch.length;
-    }
-  }
-  
-  results.success = results.errors.length === 0;
-  return results;
-}
+    -- Créer une politique pour les administrateurs uniquement
+    CREATE POLICY "Les administrateurs peuvent tout faire" ON public.migrations
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.profiles
+          WHERE id = auth.uid()
+          AND role = 'admin'
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.profiles
+          WHERE id = auth.uid()
+          AND role = 'admin'
+        )
+      );
+  END IF;
+END;
+$$;
 
-/**
- * Transforme des données dans une table existante
- */
-async function transformData(
-  supabase, 
-  table, 
-  filters = {}, 
-  updates = {}, 
-  batchSize = 100, 
-  dryRun = false,
-  transformFunctionStr
-) {
-  // Récupérer les données avec filtres
-  let query = supabase.from(table).select('*');
-  
-  // Appliquer les filtres
-  Object.entries(filters).forEach(([column, value]) => {
-    if (typeof value === 'object' && value !== null) {
-      // Gérer les opérateurs spéciaux
-      Object.entries(value).forEach(([operator, operatorValue]) => {
-        switch(operator) {
-          case 'gt': query = query.gt(column, operatorValue); break;
-          case 'gte': query = query.gte(column, operatorValue); break;
-          case 'lt': query = query.lt(column, operatorValue); break;
-          case 'lte': query = query.lte(column, operatorValue); break;
-          case 'neq': query = query.neq(column, operatorValue); break;
-          case 'in': query = query.in(column, operatorValue); break;
-          case 'contains': query = query.contains(column, operatorValue); break;
-          case 'ilike': query = query.ilike(column, operatorValue); break;
-        }
-      });
-    } else {
-      // Filtre d'égalité simple
-      query = query.eq(column, value);
-    }
-  });
-  
-  const { data: rowsToUpdate, error: fetchError } = await query;
-  
-  if (fetchError) {
-    return { 
-      success: false, 
-      error: fetchError.message,
-      operation: 'transform',
-      table
-    };
-  }
-  
-  if (rowsToUpdate.length === 0) {
-    return { 
-      success: true, 
-      message: 'Aucune donnée à transformer',
-      operation: 'transform',
-      table,
-      count: 0
-    };
-  }
-  
-  // Préparer les mises à jour
-  const updates_to_apply = [];
-  
-  for (const row of rowsToUpdate) {
-    const updateData = { ...updates };
-    
-    // Appliquer la fonction de transformation personnalisée si fournie
-    if (transformFunctionStr) {
-      try {
-        const transformFunction = new Function('row', 'updates', transformFunctionStr);
-        const customUpdates = transformFunction(row, updates) || {};
-        Object.assign(updateData, customUpdates);
-      } catch (error) {
-        console.error('Erreur dans la fonction de transformation:', error);
-      }
-    }
-    
-    updates_to_apply.push({
-      id: row.id, // Supposant que la table a une colonne 'id'
-      original: row,
-      updates: updateData
-    });
-  }
-  
-  // En mode dry run, retourner les mises à jour qui seraient appliquées
-  if (dryRun) {
-    return {
-      success: true,
-      operation: 'transform (dry run)',
-      table,
-      count: updates_to_apply.length,
-      sample: updates_to_apply.slice(0, 5)
-    };
-  }
-  
-  // Appliquer les mises à jour par lots
-  const results = {
-    success: true,
-    operation: 'transform',
-    table,
-    totalCount: updates_to_apply.length,
-    updatedCount: 0,
-    errors: []
-  };
-  
-  for (let i = 0; i < updates_to_apply.length; i += batchSize) {
-    const batch = updates_to_apply.slice(i, i + batchSize);
-    
-    // Mettre à jour chaque ligne individuellement pour garantir la précision
-    for (const item of batch) {
-      const { error: updateError } = await supabase
-        .from(table)
-        .update(item.updates)
-        .eq('id', item.id);
-      
-      if (updateError) {
-        results.errors.push({
-          id: item.id,
-          error: updateError.message
-        });
-      } else {
-        results.updatedCount++;
-      }
-    }
-  }
-  
-  results.success = results.errors.length === 0;
-  return results;
-}
-
-/**
- * Supprime des données d'une table selon des filtres
- */
-async function deleteData(
-  supabase, 
-  table, 
-  filters = {}, 
-  batchSize = 100, 
-  dryRun = false
-) {
-  // Vérifier si des filtres sont fournis pour éviter une suppression accidentelle de toutes les données
-  if (Object.keys(filters).length === 0) {
-    return { 
-      success: false, 
-      error: 'Aucun filtre fourni. Pour protéger vos données, des filtres sont requis pour les opérations de suppression.',
-      operation: 'delete',
-      table
-    };
-  }
-  
-  // Récupérer les IDs des lignes à supprimer
-  let query = supabase.from(table).select('id');
-  
-  // Appliquer les filtres
-  Object.entries(filters).forEach(([column, value]) => {
-    if (typeof value === 'object' && value !== null) {
-      // Gérer les opérateurs spéciaux
-      Object.entries(value).forEach(([operator, operatorValue]) => {
-        switch(operator) {
-          case 'gt': query = query.gt(column, operatorValue); break;
-          case 'gte': query = query.gte(column, operatorValue); break;
-          case 'lt': query = query.lt(column, operatorValue); break;
-          case 'lte': query = query.lte(column, operatorValue); break;
-          case 'neq': query = query.neq(column, operatorValue); break;
-          case 'in': query = query.in(column, operatorValue); break;
-          case 'contains': query = query.contains(column, operatorValue); break;
-          case 'ilike': query = query.ilike(column, operatorValue); break;
-        }
-      });
-    } else {
-      // Filtre d'égalité simple
-      query = query.eq(column, value);
-    }
-  });
-  
-  const { data: rowsToDelete, error: fetchError } = await query;
-  
-  if (fetchError) {
-    return { 
-      success: false, 
-      error: fetchError.message,
-      operation: 'delete',
-      table
-    };
-  }
-  
-  if (rowsToDelete.length === 0) {
-    return { 
-      success: true, 
-      message: 'Aucune donnée à supprimer',
-      operation: 'delete',
-      table,
-      count: 0
-    };
-  }
-  
-  // En mode dry run, retourner les IDs qui seraient supprimés
-  if (dryRun) {
-    return {
-      success: true,
-      operation: 'delete (dry run)',
-      table,
-      count: rowsToDelete.length,
-      ids: rowsToDelete.map(row => row.id)
-    };
-  }
-  
-  // Supprimer par lots
-  const results = {
-    success: true,
-    operation: 'delete',
-    table,
-    totalCount: rowsToDelete.length,
-    deletedCount: 0,
-    errors: []
-  };
-  
-  // Extraire les IDs
-  const ids = rowsToDelete.map(row => row.id);
-  
-  for (let i = 0; i < ids.length; i += batchSize) {
-    const batchIds = ids.slice(i, i + batchSize);
-    
-    const { error: deleteError } = await supabase
-      .from(table)
-      .delete()
-      .in('id', batchIds);
-    
-    if (deleteError) {
-      results.errors.push({
-        batch: i / batchSize + 1,
-        error: deleteError.message
-      });
-    } else {
-      results.deletedCount += batchIds.length;
-    }
-  }
-  
-  results.success = results.errors.length === 0;
-  return results;
-}
+CREATE OR REPLACE FUNCTION execute_sql(sql_string TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  EXECUTE sql_string;
+END;
+$$;
+*/
