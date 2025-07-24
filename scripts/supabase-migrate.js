@@ -8,38 +8,16 @@ import path from 'path';
 program
   .version('1.0.0')
   .description('Script de migration Supabase pour Nowme')
-  .option('-e, --environment <type>', 'Environnement cible (dev, staging, production)', 'dev')
   .parse(process.argv);
 
-const options = program.opts();
-
-// Configuration des projets - CORRIGÉ
-const projectConfig = {
-  dev: {
-    id: 'dqfyuhwrjozoxadkccdj',
-    url: process.env.VITE_SUPABASE_URL || 'https://dqfyuhwrjozoxadkccdj.supabase.co'
-  },
-  staging: {
-    id: 'dqfyuhwrjozoxadkccdj',
-    url: process.env.VITE_SUPABASE_URL || 'https://dqfyuhwrjozoxadkccdj.supabase.co'
-  },
-  production: {
-    id: 'dqfyuhwrjozoxadkccdj',
-    url: process.env.VITE_SUPABASE_URL || 'https://dqfyuhwrjozoxadkccdj.supabase.co'
-  }
-};
+// Configuration du projet
+const projectId = 'dqfyuhwrjozoxadkccdj';
+const projectUrl = process.env.VITE_SUPABASE_URL || `https://${projectId}.supabase.co`;
 
 async function runMigrations() {
-  const config = projectConfig[options.environment];
-  
-  if (!config) {
-    console.error('❌ Environnement invalide. Utilisez dev, staging, ou production');
-    process.exit(1);
-  }
-
   try {
-    console.log(`🚀 Démarrage des migrations pour l'environnement ${options.environment}`);
-    console.log(`📡 URL Supabase: ${config.url}`);
+    console.log(`🚀 Démarrage des migrations pour le projet ${projectId}`);
+    console.log(`📡 URL Supabase: ${projectUrl}`);
     
     // Vérifier que les variables d'environnement sont disponibles
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -49,7 +27,7 @@ async function runMigrations() {
     }
 
     // Créer le client Supabase avec la clé service
-    const supabase = createClient(config.url, serviceRoleKey);
+    const supabase = createClient(projectUrl, serviceRoleKey);
 
     // Test de connexion
     console.log('🔍 Test de connexion...');
@@ -146,7 +124,7 @@ async function runMigrations() {
         console.log('   3. Copier-coller le contenu du fichier:');
         console.log(`      supabase/migrations/${file}`);
         console.log('   4. Exécuter la requête');
-        console.log('\n🌐 Dashboard: https://supabase.com/dashboard/project/dqfyuhwrjozoxadkccdj/sql');
+        console.log(`\n🌐 Dashboard: https://supabase.com/dashboard/project/${projectId}/sql`);
 
         // Marquer comme "à faire manuellement"
         console.log(`\n⚠️ Migration ${file} nécessite une application manuelle`);
@@ -159,7 +137,7 @@ async function runMigrations() {
     console.log('\n✅ Instructions générées pour toutes les migrations');
     console.log('\n💡 CONSEIL: Appliquez les migrations dans l\'ordre chronologique');
     console.log('💡 Vérifiez que chaque migration s\'exécute sans erreur avant de passer à la suivante');
-    console.log('\n🔗 Lien direct: https://supabase.com/dashboard/project/dqfyuhwrjozoxadkccdj/sql');
+    console.log(`\n🔗 Lien direct: https://supabase.com/dashboard/project/${projectId}/sql`);
 
   } catch (error) {
     console.error('❌ Erreur lors des migrations:', error.message);
