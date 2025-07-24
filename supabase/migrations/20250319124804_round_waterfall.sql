@@ -93,26 +93,52 @@ END $$;
 ALTER POLICY "Partners can read their own data" ON public.partners
   USING (
     auth.uid() = user_id 
-    AND (auth.jwt() ->> 'role')::text = 'partner'
+    AND ((auth.jwt() ->> 'app_metadata')::jsonb ->> 'role')::text = 'partner'
   );
 
 ALTER POLICY "Partners can insert their own data" ON public.partners
   WITH CHECK (
     auth.uid() = user_id 
-    AND (auth.jwt() ->> 'role')::text = 'partner'
+    AND ((auth.jwt() ->> 'app_metadata')::jsonb ->> 'role')::text = 'partner'
   );
 
 ALTER POLICY "Partners can update their own data" ON public.partners
   USING (
     auth.uid() = user_id 
-    AND (auth.jwt() ->> 'role')::text = 'partner'
+    AND ((auth.jwt() ->> 'app_metadata')::jsonb ->> 'role')::text = 'partner'
   )
   WITH CHECK (
     auth.uid() = user_id 
-    AND (auth.jwt() ->> 'role')::text = 'partner'
+    AND ((auth.jwt() ->> 'app_metadata')::jsonb ->> 'role')::text = 'partner'
   );
+
+-- Fonction utilitaire pour vérifier si l'utilisateur est un service_role
+CREATE OR REPLACE FUNCTION is_service_role()
+RETURNS boolean AS $$
+BEGIN
+  RETURN current_setting('request.jwt.claims', true)::json->>'role' = 'service_role';
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN false;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Politiques pour le service_role
+CREATE POLICY "Allow Insert from Webhook"
+  ON public.user_profiles
+  FOR INSERT
+  TO service_role
+  WITH CHECK (true);
+
+CREATE POLICY "Allow Update only for Service Role"
+  ON public.user_profiles
+  FOR UPDATE
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
 
 -- Ajout de commentaires
 COMMENT ON FUNCTION update_user_role() IS 'Met à jour le rôle utilisateur dans auth.users.raw_app_meta_data';
+COMMENT ON FUNCTION is_service_role() IS 'Vérifie si le rôle actuel est service_role';
 COMMENT ON TRIGGER set_partner_role ON public.partners IS 'Définit le rôle partenaire lors de l''insertion/mise à jour';
 COMMENT ON TRIGGER set_subscriber_role ON public.user_profiles IS 'Définit le rôle abonné lors de l''insertion/mise à jour';
