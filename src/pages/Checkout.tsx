@@ -103,7 +103,7 @@ export default function Checkout() {
               <div className="bg-green-50 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-green-900 mb-2">⭐ Plan annuel avantageux</h4>
                 <p className="text-green-700 text-sm">
-                  399€ pour l'année + 960€ de bonus + 100€ de réduction séjours. Économie de 80€ !
+                  399€ pour l'année + 100€ de réduction séjours. Économie de 80€ !
                 </p>
               </div>
             )}
