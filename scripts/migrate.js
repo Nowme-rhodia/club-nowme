@@ -7,31 +7,18 @@ import { program } from 'commander';
 program
   .version('1.0.0')
   .description('Script de migration Supabase pour Nowme')
-  .option('-e, --environment <type>', 'Environnement cible (dev, staging, production)', 'dev')
   .option('-d, --direction <type>', 'Direction de la migration (up, down)', 'up')
   .parse(process.argv);
 
 const options = program.opts();
 
 // Charger les variables d'environnement
-const envFile = `.env.${options.environment}`;
-dotenv.config({ path: envFile });
+dotenv.config();
 
-const projectIds = {
-  dev: 'dqfyuhwrjozoxadkccdj',
-  staging: 'dqfyuhwrjozoxadkccdj',
-  production: 'dqfyuhwrjozoxadkccdj'
-};
-
-const projectId = projectIds[options.environment];
-
-if (!projectId) {
-  console.error('Environnement invalide. Utilisez dev, staging, ou production');
-  process.exit(1);
-}
+const projectId = 'dqfyuhwrjozoxadkccdj';
 
 try {
-  console.log(`🚀 Démarrage des migrations pour l'environnement ${options.environment}`);
+  console.log(`🚀 Démarrage des migrations pour le projet ${projectId}`);
   
   // Exécuter les migrations
   execSync(`supabase db push --db-url postgresql://postgres:[PASSWORD]@db.${projectId}.supabase.co:5432/postgres`, {
