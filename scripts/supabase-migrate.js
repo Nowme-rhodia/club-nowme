@@ -1,167 +1,245 @@
 #!/usr/bin/env node
 
-import { createClient } from '@supabase/supabase-js';
-import { program } from 'commander';
-import fs from 'fs/promises';
+import { execSync } from 'child_process';
+import fs from 'fs';
 import path from 'path';
+import { program } from 'commander';
+import chalk from 'chalk';
+import inquirer from 'inquirer';
+import dotenv from 'dotenv';
+
+// Charger les variables d'environnement
+dotenv.config();
 
 program
   .version('1.0.0')
-  .description('Script de migration Supabase pour Nowme')
+  .description('Outil de gestion des migrations Supabase')
+  .option('-c, --create <name>', 'Créer une nouvelle migration')
+  .option('-p, --push', 'Pousser les migrations vers la base de données')
+  .option('-r, --reset', 'Réinitialiser la base de données (DANGER)')
+  .option('-l, --list', 'Lister les migrations existantes')
+  .option('-d, --dry-run', 'Simuler sans exécuter')
+  .option('-y, --yes', 'Confirmer automatiquement les actions')
   .parse(process.argv);
 
-// Configuration du projet
+const options = program.opts();
 const projectId = 'dqfyuhwrjozoxadkccdj';
-const projectUrl = process.env.VITE_SUPABASE_URL || `https://${projectId}.supabase.co`;
 
-async function runMigrations() {
+// Vérifier si la CLI Supabase est installée
+function checkSupabaseCLI() {
   try {
-    console.log(`🚀 Démarrage des migrations pour le projet ${projectId}`);
-    console.log(`📡 URL Supabase: ${projectUrl}`);
-    
-    // Vérifier que les variables d'environnement sont disponibles
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-      console.error('❌ SUPABASE_SERVICE_ROLE_KEY manquante');
-      process.exit(1);
-    }
-
-    // Créer le client Supabase avec la clé service
-    const supabase = createClient(projectUrl, serviceRoleKey);
-
-    // Test de connexion
-    console.log('🔍 Test de connexion...');
-    const { data: testData, error: testError } = await supabase
-      .from('user_profiles')
-      .select('count')
-      .limit(1);
-
-    if (testError && testError.code !== '42P01') {
-      console.error('❌ Erreur de connexion:', testError.message);
-      process.exit(1);
-    }
-
-    console.log('✅ Connexion Supabase réussie');
-
-    // Lire les fichiers de migration
-    const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
-    
-    let files;
-    try {
-      files = await fs.readdir(migrationsDir);
-    } catch (error) {
-      console.error('❌ Impossible de lire le dossier migrations:', error.message);
-      process.exit(1);
-    }
-
-    const sqlFiles = files.filter(f => f.endsWith('.sql')).sort();
-    
-    if (sqlFiles.length === 0) {
-      console.log('ℹ️ Aucun fichier de migration trouvé');
-      return;
-    }
-
-    console.log(`📦 ${sqlFiles.length} fichiers de migration trouvés`);
-
-    // Vérifier/créer la table de suivi des migrations
-    await ensureMigrationsTable(supabase);
-
-    // Récupérer les migrations déjà appliquées
-    const { data: appliedMigrations, error: migrationsError } = await supabase
-      .from('__supabase_migrations')
-      .select('name');
-
-    if (migrationsError) {
-      console.log('⚠️ Table de migrations non accessible, on continue...');
-    }
-
-    const appliedNames = new Set(appliedMigrations?.map(m => m.name) || []);
-
-    // Afficher les instructions pour chaque migration
-    console.log('\n📋 INSTRUCTIONS POUR APPLIQUER LES MIGRATIONS :');
-    console.log('=' .repeat(60));
-    
-    for (const file of sqlFiles) {
-      if (appliedNames.has(file)) {
-        console.log(`⏭️ Migration ${file} déjà appliquée`);
-        continue;
-      }
-
-      console.log(`\n📦 Migration à appliquer : ${file}`);
-      console.log('-'.repeat(40));
-      
-      try {
-        const sql = await fs.readFile(path.join(migrationsDir, file), 'utf8');
-        
-        // Extraire le commentaire de description
-        const lines = sql.split('\n');
-        const commentLines = [];
-        let inComment = false;
-        
-        for (const line of lines) {
-          if (line.trim().startsWith('/*')) {
-            inComment = true;
-          }
-          if (inComment) {
-            commentLines.push(line.replace(/^\/\*|\*\/$/g, '').trim());
-          }
-          if (line.trim().endsWith('*/')) {
-            inComment = false;
-            break;
-          }
-        }
-
-        if (commentLines.length > 0) {
-          console.log('📝 Description:');
-          commentLines.forEach(line => {
-            if (line.trim()) console.log(`   ${line}`);
-          });
-        }
-
-        console.log('\n🔧 Instructions:');
-        console.log('   1. Ouvrir le dashboard Supabase');
-        console.log('   2. Aller dans SQL Editor');
-        console.log('   3. Copier-coller le contenu du fichier:');
-        console.log(`      supabase/migrations/${file}`);
-        console.log('   4. Exécuter la requête');
-        console.log(`\n🌐 Dashboard: https://supabase.com/dashboard/project/${projectId}/sql`);
-
-        // Marquer comme "à faire manuellement"
-        console.log(`\n⚠️ Migration ${file} nécessite une application manuelle`);
-
-      } catch (error) {
-        console.error(`❌ Erreur lors de la lecture de ${file}:`, error.message);
-      }
-    }
-
-    console.log('\n✅ Instructions générées pour toutes les migrations');
-    console.log('\n💡 CONSEIL: Appliquez les migrations dans l\'ordre chronologique');
-    console.log('💡 Vérifiez que chaque migration s\'exécute sans erreur avant de passer à la suivante');
-    console.log(`\n🔗 Lien direct: https://supabase.com/dashboard/project/${projectId}/sql`);
-
+    const version = execSync('supabase --version', { stdio: 'pipe' }).toString().trim();
+    console.log(chalk.green(`✅ Supabase CLI détectée: ${version}`));
+    return true;
   } catch (error) {
-    console.error('❌ Erreur lors des migrations:', error.message);
+    console.error(chalk.red('❌ Supabase CLI non trouvée. Veuillez l\'installer:'));
+    console.log(chalk.yellow('npm install -g supabase'));
+    return false;
+  }
+}
+
+// Vérifier si le répertoire des migrations existe, le créer si nécessaire
+function ensureMigrationsDir() {
+  const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
+  
+  if (!fs.existsSync(path.join(process.cwd(), 'supabase'))) {
+    fs.mkdirSync(path.join(process.cwd(), 'supabase'));
+  }
+  
+  if (!fs.existsSync(migrationsDir)) {
+    fs.mkdirSync(migrationsDir);
+    console.log(chalk.blue('📁 Répertoire des migrations créé'));
+  }
+  
+  return migrationsDir;
+}
+
+// Créer une nouvelle migration
+async function createMigration(name) {
+  const migrationsDir = ensureMigrationsDir();
+  
+  // Formater le nom de fichier
+  const timestamp = new Date().toISOString().replace(/[-T:.Z]/g, '').substring(0, 14);
+  const safeName = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const fileName = `${timestamp}_${safeName}.sql`;
+  const filePath = path.join(migrationsDir, fileName);
+  
+  // Créer le fichier avec un template
+  const template = `-- Migration: ${name}
+-- Created at: ${new Date().toISOString()}
+
+-- Up Migration
+BEGIN;
+
+-- Votre SQL ici
+
+COMMIT;
+
+-- Down Migration (optionnel)
+/*
+BEGIN;
+
+-- SQL pour annuler les changements
+
+COMMIT;
+*/
+`;
+
+  fs.writeFileSync(filePath, template);
+  console.log(chalk.green(`✅ Migration créée: ${fileName}`));
+  
+  // Ouvrir dans l'éditeur par défaut si disponible
+  try {
+    if (process.platform === 'win32') {
+      execSync(`start ${filePath}`);
+    } else if (process.platform === 'darwin') {
+      execSync(`open ${filePath}`);
+    } else {
+      execSync(`xdg-open ${filePath}`);
+    }
+  } catch (error) {
+    console.log(chalk.yellow(`ℹ️ Vous pouvez éditer le fichier manuellement: ${filePath}`));
+  }
+}
+
+// Lister les migrations existantes
+function listMigrations() {
+  const migrationsDir = path.join(process.cwd(), 'supabase/migrations');
+  
+  if (!fs.existsSync(migrationsDir)) {
+    console.log(chalk.yellow('⚠️ Aucun répertoire de migrations trouvé'));
+    return;
+  }
+  
+  const migrations = fs.readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.sql'))
+    .sort();
+  
+  if (migrations.length === 0) {
+    console.log(chalk.yellow('⚠️ Aucune migration trouvée'));
+    return;
+  }
+  
+  console.log(chalk.blue(`📋 ${migrations.length} migrations trouvées:`));
+  
+  migrations.forEach((migration, index) => {
+    // Extraire la date et le nom
+    const timestamp = migration.substring(0, 14);
+    const name = migration.substring(15).replace('.sql', '').replace(/_/g, ' ');
+    
+    // Formater la date
+    const year = timestamp.substring(0, 4);
+    const month = timestamp.substring(4, 6);
+    const day = timestamp.substring(6, 8);
+    const hour = timestamp.substring(8, 10);
+    const minute = timestamp.substring(10, 12);
+    
+    const formattedDate = `${year}-${month}-${day} ${hour}:${minute}`;
+    
+    console.log(chalk.green(`${index + 1}. [${formattedDate}] ${name}`));
+  });
+}
+
+// Pousser les migrations vers la base de données
+async function pushMigrations(dryRun = false) {
+  // Vérifier si le mot de passe est disponible
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
+  if (!dbPassword) {
+    console.error(chalk.red('❌ Variable SUPABASE_DB_PASSWORD non trouvée dans .env'));
+    process.exit(1);
+  }
+  
+  // Construire la commande
+  const dbUrl = `postgresql://postgres:${dbPassword}@db.${projectId}.supabase.co:5432/postgres`;
+  let command = `supabase db push --db-url "${dbUrl}"`;
+  
+  if (dryRun) {
+    command += ' --dry-run';
+    console.log(chalk.yellow('🔍 Mode simulation activé (dry-run)'));
+  }
+  
+  try {
+    console.log(chalk.blue('🚀 Exécution des migrations...'));
+    // Masquer le mot de passe dans l'affichage
+    console.log(chalk.gray(command.replace(dbPassword, '********')));
+    
+    execSync(command, { stdio: 'inherit' });
+    
+    if (!dryRun) {
+      console.log(chalk.green('✅ Migrations appliquées avec succès'));
+    } else {
+      console.log(chalk.yellow('⏭️ Simulation terminée (aucune modification appliquée)'));
+    }
+  } catch (error) {
+    console.error(chalk.red('❌ Erreur lors de l\'application des migrations'));
     process.exit(1);
   }
 }
 
-async function ensureMigrationsTable(supabase) {
-  try {
-    // Vérifier si la table existe déjà
-    const { data, error } = await supabase
-      .from('__supabase_migrations')
-      .select('id')
-      .limit(1);
-
-    if (error && error.code === '42P01') {
-      console.log('📋 Table de suivi des migrations non trouvée');
-      console.log('💡 Vous devrez peut-être la créer manuellement si nécessaire');
-    } else {
-      console.log('✅ Table de suivi des migrations accessible');
+// Réinitialiser la base de données
+async function resetDatabase(autoConfirm = false) {
+  if (!autoConfirm) {
+    const { confirm } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'confirm',
+        message: chalk.red('⚠️ ATTENTION: Cette action va réinitialiser TOUTES les données. Êtes-vous sûr?'),
+        default: false
+      }
+    ]);
+    
+    if (!confirm) {
+      console.log(chalk.blue('🛑 Opération annulée'));
+      return;
     }
+  }
+  
+  // Vérifier si le mot de passe est disponible
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD;
+  if (!dbPassword) {
+    console.error(chalk.red('❌ Variable SUPABASE_DB_PASSWORD non trouvée dans .env'));
+    process.exit(1);
+  }
+  
+  // Construire la commande
+  const dbUrl = `postgresql://postgres:${dbPassword}@db.${projectId}.supabase.co:5432/postgres`;
+  const command = `supabase db reset --db-url "${dbUrl}"`;
+  
+  try {
+    console.log(chalk.red('🔄 Réinitialisation de la base de données...'));
+    // Masquer le mot de passe dans l'affichage
+    console.log(chalk.gray(command.replace(dbPassword, '********')));
+    
+    execSync(command, { stdio: 'inherit' });
+    console.log(chalk.green('✅ Base de données réinitialisée avec succès'));
   } catch (error) {
-    console.log('⚠️ Impossible de vérifier la table de migrations');
+    console.error(chalk.red('❌ Erreur lors de la réinitialisation de la base de données'));
+    process.exit(1);
   }
 }
 
-runMigrations();
+// Fonction principale
+async function main() {
+  console.log(chalk.blue('🔧 Outil de gestion des migrations Supabase'));
+  console.log(chalk.blue('═'.repeat(50)));
+  
+  // Vérifier la CLI Supabase
+  if (!checkSupabaseCLI()) {
+    process.exit(1);
+  }
+  
+  // Exécuter la commande appropriée
+  if (options.create) {
+    await createMigration(options.create);
+  } else if (options.list) {
+    listMigrations();
+  } else if (options.push) {
+    await pushMigrations(options.dryRun);
+  } else if (options.reset) {
+    await resetDatabase(options.yes);
+  } else {
+    program.help();
+  }
+}
+
+main();
