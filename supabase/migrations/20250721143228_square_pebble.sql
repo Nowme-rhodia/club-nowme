@@ -19,7 +19,8 @@ DROP POLICY IF EXISTS "Allow Insert from Webhook" ON user_profiles;
 CREATE OR REPLACE FUNCTION is_service_role()
 RETURNS boolean AS $$
 BEGIN
-  RETURN current_setting('role') = 'service_role';
+  -- Utilisation de current_setting avec une valeur par défaut pour éviter les erreurs
+  RETURN current_setting('request.jwt.claims', true)::json->>'role' = 'service_role';
 EXCEPTION
   WHEN OTHERS THEN
     RETURN false;
