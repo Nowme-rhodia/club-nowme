@@ -8,6 +8,10 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs/promises';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Charger les variables d'environnement
+dotenv.config();
 
 async function applyMigrationsManual() {
   console.log('🚀 Application manuelle des migrations Supabase');
