@@ -1,81 +1,103 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-};
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 Deno.serve(async (req) => {
+  console.log("🔐 reset-password Function: Lancement");
+
+  // Gestion du CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
+      status: 405,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
   }
 
   try {
-    const { token, password } = await req.json();
+    const { password, token } = await req.json();
+    console.log("🛠 Données reçues:", { hasPassword: !!password, hasToken: !!token });
 
-    if (!token || !password) {
-      return new Response(JSON.stringify({
-        error: 'Token ou mot de passe manquant'
-      }), {
+    if (!password || !token) {
+      return new Response(JSON.stringify({ error: 'Mot de passe ou token manquant' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (password.length < 8) {
-      return new Response(JSON.stringify({
-        error: 'Le mot de passe doit contenir au moins 8 caractères'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !serviceKey) {
-      return new Response(JSON.stringify({
-        error: 'Configuration Supabase manquante'
-      }), {
+    console.log("🌍 SUPABASE_URL:", supabaseUrl);
+    console.log("🔑 SERVICE_ROLE_KEY existe:", !!supabaseServiceKey);
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: 'Configuration Supabase manquante' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
 
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data, error } = await supabase.auth.verifyAndResetPassword({ token, new_password: password });
+    console.log("🔄 Tentative de réinitialisation...");
+    const { data, error } = await adminClient.auth
+      .resetPasswordForEmail(null, {
+        password,
+        token
+      });
 
     if (error) {
-      console.error('Erreur reset:', error);
-      return new Response(JSON.stringify({
-        error: 'Échec de la réinitialisation du mot de passe',
-        details: error.message
-      }), {
+      console.error("❌ Erreur Supabase:", error.message);
+      return new Response(JSON.stringify({ error: 'Erreur Supabase', detail: error.message }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     }
+
+    console.log("✅ Réinitialisation réussie");
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Mot de passe réinitialisé avec succès',
-      user: data.user
+      user: data?.user ?? null
     }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
     });
-
   } catch (err) {
-    console.error('Erreur serveur:', err);
+    console.error("💥 Erreur inattendue:", err.message);
     return new Response(JSON.stringify({
-      error: 'Erreur serveur interne',
-      details: err.message
+      error: 'Erreur serveur',
+      detail: err.message
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
     });
   }
 });
