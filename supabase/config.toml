@@ -1,5 +1,5 @@
-[project]
-id = "dqfyuhwrjozoxadkccdj"
+# supabase/config.toml
+project_id = "dqfyuhwrjozoxadkccdj"
 
 [api]
 port = 54321
