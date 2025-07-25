@@ -436,4 +436,4 @@ async function sendRewardRedemptionNotification(supabase: any, userId: string, r
       `,
       status: 'pending'
     });
-}
+} 
