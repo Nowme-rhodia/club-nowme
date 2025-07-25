@@ -15,6 +15,11 @@ const __dirname = dirname(__filename);
 // Charger les variables d'environnement
 dotenv.config();
 
+// Afficher les informations de débogage
+console.log('Recherche des variables d\'environnement...');
+const envKeys = Object.keys(process.env).filter(key => key.includes('SUPA'));
+console.log(`Variables trouvées: ${envKeys.join(', ') || 'aucune'}`);
+
 // Configuration Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -22,6 +27,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('Erreur: Variables d\'environnement SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY requises');
   console.error('Créez un fichier .env à la racine du projet avec ces variables');
+  console.error('Ou assurez-vous qu\'elles sont définies dans l\'environnement GitHub Actions');
   process.exit(1);
 }
 
