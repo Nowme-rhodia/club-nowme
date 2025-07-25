@@ -11,7 +11,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<{ success: boolean }>;
   isAdmin: boolean;
   isPartner: boolean;
   isSubscriber: boolean;
@@ -78,11 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
       const { data: partnerData } = await supabase
@@ -127,48 +122,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectTo = `${window.location.origin}/update-password`;
+      const redirectTo = `${window.location.origin}/auth/update-password`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) {
-        if (error.message && error.message.includes('you can only request this after')) {
+        if (error.message.includes('you can only request this after')) {
           throw error;
         } else {
-          toast.error('Une erreur est survenue lors de l\'envoi de l\'email');
+          toast.error("Une erreur est survenue lors de l'envoi de l'email");
           throw error;
         }
       }
       toast.success('Un email de réinitialisation vous a été envoyé');
     } catch (error) {
-      throw error;
-    }
-  };
-
-  const updatePassword = async (password: string): Promise<{ success: boolean }> => {
-    try {
-      console.log('updatePassword appelé avec mot de passe de longueur', password.length);
-
-      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-      const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-
-      if (!accessToken || !refreshToken) {
-        throw new Error('Tokens de réinitialisation manquants dans l’URL');
-      }
-
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken
-      });
-      if (sessionError) throw sessionError;
-
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
-
-      console.log('Mot de passe mis à jour avec succès');
-      return { success: true };
-    } catch (error) {
-      console.error('Erreur dans updatePassword:', error);
       throw error;
     }
   };
@@ -185,7 +150,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       resetPassword,
-      updatePassword,
       isAdmin,
       isPartner,
       isSubscriber
