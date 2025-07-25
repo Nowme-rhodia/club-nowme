@@ -1,3 +1,4 @@
+// signin.tsx - Version corrigée
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
@@ -28,42 +29,73 @@ export default function SignIn() {
     setLoading(true);
 
     try {
+      // Étape 1: Connexion avec email et mot de passe
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
 
       if (signInError) {
+        console.error('Erreur de connexion:', signInError);
         throw new Error(signInError.message);
       }
 
+      // Étape 2: Récupérer l'utilisateur immédiatement après la connexion
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error("Impossible de récupérer l'utilisateur connecté");
+      
+      if (userError) {
+        console.error('Erreur lors de la récupération de l\'utilisateur:', userError);
+        throw new Error("Impossible de récupérer l'utilisateur connecté");
+      }
+      
+      if (!user) {
+        console.error('Utilisateur non trouvé après connexion');
+        throw new Error("Utilisateur non trouvé après connexion");
+      }
+      
+      console.log('Utilisateur connecté avec succès:', user.id);
 
-      const { data: partnerData } = await supabase
+      // Étape 3: Vérifier si c'est un partenaire
+      const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (partnerData) {
-        navigate('/partner/dashboard');
-      } else {
-        const { data: userData } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+      if (partnerError && partnerError.code !== 'PGRST116') {
+        console.error('Erreur lors de la vérification du partenaire:', partnerError);
+      }
 
-        if (userData?.is_admin) {
-          navigate('/admin');
-        } else if (userData?.subscription_status === 'active') {
-          navigate('/dashboard');
-        } else {
-          navigate('/subscription');
-        }
+      if (partnerData) {
+        console.log('Partenaire trouvé, redirection vers le dashboard partenaire');
+        navigate('/partner/dashboard');
+        return;
+      }
+
+      // Étape 4: Si ce n'est pas un partenaire, vérifier le profil utilisateur
+      const { data: userData, error: userDataError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (userDataError && userDataError.code !== 'PGRST116') {
+        console.error('Erreur lors de la récupération du profil utilisateur:', userDataError);
+      }
+
+      // Étape 5: Rediriger en fonction du profil
+      if (userData?.is_admin) {
+        console.log('Utilisateur admin, redirection vers /admin');
+        navigate('/admin');
+      } else if (userData?.subscription_status === 'active') {
+        console.log('Utilisateur avec abonnement actif, redirection vers /dashboard');
+        navigate('/dashboard');
+      } else {
+        console.log('Utilisateur sans abonnement actif, redirection vers /subscription');
+        navigate('/subscription');
       }
     } catch (err) {
+      console.error('Erreur complète:', err);
       setError('Email ou mot de passe incorrect');
     } finally {
       setLoading(false);
