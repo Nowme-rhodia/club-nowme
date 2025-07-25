@@ -223,4 +223,4 @@ function generateNewsletterHTML(bonPlans: any[], date: Date): string {
 </body>
 </html>
   `.trim();
-}
+} 
