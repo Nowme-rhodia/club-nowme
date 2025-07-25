@@ -1,9 +1,9 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 };
 
 Deno.serve(async (req) => {
@@ -11,59 +11,46 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
   try {
-    const { password, token } = await req.json();
-    console.log("Token reçu :", token);
+    const { token, password } = await req.json();
 
-    if (!password || !token) {
-      return new Response(JSON.stringify({ error: 'Mot de passe ou token manquant' }), {
+    if (!token || !password) {
+      return new Response(JSON.stringify({ error: 'Token ou mot de passe manquant' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    const supabase = createClient(supabaseUrl!, serviceKey!);
+    const adminClient = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    const { data, error } = await supabase.auth
-      .verifyOtp({ token, type: 'recovery', password });
+    const { data, error } = await adminClient.auth
+      .verifyOtp({ type: 'recovery', token, password });
 
     if (error) {
-      console.error('Erreur Supabase:', error);
-      return new Response(JSON.stringify({
-        error: 'Erreur lors de la mise à jour',
-        details: error.message
-      }), {
+      console.error("Erreur Supabase:", error);
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Mot de passe mis à jour',
+      message: 'Mot de passe mis à jour avec succès',
       user: data.user
     }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+
   } catch (err) {
-    console.error('Erreur inattendue:', err);
-    return new Response(JSON.stringify({
-      error: 'Erreur serveur',
-      details: String(err)
-    }), {
+    console.error("Erreur serveur:", err);
+    return new Response(JSON.stringify({ error: 'Erreur serveur interne', details: String(err) }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
