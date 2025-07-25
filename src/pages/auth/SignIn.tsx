@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../lib/auth';
 import { SEO } from '../../components/SEO';
+import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 export default function SignIn() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -15,10 +15,8 @@ export default function SignIn() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    // Vérifier s'il y a un message de succès depuis la réinitialisation
     if (location.state?.message) {
       setSuccessMessage(location.state.message);
-      // Nettoyer le state après affichage
       window.history.replaceState({}, document.title);
     }
   }, [location]);
@@ -30,8 +28,41 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
-      navigate('/');
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (signInError) {
+        throw new Error(signInError.message);
+      }
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Impossible de récupérer l'utilisateur connecté");
+
+      const { data: partnerData } = await supabase
+        .from('partners')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (partnerData) {
+        navigate('/partner/dashboard');
+      } else {
+        const { data: userData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (userData?.is_admin) {
+          navigate('/admin');
+        } else if (userData?.subscription_status === 'active') {
+          navigate('/dashboard');
+        } else {
+          navigate('/subscription');
+        }
+      }
     } catch (err) {
       setError('Email ou mot de passe incorrect');
     } finally {
