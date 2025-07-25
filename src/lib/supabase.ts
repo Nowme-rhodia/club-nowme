@@ -1,16 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';  // ✅ Correction de l'import
+import type { Database } from '@/types/supabase'; // Tu peux garder ce type si tu l’utilises ailleurs
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('⛔ Missing Supabase environment variables!');
+  throw new Error('⛔️ Supabase env variables manquantes');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// ✅ Configuration complète recommandée par Supabase
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
-// Helper functions
+// 🧠 Garde les helpers si tu veux
 export const auth = {
   signIn: async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
