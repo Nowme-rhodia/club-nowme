@@ -14,7 +14,8 @@
     "db:create": "node scripts/db-migrate.js --create",
     "db:push": "node scripts/db-migrate.js --push",
     "db:list": "node scripts/db-migrate.js --list",
-    "db:reset": "node scripts/db-migrate.js --reset"
+    "db:reset": "node scripts/db-migrate.js --reset",
+    "migrate": "node scripts/db-migrate.js"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",
