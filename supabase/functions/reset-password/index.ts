@@ -1,14 +1,22 @@
-import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
-};
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -17,40 +25,34 @@ Deno.serve(async (req) => {
     if (!token || !password) {
       return new Response(JSON.stringify({ error: 'Token ou mot de passe manquant' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    const adminClient = createClient(supabaseUrl!, supabaseServiceKey!);
-
-    const { data, error } = await adminClient.auth
-      .verifyOtp({ type: 'recovery', token, password });
+    const { data, error } = await supabase.auth
+      .admin
+      .resetPasswordForEmail(token, { password });
 
     if (error) {
-      console.error("Erreur Supabase:", error);
       return new Response(JSON.stringify({ error: error.message }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Mot de passe mis à jour avec succès',
-      user: data.user
-    }), {
+    return new Response(JSON.stringify({ success: true, user: data.user }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
-
-  } catch (err) {
-    console.error("Erreur serveur:", err);
-    return new Response(JSON.stringify({ error: 'Erreur serveur interne', details: String(err) }), {
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Erreur interne', details: e.message }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 });
