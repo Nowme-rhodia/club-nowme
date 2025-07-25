@@ -34,13 +34,14 @@ if (!supabaseUrl || !supabaseServiceKey) {
 // Initialiser le client Supabase avec la clé de service pour les opérations admin
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Définir le chemin du dossier des migrations
-const MIGRATIONS_DIR = path.join(process.cwd(), 'migrations');
+// ✅ Définir le chemin du bon dossier des migrations (corrigé ici)
+const MIGRATIONS_DIR = path.join(process.cwd(), 'supabase', 'migrations');
 
 // Créer le dossier des migrations s'il n'existe pas
 if (!fs.existsSync(MIGRATIONS_DIR)) {
   fs.mkdirSync(MIGRATIONS_DIR, { recursive: true });
 }
+
 
 // Fonction pour créer une nouvelle migration
 async function createMigration(name) {
