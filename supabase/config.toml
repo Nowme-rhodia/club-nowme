@@ -26,15 +26,11 @@ additional_redirect_urls = [
 ]
 jwt_expiry = 36000
 enable_signup = true
-# Déplacez la configuration de l'URL de réinitialisation de mot de passe ici
-default_password_reset_url = "https://club.nowme.fr/auth/reset-password"
 
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
-
-# Supprimez la section [auth.url] qui cause l'erreur
 
 [functions.stripe-webhook]
 verify_jwt = false
