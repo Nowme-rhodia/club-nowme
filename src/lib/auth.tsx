@@ -1,3 +1,4 @@
+// auth.tsx - Version corrigée
 import { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
@@ -47,22 +48,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
-      const { data: partnerData } = await supabase
+      const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
         .select('*')
         .eq('user_id', userId)
         .single();
+
+      if (partnerError && partnerError.code !== 'PGRST116') {
+        console.error('Error checking partner data:', partnerError);
+      }
 
       if (partnerData) {
         setProfile({ ...partnerData, role: 'partner' });
         return;
       }
 
-      const { data: userData } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
+
+      if (userError && userError.code !== 'PGRST116') {
+        console.error('Error loading user profile:', userError);
+      }
 
       if (userData) {
         setProfile({
@@ -77,31 +86,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
 
-      const { data: partnerData } = await supabase
+      // Récupérer immédiatement les informations de l'utilisateur connecté
+      const { data: { user: currentUser }, error: getUserError } = await supabase.auth.getUser();
+      
+      if (getUserError || !currentUser) {
+        throw getUserError || new Error("Impossible de récupérer l'utilisateur connecté");
+      }
+
+      const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
         .select('*')
-        .eq('user_id', user?.id || '')
+        .eq('user_id', currentUser.id)
         .single();
+
+      if (partnerError && partnerError.code !== 'PGRST116') {
+        console.error('Error checking partner data:', partnerError);
+      }
 
       if (partnerData) {
         navigate('/partner/dashboard');
-      } else {
-        const { data: userData } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', user?.id || '')
-          .single();
+        return;
+      }
 
-        if (userData?.is_admin) {
-          navigate('/admin');
-        } else if (userData?.subscription_status === 'active') {
-          navigate('/dashboard');
-        } else {
-          navigate('/subscription');
-        }
+      const { data: userData, error: userError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (userError && userError.code !== 'PGRST116') {
+        console.error('Error loading user profile:', userError);
+      }
+
+      if (userData?.is_admin) {
+        navigate('/admin');
+      } else if (userData?.subscription_status === 'active') {
+        navigate('/dashboard');
+      } else {
+        navigate('/subscription');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Email ou mot de passe incorrect';
