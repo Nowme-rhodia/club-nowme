@@ -11,7 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<{ success: boolean }>;
   isAdmin: boolean;
   isPartner: boolean;
   isSubscriber: boolean;
@@ -83,9 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       const { data: partnerData } = await supabase
         .from('partners')
@@ -129,10 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectTo = `${window.location.origin}/auth/reset-password`;
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo
-      });
+      const redirectTo = `${window.location.origin}/update-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) {
         if (error.message && error.message.includes('you can only request this after')) {
           throw error;
@@ -147,55 +143,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // MODIFICATION ICI
-  const updatePassword = async (password: string) => {
+  const updatePassword = async (password: string): Promise<{ success: boolean }> => {
     try {
-      console.log('updatePassword appelé avec:', { passwordLength: password.length });
-      
-      // Extraction des tokens depuis l'URL
-      const hash = window.location.hash;
-      console.log('Hash URL:', hash);
-      
-      const params = new URLSearchParams(hash.replace('#', ''));
+      console.log('updatePassword appelé avec mot de passe de longueur', password.length);
+
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+      const params = new URLSearchParams(hash);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
-      const type = params.get('type');
-      
-      console.log('Tokens extraits:', { 
-        hasAccessToken: !!accessToken, 
-        hasRefreshToken: !!refreshToken, 
-        type 
-      });
 
       if (!accessToken || !refreshToken) {
-        throw new Error('Tokens de réinitialisation manquants');
+        throw new Error('Tokens de réinitialisation manquants dans l’URL');
       }
 
-      // 1. Établir la session avec les tokens
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken
       });
       if (sessionError) throw sessionError;
 
-      // 2. Mettre à jour le mot de passe
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
 
       console.log('Mot de passe mis à jour avec succès');
       return { success: true };
-
     } catch (error) {
       console.error('Erreur dans updatePassword:', error);
       throw error;
     }
   };
-  // FIN MODIFICATION
 
   const isAdmin = profile?.role === 'admin';
   const isPartner = profile?.role === 'partner';
   const isSubscriber = profile?.subscription_status === 'active' || profile?.role === 'subscriber';
-  const isYearlyMember = profile?.subscription_type === 'yearly' && profile?.subscription_status === 'active';
 
   return (
     <AuthContext.Provider value={{
