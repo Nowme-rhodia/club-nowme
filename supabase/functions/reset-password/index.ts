@@ -1,113 +1,58 @@
-import { createClient } from 'jsr:@supabase/supabase-js@^2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-};
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 Deno.serve(async (req) => {
-  console.log("🔐 reset-password Function: Démarrage");
-
-  // CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: corsHeaders
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
     });
   }
 
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
       status: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   }
 
   try {
-    const { password, token } = await req.json();
-    console.log("🛠 Données reçues:", { hasPassword: !!password, hasToken: !!token });
+    const { password } = await req.json();
+    const token = req.headers.get('Authorization')?.replace('Bearer ', '');
 
     if (!password || !token) {
       return new Response(JSON.stringify({ error: 'Mot de passe ou token manquant' }), {
         status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    console.log("🌍 SUPABASE_URL:", supabaseUrl);
-    console.log("🔑 SERVICE_ROLE_KEY existe:", !!supabaseServiceKey);
+    const client = createClient(supabaseUrl, serviceRole);
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return new Response(JSON.stringify({ error: 'Configuration Supabase manquante' }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
+    const { data, error } = await client.auth.updateUser({ password }, { accessToken: token });
+
+    if (error) {
+      const code = error.message.includes('rate limit') ? 429 : 400;
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: code,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     }
 
-    // ✅ CORRECTION : Utiliser l'API REST directement
-    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'apikey': supabaseServiceKey
-      },
-      body: JSON.stringify({ password })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("❌ Erreur API:", errorData);
-      return new Response(JSON.stringify({ 
-        error: 'Erreur lors de la mise à jour', 
-        detail: errorData.message || 'Token invalide ou expiré'
-      }), {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders
-        }
-      });
-    }
-
-    const userData = await response.json();
-    console.log("✅ Mot de passe mis à jour avec succès");
-
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Mot de passe mis à jour avec succès'
-    }), {
+    return new Response(JSON.stringify({ success: true, user: data.user }), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
-
   } catch (err) {
-    console.error("💥 Erreur inattendue:", err.message);
-    return new Response(JSON.stringify({
-      error: 'Erreur serveur',
-      detail: err.message
-    }), {
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders
-      }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   }
 });
