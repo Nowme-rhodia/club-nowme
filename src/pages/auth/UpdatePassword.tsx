@@ -14,7 +14,6 @@ export default function UpdatePassword() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    // Corrige les URLs mal formées avec double slash
     if (window.location.pathname.includes('//')) {
       const corrected = window.location.pathname.replace('//', '/');
       window.history.replaceState(null, '', corrected + window.location.hash);
@@ -57,7 +56,10 @@ export default function UpdatePassword() {
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
       const response = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           token,
           password
@@ -67,7 +69,7 @@ export default function UpdatePassword() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.details || 'Erreur inconnue');
+        throw new Error(data.error || data.detail || 'Erreur inconnue');
       }
 
       setSuccess(true);
