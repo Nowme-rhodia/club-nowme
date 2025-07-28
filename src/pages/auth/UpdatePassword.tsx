@@ -55,8 +55,53 @@ export default function UpdatePassword() {
     setLoading(true);
 
     try {
+      // ✅ CORRECTION : Utiliser directement l'API Supabase Auth
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/auth/signin', {
+          state: { message: 'Votre mot de passe a bien été mis à jour.' }
+        });
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error updating password:', err);
+      setError(err.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Alternative si l'approche directe ne marche pas
+  const handleSubmitAlternative = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    if (!token) {
+      setError('Le lien de réinitialisation est invalide.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-      // Supprimer l'en-tête Authorization qui cause des problèmes
       const response = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
         method: 'POST',
         headers: { 
@@ -81,7 +126,8 @@ export default function UpdatePassword() {
         });
       }, 2000);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error updating password:', err);
+      setError(err.message || 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }

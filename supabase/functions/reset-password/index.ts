@@ -57,23 +57,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ✅ CORRECTION : Utiliser le client admin avec la bonne méthode
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
-    // ✅ CORRECTION : Utiliser updateUser avec le token dans l'en-tête
-    const { data, error } = await adminClient.auth.admin.updateUserById(
-      // On doit d'abord décoder le token pour obtenir l'user_id
-      // Mais comme on n'a que le token, on va utiliser une approche différente
-      '', // user_id sera déterminé par le token
-      { password }
-    );
-
-    // ✅ MEILLEURE APPROCHE : Utiliser l'API REST directement
+    // ✅ CORRECTION : Utiliser l'API REST directement
     const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
       method: 'PUT',
       headers: {
