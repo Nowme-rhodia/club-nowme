@@ -1,9 +1,10 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
+// reset-password.ts
+import { createClient } from 'jsr:@supabase/supabase-js@^2';
 
 Deno.serve(async (req) => {
   console.log("🔐 reset-password Function: Lancement");
 
-  // Gestion du CORS
+  // CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -42,9 +43,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    console.log("🌍 SUPABASE_URL:", supabaseUrl);
-    console.log("🔑 SERVICE_ROLE_KEY existe:", !!supabaseServiceKey);
-
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(JSON.stringify({ error: 'Configuration Supabase manquante' }), {
         status: 500,
@@ -57,12 +55,11 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log("🔄 Tentative de réinitialisation...");
-    const { data, error } = await adminClient.auth
-      .resetPasswordForEmail(null, {
-        password,
-        token
-      });
+    // Mise à jour du mot de passe
+    const { data, error } = await adminClient.auth.updateUser(
+      { password },
+      { accessToken: token }
+    );
 
     if (error) {
       console.error("❌ Erreur Supabase:", error.message);
@@ -74,8 +71,6 @@ Deno.serve(async (req) => {
         }
       });
     }
-
-    console.log("✅ Réinitialisation réussie");
 
     return new Response(JSON.stringify({
       success: true,
