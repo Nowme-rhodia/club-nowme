@@ -43,6 +43,9 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+    console.log("🌍 SUPABASE_URL:", supabaseUrl);
+    console.log("🔑 SERVICE_ROLE_KEY existe:", !!supabaseServiceKey);
+
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(JSON.stringify({ error: 'Configuration Supabase manquante' }), {
         status: 500,
@@ -55,10 +58,14 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Mise à jour du mot de passe
-    const { data, error } = await adminClient.auth.updateUser(
-      { password },
-      { accessToken: token }
+    // Utiliser directement la méthode resetPasswordForEmail
+    // Cette méthode est spécifiquement conçue pour les tokens de réinitialisation
+    const { data, error } = await adminClient.auth.resetPasswordForEmail(
+      null, // email n'est pas nécessaire car nous avons le token
+      {
+        password,
+        token
+      }
     );
 
     if (error) {
