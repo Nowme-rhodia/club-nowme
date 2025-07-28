@@ -1,3 +1,4 @@
+// UpdatePassword.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, AlertCircle, Lock } from 'lucide-react';
@@ -14,6 +15,7 @@ export default function UpdatePassword() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    // Corrige les URLs mal formées avec double slash
     if (window.location.pathname.includes('//')) {
       const corrected = window.location.pathname.replace('//', '/');
       window.history.replaceState(null, '', corrected + window.location.hash);
@@ -54,11 +56,11 @@ export default function UpdatePassword() {
 
     try {
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+      // Supprimer l'en-tête Authorization qui cause des problèmes
       const response = await fetch(`${SUPABASE_URL}/functions/v1/reset-password`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+        headers: { 
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           token,
