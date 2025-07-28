@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, AlertCircle, Lock } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
 
 export default function UpdatePassword() {
