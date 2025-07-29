@@ -60,16 +60,19 @@ export default function UpdatePassword() {
     // Validations
     const passwordError = validatePassword(password);
     if (passwordError) {
+      console.log('❌ Validation échec:', passwordError);
       setError(passwordError);
       return;
     }
     
     if (password !== confirmPassword) {
+      console.log('❌ Validation échec: Les mots de passe ne correspondent pas');
       setError('Les mots de passe ne correspondent pas');
       return;
     }
     
     if (!tokenHash) {
+      console.log('❌ Validation échec: Token manquant');
       setError('Token manquant. Veuillez utiliser le lien de votre email.');
       return;
     }
@@ -79,40 +82,61 @@ export default function UpdatePassword() {
     try {
       console.log('🔐 Étape 1: Vérification du token...');
       console.log('Token utilisé:', tokenHash.substring(0, 10) + '...');
+      console.log('Type utilisé: recovery');
+      
+      // Capture de la requête réseau pour debug
+      console.log('📡 Envoi de la requête verifyOtp...');
+      console.log('📊 Paramètres:', { token_hash: tokenHash.substring(0, 10) + '...', type: 'recovery' });
       
       // ÉTAPE 1: Vérifier le token (SANS email selon l'API Supabase)
-      const { error: verifyError, data: verifyData } = await supabase.auth.verifyOtp({
+      const verifyResponse = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: 'recovery'
       });
+      
+      const { error: verifyError, data: verifyData } = verifyResponse;
 
-      console.log('Résultat verifyOtp:', verifyError ? 'ERREUR' : 'SUCCÈS');
+      console.log('📊 Réponse verifyOtp complète:', verifyResponse);
+      console.log('📊 Données verifyOtp:', verifyData);
+      console.log('📊 Erreur verifyOtp:', verifyError);
       
       if (verifyError) {
         console.error('❌ Erreur verifyOtp:', verifyError);
+        console.error('❌ Code erreur:', verifyError.status);
+        console.error('❌ Message erreur:', verifyError.message);
         throw new Error(`Erreur de vérification: ${verifyError.message}`);
       }
 
       console.log('✅ Token vérifié avec succès');
       console.log('🔄 Étape 2: Mise à jour du mot de passe...');
+      console.log('📡 Envoi de la requête updateUser...');
       
       // ÉTAPE 2: Mettre à jour le mot de passe
-      const { error: updateError, data: updateData } = await supabase.auth.updateUser({
+      const updateResponse = await supabase.auth.updateUser({
         password: password
       });
+      
+      const { error: updateError, data: updateData } = updateResponse;
 
-      console.log('Résultat updateUser:', updateError ? 'ERREUR' : 'SUCCÈS');
+      console.log('📊 Réponse updateUser complète:', updateResponse);
+      console.log('📊 Données updateUser:', updateData);
+      console.log('📊 Erreur updateUser:', updateError);
 
       if (updateError) {
         console.error('❌ Erreur updateUser:', updateError);
+        console.error('❌ Code erreur:', updateError.status);
+        console.error('❌ Message erreur:', updateError.message);
         throw new Error(`Erreur de mise à jour: ${updateError.message}`);
       }
 
       console.log('🎉 Mot de passe mis à jour avec succès !');
+      console.log('📊 Données utilisateur mises à jour:', updateData?.user);
       setSuccess(true);
       
       // Redirection après 2 secondes
+      console.log('⏱️ Redirection prévue dans 2 secondes...');
       setTimeout(() => {
+        console.log('🔄 Redirection vers /auth/signin');
         navigate('/auth/signin', {
           state: { message: 'Votre mot de passe a été mis à jour avec succès' }
         });
@@ -120,8 +144,42 @@ export default function UpdatePassword() {
       
     } catch (err: any) {
       console.error('💥 Erreur complète:', err);
-      setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
+      console.error('💥 Type d\'erreur:', typeof err);
+      console.error('💥 Message d\'erreur:', err.message);
+      
+      // Tentative alternative si la première méthode échoue
+      if (err.message?.includes('vérification')) {
+        console.log('🔄 Tentative alternative: mise à jour directe du mot de passe...');
+        try {
+          const alternativeResponse = await supabase.auth.updateUser({
+            password: password
+          });
+          
+          console.log('📊 Réponse alternative:', alternativeResponse);
+          
+          if (alternativeResponse.error) {
+            console.error('❌ Échec de la tentative alternative:', alternativeResponse.error);
+            throw alternativeResponse.error;
+          }
+          
+          console.log('✅ Mise à jour alternative réussie!');
+          setSuccess(true);
+          
+          setTimeout(() => {
+            navigate('/auth/signin', {
+              state: { message: 'Votre mot de passe a été mis à jour avec succès' }
+            });
+          }, 2000);
+          
+        } catch (altErr: any) {
+          console.error('💥 Erreur alternative:', altErr);
+          setError(altErr.message || 'Une erreur est survenue. Veuillez réessayer.');
+        }
+      } else {
+        setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
+      }
     } finally {
+      console.log('⏱️ Fin du traitement (succès ou échec)');
       setLoading(false);
     }
   };
