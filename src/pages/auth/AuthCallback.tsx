@@ -10,13 +10,39 @@ const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Récupérer les paramètres de l'URL
-    const params = new URLSearchParams(location.search);
+    // Afficher les informations de débogage
+    console.log('URL complète:', window.location.href);
+    console.log('Location search:', location.search);
+    console.log('Location hash:', location.hash);
+    
+    // Récupérer les paramètres de l'URL (essayer à la fois search et hash)
+    let params;
+    
+    // Vérifier d'abord dans les paramètres de requête (search)
+    if (location.search) {
+      params = new URLSearchParams(location.search);
+    } 
+    // Si rien n'est trouvé, vérifier dans le hash (ancien format)
+    else if (location.hash && location.hash.startsWith('#')) {
+      params = new URLSearchParams(location.hash.substring(1));
+    } else {
+      params = new URLSearchParams('');
+    }
+    
     const type = params.get('type');
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
     const error = params.get('error');
     const errorDescription = params.get('error_description');
+    
+    // Afficher les paramètres extraits pour le débogage
+    console.log('Paramètres extraits:', {
+      type,
+      accessToken: !!accessToken,
+      refreshToken: !!refreshToken,
+      error,
+      errorDescription
+    });
 
     if (error) {
       console.error('Erreur d\'authentification:', error, errorDescription);
@@ -24,11 +50,30 @@ const AuthCallback = () => {
       return;
     }
 
+    // Si nous avons un access_token, essayer de le stocker manuellement
+    if (accessToken) {
+      try {
+        // Stocker le token dans le localStorage (comme le ferait Supabase)
+        localStorage.setItem('supabase.auth.token', JSON.stringify({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+          expires_at: Date.now() + 3600 * 1000, // Approximation d'une heure
+          expires_in: 3600
+        }));
+        
+        // Recharger la page pour que Supabase puisse détecter le token
+        window.location.href = '/';
+        return;
+      } catch (err) {
+        console.error('Erreur lors du stockage du token:', err);
+      }
+    }
+
     // Gérer les différents types de callbacks
     switch (type) {
       case 'recovery':
         // Rediriger vers la page de mise à jour du mot de passe avec le token
-        navigate(`/auth/update-password${location.search}`);
+        navigate(`/auth/update-password${location.search || location.hash}`);
         break;
       case 'signup':
       case 'magiclink':
@@ -42,8 +87,16 @@ const AuthCallback = () => {
         }
         break;
       default:
-        // Redirection par défaut
-        navigate(user ? '/' : '/auth/signin');
+        // Si nous n'avons pas de type mais que l'utilisateur est connecté
+        if (user) {
+          navigate('/');
+        } else if (location.search || location.hash) {
+          // Si nous avons des paramètres mais pas de type reconnu
+          setError('Type de callback non reconnu. Veuillez réessayer de vous connecter.');
+        } else {
+          // Redirection par défaut
+          navigate('/auth/signin');
+        }
     }
   }, [location, navigate, user]);
 
