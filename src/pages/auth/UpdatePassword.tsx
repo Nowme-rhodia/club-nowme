@@ -1,3 +1,4 @@
+// updatepassword.tsx - Version améliorée
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle, ArrowLeft, Check } from 'lucide-react';
@@ -14,6 +15,7 @@ export default function UpdatePassword() {
   const [tokenHash, setTokenHash] = useState('');
   const [isValidToken, setIsValidToken] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   // Vérification du token une seule fois au montage
   useEffect(() => {
@@ -82,59 +84,71 @@ export default function UpdatePassword() {
     try {
       console.log('🔐 Étape 1: Vérification du token...');
       console.log('Token utilisé:', tokenHash.substring(0, 10) + '...');
-      console.log('Type utilisé: recovery');
       
-      // Capture de la requête réseau pour debug
-      console.log('📡 Envoi de la requête verifyOtp...');
-      console.log('📊 Paramètres:', { token_hash: tokenHash.substring(0, 10) + '...', type: 'recovery' });
-      
-      // ÉTAPE 1: Vérifier le token (SANS email selon l'API Supabase)
-      const verifyResponse = await supabase.auth.verifyOtp({
+      // ÉTAPE 1: Vérifier le token
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: 'recovery'
       });
       
-      const { error: verifyError, data: verifyData } = verifyResponse;
-
-      console.log('📊 Réponse verifyOtp complète:', verifyResponse);
-      console.log('📊 Données verifyOtp:', verifyData);
-      console.log('📊 Erreur verifyOtp:', verifyError);
+      console.log('📊 Réponse verifyOtp:', { data: verifyData, error: verifyError });
       
       if (verifyError) {
         console.error('❌ Erreur verifyOtp:', verifyError);
-        console.error('❌ Code erreur:', verifyError.status);
-        console.error('❌ Message erreur:', verifyError.message);
         throw new Error(`Erreur de vérification: ${verifyError.message}`);
+      }
+
+      // Stocker le token d'accès pour l'utiliser avec la fonction Edge
+      if (verifyData?.session?.access_token) {
+        setAccessToken(verifyData.session.access_token);
+        console.log('✅ Token d\'accès obtenu');
       }
 
       console.log('✅ Token vérifié avec succès');
       console.log('🔄 Étape 2: Mise à jour du mot de passe...');
-      console.log('📡 Envoi de la requête updateUser...');
       
-      // ÉTAPE 2: Mettre à jour le mot de passe
-      const updateResponse = await supabase.auth.updateUser({
+      // OPTION 1: Utiliser directement updateUser (méthode actuelle)
+      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
         password: password
       });
       
-      const { error: updateError, data: updateData } = updateResponse;
-
-      console.log('📊 Réponse updateUser complète:', updateResponse);
-      console.log('📊 Données updateUser:', updateData);
-      console.log('📊 Erreur updateUser:', updateError);
+      console.log('📊 Réponse updateUser:', { data: updateData, error: updateError });
 
       if (updateError) {
         console.error('❌ Erreur updateUser:', updateError);
-        console.error('❌ Code erreur:', updateError.status);
-        console.error('❌ Message erreur:', updateError.message);
-        throw new Error(`Erreur de mise à jour: ${updateError.message}`);
+        
+        // OPTION 2: Si la méthode directe échoue, essayer via la fonction Edge
+        if (accessToken) {
+          console.log('🔄 Tentative via fonction Edge...');
+          
+          const response = await fetch(`${window.location.origin}/functions/v1/reset-password`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ password })
+          });
+          
+          const result = await response.json();
+          console.log('📊 Réponse fonction Edge:', result);
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Erreur lors de la réinitialisation du mot de passe');
+          }
+          
+          console.log('✅ Mot de passe mis à jour via fonction Edge');
+        } else {
+          throw new Error(`Erreur de mise à jour: ${updateError.message}`);
+        }
+      } else {
+        console.log('✅ Mot de passe mis à jour directement');
       }
 
       console.log('🎉 Mot de passe mis à jour avec succès !');
-      console.log('📊 Données utilisateur mises à jour:', updateData?.user);
       setSuccess(true);
       
       // Redirection après 2 secondes
-      console.log('⏱️ Redirection prévue dans 2 secondes...');
       setTimeout(() => {
         console.log('🔄 Redirection vers /auth/signin');
         navigate('/auth/signin', {
@@ -144,46 +158,14 @@ export default function UpdatePassword() {
       
     } catch (err: any) {
       console.error('💥 Erreur complète:', err);
-      console.error('💥 Type d\'erreur:', typeof err);
-      console.error('💥 Message d\'erreur:', err.message);
-      
-      // Tentative alternative si la première méthode échoue
-      if (err.message?.includes('vérification')) {
-        console.log('🔄 Tentative alternative: mise à jour directe du mot de passe...');
-        try {
-          const alternativeResponse = await supabase.auth.updateUser({
-            password: password
-          });
-          
-          console.log('📊 Réponse alternative:', alternativeResponse);
-          
-          if (alternativeResponse.error) {
-            console.error('❌ Échec de la tentative alternative:', alternativeResponse.error);
-            throw alternativeResponse.error;
-          }
-          
-          console.log('✅ Mise à jour alternative réussie!');
-          setSuccess(true);
-          
-          setTimeout(() => {
-            navigate('/auth/signin', {
-              state: { message: 'Votre mot de passe a été mis à jour avec succès' }
-            });
-          }, 2000);
-          
-        } catch (altErr: any) {
-          console.error('💥 Erreur alternative:', altErr);
-          setError(altErr.message || 'Une erreur est survenue. Veuillez réessayer.');
-        }
-      } else {
-        setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
-      }
+      setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
-      console.log('⏱️ Fin du traitement (succès ou échec)');
       setLoading(false);
     }
   };
 
+  // Le reste du code reste identique...
+  
   // Affichage pendant la vérification du token
   if (checking) {
     return (
