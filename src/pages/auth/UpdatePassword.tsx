@@ -23,53 +23,34 @@ const UpdatePassword = () => {
     watch
   } = useForm<FormData>();
 
-  // Récupérer le token depuis les paramètres de l'URL (compatible avec les deux formats)
-  let accessToken = null;
-  
-  // Vérifier d'abord dans les paramètres de requête (search)
-  if (location.search) {
-    const searchParams = new URLSearchParams(location.search);
-    accessToken = searchParams.get('access_token');
-  } 
-  // Si rien n'est trouvé, vérifier dans le hash (ancien format)
-  else if (location.hash && location.hash.startsWith('#')) {
-    const hashParams = new URLSearchParams(location.hash.substring(1));
-    accessToken = hashParams.get('access_token');
-  }
+  // Récupérer les paramètres de l'URL
+  const searchParams = new URLSearchParams(location.search);
+  const tokenHash = searchParams.get('token_hash');
+  const type = searchParams.get('type');
 
   useEffect(() => {
     console.log('UpdatePassword - URL complète:', window.location.href);
     console.log('UpdatePassword - Location search:', location.search);
-    console.log('UpdatePassword - Location hash:', location.hash);
-    console.log('UpdatePassword - Access token trouvé:', !!accessToken);
+    console.log('UpdatePassword - Token hash trouvé:', !!tokenHash);
+    console.log('UpdatePassword - Type:', type);
     
-    if (!accessToken) {
+    if (!tokenHash) {
       setTokenError('Aucun token de réinitialisation trouvé. Veuillez demander un nouveau lien de réinitialisation.');
     }
-  }, [accessToken, location]);
+  }, [tokenHash, location, type]);
 
   const onSubmit = async (data: FormData) => {
-    if (!accessToken) {
+    if (!tokenHash) {
       toast.error('Token de réinitialisation manquant');
       return;
     }
 
     setLoading(true);
     try {
-      // Utiliser le token pour mettre à jour le mot de passe
-      // D'abord, essayer de définir la session avec le token
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: ''
-      });
-      
-      if (sessionError) {
-        console.error('Erreur lors de la définition de la session:', sessionError);
-        throw sessionError;
-      }
-      
-      // Ensuite, mettre à jour le mot de passe
-      const { error } = await supabase.auth.updateUser({
+      // Utiliser directement la méthode resetPasswordForEmail avec le token_hash
+      const { error } = await supabase.auth.resetPasswordForEmail(null, {
+        redirectTo: window.location.origin + '/auth/callback',
+        token_hash: tokenHash,
         password: data.password
       });
 
