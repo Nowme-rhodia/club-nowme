@@ -1,74 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle, ArrowLeft, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
 
 export default function UpdatePassword() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(true);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasValidSession, setHasValidSession] = useState(false);
+  const [hasValidToken, setHasValidToken] = useState(false);
+  const [tokenHash, setTokenHash] = useState('');
 
   useEffect(() => {
-    console.log('UpdatePassword - URL complète:', window.location.href);
-    console.log('UpdatePassword - Location search:', location.search);
-    
-    const searchParams = new URLSearchParams(location.search);
-    const tokenHash = searchParams.get('token_hash');
-    const type = searchParams.get('type');
-    
-    console.log('UpdatePassword - Token hash trouvé:', !!tokenHash);
-    console.log('UpdatePassword - Type:', type);
+    const checkToken = () => {
+      console.log('UpdatePassword - URL complète:', window.location.href);
+      console.log('UpdatePassword - Location search:', window.location.search);
+      
+      const searchParams = new URLSearchParams(window.location.search);
+      const hash = searchParams.get('token_hash');
+      const type = searchParams.get('type');
+      
+      console.log('UpdatePassword - Token hash trouvé:', !!hash);
+      console.log('UpdatePassword - Type:', type);
 
-    const verifySession = async () => {
-      try {
-        if (!tokenHash || type !== 'recovery') {
-          setError('Lien de réinitialisation invalide ou expiré.');
-          setVerifying(false);
-          return;
-        }
-
-        console.log('Vérification du token hash...');
-        
-        // Vérifier la session avec le token_hash
-        const { data, error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: 'recovery'
-        });
-
-        if (verifyError) {
-          console.error('Erreur vérification token:', verifyError);
-          setError('Token de réinitialisation invalide ou expiré. Veuillez demander un nouveau lien.');
-          setHasValidSession(false);
-        } else if (data.user) {
-          console.log('Session établie avec succès pour:', data.user.email);
-          setHasValidSession(true);
-        } else {
-          setError('Impossible d\'établir la session. Veuillez réessayer.');
-          setHasValidSession(false);
-        }
-      } catch (err) {
-        console.error('Erreur lors de la vérification:', err);
-        setError('Une erreur est survenue lors de la vérification du lien.');
-        setHasValidSession(false);
-      } finally {
-        setVerifying(false);
+      if (!hash || type !== 'recovery') {
+        setError('Lien de réinitialisation invalide ou expiré.');
+        setHasValidToken(false);
+      } else {
+        setTokenHash(hash);
+        setHasValidToken(true);
       }
+      
+      setVerifying(false);
     };
 
-    // Éviter la boucle infinie en vérifiant si on a déjà vérifié
-    if (verifying && tokenHash && type === 'recovery') {
-      verifySession();
-    } else if (!tokenHash || type !== 'recovery') {
-      setError('Lien de réinitialisation invalide.');
-      setVerifying(false);
-    }
+    // Exécuter une seule fois
+    checkToken();
   }, []); // Dépendances vides pour éviter la boucle
 
   const validatePassword = (password: string) => {
@@ -82,7 +54,12 @@ export default function UpdatePassword() {
     e.preventDefault();
     setError(null);
     
-    // Validation des mots de passe
+    // Validation
+    if (!email) {
+      setError('L\'adresse email est requise');
+      return;
+    }
+    
     const passwordError = validatePassword(password);
     if (passwordError) {
       setError(passwordError);
@@ -94,23 +71,38 @@ export default function UpdatePassword() {
       return;
     }
     
-    if (!hasValidSession) {
-      setError('Session invalide. Veuillez demander un nouveau lien de réinitialisation.');
+    if (!hasValidToken || !tokenHash) {
+      setError('Token invalide. Veuillez demander un nouveau lien.');
       return;
     }
     
     setLoading(true);
 
     try {
-      console.log('Début de la mise à jour du mot de passe...');
+      console.log('Vérification du token avec email:', email);
       
-      // Maintenant que la session est établie, on peut mettre à jour le mot de passe
+      // Étape 1: Vérifier le token avec l'email
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: email,
+        token_hash: tokenHash,
+        type: 'recovery'
+      });
+
+      if (verifyError) {
+        console.error('Erreur vérification OTP:', verifyError);
+        throw new Error(`Erreur de vérification: ${verifyError.message}`);
+      }
+
+      console.log('Token vérifié avec succès, mise à jour du mot de passe...');
+      
+      // Étape 2: Mettre à jour le mot de passe
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
       if (updateError) {
-        throw updateError;
+        console.error('Erreur mise à jour mot de passe:', updateError);
+        throw new Error(`Erreur de mise à jour: ${updateError.message}`);
       }
 
       console.log('Mot de passe mis à jour avec succès');
@@ -123,7 +115,7 @@ export default function UpdatePassword() {
         });
       }, 2000);
     } catch (err: any) {
-      console.error('Erreur lors de la mise à jour du mot de passe:', err);
+      console.error('Erreur complète:', err);
       setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
@@ -205,7 +197,7 @@ export default function UpdatePassword() {
                 </div>
               )}
 
-              {!hasValidSession ? (
+              {!hasValidToken ? (
                 <div className="text-center">
                   <p className="text-sm text-gray-500 mb-6">
                     Le lien de réinitialisation est invalide ou a expiré. Veuillez demander un nouveau lien.
@@ -219,6 +211,28 @@ export default function UpdatePassword() {
                 </div>
               ) : (
                 <>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      Adresse email
+                    </label>
+                    <div className="mt-1">
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                        placeholder="votre@email.com"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Saisissez l'email associé à votre compte
+                    </p>
+                  </div>
+
                   <div>
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                       Nouveau mot de passe
