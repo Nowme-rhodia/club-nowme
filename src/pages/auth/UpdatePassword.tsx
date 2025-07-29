@@ -12,30 +12,22 @@ export default function UpdatePassword() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
-  const [sessionReady, setSessionReady] = useState(false);
+  const [tokenHash, setTokenHash] = useState('');
+  const [isValidToken, setIsValidToken] = useState(false);
 
-  // 🔍 Extraire access_token depuis l’URL
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const access_token = hashParams.get('access_token');
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') || params.get('token_hash'); // ← ICI le fix
+    const type = params.get('type');
 
-    if (access_token) {
-      supabase.auth.setSession({
-        access_token,
-        refresh_token: hashParams.get('refresh_token') || '',
-      }).then(({ error }) => {
-        if (error) {
-          console.error('Erreur lors de la restauration de session', error);
-          setError('Lien expiré ou invalide.');
-        } else {
-          setSessionReady(true);
-        }
-        setChecking(false);
-      });
+    if (token && type === 'recovery') {
+      setTokenHash(token);
+      setIsValidToken(true);
     } else {
       setError("Lien invalide ou expiré.");
-      setChecking(false);
     }
+
+    setChecking(false);
   }, []);
 
   const validatePassword = (pwd: string) => {
@@ -60,9 +52,23 @@ export default function UpdatePassword() {
       return;
     }
 
+    if (!tokenHash) {
+      setError('Le lien est incomplet. Merci de réessayer.');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'recovery'
+      });
+
+      if (verifyError) {
+        throw new Error('Erreur lors de la vérification du lien. Il a peut-être expiré.');
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({ password });
 
       if (updateError) {
@@ -118,7 +124,7 @@ export default function UpdatePassword() {
                 Retour à la connexion
               </Link>
             </div>
-          ) : !sessionReady ? (
+          ) : !isValidToken ? (
             <div className="text-center">
               <div className="rounded-full bg-red-100 p-3 mx-auto w-fit mb-4">
                 <AlertCircle className="h-6 w-6 text-red-600" />
