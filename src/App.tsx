@@ -15,7 +15,7 @@ const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
 const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword'));
 const UpdatePassword = React.lazy(() => import('./pages/auth/UpdatePassword'));
 const TestSignup = React.lazy(() => import('./pages/auth/TestSignup'));
-const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback')); // Nouveau composant de callback
+const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback'));
 
 // Partner auth pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
@@ -53,6 +53,7 @@ const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const Partners = React.lazy(() => import('./pages/admin/Partners'));
 const Subscribers = React.lazy(() => import('./pages/admin/Subscribers'));
 const Newsletter = React.lazy(() => import('./pages/admin/Newsletter'));
+const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers')); // 👈 AJOUT
 
 // Qui sommes-nous
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
@@ -92,7 +93,7 @@ function App() {
                   <Route path="/auth/signin" element={<SignIn />} />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
                   <Route path="/auth/update-password" element={<UpdatePassword />} />
-                  <Route path="/auth/callback" element={<AuthCallback />} /> {/* Nouvelle route pour le callback d'authentification */}
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/auth/test-signup" element={<TestSignup />} />
 
                   {/* Partner routes */}
@@ -114,6 +115,7 @@ function App() {
                     <Route path="partners" element={<Partners />} />
                     <Route path="subscribers" element={<Subscribers />} />
                     <Route path="newsletter" element={<Newsletter />} />
+                    <Route path="create-users" element={<CreateUsers />} /> {/* 👈 AJOUT */}
                   </Route>
 
                   {/* 404 */}
