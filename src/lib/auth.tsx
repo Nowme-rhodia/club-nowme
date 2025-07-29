@@ -1,4 +1,4 @@
-// auth.tsx - Version mise à jour pour le nouveau flux d'authentification
+// auth.tsx - Corrigé pour le flux token_hash
 import { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
@@ -29,9 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      }
+      if (session?.user) loadUserProfile(session.user.id);
       setLoading(false);
     });
 
@@ -56,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (partnerError && partnerError.code !== 'PGRST116') {
-        console.error('Error checking partner data:', partnerError);
+        console.error('Erreur partner:', partnerError);
       }
 
       if (partnerData) {
@@ -71,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (userError && userError.code !== 'PGRST116') {
-        console.error('Error loading user profile:', userError);
+        console.error('Erreur profil:', userError);
       }
 
       if (userData) {
@@ -81,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
+      console.error('Erreur profil général:', error);
     }
   };
 
@@ -90,37 +88,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
-      // Récupérer immédiatement les informations de l'utilisateur connecté
       const { data: { user: currentUser }, error: getUserError } = await supabase.auth.getUser();
-      
-      if (getUserError || !currentUser) {
-        throw getUserError || new Error("Impossible de récupérer l'utilisateur connecté");
-      }
+      if (getUserError || !currentUser) throw getUserError || new Error("Impossible de récupérer l'utilisateur");
 
-      const { data: partnerData, error: partnerError } = await supabase
+      const { data: partnerData } = await supabase
         .from('partners')
         .select('*')
         .eq('user_id', currentUser.id)
         .single();
-
-      if (partnerError && partnerError.code !== 'PGRST116') {
-        console.error('Error checking partner data:', partnerError);
-      }
 
       if (partnerData) {
         navigate('/partner/dashboard');
         return;
       }
 
-      const { data: userData, error: userError } = await supabase
+      const { data: userData } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', currentUser.id)
         .single();
-
-      if (userError && userError.code !== 'PGRST116') {
-        console.error('Error loading user profile:', userError);
-      }
 
       if (userData?.is_admin) {
         navigate('/admin');
@@ -130,8 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         navigate('/subscription');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Email ou mot de passe incorrect';
-      toast.error(errorMessage);
+      toast.error('Email ou mot de passe incorrect');
       throw error;
     }
   };
@@ -141,38 +126,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       navigate('/');
-    } catch (error) {
-      toast.error('Une erreur est survenue lors de la déconnexion');
+    } catch {
+      toast.error('Erreur lors de la déconnexion');
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
-      // Utiliser le nouveau format d'URL avec les paramètres de requête au lieu des fragments
-      const redirectTo = `${window.location.origin}/auth/update-password#recovery`;
+      const redirectTo = `${window.location.origin}/auth/update-password`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-      if (error) {
-        if (error.message.includes('you can only request this after')) {
-          throw error;
-        } else {
-          toast.error("Une erreur est survenue lors de l'envoi de l'email");
-          throw error;
-        }
-      }
-      toast.success('Un email de réinitialisation vous a été envoyé');
+      if (error) throw error;
+      toast.success('Lien envoyé par email');
     } catch (error) {
+      toast.error("Impossible d'envoyer le lien");
       throw error;
     }
   };
 
   const updatePassword = async (password: string) => {
     try {
-      // Cette méthode fonctionne avec les deux formats d'URL (fragments ou paramètres de requête)
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get('token_hash');
+      const type = params.get('type');
+
+      if (tokenHash && type === 'recovery') {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery',
+        });
+        if (verifyError) throw verifyError;
+      }
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      return { success: true };
+
+      toast.success('Mot de passe mis à jour');
     } catch (error) {
-      console.error('Error updating password:', error);
+      toast.error("Erreur lors de la mise à jour");
       throw error;
     }
   };
@@ -201,8 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
