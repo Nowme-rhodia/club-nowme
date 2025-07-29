@@ -7,11 +7,11 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     Content-Security-Policy = """
       default-src 'self' https://dqfyuhwrjozoxadkccdj.supabase.co https://plausible.io;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com;
+      script-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://js.stripe.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' https://*.unsplash.com https://i.imgur.com https://imgur.com https://maps.gstatic.com https://maps.googleapis.com data:;
-      connect-src 'self' https://dqfyuhwrjozoxadkccdj.supabase.co https://plausible.io https://maps.googleapis.com https://maps.gstatic.com;
+      connect-src 'self' https://dqfyuhwrjozoxadkccdj.supabase.co https://plausible.io https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com;
     """
 
 [[redirects]]

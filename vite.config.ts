@@ -15,17 +15,12 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  // Configuration pour exposer les variables d'environnement sans préfixe VITE_
+  // Configuration sécurisée pour exposer uniquement les variables nécessaires
   define: {
-    // Cela permet d'exposer toutes les variables d'environnement au frontend
-    // Attention: ceci peut exposer des informations sensibles
-    // Il est recommandé de spécifier explicitement les variables à exposer
-    'process.env': process.env
-    
-    // Alternative plus sécurisée: spécifier explicitement les variables
-    // 'process.env.API_KEY': JSON.stringify(process.env.API_KEY),
-    // 'process.env.STRIPE_KEY': JSON.stringify(process.env.STRIPE_KEY),
-    // etc.
+    'process.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL),
+    'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY),
+    'process.env.VITE_GOOGLE_MAPS_API_KEY': JSON.stringify(process.env.VITE_GOOGLE_MAPS_API_KEY),
+    'process.env.STRIPE_PUBLISHABLE_KEY': JSON.stringify(process.env.STRIPE_PUBLISHABLE_KEY),
   },
 });
 // force rebuild for Stackblitz

@@ -1,8 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-
-// Charger les variables d'environnement
-dotenv.config();
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
