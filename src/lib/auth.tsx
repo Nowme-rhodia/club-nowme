@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       // Utiliser le nouveau format d'URL avec les paramètres de requête au lieu des fragments
-      const redirectTo = `${window.location.origin}/auth/update-password`;
+      const redirectTo = `${window.location.origin}/auth/update-password#recovery`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) {
         if (error.message.includes('you can only request this after')) {
