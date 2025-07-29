@@ -34,6 +34,8 @@ export default function UpdatePassword() {
           return;
         }
 
+        console.log('Vérification du token hash...');
+        
         // Vérifier la session avec le token_hash
         const { data, error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
@@ -43,22 +45,31 @@ export default function UpdatePassword() {
         if (verifyError) {
           console.error('Erreur vérification token:', verifyError);
           setError('Token de réinitialisation invalide ou expiré. Veuillez demander un nouveau lien.');
+          setHasValidSession(false);
         } else if (data.user) {
           console.log('Session établie avec succès pour:', data.user.email);
           setHasValidSession(true);
         } else {
           setError('Impossible d\'établir la session. Veuillez réessayer.');
+          setHasValidSession(false);
         }
       } catch (err) {
         console.error('Erreur lors de la vérification:', err);
         setError('Une erreur est survenue lors de la vérification du lien.');
+        setHasValidSession(false);
       } finally {
         setVerifying(false);
       }
     };
 
-    verifySession();
-  }, [location]);
+    // Éviter la boucle infinie en vérifiant si on a déjà vérifié
+    if (verifying && tokenHash && type === 'recovery') {
+      verifySession();
+    } else if (!tokenHash || type !== 'recovery') {
+      setError('Lien de réinitialisation invalide.');
+      setVerifying(false);
+    }
+  }, []); // Dépendances vides pour éviter la boucle
 
   const validatePassword = (password: string) => {
     if (password.length < 8) {
