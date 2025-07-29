@@ -1,5 +1,3 @@
-// 🔁 app.tsx (version complète)
-
 import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -15,7 +13,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Auth pages
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
 const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword'));
-const ResetPassword = React.lazy(() => import('./pages/auth/ResetPassword'));
 const UpdatePassword = React.lazy(() => import('./pages/auth/UpdatePassword'));
 const TestSignup = React.lazy(() => import('./pages/auth/TestSignup'));
 
@@ -93,8 +90,8 @@ function App() {
                   {/* Auth routes */}
                   <Route path="/auth/signin" element={<SignIn />} />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/auth/reset-password" element={<ResetPassword />} />
                   <Route path="/auth/update-password" element={<UpdatePassword />} />
+                  <Route path="/auth/reset-password" element={<UpdatePassword />} /> {/* Rediriger vers UpdatePassword */}
                   <Route path="/auth/test-signup" element={<TestSignup />} />
 
                   {/* Partner routes */}
