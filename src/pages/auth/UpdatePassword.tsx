@@ -1,144 +1,284 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Lock, AlertCircle, ArrowLeft, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useForm } from 'react-hook-form';
-import { toast } from 'react-hot-toast';
-import { LoadingSpinner } from '../../components/LoadingSpinner';
+import { SEO } from '../../components/SEO';
 
-type FormData = {
-  password: string;
-  confirmPassword: string;
-};
-
-const UpdatePassword = () => {
+export default function UpdatePassword() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [tokenError, setTokenError] = useState<string | null>(null);
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch
-  } = useForm<FormData>();
-
-  // Récupérer les paramètres de l'URL
-  const searchParams = new URLSearchParams(location.search);
-  const tokenHash = searchParams.get('token_hash');
-  const type = searchParams.get('type');
+  const [verifying, setVerifying] = useState(true);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasValidSession, setHasValidSession] = useState(false);
 
   useEffect(() => {
     console.log('UpdatePassword - URL complète:', window.location.href);
     console.log('UpdatePassword - Location search:', location.search);
+    
+    const searchParams = new URLSearchParams(location.search);
+    const tokenHash = searchParams.get('token_hash');
+    const type = searchParams.get('type');
+    
     console.log('UpdatePassword - Token hash trouvé:', !!tokenHash);
     console.log('UpdatePassword - Type:', type);
-    
-    if (!tokenHash) {
-      setTokenError('Aucun token de réinitialisation trouvé. Veuillez demander un nouveau lien de réinitialisation.');
-    }
-  }, [tokenHash, location, type]);
 
-  const onSubmit = async (data: FormData) => {
-    if (!tokenHash) {
-      toast.error('Token de réinitialisation manquant');
+    const verifySession = async () => {
+      try {
+        if (!tokenHash || type !== 'recovery') {
+          setError('Lien de réinitialisation invalide ou expiré.');
+          setVerifying(false);
+          return;
+        }
+
+        // Vérifier la session avec le token_hash
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery'
+        });
+
+        if (verifyError) {
+          console.error('Erreur vérification token:', verifyError);
+          setError('Token de réinitialisation invalide ou expiré. Veuillez demander un nouveau lien.');
+        } else if (data.user) {
+          console.log('Session établie avec succès pour:', data.user.email);
+          setHasValidSession(true);
+        } else {
+          setError('Impossible d\'établir la session. Veuillez réessayer.');
+        }
+      } catch (err) {
+        console.error('Erreur lors de la vérification:', err);
+        setError('Une erreur est survenue lors de la vérification du lien.');
+      } finally {
+        setVerifying(false);
+      }
+    };
+
+    verifySession();
+  }, [location]);
+
+  const validatePassword = (password: string) => {
+    if (password.length < 8) {
+      return 'Le mot de passe doit contenir au moins 8 caractères';
+    }
+    return null;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    
+    // Validation des mots de passe
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
-
+    
+    if (password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas');
+      return;
+    }
+    
+    if (!hasValidSession) {
+      setError('Session invalide. Veuillez demander un nouveau lien de réinitialisation.');
+      return;
+    }
+    
     setLoading(true);
+
     try {
-      // Utiliser directement la méthode resetPasswordForEmail avec le token_hash
-      const { error } = await supabase.auth.resetPasswordForEmail(null, {
-        redirectTo: window.location.origin + '/auth/callback',
-        token_hash: tokenHash,
-        password: data.password
+      console.log('Début de la mise à jour du mot de passe...');
+      
+      // Maintenant que la session est établie, on peut mettre à jour le mot de passe
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
       });
 
-      if (error) throw error;
+      if (updateError) {
+        throw updateError;
+      }
 
-      toast.success('Votre mot de passe a été mis à jour avec succès');
-      navigate('/auth/signin');
-    } catch (error: any) {
-      console.error('Erreur lors de la mise à jour du mot de passe:', error);
-      toast.error(error.message || 'Une erreur est survenue lors de la mise à jour du mot de passe');
+      console.log('Mot de passe mis à jour avec succès');
+      setSuccess(true);
+      
+      // Redirection automatique après succès
+      setTimeout(() => {
+        navigate('/auth/signin', {
+          state: { message: 'Votre mot de passe a été mis à jour avec succès' }
+        });
+      }, 2000);
+    } catch (err: any) {
+      console.error('Erreur lors de la mise à jour du mot de passe:', err);
+      setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (tokenError) {
+  // Afficher un indicateur de chargement pendant la vérification initiale
+  if (verifying) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Erreur de token</h2>
-          <p className="text-gray-700">{tokenError}</p>
-          <button
-            onClick={() => navigate('/auth/forgot-password')}
-            className="mt-6 w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark transition-colors"
-          >
-            Demander un nouveau lien
-          </button>
+      <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <img src="https://i.imgur.com/or3q8gE.png" alt="Logo" className="mx-auto h-16 w-auto" />
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+            Vérification du lien de récupération
+          </h2>
+          <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+            <div className="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10 text-center">
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+              </div>
+              <p className="mt-4 text-sm text-gray-600">
+                Vérification de votre lien de réinitialisation...
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Mettre à jour votre mot de passe</h2>
-        
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Nouveau mot de passe
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              {...register('password', {
-                required: 'Le mot de passe est requis',
-                minLength: {
-                  value: 8,
-                  message: 'Le mot de passe doit contenir au moins 8 caractères'
-                }
-              })}
-            />
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-            )}
-          </div>
-          
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Confirmer le mot de passe
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              {...register('confirmPassword', {
-                required: 'Veuillez confirmer votre mot de passe',
-                validate: value => value === watch('password') || 'Les mots de passe ne correspondent pas'
-              })}
-            />
-            {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
-            )}
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark transition-colors disabled:bg-gray-400"
-          >
-            {loading ? <LoadingSpinner size="sm" /> : 'Mettre à jour le mot de passe'}
-          </button>
-        </form>
+    <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <SEO 
+        title="Réinitialisation du mot de passe"
+        description="Créez un nouveau mot de passe pour votre compte Nowme"
+      />
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <img src="https://i.imgur.com/or3q8gE.png" alt="Logo" className="mx-auto h-16 w-auto" />
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+          Réinitialisation du mot de passe
+        </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Créez un nouveau mot de passe sécurisé
+        </p>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+          {success ? (
+            <div className="text-center">
+              <div className="rounded-full bg-green-100 p-3 mx-auto w-fit mb-4">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Mot de passe mis à jour !
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Votre mot de passe a été réinitialisé avec succès. Vous allez être redirigé vers la page de connexion.
+              </p>
+              <Link
+                to="/auth/signin"
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-primary hover:bg-primary-dark"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Aller à la connexion
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="rounded-md bg-red-50 p-4">
+                  <div className="flex">
+                    <AlertCircle className="h-5 w-5 text-red-400" />
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!hasValidSession ? (
+                <div className="text-center">
+                  <p className="text-sm text-gray-500 mb-6">
+                    Le lien de réinitialisation est invalide ou a expiré. Veuillez demander un nouveau lien.
+                  </p>
+                  <Link
+                    to="/auth/forgot-password"
+                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-primary hover:bg-primary-dark"
+                  >
+                    Demander un nouveau lien
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                      Nouveau mot de passe
+                    </label>
+                    <div className="mt-1 relative">
+                      <input
+                        id="password"
+                        name="password"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                      />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Minimum 8 caractères
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                      Confirmer le mot de passe
+                    </label>
+                    <div className="mt-1 relative">
+                      <input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                      />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className={`
+                        flex w-full justify-center items-center rounded-full border border-transparent px-4 py-3 text-base font-medium text-white shadow-sm
+                        ${loading
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                        }
+                      `}
+                    >
+                      {loading ? 'Mise à jour...' : 'Réinitialiser le mot de passe'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <div className="text-center">
+                <Link
+                  to="/auth/signin"
+                  className="text-sm font-medium text-primary hover:text-primary-dark"
+                >
+                  Retour à la connexion
+                </Link>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
-};
-
-export default UpdatePassword;
+}
