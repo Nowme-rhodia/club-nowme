@@ -83,7 +83,6 @@ export default function UpdatePassword() {
       
       // Étape 1: Vérifier le token avec l'email
       const { error: verifyError } = await supabase.auth.verifyOtp({
-        email: email,
         token_hash: tokenHash,
         type: 'recovery'
       });
