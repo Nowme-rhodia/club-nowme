@@ -1,4 +1,4 @@
-// auth.tsx - Corrigé pour le flux token_hash
+// auth.tsx - Corrigé avec détection PASSWORD_RECOVERY
 import { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
@@ -33,8 +33,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        console.log('🔐 Événement PASSWORD_RECOVERY détecté');
+        toast.success('Lien validé, tu peux définir ton nouveau mot de passe ✨');
+        navigate('/auth/update-password');
+      }
+
       if (session?.user) {
         await loadUserProfile(session.user.id);
       } else {
