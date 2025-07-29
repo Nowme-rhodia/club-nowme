@@ -15,6 +15,7 @@ const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
 const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword'));
 const UpdatePassword = React.lazy(() => import('./pages/auth/UpdatePassword'));
 const TestSignup = React.lazy(() => import('./pages/auth/TestSignup'));
+const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback')); // Nouveau composant de callback
 
 // Partner auth pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
@@ -91,7 +92,7 @@ function App() {
                   <Route path="/auth/signin" element={<SignIn />} />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
                   <Route path="/auth/update-password" element={<UpdatePassword />} />
-                  <Route path="/auth/reset-password" element={<UpdatePassword />} /> {/* Rediriger vers UpdatePassword */}
+                  <Route path="/auth/callback" element={<AuthCallback />} /> {/* Nouvelle route pour le callback d'authentification */}
                   <Route path="/auth/test-signup" element={<TestSignup />} />
 
                   {/* Partner routes */}
