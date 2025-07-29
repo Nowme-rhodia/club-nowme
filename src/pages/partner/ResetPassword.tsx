@@ -11,31 +11,21 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [tokenHash, setTokenHash] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Récupérer le token de l'URL
-    const hash = window.location.hash;
-    const accessToken = hash.split('access_token=')[1]?.split('&')[0];
+    const params = new URLSearchParams(window.location.search);
+    const hash = params.get('token_hash');
+    const type = params.get('type');
 
-    if (!accessToken) {
-      setError('Token de réinitialisation manquant ou invalide :/');
-      return;
+    if (hash && type === 'recovery') {
+      setTokenHash(hash);
+    } else {
+      setError('Lien de réinitialisation invalide ou expiré.');
     }
 
-    // Mettre à jour la session avec le token
-    const updateSession = async () => {
-      const { error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: ''
-      });
-
-      if (error) {
-        console.error('Erreur de mise à jour de la session:', error);
-        setError('Token invalide ou expiré. Veuillez demander un nouveau lien.');
-      }
-    };
-
-    updateSession();
+    setChecking(false);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,37 +33,55 @@ export default function ResetPassword() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+      setError('Les mots de passe ne correspondent pas.');
       return;
     }
 
     if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
+      setError('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+
+    if (!tokenHash) {
+      setError('Le lien de réinitialisation est incomplet.');
       return;
     }
 
     setLoading(true);
 
     try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'recovery',
+      });
+
+      if (verifyError) throw verifyError;
+
       const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+        password,
       });
 
       if (updateError) throw updateError;
 
       setSuccess(true);
-      
-      // Rediriger vers la page de connexion après 3 secondes
       setTimeout(() => {
         navigate('/partner/signin');
-      }, 3000);
+      }, 2500);
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Erreur:', err);
       setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FDF8F4]">
+        <p className="text-sm text-gray-600">Vérification du lien en cours...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -87,7 +95,7 @@ export default function ResetPassword() {
           Nouveau mot de passe
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Choisissez un nouveau mot de passe sécurisé pour votre compte partenaire
+          Pour accéder à votre espace et continuer à créer du lien 🌟
         </p>
       </div>
 
@@ -99,10 +107,10 @@ export default function ResetPassword() {
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Mot de passe mis à jour !
+                Mot de passe mis à jour 🎉
               </h3>
               <p className="text-sm text-gray-500">
-                Vous allez être redirigé vers la page de connexion...
+                Redirection en cours...
               </p>
             </div>
           ) : (
