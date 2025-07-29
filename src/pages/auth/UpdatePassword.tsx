@@ -12,7 +12,7 @@ export default function UpdatePassword() {
   const [verifying, setVerifying] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [hasValidSession, setHasValidSession] = useState(false);
+  const [hasValidSession, setHasValidSession] = useState(false); 
 
   useEffect(() => {
     const setupSession = async () => {
