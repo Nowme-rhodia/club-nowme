@@ -12,6 +12,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
   isAdmin: boolean;
   isPartner: boolean;
   isSubscriber: boolean;
@@ -163,6 +164,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updatePassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating password:', error);
+      throw error;
+    }
+  };
+
   const isAdmin = profile?.role === 'admin';
   const isPartner = profile?.role === 'partner';
   const isSubscriber = profile?.subscription_status === 'active' || profile?.role === 'subscriber';
@@ -175,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signOut,
       resetPassword,
+      updatePassword,
       isAdmin,
       isPartner,
       isSubscriber
