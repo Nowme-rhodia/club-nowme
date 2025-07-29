@@ -1,4 +1,5 @@
-import { createClient } from 'jsr:@supabase/supabase-js@^2';
+// reset-password.ts
+import { createClient } from 'npm:@supabase/supabase-js@2.38.4';
 
 Deno.serve(async (req) => {
   // Gestion des requêtes CORS preflight
