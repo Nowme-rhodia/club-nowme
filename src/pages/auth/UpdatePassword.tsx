@@ -16,8 +16,9 @@ export default function UpdatePassword() {
   const [isValidToken, setIsValidToken] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token') || params.get('token_hash'); // ← ICI le fix
+    const hash = window.location.hash.substring(1); // remove leading #
+    const params = new URLSearchParams(hash);
+    const token = params.get('token');
     const type = params.get('type');
 
     if (token && type === 'recovery') {
@@ -60,7 +61,7 @@ export default function UpdatePassword() {
     setLoading(true);
 
     try {
-      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+      const { error: verifyError } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: 'recovery'
       });
@@ -81,7 +82,6 @@ export default function UpdatePassword() {
           state: { message: 'Mot de passe mis à jour avec succès 🎉' }
         });
       }, 2500);
-
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
     } finally {
