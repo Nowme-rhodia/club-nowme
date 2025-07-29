@@ -1,4 +1,4 @@
-// auth.tsx - Version corrigée
+// auth.tsx - Version mise à jour pour le nouveau flux d'authentification
 import { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
@@ -148,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
+      // Utiliser le nouveau format d'URL avec les paramètres de requête au lieu des fragments
       const redirectTo = `${window.location.origin}/auth/update-password`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) {
@@ -166,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (password: string) => {
     try {
+      // Cette méthode fonctionne avec les deux formats d'URL (fragments ou paramètres de requête)
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       return { success: true };
