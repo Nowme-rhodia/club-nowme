@@ -1,43 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../lib/auth';
+import { supabase } from '../../lib/supabase';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Afficher les informations de débogage
-    console.log('URL complète:', window.location.href);
-    console.log('Location search:', location.search);
-    console.log('Location hash:', location.hash);
+    console.log('AuthCallback - URL complète:', window.location.href);
+    console.log('AuthCallback - Location search:', location.search);
+    console.log('AuthCallback - Location hash:', location.hash);
     
-    // Récupérer les paramètres de l'URL (essayer à la fois search et hash)
-    let params;
+    // Récupérer les paramètres de l'URL
+    const searchParams = new URLSearchParams(location.search);
+    const hashParams = location.hash ? new URLSearchParams(location.hash.substring(1)) : null;
     
-    // Vérifier d'abord dans les paramètres de requête (search)
-    if (location.search) {
-      params = new URLSearchParams(location.search);
-    } 
-    // Si rien n'est trouvé, vérifier dans le hash (ancien format)
-    else if (location.hash && location.hash.startsWith('#')) {
-      params = new URLSearchParams(location.hash.substring(1));
-    } else {
-      params = new URLSearchParams('');
-    }
-    
-    const type = params.get('type');
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const error = params.get('error');
-    const errorDescription = params.get('error_description');
+    // Vérifier les différents formats possibles
+    const type = searchParams.get('type') || hashParams?.get('type');
+    const tokenHash = searchParams.get('token_hash') || hashParams?.get('token_hash');
+    const accessToken = searchParams.get('access_token') || hashParams?.get('access_token');
+    const refreshToken = searchParams.get('refresh_token') || hashParams?.get('refresh_token');
+    const error = searchParams.get('error') || hashParams?.get('error');
+    const errorDescription = searchParams.get('error_description') || hashParams?.get('error_description');
     
     // Afficher les paramètres extraits pour le débogage
-    console.log('Paramètres extraits:', {
+    console.log('AuthCallback - Paramètres extraits:', {
       type,
+      tokenHash: !!tokenHash,
       accessToken: !!accessToken,
       refreshToken: !!refreshToken,
       error,
@@ -50,55 +42,49 @@ const AuthCallback = () => {
       return;
     }
 
-    // Si nous avons un access_token, essayer de le stocker manuellement
-    if (accessToken) {
-      try {
-        // Stocker le token dans le localStorage (comme le ferait Supabase)
-        localStorage.setItem('supabase.auth.token', JSON.stringify({
-          access_token: accessToken,
-          refresh_token: refreshToken || '',
-          expires_at: Date.now() + 3600 * 1000, // Approximation d'une heure
-          expires_in: 3600
-        }));
-        
-        // Recharger la page pour que Supabase puisse détecter le token
-        window.location.href = '/';
-        return;
-      } catch (err) {
-        console.error('Erreur lors du stockage du token:', err);
-      }
-    }
-
     // Gérer les différents types de callbacks
     switch (type) {
       case 'recovery':
-        // Rediriger vers la page de mise à jour du mot de passe avec le token
-        navigate(`/auth/update-password${location.search || location.hash}`);
+        // Si nous avons un token_hash, rediriger directement vers la page de mise à jour du mot de passe
+        if (tokenHash) {
+          navigate(`/auth/update-password?token_hash=${tokenHash}&type=recovery`);
+        } 
+        // Si nous avons un access_token, utiliser l'ancien format
+        else if (accessToken) {
+          navigate(`/auth/update-password?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}`);
+        } 
+        else {
+          setError('Token de récupération manquant. Veuillez demander un nouveau lien de réinitialisation.');
+        }
         break;
       case 'signup':
       case 'magiclink':
       case 'invite':
-        // Si l'utilisateur est déjà connecté, rediriger vers la page d'accueil
-        if (user) {
-          navigate('/');
-        } else {
-          // Sinon, rediriger vers la page de connexion
-          navigate('/auth/signin');
-        }
+        // Vérifier si l'utilisateur est connecté
+        supabase.auth.getUser().then(({ data, error }) => {
+          if (error || !data.user) {
+            console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+            navigate('/auth/signin');
+          } else {
+            navigate('/');
+          }
+        });
         break;
       default:
-        // Si nous n'avons pas de type mais que l'utilisateur est connecté
-        if (user) {
-          navigate('/');
-        } else if (location.search || location.hash) {
-          // Si nous avons des paramètres mais pas de type reconnu
-          setError('Type de callback non reconnu. Veuillez réessayer de vous connecter.');
-        } else {
-          // Redirection par défaut
-          navigate('/auth/signin');
-        }
+        // Vérifier si l'utilisateur est connecté
+        supabase.auth.getUser().then(({ data, error }) => {
+          if (error || !data.user) {
+            if (location.search || location.hash) {
+              setError('Type de callback non reconnu. Veuillez réessayer de vous connecter.');
+            } else {
+              navigate('/auth/signin');
+            }
+          } else {
+            navigate('/');
+          }
+        });
     }
-  }, [location, navigate, user]);
+  }, [location, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
