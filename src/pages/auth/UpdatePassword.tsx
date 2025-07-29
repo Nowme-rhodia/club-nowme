@@ -1,3 +1,4 @@
+// src/pages/auth/UpdatePassword.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Lock, AlertCircle, Check, ArrowLeft } from 'lucide-react';
@@ -16,10 +17,17 @@ export default function UpdatePassword() {
   const [isValidToken, setIsValidToken] = useState(false);
 
   useEffect(() => {
-    const hash = window.location.hash.substring(1); // remove leading #
-    const params = new URLSearchParams(hash);
-    const token = params.get('token');
-    const type = params.get('type');
+    const params = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+
+    const tokenFromQuery = params.get('token_hash') || params.get('token');
+    const typeFromQuery = params.get('type');
+
+    const tokenFromHash = hash.get('token_hash') || hash.get('token');
+    const typeFromHash = hash.get('type');
+
+    const token = tokenFromQuery || tokenFromHash;
+    const type = typeFromQuery || typeFromHash;
 
     if (token && type === 'recovery') {
       setTokenHash(token);
@@ -63,17 +71,12 @@ export default function UpdatePassword() {
     try {
       const { error: verifyError } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
-        type: 'recovery'
+        type: 'recovery',
+        new_password: password,
       });
 
       if (verifyError) {
         throw new Error('Erreur lors de la vérification du lien. Il a peut-être expiré.');
-      }
-
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-
-      if (updateError) {
-        throw new Error('Erreur lors de la mise à jour du mot de passe.');
       }
 
       setSuccess(true);
