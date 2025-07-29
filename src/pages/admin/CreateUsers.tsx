@@ -1,3 +1,4 @@
+// CreateUsers.tsx modifié
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
@@ -10,28 +11,44 @@ export default function CreateUsers() {
     setErrorMessage('');
 
     const baseRedirect = 'https://club.nowme.fr/auth/update-password';
+    const users = [
+      { email: 'rhodia@nowme.fr', password: 'AdminTemp2025!', role: 'Admin' },
+      { email: 'rhodia.kw@gmail.com', password: 'AbonneeTemp2025!', role: 'Abonnée' },
+      { email: 'nowme.club@gmail.com', password: 'PartnerTemp2025!', role: 'Partenaire' }
+    ];
 
     try {
-      // ✅ Admin
-      await supabase.auth.signUp({
-        email: 'rhodia@nowme.fr',
-        password: 'AdminTemp2025!',
-        options: { emailRedirectTo: baseRedirect }
-      });
+      // Récupérer le token de l'utilisateur actuel (admin)
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (!token) {
+        throw new Error('Vous devez être connecté en tant qu\'administrateur');
+      }
 
-      // ✅ Abonnée
-      await supabase.auth.signUp({
-        email: 'rhodia.kw@gmail.com',
-        password: 'AbonneeTemp2025!',
-        options: { emailRedirectTo: baseRedirect }
-      });
+      // Appeler la fonction Edge pour chaque utilisateur
+      for (const user of users) {
+        const response = await fetch('/api/admin-recreate-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            email: user.email,
+            password: user.password,
+            redirectTo: baseRedirect
+          })
+        });
 
-      // ✅ Partenaire
-      await supabase.auth.signUp({
-        email: 'nowme.club@gmail.com',
-        password: 'PartnerTemp2025!',
-        options: { emailRedirectTo: baseRedirect }
-      });
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(`Erreur pour ${user.role}: ${result.error}`);
+        }
+        
+        console.log(`✅ ${user.role} créé:`, result);
+      }
 
       setStatus('done');
     } catch (err: any) {
@@ -69,4 +86,3 @@ export default function CreateUsers() {
       </div>
     </div>
   );
-}
