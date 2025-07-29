@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { createClient } from 'jsr:@supabase/supabase-js@^2';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -35,6 +35,7 @@ Deno.serve(async (req) => {
 
     const client = createClient(supabaseUrl, serviceRole);
 
+    // Utiliser updateUser avec le token d'accès
     const { data, error } = await client.auth.updateUser({ password }, { accessToken: token });
 
     if (error) {
