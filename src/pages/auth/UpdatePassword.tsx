@@ -23,15 +23,30 @@ const UpdatePassword = () => {
     watch
   } = useForm<FormData>();
 
-  // Récupérer le token depuis les paramètres de l'URL (nouveau format)
-  const params = new URLSearchParams(location.search);
-  const accessToken = params.get('access_token');
+  // Récupérer le token depuis les paramètres de l'URL (compatible avec les deux formats)
+  let accessToken = null;
+  
+  // Vérifier d'abord dans les paramètres de requête (search)
+  if (location.search) {
+    const searchParams = new URLSearchParams(location.search);
+    accessToken = searchParams.get('access_token');
+  } 
+  // Si rien n'est trouvé, vérifier dans le hash (ancien format)
+  else if (location.hash && location.hash.startsWith('#')) {
+    const hashParams = new URLSearchParams(location.hash.substring(1));
+    accessToken = hashParams.get('access_token');
+  }
 
   useEffect(() => {
+    console.log('UpdatePassword - URL complète:', window.location.href);
+    console.log('UpdatePassword - Location search:', location.search);
+    console.log('UpdatePassword - Location hash:', location.hash);
+    console.log('UpdatePassword - Access token trouvé:', !!accessToken);
+    
     if (!accessToken) {
       setTokenError('Aucun token de réinitialisation trouvé. Veuillez demander un nouveau lien de réinitialisation.');
     }
-  }, [accessToken]);
+  }, [accessToken, location]);
 
   const onSubmit = async (data: FormData) => {
     if (!accessToken) {
@@ -42,6 +57,18 @@ const UpdatePassword = () => {
     setLoading(true);
     try {
       // Utiliser le token pour mettre à jour le mot de passe
+      // D'abord, essayer de définir la session avec le token
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: ''
+      });
+      
+      if (sessionError) {
+        console.error('Erreur lors de la définition de la session:', sessionError);
+        throw sessionError;
+      }
+      
+      // Ensuite, mettre à jour le mot de passe
       const { error } = await supabase.auth.updateUser({
         password: data.password
       });
