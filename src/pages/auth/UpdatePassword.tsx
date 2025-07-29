@@ -14,23 +14,25 @@ export default function UpdatePassword() {
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
   const [tokenHash, setTokenHash] = useState('');
+  const [type, setType] = useState('');
   const [isValidToken, setIsValidToken] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const query = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.slice(1));
 
-    const tokenFromQuery = params.get('token_hash') || params.get('token');
-    const typeFromQuery = params.get('type');
+    const tokenFromQuery = query.get('token_hash') || query.get('token');
+    const typeFromQuery = query.get('type');
 
     const tokenFromHash = hash.get('token_hash') || hash.get('token');
     const typeFromHash = hash.get('type');
 
     const token = tokenFromQuery || tokenFromHash;
-    const type = typeFromQuery || typeFromHash;
+    const tokenType = typeFromQuery || typeFromHash;
 
-    if (token && type === 'recovery') {
+    if (token && tokenType === 'recovery') {
       setTokenHash(token);
+      setType(tokenType);
       setIsValidToken(true);
     } else {
       setError("Lien invalide ou expiré.");
@@ -61,30 +63,30 @@ export default function UpdatePassword() {
       return;
     }
 
-    if (!tokenHash) {
-      setError('Le lien est incomplet. Merci de réessayer.');
+    if (!tokenHash || !type) {
+      setError('Lien manquant. Merci de recommencer.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
-        type: 'recovery',
+        type,
         new_password: password,
       });
 
-      if (verifyError) {
-        throw new Error('Erreur lors de la vérification du lien. Il a peut-être expiré.');
+      if (error) {
+        throw new Error(error.message || 'Échec de la réinitialisation.');
       }
 
       setSuccess(true);
       setTimeout(() => {
         navigate('/auth/signin', {
-          state: { message: 'Mot de passe mis à jour avec succès 🎉' }
+          state: { message: 'Mot de passe mis à jour avec succès 🎉' },
         });
-      }, 2500);
+      }, 2000);
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
     } finally {
@@ -133,9 +135,7 @@ export default function UpdatePassword() {
                 <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Lien invalide</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Le lien de réinitialisation est invalide ou a expiré.
-              </p>
+              <p className="text-sm text-gray-500 mb-6">Le lien est invalide ou a expiré.</p>
               <Link
                 to="/auth/forgot-password"
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-primary hover:bg-primary-dark"
