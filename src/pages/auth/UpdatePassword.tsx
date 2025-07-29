@@ -1,4 +1,4 @@
-// updatepassword.tsx - Version améliorée
+// updatepassword.tsx - Version corrigée
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle, ArrowLeft, Check } from 'lucide-react';
@@ -121,7 +121,8 @@ export default function UpdatePassword() {
         if (accessToken) {
           console.log('🔄 Tentative via fonction Edge...');
           
-          const response = await fetch(`${window.location.origin}/functions/v1/reset-password`, {
+          // URL CORRIGÉE: Utiliser l'URL complète de la fonction Edge Supabase
+          const response = await fetch('https://dqfyuhwrjozoxadkccdj.functions.supabase.co/reset-password', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -252,81 +253,4 @@ export default function UpdatePassword() {
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Nouveau mot de passe
-                </label>
-                <div className="mt-1 relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                    placeholder="Votre nouveau mot de passe"
-                  />
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Minimum 8 caractères
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  Confirmer le mot de passe
-                </label>
-                <div className="mt-1 relative">
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                    placeholder="Confirmez votre mot de passe"
-                  />
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`
-                    flex w-full justify-center items-center rounded-full border border-transparent px-4 py-3 text-base font-medium text-white shadow-sm
-                    ${loading
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
-                    }
-                  `}
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Mise à jour en cours...
-                    </>
-                  ) : (
-                    'Réinitialiser le mot de passe'
-                  )}
-                </button>
-              </div>
-
-              <div className="text-center">
-                <Link
-                  to="/auth/signin"
-                  className="text-sm font-medium text-primary hover:text-primary-dark"
-                >
-                  Retour à la connexion
-                </Link>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+                </label
