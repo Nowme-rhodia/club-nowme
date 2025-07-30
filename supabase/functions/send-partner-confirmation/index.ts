@@ -1,7 +1,5 @@
-// supabase/functions/send-partner-confirmation/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, handleCors } from "../_shared/utils/cors.ts";
-import { logger } from "../_shared/utils/logging.ts";
+import { corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -12,59 +10,60 @@ serve(async (req) => {
     const { to, submission } = await req.json();
 
     if (!to || !submission?.contactName || !submission?.businessName) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Champs requis manquants" }),
-        { status: 400, headers: corsHeaders }
-      );
+      return new Response(JSON.stringify({ success: false, error: "Champs requis manquants" }), {
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
     const html = `
-      Bonjour ${submission.contactName},<br/><br/>
-      Nous avons bien reçu votre demande de partenariat pour <strong>${submission.businessName}</strong>.<br/><br/>
-      <u>Récapitulatif de votre demande :</u><br/>
-      - Offre : ${submission.offer?.title || "-"}<br/>
-      - Description : ${submission.offer?.description || "-"}<br/>
-      - Catégorie : ${submission.offer?.category || "-"}<br/>
-      - Prix : ${submission.offer?.price || "-"} €<br/>
-      - Localisation : ${submission.offer?.location || "-"}<br/><br/>
-      Notre équipe va étudier votre demande dans les plus brefs délais.<br/>
-      Vous recevrez une réponse par email dans un délai maximum de 48h.<br/><br/>
-      Cordialement,<br/>
-      L’équipe Kiff Community
+      <h2>Merci pour votre demande de partenariat, ${submission.contactName} !</h2>
+      <p>Nous avons bien reçu votre demande pour <strong>${submission.businessName}</strong>.</p>
+      <h3>Résumé :</h3>
+      <ul>
+        <li><strong>Offre :</strong> ${submission.offer?.title || "-"}</li>
+        <li><strong>Description :</strong> ${submission.offer?.description || "-"}</li>
+        <li><strong>Catégorie :</strong> ${submission.offer?.category || "-"}</li>
+        <li><strong>Prix :</strong> ${submission.offer?.price || "-"}€</li>
+        <li><strong>Localisation :</strong> ${submission.offer?.location || "-"}</li>
+      </ul>
+      <p>Nous revenons vers vous sous 48h. À très vite !</p>
+      <p>— L'équipe Kiff Community</p>
     `;
 
-    const resendResponse = await fetch("https://api.resend.com/emails", {
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         from: "Nowme Club <contact@nowme.fr>",
         to,
         subject: "Confirmation de votre demande de partenariat",
-        html,
-      }),
+        html
+      })
     });
 
-    if (!resendResponse.ok) {
-      const errorText = await resendResponse.text();
-      logger.error("Erreur Resend:", errorText);
-      return new Response(JSON.stringify({ success: false, error: "Erreur Resend" }), {
-        headers: corsHeaders,
+    if (!response.ok) {
+      const errText = await response.text();
+      logger.error("Erreur Resend:", errText);
+      return new Response(JSON.stringify({ success: false, error: "Erreur d’envoi avec Resend" }), {
         status: 500,
+        headers: corsHeaders
       });
     }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
-      headers: corsHeaders,
+      headers: corsHeaders
     });
-  } catch (err) {
-    logger.error("Erreur générale:", err);
-    return new Response(JSON.stringify({ success: false, error: "Erreur inattendue" }), {
+
+  } catch (error) {
+    logger.error("Erreur générale:", error);
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
       status: 500,
-      headers: corsHeaders,
+      headers: corsHeaders
     });
   }
 });
