@@ -21,7 +21,7 @@ serve(async (req) => {
       hostname: "smtp.gmail.com",
       port: 465,
       username: "contact@nowme.fr",
-      password: Deno.env.get('GMAIL_PARTNER_PASSWORD'),
+      password: Deno.env.get('GMAIL_PASSWORD'),
       tls: true,
     };
 
