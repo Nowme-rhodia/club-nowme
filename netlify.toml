@@ -14,6 +14,15 @@
       connect-src 'self' https://dqfyuhwrjozoxadkccdj.supabase.co https://plausible.io https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com;
     """
 
+# ✅ Redirection explicite vers Supabase Edge Function
+[[redirects]]
+  from = "/api/admin-recreate-user"
+  to = "https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/admin-recreate-user"
+  status = 200
+  force = true
+  headers = { X-From = "Netlify" }
+
+# Redirection générique pour React Router
 [[redirects]]
   from = "/*"
   to = "/index.html"
