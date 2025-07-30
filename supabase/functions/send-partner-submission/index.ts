@@ -1,23 +1,20 @@
-// supabase/functions/send-partner-submission/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+
 serve(async (req) => {
-  const cors = handleCors(req);
-  if (cors) return cors;
+  if (req.method === "OPTIONS") return handleCors(req);
 
   try {
     const supabase = createSupabaseClient();
-    const { name, email, phone, website, message, offer, businessName } = await req.json();
+    const { name, email, phone, website, message } = await req.json();
 
-    if (!email || !name || !message || !businessName || !offer) {
+    if (!email || !name || !message) {
       return new Response(JSON.stringify({
         success: false,
         error: "Champs obligatoires manquants"
-      }), {
-        status: 400,
-        headers: corsHeaders
-      });
+      }), { status: 400, headers: corsHeaders });
     }
 
     const html = `
@@ -29,61 +26,39 @@ serve(async (req) => {
       <p><strong>Message :</strong><br/>${message.replace(/\n/g, "<br/>")}</p>
     `;
 
-    const { error } = await supabase.from("emails").insert({
-      to_address: "contact@nowme.fr",
-      subject: "Nouvelle demande de partenariat",
-      content: html
-    });
-
-    if (error) {
-      logger.error("Erreur insertion email:", error);
-      return new Response(JSON.stringify({
-        success: false,
-        error: "Erreur lors de l’enregistrement du message"
-      }), {
-        status: 500,
-        headers: corsHeaders
-      });
-    }
-
-    // 🔁 Appel de la fonction d’email de confirmation via fetch
-    const confirmationResponse = await fetch(`${Deno.env.get("SUPABASE_FUNCTIONS_URL")}/send-partner-confirmation`, {
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        to: email,
-        submission: {
-          contactName: name,
-          businessName,
-          offer
-        }
+        from: "Nowme Club <contact@nowme.fr>",
+        to: "contact@nowme.fr",
+        subject: "Nouvelle demande de partenariat",
+        html
       })
     });
 
-    if (!confirmationResponse.ok) {
-      const errorText = await confirmationResponse.text();
-      logger.error("Erreur email confirmation:", errorText);
+    if (!response.ok) {
+      const err = await response.text();
+      logger.error("Erreur envoi Resend:", err);
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Erreur d’envoi avec Resend"
+      }), { status: 500, headers: corsHeaders });
     }
 
     return new Response(JSON.stringify({
       success: true,
-      message: "Demande enregistrée avec succès"
-    }), {
-      status: 200,
-      headers: corsHeaders
-    });
+      message: "Demande envoyée avec succès"
+    }), { status: 200, headers: corsHeaders });
 
   } catch (err) {
     logger.error("Erreur globale:", err);
     return new Response(JSON.stringify({
       success: false,
       error: "Erreur inattendue"
-    }), {
-      status: 500,
-      headers: corsHeaders
-    });
+    }), { status: 500, headers: corsHeaders });
   }
 });
