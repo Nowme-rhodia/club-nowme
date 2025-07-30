@@ -1,76 +1,64 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+// supabase/functions/send-partner-rejection/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders, handleCors } from "../_shared/utils/cors.ts";
+import { logger } from "../_shared/utils/logging.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const client = new SmtpClient();
+  if (req.method === "OPTIONS") return handleCors(req);
 
   try {
-    const { to } = await req.json();
+    const { to, name } = await req.json();
 
-    // Configuration SMTP pour Gmail
-    const config = {
-      hostname: "smtp.gmail.com",
-      port: 465,
-      username: "contact@nowme.fr",
-      password: Deno.env.get('GMAIL_PASSWORD'),
-      tls: true,
-    };
+    if (!to || !name) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Données manquantes" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
 
-    await client.connectTLS(config);
-
-    // Construire le contenu de l'email
-    const emailContent = `
-      Bonjour,
-
-      Nous avons étudié avec attention votre demande de partenariat.
-      Malheureusement, nous ne pouvons pas y donner suite pour le moment.
-
-      N'hésitez pas à soumettre une nouvelle demande ultérieurement.
-
-      Cordialement,
-      L'équipe Kiff Community
+    const html = `
+      <h2>Bonjour ${name},</h2>
+      <p>Merci pour votre demande de partenariat avec le Nowme Club.</p>
+      <p>Après analyse, nous ne pouvons malheureusement pas donner suite à votre proposition pour le moment.</p>
+      <p>Mais ne baissez pas les bras, vous pouvez retenter votre chance avec une autre offre ou nous recontacter plus tard.</p>
+      <p>À bientôt,<br/>L’équipe Kiff Community</p>
     `;
 
-    await client.send({
-      from: config.username,
-      to,
-      subject: "Votre demande de partenariat n'a pas été retenue",
-      content: emailContent,
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Nowme Club <contact@nowme.fr>",
+        to,
+        subject: "Votre demande de partenariat",
+        html,
+      })
     });
 
-    await client.close();
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
-    );
-  } catch (error) {
-    console.error('Error sending email:', error);
-    if (client) {
-      try {
-        await client.close();
-      } catch (e) {
-        console.error('Error closing SMTP connection:', e);
-      }
+    if (!resendRes.ok) {
+      const errorText = await resendRes.text();
+      logger.error("Erreur Resend:", errorText);
+      return new Response(
+        JSON.stringify({ success: false, error: "Erreur Resend" }),
+        { status: 500, headers: corsHeaders }
+      );
     }
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: corsHeaders,
+      status: 200,
+    });
+
+  } catch (error) {
+    logger.error("Erreur générale:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      },
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: corsHeaders }
     );
   }
 });
