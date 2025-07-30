@@ -1,136 +1,108 @@
+// supabase/functions/stripe-user-welcome/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-const MAX_RETRIES = 3;
-const BATCH_SIZE = 10;
+// HTML email
+function generateWelcomeEmail(prenom: string, link: string): string {
+  return `
+  <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+      <div style="max-width: 600px; margin: auto; padding: 20px;">
+        <h2 style="color: #BF2778;">Bienvenue chez Nowme !</h2>
+        <p>Bonjour ${prenom || ""},</p>
+        <p>Ton compte a bien été créé après ton inscription 💃</p>
+        <p>Avant d’en profiter, il ne reste qu’une seule chose à faire :</p>
+        <p style="text-align:center;">
+          <a href="${link}" style="background-color:#BF2778;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;">Créer mon mot de passe</a>
+        </p>
+        <p>Ce lien est valable 24h.</p>
+        <p>Si tu n'es pas à l’origine de cette inscription, ignore ce message.</p>
+        <p style="margin-top:40px;">À très vite,<br>L’équipe Nowme ✨</p>
+      </div>
+    </body>
+  </html>
+  `;
+}
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  );
-
-  const client = new SmtpClient();
-
   try {
-    // Configuration SMTP
-    const config = {
-      hostname: "smtp.gmail.com",
-      port: 465,
-      username: "contact@nowme.fr",
-      password: Deno.env.get('GMAIL_PASSWORD'),
-      tls: true,
-    };
-
-    // Récupérer les emails en attente
-    const { data: pendingEmails, error: fetchError } = await supabase
-      .from('emails')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-      .limit(BATCH_SIZE);
-
-    if (fetchError) throw fetchError;
-    if (!pendingEmails?.length) {
-      return new Response(
-        JSON.stringify({ message: 'No pending emails' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`📨 Processing ${pendingEmails.length} emails...`);
-
-    // Connexion SMTP
-    await client.connectTLS(config);
-
-    // Traiter chaque email
-    for (const email of pendingEmails) {
-      try {
-        console.log(`📧 Sending email to ${email.to_address}...`);
-        
-        await client.send({
-          from: config.username,
-          to: email.to_address,
-          subject: email.subject,
-          content: email.content,
-        });
-
-        // Marquer comme envoyé
-        const { error: updateError } = await supabase
-          .from('emails')
-          .update({
-            status: 'sent',
-            sent_at: new Date().toISOString()
-          })
-          .eq('id', email.id);
-
-        if (updateError) throw updateError;
-        
-        console.log(`✅ Email sent successfully to ${email.to_address}`);
-
-      } catch (error) {
-        console.error(`❌ Error sending email to ${email.to_address}:`, error);
-
-        const retryCount = (email.retry_count || 0) + 1;
-        const status = retryCount >= MAX_RETRIES ? 'failed' : 'pending';
-
-        // Mettre à jour le statut et le compteur de tentatives
-        const { error: updateError } = await supabase
-          .from('emails')
-          .update({
-            status,
-            error: error.message,
-            retry_count: retryCount,
-            last_retry: new Date().toISOString()
-          })
-          .eq('id', email.id);
-
-        if (updateError) {
-          console.error('Error updating email status:', updateError);
-        }
-      }
-    }
-
-    await client.close();
-
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        processed: pendingEmails.length 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-  } catch (error) {
-    console.error('Error processing email queue:', error);
+    const { email, firstName, redirectTo } = await req.json();
 
-    if (client) {
-      try {
-        await client.close();
-      } catch (e) {
-        console.error('Error closing SMTP connection:', e);
-      }
+    if (!email) {
+      return new Response(JSON.stringify({ success: false, error: "email manquant" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
+    const { data, error } = await supabase.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: {
+        redirectTo: redirectTo || "https://club.nowme.fr/update-password"
       }
-    );
+    });
+
+    if (error) {
+      console.error("Erreur lien:", error);
+      return new Response(JSON.stringify({ success: false, error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const link = data?.properties?.action_link;
+    const html = generateWelcomeEmail(firstName || "", link);
+
+    // ✉️ Envoi via mailer Supabase
+    const mailRes = await fetch("https://api.supabase.com/v1/mailer/send", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: "Nowme <contact@nowme.fr>",
+        to: email,
+        subject: "Bienvenue chez Nowme ! Crée ton mot de passe",
+        html
+      })
+    });
+
+    if (!mailRes.ok) {
+      const err = await mailRes.text();
+      console.error("Erreur mail:", err);
+      return new Response(JSON.stringify({ success: false, error: err }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, message: "Email envoyé !" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+
+  } catch (err) {
+    console.error("Erreur globale:", err);
+    return new Response(JSON.stringify({ success: false, error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 });
