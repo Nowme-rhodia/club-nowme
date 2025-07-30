@@ -1,83 +1,66 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+// supabase/functions/send-partner-confirmation/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const client = new SmtpClient();
+  const cors = handleCors(req);
+  if (cors) return cors;
 
   try {
+    const supabase = createSupabaseClient();
     const { to, submission } = await req.json();
 
-    // Configuration SMTP pour Gmail avec le compte partenaire
-    const config = {
-      hostname: "smtp.gmail.com",
-      port: 465,
-      username: "contact@nowme.fr",
-      password: Deno.env.get('GMAIL_PASSWORD'),
-      tls: true,
-    };
+    if (!to || !submission?.contactName || !submission?.businessName) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Champs requis manquants" }),
+        { status: 400, headers: corsHeaders }
+      );
+    }
 
-    await client.connectTLS(config);
+    const content = `
+      Bonjour ${submission.contactName},<br/><br/>
+      Nous avons bien reçu votre demande de partenariat pour <strong>${submission.businessName}</strong>.<br/><br/>
 
-    // Construire le contenu de l'email
-    const emailContent = `
-      Bonjour ${submission.contactName},
+      <u>Récapitulatif de votre demande :</u><br/>
+      - Offre : ${submission.offer?.title || "-"}<br/>
+      - Description : ${submission.offer?.description || "-"}<br/>
+      - Catégorie : ${submission.offer?.category || "-"}<br/>
+      - Prix : ${submission.offer?.price || "-"} €<br/>
+      - Localisation : ${submission.offer?.location || "-"}<br/><br/>
 
-      Nous avons bien reçu votre demande de partenariat pour ${submission.businessName}.
+      Notre équipe va étudier votre demande dans les plus brefs délais.<br/>
+      Vous recevrez une réponse par email dans un délai maximum de 48h.<br/><br/>
 
-      Récapitulatif de votre demande :
-      - Offre : ${submission.offer.title}
-      - Description : ${submission.offer.description}
-      - Catégorie : ${submission.offer.category}
-      - Prix : ${submission.offer.price}€
-      - Localisation : ${submission.offer.location}
-
-      Notre équipe va étudier votre demande dans les plus brefs délais.
-      Vous recevrez une réponse par email dans un délai maximum de 48h.
-
-      Cordialement,
-      L'équipe Kiff Community
+      Cordialement,<br/>
+      L’équipe Kiff Community
     `;
 
-    await client.send({
-      from: config.username,
-      to,
+    const { error } = await supabase.from("emails").insert({
+      to_address: to,
       subject: "Confirmation de votre demande de partenariat",
-      content: emailContent,
+      content,
     });
 
-    await client.close();
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
-    );
-  } catch (error) {
-    console.error('Error sending email:', error);
-    if (client) {
-      try {
-        await client.close();
-      } catch (e) {
-        console.error('Error closing SMTP connection:', e);
-      }
+    if (error) {
+      logger.error("Erreur enregistrement email :", error);
+      return new Response(JSON.stringify({ success: false, error: "Erreur base de données" }), {
+        status: 500,
+        headers: corsHeaders,
+      });
     }
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      },
-    );
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: corsHeaders,
+    });
+
+  } catch (err) {
+    logger.error("Erreur générale :", err);
+    return new Response(JSON.stringify({ success: false, error: "Erreur inattendue" }), {
+      status: 500,
+      headers: corsHeaders,
+    });
   }
 });
