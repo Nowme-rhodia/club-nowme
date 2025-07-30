@@ -2,23 +2,36 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 Deno.serve(async (req) => {
+  // ✅ Gérer CORS pour les appels cross-origin
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    });
+  }
+
+  // ✅ Refuser toute méthode autre que POST
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // ✅ Vérification du token admin
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-        status: 405,
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Non autorisé' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       {
@@ -27,60 +40,101 @@ Deno.serve(async (req) => {
           persistSession: false
         }
       }
-    )
+    );
 
-    const { email, password, redirectTo } = await req.json()
+    const { email, password, redirectTo } = await req.json();
 
     if (!email || !password) {
       return new Response(JSON.stringify({ error: 'Email et mot de passe requis' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
-      })
+      });
     }
 
-    // Vérifie si l'utilisateur existe dans auth.users
-    const { data: existingUsers } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .execute({ schema: 'auth' })
+    console.log(`📨 Tentative de création de compte pour ${email}`);
 
-    if (existingUsers && existingUsers.length > 0) {
-      const userId = existingUsers[0].id
-      await supabase.rpc('delete_user_completely', { user_id: userId })
+    // ✅ 1. Vérifier si l'utilisateur existe (même soft-deleted)
+    const { data: existingUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+
+    if (getUserError && getUserError.message !== 'User not found') {
+      console.error('❌ Erreur getUserByEmail:', getUserError.message);
+      return new Response(JSON.stringify({ error: getUserError.message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+    // ✅ 2. Supprimer l'utilisateur s'il existe
+    if (existingUser) {
+      console.log(`🧹 Utilisateur existant trouvé : ${existingUser.id} → suppression...`);
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.id, true);
+
+      if (deleteError) {
+        console.error('❌ Erreur deleteUser:', deleteError.message);
+        return new Response(JSON.stringify({ error: deleteError.message }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // ✅ 3. Créer le nouvel utilisateur
+    console.log(`🚀 Création de ${email}...`);
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
-      email_redirect_to: redirectTo ?? 'https://club.nowme.fr/auth/update-password',
+      email_confirm: true,
       user_metadata: {
         created_from: 'edge_function',
         recreated: true,
         recreated_at: new Date().toISOString()
       }
-    })
+    });
 
     if (createError) {
+      console.error('❌ Erreur createUser:', createError.message);
       return new Response(JSON.stringify({ error: createError.message }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
-      })
+      });
+    }
+
+    if (!newUser) {
+      return new Response(JSON.stringify({ error: 'Utilisateur créé mais aucune donnée retournée' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ✅ 4. Envoyer un email de réinitialisation si demandé
+    if (redirectTo) {
+      console.log(`✉️ Envoi d’un email recovery vers ${redirectTo}`);
+      const { error: recoveryError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo }
+      });
+
+      if (recoveryError) {
+        console.warn('⚠️ Erreur generateLink (email non envoyé):', recoveryError.message);
+        // on continue quand même
+      }
     }
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Utilisateur recréé avec succès',
-      user: newUser
+      user: newUser,
+      message: `✅ Utilisateur ${email} recréé avec succès`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
-    })
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    });
+
+  } catch (err: any) {
+    console.error('🔥 Erreur inattendue:', err.message || err);
+    return new Response(JSON.stringify({ error: err.message || 'Erreur inconnue' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
-    })
+    });
   }
-})
+});
