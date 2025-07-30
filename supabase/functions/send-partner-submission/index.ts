@@ -1,83 +1,70 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// supabase/functions/send-partner-submission/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createSupabaseClient, corsHeaders, handleCors, logger } from "../../_shared/utils/index.ts";
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const client = new SmtpClient();
+  // ✅ Gérer les requêtes OPTIONS (CORS)
+  const cors = handleCors(req);
+  if (cors) return cors;
 
   try {
-    const { submission } = await req.json();
+    const supabase = createSupabaseClient();
+    const { name, email, phone, website, message } = await req.json();
 
-    // Configuration SMTP pour Gmail avec le compte partenaire
-    const config = {
-      hostname: "smtp.gmail.com",
-      port: 465,
-      username: "contact@nowme.fr",
-      password: Deno.env.get('GMAIL_PASSWORD'),
-      tls: true,
-    };
+    if (!email || !name || !message) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Champs obligatoires manquants"
+      }), {
+        status: 400,
+        headers: corsHeaders
+      });
+    }
 
-    await client.connectTLS(config);
-
-    // Construire le contenu de l'email
-    const emailContent = `
-      Nouvelle demande de partenariat reçue !
-
-      Informations du partenaire :
-      - Entreprise : ${submission.businessName}
-      - Contact : ${submission.contactName}
-      - Email : ${submission.email}
-      - Téléphone : ${submission.phone}
-
-      Détails de l'offre :
-      - Titre : ${submission.offer.title}
-      - Description : ${submission.offer.description}
-      - Catégorie : ${submission.offer.category}
-      - Prix : ${submission.offer.price}€
-      - Localisation : ${submission.offer.location}
-
-      Vous pouvez gérer cette demande depuis le tableau de bord administrateur.
+    // ✅ Créer le contenu HTML du mail
+    const html = `
+      <h2>Nouvelle demande de partenariat</h2>
+      <p><strong>Nom :</strong> ${name}</p>
+      <p><strong>Email :</strong> ${email}</p>
+      ${phone ? `<p><strong>Téléphone :</strong> ${phone}</p>` : ""}
+      ${website ? `<p><strong>Site web :</strong> ${website}</p>` : ""}
+      <p><strong>Message :</strong><br/>${message.replace(/\n/g, "<br/>")}</p>
     `;
 
-    await client.send({
-      from: config.username,
-      to: config.username,
+    // ✅ Ajouter à la table emails (statut = pending)
+    const { error } = await supabase.from("emails").insert({
+      to_address: "contact@nowme.fr",
       subject: "Nouvelle demande de partenariat",
-      content: emailContent,
+      content: html
     });
 
-    await client.close();
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
-    );
-  } catch (error) {
-    console.error('Error sending email:', error);
-    if (client) {
-      try {
-        await client.close();
-      } catch (e) {
-        console.error('Error closing SMTP connection:', e);
-      }
+    if (error) {
+      logger.error("Erreur insertion email:", error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Erreur lors de l’enregistrement du message"
+      }), {
+        status: 500,
+        headers: corsHeaders
+      });
     }
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      },
-    );
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Demande enregistrée avec succès"
+    }), {
+      status: 200,
+      headers: corsHeaders
+    });
+
+  } catch (err) {
+    logger.error("Erreur globale:", err);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Erreur inattendue"
+    }), {
+      status: 500,
+      headers: corsHeaders
+    });
   }
 });
