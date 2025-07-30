@@ -1,7 +1,5 @@
-// supabase/functions/send-partner-approval/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, handleCors } from "../_shared/utils/cors.ts";
-import { logger } from "../_shared/utils/logging.ts";
+import { corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -9,55 +7,56 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return handleCors(req);
 
   try {
-    const { to, name, offer } = await req.json();
+    const { to, offerTitle, contactName } = await req.json();
 
-    if (!to || !name || !offer?.title) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Données manquantes" }),
-        { status: 400, headers: corsHeaders }
-      );
+    if (!to || !offerTitle || !contactName) {
+      return new Response(JSON.stringify({ success: false, error: "Données manquantes" }), {
+        headers: corsHeaders,
+        status: 400,
+      });
     }
 
     const html = `
-      <h2>Félicitations ${name} !</h2>
-      <p>Votre offre <strong>${offer.title}</strong> a été validée et sera bientôt visible par les abonnées du Nowme Club !</p>
-      <p>On vous recontacte très vite avec les prochaines étapes ✨</p>
-      <p>— L'équipe Kiff Community</p>
+      <h2>🎉 Votre offre a été validée !</h2>
+      <p>Bonjour ${contactName},</p>
+      <p>Félicitations ! Votre offre <strong>${offerTitle}</strong> a été acceptée et est désormais visible par toutes les abonnées de Nowme Club.</p>
+      <p>On a hâte de voir les kiffs qu’elle va déclencher 🎯</p>
+      <p>— L’équipe Kiff Community</p>
     `;
 
-    const resendRes = await fetch("https://api.resend.com/emails", {
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         from: "Nowme Club <contact@nowme.fr>",
         to,
-        subject: "🎉 Votre offre a été validée !",
+        subject: "🎉 Votre offre est en ligne !",
         html
       })
     });
 
-    if (!resendRes.ok) {
-      const text = await resendRes.text();
-      logger.error("Erreur Resend:", text);
-      return new Response(
-        JSON.stringify({ success: false, error: "Erreur Resend" }),
-        { status: 500, headers: corsHeaders }
-      );
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error("Erreur Resend:", errorText);
+      return new Response(JSON.stringify({ success: false, error: "Erreur Resend" }), {
+        status: 500,
+        headers: corsHeaders,
+      });
     }
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: corsHeaders,
       status: 200,
+      headers: corsHeaders
     });
 
-  } catch (err) {
-    logger.error("Erreur globale:", err);
-    return new Response(
-      JSON.stringify({ success: false, error: err.message }),
-      { status: 500, headers: corsHeaders }
-    );
+  } catch (error) {
+    logger.error("Erreur envoi approval:", error);
+    return new Response(JSON.stringify({ success: false, error: error.message }), {
+      headers: corsHeaders,
+      status: 500
+    });
   }
 });
