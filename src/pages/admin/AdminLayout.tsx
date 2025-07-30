@@ -52,6 +52,12 @@ export default function AdminLayout() {
       href: '/admin/settings',
       icon: Settings,
       current: location.pathname === '/admin/settings'
+    },
+    {
+      name: 'Créer Admins',
+      href: '/admin/create-admin-users',
+      icon: Users,
+      current: location.pathname === '/admin/create-admin-users'
     }
   ];
 

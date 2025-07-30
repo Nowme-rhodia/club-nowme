@@ -54,6 +54,7 @@ const Partners = React.lazy(() => import('./pages/admin/Partners'));
 const Subscribers = React.lazy(() => import('./pages/admin/Subscribers'));
 const Newsletter = React.lazy(() => import('./pages/admin/Newsletter'));
 const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers')); // 👈 AJOUT
+const CreateAdminUsers = React.lazy(() => import('./pages/admin/CreateAdminUsers')); // 👈 NOUVEAU
 
 // Qui sommes-nous
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
@@ -116,6 +117,7 @@ function App() {
                     <Route path="subscribers" element={<Subscribers />} />
                     <Route path="newsletter" element={<Newsletter />} />
                     <Route path="create-users" element={<CreateUsers />} /> {/* 👈 AJOUT */}
+                    <Route path="create-admin-users" element={<CreateAdminUsers />} /> {/* 👈 NOUVEAU */}
                   </Route>
 
                   {/* 404 */}
