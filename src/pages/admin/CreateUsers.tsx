@@ -21,35 +21,39 @@ export default function CreateUsers() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      if (!token) throw new Error('Vous devez être connecté en tant qu\'administrateur');
+      if (!token) throw new Error("Vous devez être connectée en tant qu'administratrice");
 
       for (const user of users) {
-        const response = await fetch('/api/admin-recreate-user', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            email: user.email,
-            password: user.password,
-            redirectTo: baseRedirect
-          })
-        });
+        const response = await fetch(
+          'https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/admin-recreate-user',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              email: user.email,
+              password: user.password,
+              redirectTo: baseRedirect
+            })
+          }
+        );
 
         const result = await response.json();
-        console.log(`📦 Résultat pour ${user.email}:`, result);
 
         if (!response.ok) {
-          throw new Error(`Erreur pour ${user.role}: ${result.error}`);
+          throw new Error(`Erreur pour ${user.role} : ${result.error}`);
         }
+
+        console.log(`✅ ${user.role} recréé`, result);
       }
 
       setStatus('done');
     } catch (err: any) {
-      console.error(err);
       setStatus('error');
-      setErrorMessage(err?.message || 'Erreur inconnue');
+      setErrorMessage(err.message || 'Erreur inconnue');
+      console.error(err);
     }
   };
 
@@ -57,10 +61,7 @@ export default function CreateUsers() {
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="max-w-md w-full p-6 border rounded-xl shadow-md text-center">
         <h2 className="text-lg font-bold mb-4">Créer les comptes système</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Clique sur le bouton ci-dessous pour créer les comptes admin, abonnée et partenaire.
-        </p>
-
+        <p className="text-sm text-gray-500 mb-6">Clique pour recréer les comptes admin, abonnée et partenaire.</p>
         <button
           onClick={handleClick}
           disabled={status === 'loading' || status === 'done'}
@@ -78,7 +79,6 @@ export default function CreateUsers() {
             ? '✅ Comptes créés'
             : 'Créer les comptes'}
         </button>
-
         {status === 'error' && (
           <p className="mt-4 text-sm text-red-600">{errorMessage}</p>
         )}
