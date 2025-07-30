@@ -1,29 +1,50 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
 export default function CreateUsers() {
+  const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+
+    const loadSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) throw error;
+        if (!data.session?.access_token) {
+          console.log('⛔️ Aucune session trouvée. Peut-être non connecté.');
+          setError('Non connecté. Veuillez vous authentifier.');
+          return;
+        }
+
+        setToken(data.session.access_token);
+      } catch (err: any) {
+        console.error('❌ Erreur récupération session :', err.message || err);
+        setError('Erreur de session Supabase.');
+      }
+    };
+
+    timeout = setTimeout(() => {
+      setError('⏳ Temps de chargement trop long...');
+    }, 5000);
+
+    loadSession().finally(() => clearTimeout(timeout));
+  }, []);
 
   const handleClick = async () => {
-    setStatus('loading');
-    setErrorMessage('');
+    if (!token) return setError("Token manquant. Impossible d'envoyer la requête.");
 
-    const baseRedirect = 'https://club.nowme.fr/auth/update-password';
+    setStatus('loading');
     const users = [
-      { email: 'rhodia@nowme.fr', password: 'AdminTemp2025!', role: 'Admin' },
-      { email: 'rhodia.kw@gmail.com', password: 'AbonneeTemp2025!', role: 'Abonnée' },
-      { email: 'nowme.club@gmail.com', password: 'PartnerTemp2025!', role: 'Partenaire' }
+      { email: 'rhodia@nowme.fr', password: 'AdminTemp2025!' },
+      { email: 'rhodia.kw@gmail.com', password: 'AbonneeTemp2025!' },
+      { email: 'nowme.club@gmail.com', password: 'PartnerTemp2025!' }
     ];
 
     try {
-      const {
-        data: { session }
-      } = await supabase.auth.getSession();
-
-      const token = session?.access_token;
-      if (!token) throw new Error("Vous devez être connectée");
-
       for (const user of users) {
         const response = await fetch(
           'https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/admin-recreate-user',
@@ -31,12 +52,12 @@ export default function CreateUsers() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
               email: user.email,
               password: user.password,
-              redirectTo: baseRedirect
+              redirectTo: 'https://club.nowme.fr/auth/update-password'
             })
           }
         );
@@ -44,47 +65,46 @@ export default function CreateUsers() {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || `Erreur ${response.status}`);
+          throw new Error(result.error || `Erreur HTTP ${response.status}`);
         }
 
-        console.log(`✅ ${user.role} créé :`, result.user.email);
+        console.log(`✅ Utilisateur ${user.email} recréé`);
       }
 
       setStatus('done');
     } catch (err: any) {
-      console.error(err);
-      setErrorMessage(err?.message || 'Une erreur est survenue');
+      console.error('❌ Erreur création utilisateurs :', err.message || err);
       setStatus('error');
+      setError(err.message);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="max-w-md w-full p-6 border rounded-xl shadow-md text-center">
-        <h2 className="text-lg font-bold mb-4">Créer les comptes système</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Clique sur le bouton pour (re)créer les comptes admin, abonnée et partenaire.
-        </p>
-        <button
-          onClick={handleClick}
-          disabled={status === 'loading' || status === 'done'}
-          className={`w-full px-4 py-2 rounded-full text-white font-semibold ${
-            status === 'done'
-              ? 'bg-green-500 cursor-default'
-              : status === 'loading'
-              ? 'bg-gray-400'
-              : 'bg-primary hover:bg-primary-dark'
-          }`}
-        >
-          {status === 'loading'
-            ? 'Création en cours...'
-            : status === 'done'
-            ? '✅ Comptes créés'
-            : 'Créer les comptes'}
-        </button>
+        <h2 className="text-xl font-bold mb-4">Création des comptes système</h2>
 
-        {status === 'error' && (
-          <p className="mt-4 text-sm text-red-600">{errorMessage}</p>
+        {error ? (
+          <p className="text-red-600 mb-6">{error}</p>
+        ) : token ? (
+          <>
+            <p className="text-gray-600 mb-6">Clique pour créer les comptes admin, abonnée et partenaire.</p>
+            <button
+              onClick={handleClick}
+              disabled={status === 'loading'}
+              className={`w-full px-4 py-2 rounded-full font-semibold text-white ${
+                status === 'done'
+                  ? 'bg-green-500'
+                  : status === 'loading'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-primary hover:bg-primary-dark'
+              }`}
+            >
+              {status === 'loading' ? 'Création en cours...' : status === 'done' ? '✅ Comptes créés' : 'Créer les comptes'}
+            </button>
+          </>
+        ) : (
+          <p className="text-gray-500 italic">Chargement en cours...</p>
         )}
       </div>
     </div>
