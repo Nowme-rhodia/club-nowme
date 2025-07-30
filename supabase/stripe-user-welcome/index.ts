@@ -1,25 +1,24 @@
-// supabase/functions/stripe-user-welcome/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
-// 🎯 CORS
+// ✅ CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-// 🎯 Config SMTP
+// ✅ SMTP config
 const smtpConfig = {
   hostname: "smtp.gmail.com",
   port: 465,
-  username: "contact@nowme.fr", // ✅ Mets bien ton adresse d’envoi
-  password: Deno.env.get("SMTP_PASSWORD"),
-  tls: true,
+  username: "contact@nowme.fr",
+  password: Deno.env.get("GMAIL_PASSWORD"),
+  tls: true
 };
 
-// 📩 Email HTML
+// ✅ Génération du contenu HTML de l'email
 function generateWelcomeEmail(prenom: string, link: string) {
   return `
   <html>
@@ -41,7 +40,7 @@ function generateWelcomeEmail(prenom: string, link: string) {
   `;
 }
 
-// 📤 Envoi email
+// ✅ Envoi de l’email
 async function sendEmail(to: string, subject: string, html: string) {
   const client = new SmtpClient();
   try {
@@ -50,7 +49,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       from: smtpConfig.username,
       to,
       subject,
-      html,
+      html
     });
     await client.close();
     return { success: true };
@@ -60,7 +59,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   }
 }
 
-// 🚀 Serveur
+// ✅ Serveur principal
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -75,9 +74,12 @@ serve(async (req) => {
     const { email, firstName, redirectTo } = await req.json();
 
     if (!email) {
-      return new Response(JSON.stringify({ success: false, error: "email manquant" }), {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "email manquant"
+      }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
@@ -85,15 +87,18 @@ serve(async (req) => {
       type: "recovery",
       email,
       options: {
-        redirectTo: redirectTo || "https://club.nowme.fr/updatepassword",
-      },
+        redirectTo: redirectTo || "https://club.nowme.fr/update-password"
+      }
     });
 
     if (error) {
       console.error("Erreur lien:", error);
-      return new Response(JSON.stringify({ success: false, error: error.message }), {
+      return new Response(JSON.stringify({
+        success: false,
+        error: error.message
+      }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
@@ -102,21 +107,31 @@ serve(async (req) => {
     const emailResult = await sendEmail(email, "Bienvenue ! Crée ton mot de passe", html);
 
     if (!emailResult.success) {
-      return new Response(JSON.stringify({ success: false, error: emailResult.error }), {
+      return new Response(JSON.stringify({
+        success: false,
+        error: emailResult.error
+      }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    return new Response(
-      JSON.stringify({ success: true, message: "email envoyé à " + email }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({
+      success: true,
+      message: "email envoyé à " + email
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+
   } catch (err) {
     console.error("Erreur globale:", err);
-    return new Response(JSON.stringify({ success: false, error: err.message }), {
+    return new Response(JSON.stringify({
+      success: false,
+      error: err.message
+    }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
