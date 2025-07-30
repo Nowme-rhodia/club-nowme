@@ -82,7 +82,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData) {
         setProfile({
           ...userData,
-          role: userData.is_admin ? 'admin' : 'subscriber'
+          role: userData.subscription_type === 'admin' ? 'admin' : 
+                userData.subscription_type === 'super_admin' ? 'admin' :
+                userData.subscription_type === 'subscriber_admin' ? 'admin' :
+                userData.subscription_type === 'partner_admin' ? 'admin' : 'subscriber'
         });
       }
     } catch (error) {

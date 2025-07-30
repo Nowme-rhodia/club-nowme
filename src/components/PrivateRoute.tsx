@@ -12,6 +12,11 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   const { user, loading, isAdmin, isPartner, isSubscriber } = useAuth();
   const location = useLocation();
 
+  console.log('PrivateRoute - User:', !!user);
+  console.log('PrivateRoute - Loading:', loading);
+  console.log('PrivateRoute - IsAdmin:', isAdmin);
+  console.log('PrivateRoute - Profile:', profile);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
