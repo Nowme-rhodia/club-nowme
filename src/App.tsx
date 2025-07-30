@@ -116,8 +116,7 @@ function App() {
                     <Route path="partners" element={<Partners />} />
                     <Route path="subscribers" element={<Subscribers />} />
                     <Route path="newsletter" element={<Newsletter />} />
-                    <Route path="create-users" element={<CreateUsers />} /> {/* 👈 AJOUT */}
-                    <Route path="create-admin-users" element={<CreateAdminUsers />} /> {/* 👈 NOUVEAU */}
+                    <Route path="create-users" element={<CreateUsers />} />
                   </Route>
 
                   {/* 404 */}
