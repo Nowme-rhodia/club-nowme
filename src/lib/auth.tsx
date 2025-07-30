@@ -54,6 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
+      console.log('Loading profile for user:', userId);
+      
       const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
         .select('*')
@@ -65,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (partnerData) {
+        console.log('User is partner:', partnerData);
         setProfile({ ...partnerData, role: 'partner' });
         return;
       }
@@ -80,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (userData) {
+        console.log('User profile loaded:', userData);
         setProfile({
           ...userData,
           role: userData.subscription_type === 'admin' ? 'admin' : 
@@ -87,9 +91,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 userData.subscription_type === 'subscriber_admin' ? 'admin' :
                 userData.subscription_type === 'partner_admin' ? 'admin' : 'subscriber'
         });
+      } else {
+        console.log('No user profile found');
+        setProfile(null);
       }
     } catch (error) {
       console.error('Erreur profil général:', error);
+      setProfile(null);
     }
   };
 

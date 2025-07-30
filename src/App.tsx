@@ -1,136 +1,133 @@
-import React, { Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { HelmetProvider } from 'react-helmet-async';
-import { AuthProvider } from './lib/auth';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
-import { ScrollToTop } from './components/ScrollToTop';
-import { PrivateRoute } from './components/PrivateRoute';
-import { LoadingFallback } from './components/LoadingFallback';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
-// Auth pages
-const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
-const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword'));
-const UpdatePassword = React.lazy(() => import('./pages/auth/UpdatePassword'));
-const TestSignup = React.lazy(() => import('./pages/auth/TestSignup'));
-const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback'));
+export default function CreateUsers() {
+  const { user, profile, isAdmin } = useAuth();
+  const [token, setToken] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [error, setError] = useState<string | null>(null);
 
-// Partner auth pages
-const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
-const PartnerForgotPassword = React.lazy(() => import('./pages/partner/ForgotPassword'));
-const PartnerResetPassword = React.lazy(() => import('./pages/partner/ResetPassword'));
-const PartnerSignUp = React.lazy(() => import('./pages/partner/SignUp'));
-const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
-const PartnerProfile = React.lazy(() => import('./pages/partner/Profile'));
-const PartnerStatistics = React.lazy(() => import('./pages/partner/Statistics'));
-const PartnerBookings = React.lazy(() => import('./pages/partner/Bookings'));
-const PartnerSettings = React.lazy(() => import('./pages/partner/Settings'));
+  console.log('CreateUsers - User:', !!user);
+  console.log('CreateUsers - Profile:', profile);
+  console.log('CreateUsers - IsAdmin:', isAdmin);
 
-// Other lazy-loaded pages
-const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
-const Categories = React.lazy(() => import('./pages/Categories'));
-const TousLesKiffs = React.lazy(() => import('./pages/TousLesKiffs'));
-const OfferPage = React.lazy(() => import('./pages/OfferPage'));
-const Account = React.lazy(() => import('./pages/Account'));
-const Community = React.lazy(() => import('./pages/Community'));
-const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
-const NotFound = React.lazy(() => import('./pages/NotFound'));
-const Subscription = React.lazy(() => import('./pages/Subscription'));
-const PricingComparison = React.lazy(() => import('./pages/PricingComparison'));
-const Checkout = React.lazy(() => import('./pages/Checkout'));
-const SubscriptionSuccess = React.lazy(() => import('./pages/SubscriptionSuccess'));
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
 
-// Club pages
-const ClubEvents = React.lazy(() => import('./pages/club/Events'));
-const ClubMasterclasses = React.lazy(() => import('./pages/club/Masterclasses'));
-const ClubWellness = React.lazy(() => import('./pages/club/Wellness'));
-const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
+    const loadSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-// Admin routes
-const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
-const Partners = React.lazy(() => import('./pages/admin/Partners'));
-const Subscribers = React.lazy(() => import('./pages/admin/Subscribers'));
-const Newsletter = React.lazy(() => import('./pages/admin/Newsletter'));
-const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers')); // 👈 AJOUT
-const CreateAdminUsers = React.lazy(() => import('./pages/admin/CreateAdminUsers')); // 👈 NOUVEAU
+        if (error) throw error;
+        if (!data.session?.access_token) {
+          console.log('⛔️ Aucune session trouvée. Peut-être non connecté.');
+          setError('Non connecté. Veuillez vous authentifier.');
+          return;
+        }
 
-// Qui sommes-nous
-const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
+        setToken(data.session.access_token);
+      } catch (err: any) {
+        console.error('❌ Erreur récupération session :', err.message || err);
+        setError('Erreur de session Supabase.');
+      }
+    };
 
-function App() {
+    timeout = setTimeout(() => {
+      setError('⏳ Temps de chargement trop long...');
+    }, 5000);
+
+    loadSession().finally(() => clearTimeout(timeout));
+  }, []);
+
+  const handleClick = async () => {
+    if (!token) return setError("Token manquant. Impossible d'envoyer la requête.");
+
+    setStatus('loading');
+    const users = [
+      { email: 'rhodia@nowme.fr', password: 'azert123', role: 'super_admin' },
+      { email: 'nowme.club@gmail.com', password: 'azert123', role: 'subscriber_admin' },
+      { email: 'rhodia.kw@gmail.com', password: 'azert123', role: 'partner_admin' }
+    ];
+
+    try {
+      for (const user of users) {
+        console.log(`🔄 Création de ${user.email}...`);
+        
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-recreate-user`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              email: user.email,
+              password: user.password,
+              role: user.role,
+              redirectTo: 'https://club.nowme.fr/auth/update-password'
+            })
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || `Erreur HTTP ${response.status}`);
+        }
+
+        console.log(`✅ Utilisateur ${user.email} créé avec rôle ${user.role}`);
+      }
+
+      setStatus('done');
+    } catch (err: any) {
+      console.error('❌ Erreur création utilisateurs :', err.message || err);
+      setStatus('error');
+      setError(err.message);
+    }
+  };
+
   return (
-    <HelmetProvider>
-      <AuthProvider>
-        <ScrollToTop />
-        <ErrorBoundary>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <main className="flex-grow">
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-
-                  {/* Public routes */}
-                  <Route path="/categories" element={<Categories />} />
-                  <Route path="/tous-les-kiffs" element={<TousLesKiffs />} />
-                  <Route path="/offres/:id" element={<OfferPage />} />
-                  <Route path="/communaute" element={<Community />} />
-                  <Route path="/soumettre-offre" element={<SubmitOffer />} />
-                  <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
-                  <Route path="/subscription" element={<Subscription />} />
-                  <Route path="/pricing" element={<PricingComparison />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-                  <Route path="/community-space" element={<PrivateRoute allowedRoles={['subscriber']}><CommunitySpace /></PrivateRoute>} />
-
-                  {/* Club routes */}
-                  <Route path="/club/events" element={<PrivateRoute allowedRoles={['subscriber']}><ClubEvents /></PrivateRoute>} />
-                  <Route path="/club/masterclasses" element={<PrivateRoute allowedRoles={['subscriber']}><ClubMasterclasses /></PrivateRoute>} />
-                  <Route path="/club/wellness" element={<PrivateRoute allowedRoles={['subscriber']}><ClubWellness /></PrivateRoute>} />
-
-                  {/* Auth routes */}
-                  <Route path="/auth/signin" element={<SignIn />} />
-                  <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/auth/update-password" element={<UpdatePassword />} />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-                  <Route path="/auth/test-signup" element={<TestSignup />} />
-
-                  {/* Partner routes */}
-                  <Route path="/partner/signin" element={<PartnerSignIn />} />
-                  <Route path="/partner/forgot-password" element={<PartnerForgotPassword />} />
-                  <Route path="/partner/reset-password" element={<PartnerResetPassword />} />
-                  <Route path="/partner/signup" element={<PartnerSignUp />} />
-                  <Route path="/partner/dashboard" element={<PrivateRoute allowedRoles={['partner']}><PartnerDashboard /></PrivateRoute>} />
-                  <Route path="/partner/profile" element={<PrivateRoute allowedRoles={['partner']}><PartnerProfile /></PrivateRoute>} />
-                  <Route path="/partner/statistics" element={<PrivateRoute allowedRoles={['partner']}><PartnerStatistics /></PrivateRoute>} />
-                  <Route path="/partner/bookings" element={<PrivateRoute allowedRoles={['partner']}><PartnerBookings /></PrivateRoute>} />
-                  <Route path="/partner/settings" element={<PrivateRoute allowedRoles={['partner']}><PartnerSettings /></PrivateRoute>} />
-
-                  {/* Protected account */}
-                  <Route path="/account/*" element={<PrivateRoute><Account /></PrivateRoute>} />
-
-                  {/* Admin */}
-                  <Route path="/admin" element={<PrivateRoute allowedRoles={['admin']}><AdminLayout /></PrivateRoute>}>
-                    <Route path="partners" element={<Partners />} />
-                    <Route path="subscribers" element={<Subscribers />} />
-                    <Route path="newsletter" element={<Newsletter />} />
-                    <Route path="create-users" element={<CreateUsers />} />
-                  </Route>
-
-                  {/* 404 */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </main>
-            <Footer />
-            <Toaster position="top-right" />
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="max-w-md w-full p-6 border rounded-xl shadow-md text-center">
+        <h2 className="text-xl font-bold mb-4">Création des comptes admin</h2>
+        
+        <div className="mb-6 text-left text-sm space-y-2">
+          <div className="p-3 bg-purple-50 rounded">
+            <strong>rhodia@nowme.fr</strong> - Super Admin (accès total)
           </div>
-        </ErrorBoundary>
-      </AuthProvider>
-    </HelmetProvider>
+          <div className="p-3 bg-blue-50 rounded">
+            <strong>nowme.club@gmail.com</strong> - Admin Abonnés
+          </div>
+          <div className="p-3 bg-green-50 rounded">
+            <strong>rhodia.kw@gmail.com</strong> - Admin Partenaires
+          </div>
+        </div>
+
+        {error ? (
+          <p className="text-red-600 mb-6">{error}</p>
+        ) : token ? (
+          <>
+            <p className="text-gray-600 mb-6">Mot de passe pour tous : <code>azert123</code></p>
+            <button
+              onClick={handleClick}
+              disabled={status === 'loading'}
+              className={`w-full px-4 py-2 rounded-full font-semibold text-white ${
+                status === 'done'
+                  ? 'bg-green-500'
+                  : status === 'loading'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-primary hover:bg-primary-dark'
+              }`}
+            >
+              {status === 'loading' ? 'Création en cours...' : status === 'done' ? '✅ Comptes créés' : 'Créer les 3 comptes admin'}
+            </button>
+          </>
+        ) : (
+          <p className="text-gray-500 italic">Chargement en cours...</p>
+        )}
+      </div>
+    </div>
   );
 }
-
-export default App;

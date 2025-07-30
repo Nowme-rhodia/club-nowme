@@ -15,7 +15,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   console.log('PrivateRoute - User:', !!user);
   console.log('PrivateRoute - Loading:', loading);
   console.log('PrivateRoute - IsAdmin:', isAdmin);
-  console.log('PrivateRoute - Profile:', profile);
+  console.log('PrivateRoute - AllowedRoles:', allowedRoles);
 
   if (loading) {
     return (
@@ -43,7 +43,10 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
       }
     });
 
+    console.log('PrivateRoute - HasAllowedRole:', hasAllowedRole);
+
     if (!hasAllowedRole) {
+      console.log('PrivateRoute - Access denied, redirecting...');
       if (isPartner) {
         return <Navigate to="/partner/dashboard" replace />;
       }

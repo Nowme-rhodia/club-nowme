@@ -10,9 +10,11 @@ export default function CreateUsers() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<any[]>([]);
 
-  console.log('CreateUsers - User:', !!user);
+  console.log('CreateUsers - User:', !!user, user?.email);
   console.log('CreateUsers - Profile:', profile);
   console.log('CreateUsers - IsAdmin:', isAdmin);
+  console.log('CreateUsers - Profile role:', profile?.role);
+  console.log('CreateUsers - Profile subscription_type:', profile?.subscription_type);
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
