@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+import { corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 interface BonPlan {
   id: string;
@@ -18,12 +15,11 @@ interface BonPlan {
   author_name: string;
   likes_count: number;
   created_at: string;
+  user?: { first_name: string };
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return handleCors(req);
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -33,114 +29,108 @@ serve(async (req) => {
   try {
     console.log('🚀 Génération de la newsletter quotidienne...');
 
-    // 1. Récupérer les meilleurs bons plans des dernières 24h
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
     const { data: bonPlans, error: bonPlansError } = await supabase
-      .from('community_posts')
+      .from("community_posts")
       .select(`
         id, title, description, category, location, price, discount, likes_count, created_at,
         user:user_profiles(first_name)
       `)
-      .eq('status', 'active')
-      .gte('created_at', yesterday.toISOString())
-      .order('likes_count', { ascending: false })
+      .eq("status", "active")
+      .gte("created_at", yesterday.toISOString())
+      .order("likes_count", { ascending: false })
       .limit(5);
 
     if (bonPlansError) throw bonPlansError;
 
-    // 2. Si pas assez de nouveaux bons plans, prendre les plus populaires de la semaine
     let finalBonPlans = bonPlans || [];
-    
+
     if (finalBonPlans.length < 3) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
 
       const { data: weeklyBonPlans, error: weeklyError } = await supabase
-        .from('community_posts')
+        .from("community_posts")
         .select(`
           id, title, description, category, location, price, discount, likes_count, created_at,
           user:user_profiles(first_name)
         `)
-        .eq('status', 'active')
-        .gte('created_at', weekAgo.toISOString())
-        .order('likes_count', { ascending: false })
+        .eq("status", "active")
+        .gte("created_at", weekAgo.toISOString())
+        .order("likes_count", { ascending: false })
         .limit(3);
 
-      if (!weeklyError) {
-        finalBonPlans = weeklyBonPlans || [];
-      }
+      if (!weeklyError) finalBonPlans = weeklyBonPlans || finalBonPlans;
     }
 
-    // 3. Générer le contenu de la newsletter
     const today = new Date();
-    const title = `Ton kiff du ${today.toLocaleDateString('fr-FR', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    const title = `Ton kiff du ${today.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     })}`;
 
-    const content = generateNewsletterHTML(finalBonPlans, today);
+    const htmlContent = generateNewsletterHTML(finalBonPlans, today);
 
-    // 4. Récupérer tous les abonnés actifs
     const { data: subscribers, error: subscribersError } = await supabase
-      .from('user_profiles')
-      .select('email, first_name')
-      .eq('subscription_status', 'active')
-      .not('email', 'is', null);
+      .from("user_profiles")
+      .select("email, first_name")
+      .eq("subscription_status", "active")
+      .not("email", "is", null);
 
     if (subscribersError) throw subscribersError;
 
-    console.log(`📧 Envoi à ${subscribers?.length || 0} abonnées...`);
+    const emailTasks = subscribers?.map(sub => {
+      const personalizedHTML = htmlContent.replace("{{first_name}}", sub.first_name || "ma belle");
 
-    // 5. Envoyer les emails via la table emails (traitement asynchrone)
-    const emailPromises = subscribers?.map(subscriber => {
-      const personalizedContent = content.replace('{{first_name}}', subscriber.first_name || 'ma belle');
-      
-      return supabase
-        .from('emails')
-        .insert({
-          to_address: subscriber.email,
+      return fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from: "Nowme Club <contact@nowme.fr>",
+          to: sub.email,
           subject: title,
-          content: personalizedContent,
-          status: 'pending'
-        });
+          html: personalizedHTML
+        })
+      });
     }) || [];
 
-    // Attendre que tous les emails soient ajoutés à la queue
-    await Promise.all(emailPromises);
-    
-    console.log(`✅ Newsletter ajoutée à la queue d'envoi pour ${subscribers?.length || 0} abonnées`);
+    await Promise.all(emailTasks);
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        queued_count: subscribers?.length || 0,
-        total_subscribers: subscribers?.length || 0,
-        featured_posts: finalBonPlans.length
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.log(`✅ Newsletter envoyée à ${subscribers?.length || 0} abonnées.`);
+
+    return new Response(JSON.stringify({
+      success: true,
+      sent: subscribers?.length || 0,
+      featured_posts: finalBonPlans.length
+    }), {
+      headers: corsHeaders,
+      status: 200
+    });
 
   } catch (error) {
-    console.error('❌ Erreur génération newsletter:', error);
+    logger.error("❌ Erreur envoi newsletter:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
+      {
+        headers: corsHeaders,
+        status: 500
       }
     );
   }
 });
 
-function generateNewsletterHTML(bonPlans: any[], date: Date): string {
-  const dateStr = date.toLocaleDateString('fr-FR', { 
+function generateNewsletterHTML(bonPlans: BonPlan[], date: Date): string {
+  const dateStr = date.toLocaleDateString('fr-FR', {
     weekday: 'long',
-    day: 'numeric', 
-    month: 'long', 
-    year: 'numeric' 
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
   });
 
   return `
@@ -171,9 +161,8 @@ function generateNewsletterHTML(bonPlans: any[], date: Date): string {
     
     <div class="content">
       <p>Salut {{first_name}} !</p>
-      
       <p>Voici les bons plans qui font le buzz dans la communauté aujourd'hui :</p>
-      
+
       ${bonPlans.map((plan, index) => `
         <div class="bon-plan">
           <h3>${index + 1}. ${plan.title}</h3>
@@ -188,25 +177,25 @@ function generateNewsletterHTML(bonPlans: any[], date: Date): string {
           <p>${plan.description}</p>
         </div>
       `).join('')}
-      
+
       ${bonPlans.length === 0 ? `
         <div class="bon-plan">
           <h3>🌟 Pas de nouveaux bons plans aujourd'hui</h3>
           <p>Mais ne t'inquiète pas ! Profite de cette journée pour explorer tes anciens favoris ou partager tes propres découvertes avec la communauté.</p>
         </div>
       ` : ''}
-      
+
       <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); border-radius: 12px; padding: 20px; color: white; text-align: center; margin: 30px 0;">
         <h3 style="margin-top: 0; color: white;">🎯 Rappel du jour</h3>
         <p>Tu mérites de kiffer ! Prends 5 minutes aujourd'hui pour faire quelque chose qui te fait du bien.</p>
       </div>
-      
+
       <div style="text-align: center;">
         <a href="https://club.nowme.fr/community-space" class="cta">
           ✨ Partager un bon plan
         </a>
       </div>
-      
+
       <p>Kiffe bien ta journée !</p>
       <p>L'équipe Nowme 💕</p>
     </div>
@@ -223,4 +212,4 @@ function generateNewsletterHTML(bonPlans: any[], date: Date): string {
 </body>
 </html>
   `.trim();
-} 
+}
