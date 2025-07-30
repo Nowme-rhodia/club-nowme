@@ -1,4 +1,3 @@
-// src/pages/admin/CreateUsers.tsx
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
@@ -18,10 +17,12 @@ export default function CreateUsers() {
     ];
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
 
-      if (!token) throw new Error("Vous devez être connectée en tant qu'administratrice");
+      const token = session?.access_token;
+      if (!token) throw new Error("Vous devez être connectée");
 
       for (const user of users) {
         const response = await fetch(
@@ -43,17 +44,17 @@ export default function CreateUsers() {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(`Erreur pour ${user.role} : ${result.error}`);
+          throw new Error(result.error || `Erreur ${response.status}`);
         }
 
-        console.log(`✅ ${user.role} recréé`, result);
+        console.log(`✅ ${user.role} créé :`, result.user.email);
       }
 
       setStatus('done');
     } catch (err: any) {
-      setStatus('error');
-      setErrorMessage(err.message || 'Erreur inconnue');
       console.error(err);
+      setErrorMessage(err?.message || 'Une erreur est survenue');
+      setStatus('error');
     }
   };
 
@@ -61,7 +62,9 @@ export default function CreateUsers() {
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="max-w-md w-full p-6 border rounded-xl shadow-md text-center">
         <h2 className="text-lg font-bold mb-4">Créer les comptes système</h2>
-        <p className="text-sm text-gray-500 mb-6">Clique pour recréer les comptes admin, abonnée et partenaire.</p>
+        <p className="text-sm text-gray-500 mb-6">
+          Clique sur le bouton pour (re)créer les comptes admin, abonnée et partenaire.
+        </p>
         <button
           onClick={handleClick}
           disabled={status === 'loading' || status === 'done'}
@@ -79,6 +82,7 @@ export default function CreateUsers() {
             ? '✅ Comptes créés'
             : 'Créer les comptes'}
         </button>
+
         {status === 'error' && (
           <p className="mt-4 text-sm text-red-600">{errorMessage}</p>
         )}
