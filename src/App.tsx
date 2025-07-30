@@ -1,108 +1,168 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../hooks/useAuth';
+import { Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
+import { Toaster } from 'react-hot-toast';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+import { ScrollToTop } from './components/ScrollToTop';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { AuthProvider } from './lib/auth';
+import { PrivateRoute } from './components/PrivateRoute';
 
-export default function CreateUsers() {
-  const { user, profile, isAdmin } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [error, setError] = useState<string | null>(null);
+// Lazy loading des pages
+import { lazy, Suspense } from 'react';
+import { LoadingFallback } from './components/LoadingFallback';
 
-  console.log('CreateUsers - User:', !!user);
-  console.log('CreateUsers - Profile:', profile);
-  console.log('CreateUsers - IsAdmin:', isAdmin);
+const Home = lazy(() => import('./pages/Home'));
+const Categories = lazy(() => import('./pages/Categories'));
+const TousLesKiffs = lazy(() => import('./pages/TousLesKiffs'));
+const OfferPage = lazy(() => import('./pages/OfferPage'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Community = lazy(() => import('./pages/Community'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const SubscriptionSuccess = lazy(() => import('./pages/SubscriptionSuccess'));
+const Account = lazy(() => import('./pages/Account'));
+const QRCode = lazy(() => import('./pages/account/QRCode'));
+const CommunitySpace = lazy(() => import('./pages/CommunitySpace'));
+const QuiSommesNous = lazy(() => import('./pages/QuiSommesNous'));
+const SubmitOffer = lazy(() => import('./pages/SubmitOffer'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
-  useEffect(() => {
-    let timeout: NodeJS.Timeout;
+// Auth pages
+const SignIn = lazy(() => import('./pages/auth/SignIn'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const UpdatePassword = lazy(() => import('./pages/auth/UpdatePassword'));
+const AuthCallback = lazy(() => import('./pages/auth/AuthCallback'));
+const CompleteProfile = lazy(() => import('./pages/auth/CompleteProfile'));
 
-    const loadSession = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
+// Club pages
+const ClubDashboard = lazy(() => import('./pages/club/ClubDashboard'));
+const Events = lazy(() => import('./pages/club/Events'));
+const Masterclasses = lazy(() => import('./pages/club/Masterclasses'));
+const Wellness = lazy(() => import('./pages/club/Wellness'));
 
-        if (error) throw error;
-        if (!data.session?.access_token) {
-          console.log('⛔️ Aucune session trouvée. Peut-être non connecté.');
-          setError('Non connecté. Veuillez vous authentifier.');
-          return;
-        }
+// Admin pages
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const Partners = lazy(() => import('./pages/admin/Partners'));
+const Subscribers = lazy(() => import('./pages/admin/Subscribers'));
+const Newsletter = lazy(() => import('./pages/admin/Newsletter'));
+const CreateUsers = lazy(() => import('./pages/admin/CreateUsers'));
+// Partner pages
+const PartnerSignIn = lazy(() => import('./pages/partner/SignIn'));
+const PartnerDashboard = lazy(() => import('./pages/partner/Dashboard'));
+const PartnerProfile = lazy(() => import('./pages/partner/Profile'));
+const PartnerBookings = lazy(() => import('./pages/partner/Bookings'));
+const PartnerStatistics = lazy(() => import('./pages/partner/Statistics'));
+const PartnerSettings = lazy(() => import('./pages/partner/Settings'));
 
-        setToken(data.session.access_token);
-      } catch (err: any) {
-        console.error('❌ Erreur récupération session :', err.message || err);
-        setError('Erreur de session Supabase.');
-      }
-    };
+function App() {
+  return (
+    <HelmetProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <div className="min-h-screen bg-white">
+            <ScrollToTop />
+                  {/* Pages protégées */}
+                  <Route path="/account" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <Account />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/account/qr-code" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <QRCode />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/community-space" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <CommunitySpace />
+                    </PrivateRoute>
+                  } />
 
-    timeout = setTimeout(() => {
-      setError('⏳ Temps de chargement trop long...');
-    }, 5000);
+                  {/* Club */}
+                  <Route path="/club" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <ClubDashboard />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/club/events" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <Events />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/club/masterclasses" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <Masterclasses />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/club/wellness" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <Wellness />
+                    </PrivateRoute>
+                  } />
 
-    loadSession().finally(() => clearTimeout(timeout));
-  }, []);
-
-  const handleClick = async () => {
-    if (!token) return setError("Token manquant. Impossible d'envoyer la requête.");
-
-    setStatus('loading');
+                  {/* Admin */}
+                  <Route path="/admin" element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <AdminLayout />
+                    </PrivateRoute>
+                  }>
+                    <Route index element={<Partners />} />
+                    <Route path="partners" element={<Partners />} />
+                    <Route path="subscribers" element={<Subscribers />} />
+                    <Route path="newsletter" element={<Newsletter />} />
+                    <Route path="create-users" element={<CreateUsers />} />
+                  </Route>
     const users = [
       { email: 'rhodia@nowme.fr', password: 'azert123', role: 'super_admin' },
       { email: 'nowme.club@gmail.com', password: 'azert123', role: 'subscriber_admin' },
       { email: 'rhodia.kw@gmail.com', password: 'azert123', role: 'partner_admin' }
     ];
 
-    try {
-      for (const user of users) {
-        console.log(`🔄 Création de ${user.email}...`);
-        
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-recreate-user`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              email: user.email,
-              password: user.password,
-              role: user.role,
-              redirectTo: 'https://club.nowme.fr/auth/update-password'
-            })
-          }
-        );
+                  {/* Partner */}
+                  <Route path="/partner/signin" element={<PartnerSignIn />} />
+                  <Route path="/partner/dashboard" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <PartnerDashboard />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/partner/profile" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <PartnerProfile />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/partner/bookings" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <PartnerBookings />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/partner/statistics" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <PartnerStatistics />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/partner/settings" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <PartnerSettings />
+                    </PrivateRoute>
+                  } />
 
-        const result = await response.json();
+                  {/* 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </main>
 
-        if (!response.ok) {
-          throw new Error(result.error || `Erreur HTTP ${response.status}`);
-        }
-
-        console.log(`✅ Utilisateur ${user.email} créé avec rôle ${user.role}`);
-      }
-
-      setStatus('done');
-    } catch (err: any) {
-      console.error('❌ Erreur création utilisateurs :', err.message || err);
-      setStatus('error');
-      setError(err.message);
-    }
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="max-w-md w-full p-6 border rounded-xl shadow-md text-center">
-        <h2 className="text-xl font-bold mb-4">Création des comptes admin</h2>
-        
-        <div className="mb-6 text-left text-sm space-y-2">
-          <div className="p-3 bg-purple-50 rounded">
-            <strong>rhodia@nowme.fr</strong> - Super Admin (accès total)
+            <Footer />
+            <Toaster position="top-right" />
           </div>
-          <div className="p-3 bg-blue-50 rounded">
-            <strong>nowme.club@gmail.com</strong> - Admin Abonnés
-          </div>
-          <div className="p-3 bg-green-50 rounded">
-            <strong>rhodia.kw@gmail.com</strong> - Admin Partenaires
-          </div>
+        </AuthProvider>
+      </ErrorBoundary>
+    </HelmetProvider>
+  );
+}
+
+export default App;
         </div>
 
         {error ? (
