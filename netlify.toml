@@ -1,33 +1,28 @@
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = """
-      default-src 'self' https://dqfyuhwrjozoxadkccdj.supabase.co https://plausible.io;
-      script-src 'self' https://maps.googleapis.com https://maps.gstatic.com https://js.stripe.com;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com;
-      img-src 'self' https://*.unsplash.com https://i.imgur.com https://imgur.com https://maps.gstatic.com https://maps.googleapis.com data:;
-      connect-src 'self' https://dqfyuhwrjozoxadkccdj.supabase.co https://plausible.io https://maps.googleapis.com https://maps.gstatic.com https://api.stripe.com;
-    """
+[build]
+  command = "npm run build"
+  publish = "dist"
 
-# ✅ Redirection explicite vers Supabase Edge Function
 [[redirects]]
   from = "/api/admin-recreate-user"
   to = "https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/admin-recreate-user"
   status = 200
   force = true
-  headers = { X-From = "Netlify" }
+  [redirects.headers]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization"
 
-# Redirection générique pour React Router
+[[redirects]]
+  from = "/api/*"
+  to = "https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/:splat"
+  status = 200
+  force = true
+  [redirects.headers]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-[build]
-  command = "npm run build"
-  publish = "dist"
