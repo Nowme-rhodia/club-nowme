@@ -1,6 +1,6 @@
 // supabase/functions/send-partner-submission/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createSupabaseClient, corsHeaders, handleCors, logger } from "../../_shared/utils/index.ts";
+import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
 serve(async (req) => {
   // ✅ Gérer les requêtes OPTIONS (CORS)
