@@ -393,4 +393,4 @@ async function handlePaymentFailed(invoice) {
   } catch (err) {
     console.error(`❌ Erreur dans handlePaymentFailed: ${err.message}`);
   }
-}
+} 
