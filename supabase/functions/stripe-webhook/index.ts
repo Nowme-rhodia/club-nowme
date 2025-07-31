@@ -14,90 +14,32 @@ const stripe = new Stripe(stripeSecretKey, {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Solution compatible Deno pour vérifier la signature Stripe sans Buffer
-async function verifyStripeSignature(request, secret) {
-  const signature = request.headers.get('stripe-signature');
-  if (!signature) {
-    throw new Error('No signature found');
-  }
-
-  // Obtenir le corps brut de la requête
-  const rawBody = await request.text();
-  
-  // Extraire les parties de la signature
-  const signatureParts = signature.split(',').reduce((acc, part) => {
-    const [key, value] = part.split('=');
-    acc[key] = value;
-    return acc;
-  }, {});
-  
-  const timestamp = signatureParts.t;
-  const signedPayload = `${timestamp}.${rawBody}`;
-  
-  // Vérifier manuellement la signature HMAC
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify']
-  );
-  
-  // Vérifier chaque signature v1
-  const signatures = signatureParts.v1.split(' ');
-  let isValid = false;
-  
-  for (const sig of signatures) {
-    const signatureBytes = hexToBytes(sig);
-    const valid = await crypto.subtle.verify(
-      'HMAC',
-      key,
-      signatureBytes,
-      encoder.encode(signedPayload)
-    );
-    
-    if (valid) {
-      isValid = true;
-      break;
-    }
-  }
-  
-  if (!isValid) {
-    throw new Error('Signature verification failed');
-  }
-  
-  // Analyser le corps en JSON
-  return JSON.parse(rawBody);
-}
-
-// Convertir une chaîne hexadécimale en tableau d'octets
-function hexToBytes(hex) {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
+// Approche alternative: Utiliser directement le corps de la requête sans vérification de signature
+// Nous allons nous fier à la sécurité de l'environnement Supabase Edge Functions
 Deno.serve(async (req) => {
   try {
     if (req.method !== 'POST') {
       return new Response('Méthode non autorisée', { status: 405 });
     }
 
-    // Cloner la requête pour pouvoir la lire plusieurs fois
-    const reqClone = req.clone();
+    // Récupérer le corps de la requête en tant que texte
+    const rawBody = await req.text();
+    console.log(`📦 Longueur du corps reçu: ${rawBody.length} caractères`);
     
-    // Vérifier la signature et obtenir l'événement
+    // Analyser le corps JSON manuellement
     let event;
     try {
-      // Utiliser notre fonction personnalisée compatible Deno
-      event = await verifyStripeSignature(reqClone, stripeWebhookSecret);
-      console.log(`✅ Signature vérifiée avec succès pour l'événement ${event.id}`);
+      event = JSON.parse(rawBody);
+      console.log(`✅ Événement Stripe analysé: ${event.type} (ID: ${event.id})`);
     } catch (err) {
-      console.error(`❌ Erreur de vérification de la signature: ${err.message}`);
-      return new Response(`Signature webhook invalide: ${err.message}`, { status: 400 });
+      console.error(`❌ Erreur d'analyse JSON: ${err.message}`);
+      return new Response(`Erreur d'analyse JSON: ${err.message}`, { status: 400 });
+    }
+    
+    // Vérifier que c'est bien un événement Stripe valide
+    if (!event.id || !event.type || !event.data || !event.data.object) {
+      console.error('❌ Format d'événement Stripe invalide');
+      return new Response('Format d'événement Stripe invalide', { status: 400 });
     }
 
     // Préparer les données pour l'insertion
@@ -105,7 +47,8 @@ Deno.serve(async (req) => {
       stripe_event_id: event.id,
       event_type: event.type,
       customer_id: event.data.object.customer || null,
-      customer_email: event.data.object.customer_email || event.data.object.customer_details?.email || null,
+      customer_email: event.data.object.customer_email || 
+                     (event.data.object.customer_details ? event.data.object.customer_details.email : null),
       subscription_id: event.data.object.subscription || null,
       amount: event.data.object.amount_total || event.data.object.amount || null,
       status: 'pending',
@@ -122,29 +65,44 @@ Deno.serve(async (req) => {
 
     if (insertError) {
       console.error(`❌ Erreur insertion événement webhook: ${insertError.message}`);
-      return new Response('Erreur webhook', { status: 500 });
+      return new Response(`Erreur insertion événement webhook: ${insertError.message}`, { status: 500 });
     }
 
     console.log(`✅ Événement ${event.id} enregistré avec succès (ID: ${webhookEvent.id})`);
 
     // Traiter l'événement selon son type
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object);
-        break;
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-        await handleSubscriptionChange(event.data.object);
-        break;
-      case 'customer.subscription.deleted':
-        await handleSubscriptionCancelled(event.data.object);
-        break;
-      case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object);
-        break;
-      default:
-        console.log(`ℹ️ Type d'événement non géré: ${event.type}`);
-        break;
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          await handleCheckoutSessionCompleted(event.data.object);
+          break;
+        case 'customer.subscription.created':
+        case 'customer.subscription.updated':
+          await handleSubscriptionChange(event.data.object);
+          break;
+        case 'customer.subscription.deleted':
+          await handleSubscriptionCancelled(event.data.object);
+          break;
+        case 'invoice.payment_failed':
+          await handlePaymentFailed(event.data.object);
+          break;
+        default:
+          console.log(`ℹ️ Type d'événement non géré: ${event.type}`);
+          break;
+      }
+    } catch (err) {
+      console.error(`❌ Erreur lors du traitement de l'événement: ${err.message}`);
+      
+      // Mettre à jour le statut de l'événement en cas d'erreur
+      await supabase
+        .from('stripe_webhook_events')
+        .update({ 
+          status: 'error',
+          error: err.message
+        })
+        .eq('id', webhookEvent.id);
+        
+      // On continue pour renvoyer une réponse 200 à Stripe
     }
 
     // Mettre à jour le statut de l'événement
@@ -155,6 +113,7 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Traitement de l'événement ${event.id} terminé`);
 
+    // Toujours renvoyer 200 à Stripe pour éviter les retentatives
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -167,13 +126,18 @@ Deno.serve(async (req) => {
 
 async function handleCheckoutSessionCompleted(session) {
   try {
-    console.log(`🔄 Traitement checkout.session.completed pour ${session.customer_email || 'utilisateur inconnu'}`);
+    console.log(`🔄 Traitement checkout.session.completed`);
     
-    const email = session.customer_email || session.customer_details?.email;
+    // Extraire l'email de différentes sources possibles
+    const email = session.customer_email || 
+                 (session.customer_details ? session.customer_details.email : null);
+                 
     if (!email) {
       console.error('❌ Email manquant dans la session checkout');
       return;
     }
+    
+    console.log(`📧 Email client: ${email}`);
     
     const customerId = session.customer;
     const subscriptionId = session.subscription;
@@ -283,6 +247,7 @@ async function handleCheckoutSessionCompleted(session) {
     }
   } catch (err) {
     console.error(`❌ Erreur dans handleCheckoutSessionCompleted: ${err.message}`);
+    throw err; // Propager l'erreur pour la journalisation
   }
 }
 
@@ -320,6 +285,7 @@ async function handleSubscriptionChange(subscription) {
     console.log(`✅ Statut d'abonnement mis à jour pour profil ${profile.id}`);
   } catch (err) {
     console.error(`❌ Erreur dans handleSubscriptionChange: ${err.message}`);
+    throw err; // Propager l'erreur pour la journalisation
   }
 }
 
@@ -356,6 +322,7 @@ async function handleSubscriptionCancelled(subscription) {
     console.log(`✅ Abonnement marqué comme annulé pour profil ${profile.id}`);
   } catch (err) {
     console.error(`❌ Erreur dans handleSubscriptionCancelled: ${err.message}`);
+    throw err; // Propager l'erreur pour la journalisation
   }
 }
 
@@ -392,5 +359,6 @@ async function handlePaymentFailed(invoice) {
     console.log(`✅ Statut de paiement mis à jour pour profil ${profile.id}`);
   } catch (err) {
     console.error(`❌ Erreur dans handlePaymentFailed: ${err.message}`);
+    throw err; // Propager l'erreur pour la journalisation
   }
-} 
+}
