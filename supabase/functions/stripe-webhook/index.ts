@@ -1,17 +1,20 @@
 import Stripe from 'npm:stripe@14.25.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
+
 const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2023-10-16',
   httpClient: Stripe.createFetchHttpClient()
 });
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-Deno.serve(async (req)=>{
+Deno.serve(async (req) => {
   try {
     if (req.method !== 'POST') {
       return new Response('Méthode non autorisée', {
@@ -61,7 +64,7 @@ Deno.serve(async (req)=>{
       });
     }
     
-    switch(event.type){
+    switch(event.type) {
       case 'checkout.session.completed':
         await handleCheckoutSessionCompleted(event.data.object);
         break;
@@ -144,7 +147,7 @@ async function handleCheckoutSessionCompleted(session) {
           subject: 'Bienvenue sur Nowme ✨ Crée ton mot de passe',
           html: `<p>Bienvenue dans la communauté Nowme 💃</p>
                  <p>Tu peux créer ton mot de passe ici 👇</p>
-                 <p><a href="${confirmationUrl}">${confirmationUrl}</a></p>`
+                 <p><a href=\"${confirmationUrl}\">${confirmationUrl}</a></p>`
         })
       });
     }
