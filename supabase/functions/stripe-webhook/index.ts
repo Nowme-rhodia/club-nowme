@@ -25,11 +25,11 @@ Deno.serve(async (req) => {
     if (!signature) return new Response('Signature manquante', { status: 400 });
 
     const buffer = await req.arrayBuffer();
-    const body = new TextDecoder('utf-8').decode(buffer);
+    const body = new Uint8Array(await req.arrayBuffer());
 
-    let event;
-    try {
-      event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
+let event;
+try {
+  event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
     } catch (err) {
       console.error(`Erreur de vérification de la signature Stripe ${err.message}`);
       return new Response(`Signature webhook invalide: ${err.message}`, { status: 400 });
