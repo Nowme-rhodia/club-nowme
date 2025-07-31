@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14?target=denonext";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
@@ -74,6 +75,15 @@ serve(async (req) => {
             stripe_customer_id: customerId,
             subscription_status: "active",
             subscription_type: "premium",
+          });
+
+          // Envoie du lien de création de mot de passe
+          await supabase.auth.admin.generateLink({
+            type: "signup",
+            email,
+            options: {
+              redirectTo: "https://club.nowme.fr/auth/update-password",
+            },
           });
         }
       } else {
