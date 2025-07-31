@@ -10,6 +10,7 @@ const stripe = new Stripe(stripeSecretKey, {
   httpClient: Stripe.createFetchHttpClient()
 });
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 Deno.serve(async (req)=>{
   try {
     if (req.method !== 'POST') {
@@ -32,7 +33,9 @@ Deno.serve(async (req)=>{
         status: 400
       });
     }
-    const { data: webhookEvent, error: insertError } = await supabase.from('stripe_webhook_events').insert({
+    
+    // Préparer les données pour l'insertion
+    const eventData = {
       stripe_event_id: event.id,
       event_type: event.type,
       customer_id: event.data.object.customer || null,
@@ -40,14 +43,24 @@ Deno.serve(async (req)=>{
       subscription_id: event.data.object.subscription || null,
       amount: event.data.object.amount_total || event.data.object.amount || null,
       status: 'pending',
-      raw_event: event
-    }).select('id').single();
+      raw_event: event,
+      // Ajouter un champ role avec une valeur par défaut pour éviter l'erreur CASE
+      role: null
+    };
+    
+    const { data: webhookEvent, error: insertError } = await supabase
+      .from('stripe_webhook_events')
+      .insert(eventData)
+      .select('id')
+      .single();
+      
     if (insertError) {
       console.error('Erreur insertion événement webhook:', insertError);
       return new Response('Erreur webhook', {
         status: 500
       });
     }
+    
     switch(event.type){
       case 'checkout.session.completed':
         await handleCheckoutSessionCompleted(event.data.object);
@@ -62,10 +75,16 @@ Deno.serve(async (req)=>{
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object);
         break;
+      default:
+        // Ajouter un cas par défaut pour éviter les erreurs CASE
+        console.log(`Type d'événement non géré: ${event.type}`);
+        break;
     }
+    
     await supabase.from('stripe_webhook_events').update({
       status: 'completed'
     }).eq('id', webhookEvent.id);
+    
     return new Response(JSON.stringify({
       received: true
     }), {
@@ -81,6 +100,7 @@ Deno.serve(async (req)=>{
     });
   }
 });
+
 async function handleCheckoutSessionCompleted(session) {
   const email = session.customer_email;
   const customerId = session.customer;
@@ -137,6 +157,7 @@ async function handleCheckoutSessionCompleted(session) {
     }).eq('email', email);
   }
 }
+
 async function handleSubscriptionChange(subscription) {
   const { data: profile } = await supabase.from('user_profiles').select('id').eq('stripe_customer_id', subscription.customer).single();
   if (!profile) return;
@@ -146,6 +167,7 @@ async function handleSubscriptionChange(subscription) {
     subscription_updated_at: new Date().toISOString()
   }).eq('id', profile.id);
 }
+
 async function handleSubscriptionCancelled(subscription) {
   const { data: profile } = await supabase.from('user_profiles').select('id').eq('stripe_customer_id', subscription.customer).single();
   if (!profile) return;
@@ -154,6 +176,7 @@ async function handleSubscriptionCancelled(subscription) {
     subscription_updated_at: new Date().toISOString()
   }).eq('id', profile.id);
 }
+
 async function handlePaymentFailed(invoice) {
   const { data: profile } = await supabase.from('user_profiles').select('id').eq('stripe_customer_id', invoice.customer).single();
   if (!profile) return;
