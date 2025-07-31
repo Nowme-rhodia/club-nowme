@@ -1,14 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2, CreditCard, Shield, CheckCircle } from 'lucide-react';
 import { SEO } from '../components/SEO';
-import { createCheckoutSession } from '../lib/stripe';
-import { PRICING_TIERS } from '../data/pricing';
 import toast from 'react-hot-toast';
+import { useAuth } from '../lib/auth';
+import { PRICING_TIERS } from '../data/pricing';
 
 export default function Checkout() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('discovery');
 
@@ -24,7 +26,30 @@ export default function Checkout() {
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      await createCheckoutSession(selectedPlan);
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-stripe-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${profile?.access_token}`,
+          },
+          body: JSON.stringify({
+            email: profile?.email,
+            plan: selectedPlan,
+            success_url: \`\${window.location.origin}/subscription-success\`,
+            cancel_url: \`\${window.location.origin}/subscription\`,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la création de la session Stripe');
+      }
+
+      const { sessionId } = await response.json();
+      const stripe = await import('@stripe/stripe-js').then(m => m.loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY!));
+      await stripe?.redirectToCheckout({ sessionId });
     } catch (error) {
       console.error('Erreur checkout:', error);
       toast.error('Erreur lors de la redirection vers le paiement');
@@ -57,7 +82,6 @@ export default function Checkout() {
       />
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Finaliser votre abonnement
@@ -67,7 +91,6 @@ export default function Checkout() {
           </p>
         </div>
 
-        {/* Plan sélectionné */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">Plan sélectionné</h2>
@@ -87,9 +110,9 @@ export default function Checkout() {
                 <div className="text-sm text-gray-500">/{currentTier.period}</div>
               </div>
             </div>
-            
+
             <p className="text-gray-600 mb-4">{currentTier.description}</p>
-            
+
             {selectedPlan === 'discovery' && (
               <div className="bg-blue-50 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-blue-900 mb-2">🎯 Offre découverte</h4>
@@ -98,7 +121,7 @@ export default function Checkout() {
                 </p>
               </div>
             )}
-            
+
             {selectedPlan === 'yearly' && (
               <div className="bg-green-50 rounded-lg p-4 mb-4">
                 <h4 className="font-semibold text-green-900 mb-2">⭐ Plan annuel avantageux</h4>
@@ -124,7 +147,6 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* Sécurité et garanties */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-8">
           <h3 className="font-semibold text-gray-900 mb-4">Vos garanties</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -143,18 +165,17 @@ export default function Checkout() {
           </div>
         </div>
 
-        {/* Bouton de paiement */}
         <div className="text-center">
           <button
             onClick={handleCheckout}
             disabled={loading}
-            className={`
+            className={\`
               w-full px-8 py-4 rounded-full font-bold text-lg transition-all
-              ${loading
+              \${loading
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg transform hover:scale-105'
               }
-            `}
+            \`}
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -168,13 +189,12 @@ export default function Checkout() {
               </>
             )}
           </button>
-          
+
           <p className="text-xs text-gray-500 mt-4">
             Vous serez redirigé vers Stripe pour finaliser le paiement de manière sécurisée
           </p>
         </div>
 
-        {/* FAQ rapide */}
         <div className="mt-12 bg-gray-50 rounded-xl p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Questions fréquentes</h3>
           <div className="space-y-3 text-sm">
@@ -202,4 +222,4 @@ export default function Checkout() {
       </div>
     </div>
   );
-} 
+}
