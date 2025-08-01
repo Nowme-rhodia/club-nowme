@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
-import { Sparkles, MapPin, ChevronRight } from 'lucide-react';
+import { Sparkles, MapPin, ChevronRight, Star } from 'lucide-react';
 import { SEO } from '../components/SEO';
 
 export function Home() {
@@ -71,10 +71,7 @@ export function Home() {
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1571388208497-71bedc66e932?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10 animate-subtle-zoom" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight mb-6 animate-fade-in-down ${scrollY > 50 ? 'opacity-0' : 'opacity-100'}`}>
-              Marre de juste survivre ?  
-              <span className="text-pink-500 block">Kiffe enfin TA vie !</span>
-            </h1>
+            <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight mb-6 animate-fade-in-down ${scrollY > 50 ? 'opacity-0' : 'opacity-100'}`}>Marre de juste survivre ?<span className="text-pink-500 block">Kiffe enfin TA vie !</span></h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto animate-fade-in-up">
               Communauté premium, événements exclusifs, masterclass expertes : Nowme Club, c'est TON abonnement pour reprendre le contrôle en Île-de-France.
             </p>
