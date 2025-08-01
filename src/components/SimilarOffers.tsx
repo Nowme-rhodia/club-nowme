@@ -11,7 +11,7 @@ interface SimilarOffersProps {
 export function SimilarOffers({ currentOfferId, offers }: SimilarOffersProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {offers.map((offer) => (
+      {Array.isArray(offers) && offers.map((offer) => (
         <Link
           key={offer.id}
           to={`/offres/${offer.id}`}
@@ -25,16 +25,17 @@ export function SimilarOffers({ currentOfferId, offers }: SimilarOffersProps) {
             />
           </div>
           <div className="p-4">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h3 className="font-medium text-gray-900 line-clamp-1">{offer.title}</h3>
-              <div className="flex items-center gap-1 text-yellow-500 shrink-0">
-                <Star className="w-4 h-4 fill-current" />
-                <span className="text-sm">{offer.rating.toFixed(1)}</span>
-              </div>
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="font-bold text-gray-900">{offer.title}</h3>
+              {offer.isFeatured && (
+                <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                  <Star className="w-4 h-4 inline mr-1" /> Coup de cœur
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-1 text-gray-500 text-sm">
-              <MapPin className="w-4 h-4" />
-              <span>{offer.location}</span>
+            <p className="text-gray-600 text-sm">{offer.description}</p>
+            <div className="mt-2 flex items-center text-sm text-gray-500">
+              <MapPin className="w-4 h-4 mr-1" /> {offer.location}
             </div>
           </div>
         </Link>
