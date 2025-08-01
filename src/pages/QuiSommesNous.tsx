@@ -81,15 +81,35 @@ export default function QuiSommesNous() {
         </div>
         <ul className="timeline space-y-12 relative border-l-4 border-pink-500 pl-8">
           {[
-            { title: "La pote qui te secoue", text: "Celle qui te sort de ton canapé avec une blague débile et un plan fun.", icon: <Coffee className="w-8 h-8 text-pink-500" /> },
-            { title: "La maman warrior", text: "Deux nanas à la maison, un agenda qui déborde, mais une furieuse envie de vivre.", icon: <Heart className="w-8 h-8 text-rose-500" /> },
-            { title: "L’ex-carrée", text: "15 ans à bosser dur, jusqu’à ce que je dise : stop, on mérite mieux.", icon: <Calendar className="w-8 h-8 text-gray-600" /> },
-            { title: "La reine des plans", text: "100+ soirées, ateliers, fous rires : je fais ça pour qu’on vibre ensemble.", icon: <Users className="w-8 h-8 text-violet-500" /> },
-            { title: "La meuf qui ose", text: "Je chante, j’écris, je crée — et je veux te voir briller aussi fort que moi.", icon: <Paintbrush className="w-8 h-8 text-yellow-400" /> },
+            {
+              title: "La pote qui te secoue",
+              text: "Celle qui te sort de ton canapé avec une blague débile et un plan fun.",
+              icon: () => <Coffee className="w-8 h-8 text-pink-500" />,
+            },
+            {
+              title: "La maman warrior",
+              text: "Deux nanas à la maison, un agenda qui déborde, mais une furieuse envie de vivre.",
+              icon: () => <Heart className="w-8 h-8 text-rose-500" />,
+            },
+            {
+              title: "L’ex-carrée",
+              text: "15 ans à bosser dur, jusqu’à ce que je dise : stop, on mérite mieux.",
+              icon: () => <Calendar className="w-8 h-8 text-gray-600" />,
+            },
+            {
+              title: "La reine des plans",
+              text: "100+ soirées, ateliers, fous rires : je fais ça pour qu’on vibre ensemble.",
+              icon: () => <Users className="w-8 h-8 text-violet-500" />,
+            },
+            {
+              title: "La meuf qui ose",
+              text: "Je chante, j’écris, je crée — et je veux te voir briller aussi fort que moi.",
+              icon: () => <Paintbrush className="w-8 h-8 text-yellow-400" />,
+            },
           ].map(({ title, text, icon }, i) => (
             <li key={i} className="relative animate-slide-up" style={{ animationDelay: `${i * 0.2}s` }}>
               <div className="absolute -left-10 top-0 w-12 h-12 bg-white rounded-full border-4 border-pink-500 flex items-center justify-center">
-                {icon}
+                {icon()}
               </div>
               <div className="ml-6">
                 <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
