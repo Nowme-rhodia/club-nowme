@@ -54,7 +54,7 @@ export function CategoryCard({ category, highlightTerm }: CategoryCardProps) {
         )}
         <div className="h-px mb-4 sm:mb-5 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20"></div>
         <ul className="space-y-2.5 sm:space-y-3.5 flex-grow">
-          {category.subcategories.map((subcategory) => (
+          {Array.isArray(category.subcategories) && category.subcategories.map((subcategory) => (
             <li 
               key={subcategory.slug}
               onClick={() => handleSubcategoryClick(subcategory.slug)}
