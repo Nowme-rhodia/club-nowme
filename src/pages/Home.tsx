@@ -219,38 +219,3 @@ export function Home() {
     </div>
   );
 }
-
-// Animations (ajoute dans ton CSS global)
-const animations = `
-  @keyframes fade-in-down {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fade-in-up {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes slide-up {
-    from { opacity: 0; transform: translateY(50px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes bounce-slow {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  @keyframes subtle-zoom {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.05); }
-  }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  .animate-fade-in { animation: fade-in-down 1s ease-out; }
-  .animate-fade-in-up { animation: fade-in-up 1s ease-out; }
-  .animate-slide-up { animation: slide-up 0.8s ease-out; }
-  .animate-bounce-slow { animation: bounce-slow 2s infinite; }
-  .animate-subtle-zoom { animation: subtle-zoom 10s infinite alternate; }
-  .animate-pulse { animation: pulse 1.5s infinite; }
-`;
-// petit changement pour forcer le build Netlify
