@@ -1,6 +1,9 @@
+// --- FICHIER COMPLET : Home.tsx corrigé ---
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, MapPin, Users, Shield, Search, Star, ChevronRight } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { Sparkles, MapPin, ChevronRight } from 'lucide-react';
 import { SEO } from '../components/SEO';
 
 export function Home() {
@@ -11,6 +14,50 @@ export function Home() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const features = [
+    {
+      icon: 'Users',
+      title: 'Validé par des meufs comme toi',
+      description: 'Chaque événement, chaque partenaire : testé et approuvé par notre communauté premium.'
+    },
+    {
+      icon: 'Star',
+      title: 'Plus de 120€ de valeur',
+      description: 'Événements, box, masterclass, consultations : tout inclus pour 39,99€.'
+    },
+    {
+      icon: 'Shield',
+      title: 'Zéro stress, 100% liberté',
+      description: 'Teste à 12,99€, résilie en 1 clic, kiffe quand tu veux.'
+    },
+    {
+      icon: 'Search',
+      title: 'Communauté premium',
+      description: 'Masterclass, événements exclusifs, groupe privé : ta tribu t\'attend.'
+    }
+  ];
+
+  const testimonials = [
+    {
+      name: "Marie L.",
+      role: "Entrepreneuse",
+      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150",
+      quote: "Un apéro à 5 € qui m'a fait rire aux larmes. Nowme, c'est ma bouffée d'air !"
+    },
+    {
+      name: "Sophie D.",
+      role: "Maman active",
+      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
+      quote: "Enfin du temps pour moi sans culpabiliser. Les massages à -30%, un rêve !"
+    },
+    {
+      name: "Léa P.",
+      role: "Créative",
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150",
+      quote: "Un atelier poterie qui m'a reconnectée à moi-même. Merci Nowme !"
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-white">
@@ -54,165 +101,79 @@ export function Home() {
         </div>
       </div>
 
-      {/* Avantages Section */}
+      {/* Avantages */}
       <div className="py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-16 animate-fade-in">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-16">
             Pourquoi Nowme va changer ton quotidien
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                icon: Users,
-                title: "Validé par des meufs comme toi",
-                description: "Chaque événement, chaque partenaire : testé et approuvé par notre communauté premium."
-              },
-              {
-                icon: Star,
-                title: "Plus de 120€ de valeur",
-                description: "Événements, box, masterclass, consultations : tout inclus pour 39,99€."
-              },
-              {
-                icon: Shield,
-                title: "Zéro stress, 100% liberté",
-                description: "Teste à 12,99€, résilie en 1 clic, kiffe quand tu veux."
-              },
-              {
-                icon: Search,
-                title: "Communauté premium",
-                description: "Masterclass, événements exclusifs, groupe privé : ta tribu t'attend."
-              }
-            ].map((feature, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all animate-slide-up"
-                style={{ animationDelay: `${index * 0.2}s` }}
-              >
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-6">
-                  <feature.icon className="w-8 h-8 text-pink-500" />
+            {features.map((feature, index) => {
+              const Icon = LucideIcons[feature.icon];
+              return (
+                <div
+                  key={index}
+                  className="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all animate-slide-up"
+                  style={{ animationDelay: `${index * 0.2}s` }}
+                >
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-6">
+                    {Icon && <Icon className="w-8 h-8 text-pink-500" />}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
+                  <p className="text-gray-600">{feature.description}</p>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Categories Section */}
-      <div className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4 animate-fade-in">
-              Ton kiff, à ta façon
-            </h2>
-            <p className="text-xl text-gray-600 animate-fade-in-up">
-              Des expériences qui te parlent, prêtes à te faire vibrer
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { title: "Événements Premium", description: "Brunchs, masterclass, networking", image: "https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&q=80&w=800" },
-              { title: "Communauté", description: "Groupes privés, parrainage", image: "https://images.unsplash.com/photo-1543007630-9710e4a00a20?auto=format&fit=crop&q=80&w=800" },
-              { title: "Box & Surprises", description: "Produits bien-être, lifestyle", image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&q=80&w=800" },
-              { title: "Développement", description: "Coaching, consultations", image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800" },
-              { title: "Réductions", description: "Jusqu'à -70% chez nos partenaires", image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800" },
-              { title: "Conciergerie", description: "On s'occupe de tes réservations", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=80&w=800" },
-            ].map((category, index) => (
-              <Link
-                key={index}
-                to={`/tous-les-kiffs/${category.title.toLowerCase()}`}
-                className="group relative h-80 rounded-2xl overflow-hidden animate-slide-up"
-                style={{ animationDelay: `${index * 0.2}s` }}
-              >
-                <img src={category.image} alt={category.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
-                <div className="absolute inset-0 p-6 flex flex-col justify-end text-white">
-                  <h3 className="text-2xl font-bold mb-2">{category.title}</h3>
-                  <p className="text-white/90">{category.description}</p>
-                  <span className="mt-2 inline-block px-4 py-1 bg-pink-500 text-white rounded-full text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                    Découvre ça !
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Mission Section - Manifeste */}
-      <div className="py-24 bg-pink-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-8 animate-fade-in">
-            On dit stop au train-train, oui au kiff !
+      {/* CTA rapide */}
+      <div className="py-12 px-4 bg-yellow-50 border-t border-b border-yellow-200">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+            Rejoins les 500+ femmes qui ont décidé de kiffer
           </h2>
-          <p className="text-lg text-gray-600 mb-8 animate-fade-in-up">
-            Fini de courir après des miettes de bonheur entre deux corvées. Nowme, c'est la révolution des meufs qui veulent vivre, vibrer, et kiffer sans se justifier.
+          <p className="text-gray-700 text-lg mb-6">
+            Commence dès aujourd’hui. Sans engagement. Sans excuses.
           </p>
-          <p className="text-lg text-gray-600 font-semibold">
-            Une plateforme faite par nous, pour nous. Rejoins le mouvement !
-          </p>
+          <Link
+            to="/subscription"
+            className="inline-flex items-center px-6 py-3 bg-pink-500 text-white font-medium rounded-full hover:bg-pink-600 transition-all"
+          >
+            <ChevronRight className="w-5 h-5 mr-2" /> Je m’abonne
+          </Link>
         </div>
       </div>
 
-      {/* Testimonials */}
+      {/* Témoignages */}
       <div className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-16 animate-fade-in">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-16">
             Elles kiffent déjà, et toi ?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {[
-              { name: "Marie L.", role: "Entrepreneuse", image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150", quote: "Un apéro à 5 € qui m'a fait rire aux larmes. Nowme, c'est ma bouffée d'air !" },
-              { name: "Sophie D.", role: "Maman active", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150", quote: "Enfin du temps pour moi sans culpabiliser. Les massages à -30%, un rêve !" },
-              { name: "Léa P.", role: "Créative", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150", quote: "Un atelier poterie qui m'a reconnectée à moi-même. Merci Nowme !" },
-            ].map((testimonial, index) => (
+            {testimonials.map((t, i) => (
               <div
-                key={index}
+                key={i}
                 className="bg-pink-50 rounded-xl p-6 hover:shadow-lg transition-all animate-slide-up"
-                style={{ animationDelay: `${index * 0.2}s` }}
+                style={{ animationDelay: `${i * 0.2}s` }}
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <img src={testimonial.image} alt={testimonial.name} className="w-12 h-12 rounded-full object-cover" />
+                  <img src={t.image} alt={t.name} className="w-12 h-12 rounded-full object-cover" />
                   <div>
-                    <h3 className="font-semibold text-gray-900">{testimonial.name}</h3>
-                    <p className="text-sm text-gray-500">{testimonial.role}</p>
+                    <h3 className="font-semibold text-gray-900">{t.name}</h3>
+                    <p className="text-sm text-gray-500">{t.role}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />)}
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
                 </div>
-                <p className="text-gray-600 italic">"{testimonial.quote}"</p>
+                <p className="text-gray-600 italic">"{t.quote}"</p>
               </div>
             ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Final CTA */}
-      <div className="py-24 bg-pink-500 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-6 animate-fade-in">
-            Prête à rejoindre les pionnières du kiff ?
-          </h2>
-          <p className="text-xl mb-8 animate-fade-in-up">
-            Teste à 12,99€, puis accès premium complet à 39,99€. Plus de 120€ de valeur chaque mois !
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/subscription"
-              className="inline-flex items-center px-8 py-4 rounded-full bg-white text-pink-500 font-semibold hover:bg-gray-100 transform hover:scale-105 transition-all animate-bounce-slow"
-            >
-              <Sparkles className="w-5 h-5 mr-2" />
-              Je m'abonne maintenant
-            </Link>
-            <Link
-              to="/tous-les-kiffs"
-              className="inline-flex items-center px-8 py-4 rounded-full bg-pink-700 text-white font-semibold hover:bg-pink-800 transform hover:scale-105 transition-all"
-            >
-              <MapPin className="w-5 h-5 mr-2" />
-              Mes kiffs près de chez moi
-            </Link>
           </div>
         </div>
       </div>
