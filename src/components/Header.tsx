@@ -40,18 +40,19 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            {navigationItems.map((item) => (
-              item.requiresAuth && !user ? null : (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className="text-gray-700 hover:text-primary relative group transition-colors duration-200 font-medium"
-                >
-                  {item.name}
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200"></span>
-                </Link>
-              )
-            ))}
+            {Array.isArray(navigationItems) &&
+              navigationItems.map((item) =>
+                item.requiresAuth && !user ? null : (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className="text-gray-700 hover:text-primary relative group transition-colors duration-200 font-medium"
+                  >
+                    {item.name}
+                    <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-200"></span>
+                  </Link>
+                )
+              )}
           </nav>
 
           {/* CTA Button */}
@@ -106,18 +107,19 @@ export function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-100">
             <nav className="flex flex-col space-y-4">
-              {navigationItems.map((item) => (
-                item.requiresAuth && !user ? null : (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    className="text-gray-700 hover:text-primary px-2 py-1 rounded-md transition-colors duration-200 font-medium"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                )
-              ))}
+              {Array.isArray(navigationItems) &&
+                navigationItems.map((item) =>
+                  item.requiresAuth && !user ? null : (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      className="text-gray-700 hover:text-primary px-2 py-1 rounded-md transition-colors duration-200 font-medium"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  )
+                )}
               <Link
                 to="/subscription"
                 className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 transform hover:scale-105 w-full text-center active:scale-95"
