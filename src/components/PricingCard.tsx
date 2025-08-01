@@ -10,16 +10,18 @@ interface PricingCardProps {
 }
 
 export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
-  const totalValue = 185; // Valeur totale des services
+  const totalValue = 185;
   const savings = tier.id === 'yearly' ? YEARLY_SAVINGS.savings : 0;
 
   return (
-    <div className={`
-      relative bg-white rounded-2xl shadow-lg p-8 transition-all duration-300
-      ${tier.highlighted ? 'border-2 border-primary scale-105' : 'border border-gray-200'}
-      ${isCurrentPlan ? 'ring-2 ring-primary ring-opacity-50' : ''}
-      hover:shadow-xl hover:-translate-y-1
-    `}>
+    <div
+      className={`
+        relative bg-white rounded-2xl shadow-lg p-8 transition-all duration-300
+        ${tier.highlighted ? 'border-2 border-primary scale-105' : 'border border-gray-200'}
+        ${isCurrentPlan ? 'ring-2 ring-primary ring-opacity-50' : ''}
+        hover:shadow-xl hover:-translate-y-1
+      `}
+    >
       {tier.highlighted && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
           <span className="px-4 py-1 bg-gradient-to-r from-primary to-secondary text-white rounded-full text-sm font-bold">
@@ -46,7 +48,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
           <span className="text-4xl font-bold text-gray-900">{tier.price}€</span>
           <span className="text-gray-500 ml-2">/{tier.period}</span>
         </div>
-        
+
         {tier.id === 'monthly' && (
           <div className="mt-2 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-700 font-semibold">
@@ -74,12 +76,13 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
       </div>
 
       <ul className="space-y-3 mb-8">
-        {tier.features.map((feature, index) => (
-          <li key={index} className="flex items-start">
-            <Check className="w-5 h-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
-            <span className="text-gray-700 text-sm">{feature}</span>
-          </li>
-        ))}
+        {Array.isArray(tier.features) &&
+          tier.features.map((feature, index) => (
+            <li key={index} className="flex items-start">
+              <Check className="w-5 h-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+              <span className="text-gray-700 text-sm">{feature}</span>
+            </li>
+          ))}
       </ul>
 
       <div className="space-y-3">
@@ -94,8 +97,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
               block w-full px-6 py-3 rounded-full font-semibold text-center transition-all
               ${tier.highlighted
                 ? 'bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg'
-                : 'bg-primary text-white hover:bg-primary-dark'
-              }
+                : 'bg-primary text-white hover:bg-primary-dark'}
             `}
           >
             {tier.id === 'monthly' ? (
@@ -111,7 +113,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
             )}
           </Link>
         )}
-        
+
         <p className="text-center text-xs text-gray-500">
           Sans engagement • Résiliation en 1 clic
         </p>
