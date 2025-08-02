@@ -56,6 +56,18 @@ Deno.serve(async (req) => {
       role: null, // Champ obligatoire pour éviter l'erreur CASE
     };
 
+    // Juste avant l'insertion
+
+console
+.log(
+'📥 Données envoyées à Supabase :'
+, 
+JSON
+.stringify(eventData, 
+null
+, 
+2
+));
     // Insérer l'événement dans la base de données
     const { data: webhookEvent, error: insertError } = await supabase
       .from('stripe_webhook_events')
