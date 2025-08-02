@@ -6,7 +6,7 @@ import * as LucideIcons from 'lucide-react';
 import { Sparkles, MapPin, ChevronRight, Star } from 'lucide-react';
 import { SEO } from '../components/SEO';
 
-export function Home() {
+export default function Home() {
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {

@@ -11,7 +11,7 @@ import { PrivateRoute } from './components/PrivateRoute';
 import { LoadingFallback } from './components/LoadingFallback';
 
 // Lazy load pages
-const Home = React.lazy(() => import('./pages/Home'));
+const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home || module.default })));
 const Categories = React.lazy(() => import('./pages/Categories'));
 const TousLesKiffs = React.lazy(() => import('./pages/TousLesKiffs'));
 const OfferPage = React.lazy(() => import('./pages/OfferPage'));
