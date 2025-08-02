@@ -70,6 +70,7 @@ function App() {
                   <Route path="/soumettre-offre" element={<SubmitOffer />} />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
                   <Route path="/community-space" element={<CommunitySpace />} />
+                  <Route path="/communaute" element={<Communaute />} />
 
                   {/* Auth routes */}
                   <Route path="/auth/signin" element={<SignIn />} />
