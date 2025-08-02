@@ -16,6 +16,7 @@ const Categories = React.lazy(() => import('./pages/Categories'));
 const TousLesKiffs = React.lazy(() => import('./pages/TousLesKiffs'));
 const OfferPage = React.lazy(() => import('./pages/OfferPage'));
 const Subscription = React.lazy(() => import('./pages/Subscription'));
+const Communaute = React.lazy(() => import('./pages/Community'));
 const SubscriptionSuccess = React.lazy(() => import('./pages/SubscriptionSuccess'));
 const Account = React.lazy(() => import('./pages/Account'));
 const QRCode = React.lazy(() => import('./pages/account/QRCode'));
