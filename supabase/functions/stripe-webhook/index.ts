@@ -38,8 +38,10 @@ Deno.serve(async (req) => {
     
     // Vérifier que c'est bien un événement Stripe valide
     if (!event.id || !event.type || !event.data || !event.data.object) {
-      console.error('❌ Format d'événement Stripe invalide');
-      return new Response('Format d'événement Stripe invalide', { status: 400 });
+      console.error('❌ Format d\'événement Stripe invalide');
+      )
+      return new Response('Format d\'événement Stripe invalide', { status: 400 });
+      )
     }
 
     // Préparer les données pour l'insertion
