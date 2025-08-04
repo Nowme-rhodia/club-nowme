@@ -20,7 +20,9 @@
     "stripe:listen": "stripe listen --forward-to https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/stripe-webhook",
     "stripe:test": "stripe trigger checkout.session.completed",
     "webhook:test": "node scripts/stripe-webhook-test.js webhook",
-    "webhook:cleanup": "node scripts/stripe-webhook-test.js cleanup"
+    "webhook:cleanup": "node scripts/stripe-webhook-test.js cleanup",
+    "webhook:debug": "node scripts/debug-webhook.js debug",
+    "webhook:watch": "node scripts/debug-webhook.js watch"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",
