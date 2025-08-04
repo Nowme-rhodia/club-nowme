@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Événement enregistré: ${webhookEvent.id}`);
 
-    // Traiter l'événement
+    // Traiter l'événement directement (sans fonctions SQL)
     try {
       let result = { success: true, message: 'Événement traité' };
 
@@ -189,38 +189,6 @@ Deno.serve(async (req) => {
   }
 });
 
-async function handleInvoicePaymentSucceeded(invoice) {
-  console.log('💳 Traitement invoice.payment_succeeded');
-  
-  try {
-    const email = invoice.customer_email;
-    if (!email) {
-      console.log('⚠️ Pas d\'email dans la facture');
-      return { success: true, message: 'Facture sans email, ignorée' };
-    }
-
-    // Mettre à jour le statut de paiement
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'active',
-        subscription_updated_at: new Date().toISOString()
-      })
-      .eq('email', email);
-
-    if (error) {
-      console.error('❌ Erreur mise à jour paiement:', error.message);
-      return { success: false, message: `Erreur mise à jour: ${error.message}` };
-    }
-
-    console.log('✅ Paiement confirmé pour:', email);
-    return { success: true, message: `Paiement confirmé pour ${email}` };
-  } catch (error) {
-    console.error('❌ Erreur handleInvoicePaymentSucceeded:', error.message);
-    return { success: false, message: error.message };
-  }
-}
-
 async function handleCheckoutCompleted(session) {
   console.log('🎉 Traitement checkout.session.completed');
   
@@ -243,9 +211,14 @@ async function handleCheckoutCompleted(session) {
       throw new Error(`Erreur recherche utilisateur: ${userError.message}`);
     }
 
-    // Déterminer le type d'abonnement
-    const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
-                           session.amount_total === 1299 ? 'discovery' : 'monthly';
+    // Déterminer le type d'abonnement basé sur le montant
+    let subscriptionType = 'monthly';
+    if (session.amount_total === 39900) { // 399€
+      subscriptionType = 'yearly';
+    } else if (session.amount_total === 1299) { // 12,99€ avec code KIFFE
+      subscriptionType = 'discovery';
+    }
+
     console.log(`💰 Type abonnement détecté: ${subscriptionType} (${session.amount_total})`);
 
     if (existingUser) {
@@ -314,6 +287,38 @@ async function handleCheckoutCompleted(session) {
     }
   } catch (error) {
     console.error('❌ Erreur handleCheckoutCompleted:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+async function handleInvoicePaymentSucceeded(invoice) {
+  console.log('💳 Traitement invoice.payment_succeeded');
+  
+  try {
+    const email = invoice.customer_email;
+    if (!email) {
+      console.log('⚠️ Pas d\'email dans la facture');
+      return { success: true, message: 'Facture sans email, ignorée' };
+    }
+
+    // Mettre à jour le statut de paiement
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({
+        subscription_status: 'active',
+        subscription_updated_at: new Date().toISOString()
+      })
+      .eq('email', email);
+
+    if (error) {
+      console.error('❌ Erreur mise à jour paiement:', error.message);
+      return { success: false, message: `Erreur mise à jour: ${error.message}` };
+    }
+
+    console.log('✅ Paiement confirmé pour:', email);
+    return { success: true, message: `Paiement confirmé pour ${email}` };
+  } catch (error) {
+    console.error('❌ Erreur handleInvoicePaymentSucceeded:', error.message);
     return { success: false, message: error.message };
   }
 }
