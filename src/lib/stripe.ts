@@ -5,8 +5,8 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
 
 // Prix Stripe - PRODUCTION
 export const STRIPE_PRICES = {
-  monthly: 'price_1RqkgvDaQ8XsywAvq2A06dT7',  // Prix mensuel réel
-  yearly: 'price_1RqkrQDaQ8XsywAvahFQAwMA',   // Prix annuel réel
+  monthly: 'price_1AqKgvDaQ8XsywAvq2A06dT7',  // À remplacer par votre vrai prix
+  yearly: 'price_1AqKrQDaQ8XsywAvahFQAwMA',   // À remplacer par votre vrai prix
 };
 
 export const createCheckoutSession = async (planType: 'monthly' | 'yearly', userEmail?: string) => {

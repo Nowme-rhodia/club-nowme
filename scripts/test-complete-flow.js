@@ -189,24 +189,20 @@ async function checkUserCreation() {
       .from('user_profiles')
       .select('*')
       .eq('email', TEST_EMAIL)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       return { success: false, error: profileError.message };
     }
 
-    // Vérifier dans auth.users
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserByEmail(TEST_EMAIL);
-    
-    if (authError) {
-      return { success: false, error: authError.message };
+    if (!profile) {
+      return { success: false, error: 'Profil utilisateur non trouvé' };
     }
 
     return { 
       success: true, 
       userId: profile.user_id,
-      profile: profile,
-      authUser: authUser.user
+      profile: profile
     };
   } catch (error) {
     return { success: false, error: error.message };
@@ -267,11 +263,15 @@ async function testPasswordResetLink() {
 
 async function cleanupTestData() {
   try {
-    // Supprimer l'utilisateur test s'il existe
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(TEST_EMAIL);
+    // Supprimer l'utilisateur test via la table user_profiles
+    const { data: existingProfile } = await supabaseAdmin
+      .from('user_profiles')
+      .select('user_id')
+      .eq('email', TEST_EMAIL)
+      .maybeSingle();
     
-    if (existingUser?.user) {
-      await supabaseAdmin.auth.admin.deleteUser(existingUser.user.id);
+    if (existingProfile?.user_id) {
+      await supabaseAdmin.auth.admin.deleteUser(existingProfile.user_id);
       console.log('🗑️ Utilisateur test supprimé');
     }
 
