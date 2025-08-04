@@ -111,7 +111,7 @@ async function createTestCheckoutSession() {
           'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          priceId: 'price_1RqkgvDaQ8XsywAvq2A06dT7', // Prix mensuel
+          priceId: 'price_1RqkgvDaQ8XsywAvq2A06dT7', // Prix mensuel 39,99€
           planType: 'monthly',
           email: TEST_EMAIL,
           success_url: 'https://club.nowme.fr/subscription-success?session_id={CHECKOUT_SESSION_ID}',
@@ -148,7 +148,7 @@ async function simulateCheckoutWebhook(sessionId) {
             name: 'Test User'
           },
           subscription: 'sub_test_' + Date.now(),
-          amount_total: 2700, // 27€ avec code KIFFE
+          amount_total: 1299, // 12,99€ avec code KIFFE
           metadata: {
             plan_type: 'monthly'
           }

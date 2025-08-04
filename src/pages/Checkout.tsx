@@ -26,30 +26,9 @@ export default function Checkout() {
   const handleCheckout = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-stripe-session`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${profile?.access_token}`,
-          },
-          body: JSON.stringify({
-            email: profile?.email,
-            plan: selectedPlan,
-            success_url: \`\${window.location.origin}/subscription-success\`,
-            cancel_url: \`\${window.location.origin}/subscription\`,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Erreur lors de la création de la session Stripe');
-      }
-
-      const { sessionId } = await response.json();
-      const stripe = await import('@stripe/stripe-js').then(m => m.loadStripe(import.meta.env.STRIPE_PUBLISHABLE_KEY!));
-      await stripe?.redirectToCheckout({ sessionId });
+      // Utiliser la fonction createCheckoutSession
+      const { createCheckoutSession } = await import('../lib/stripe');
+      await createCheckoutSession(selectedPlan as 'monthly' | 'yearly', profile?.email);
     } catch (error) {
       console.error('Erreur checkout:', error);
       toast.error('Erreur lors de la redirection vers le paiement');

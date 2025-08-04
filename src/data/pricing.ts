@@ -28,12 +28,12 @@ export interface ServiceOffering {
 export const PRICING_TIERS: PricingTier[] = [
   {
     id: 'monthly',
-    name: 'Mensuel avec code KIFFE',
-    price: 27,
+    name: 'Plan Découverte',
+    price: 12.99,
     originalPrice: 39.99,
     period: '1er mois, puis 39,99€/mois',
-    description: 'Économise 13€ sur ton premier mois avec le code KIFFE',
-    stripePriceId: 'price_monthly_kiffe',
+    description: 'Premier mois à 12,99€ avec le code KIFFE (-27€)',
+    stripePriceId: 'price_1RqkgvDaQ8XsywAvq2A06dT7',
     promoCode: 'KIFFE',
     features: [
       'Accès complet à tous les services dès le 1er mois',
@@ -58,7 +58,7 @@ export const PRICING_TIERS: PricingTier[] = [
     period: 'par an',
     description: 'Presque 2 mois OFFERTS + bonus exclusifs',
     highlighted: true,
-    stripePriceId: 'price_yearly_399',
+    stripePriceId: 'price_1RqkrQDaQ8XsywAvahFQAwMA',
     bonusValue: 100,
     features: [
       'Tout du plan mensuel inclus',

@@ -244,7 +244,8 @@ async function handleCheckoutCompleted(session) {
     }
 
     // Déterminer le type d'abonnement
-    const subscriptionType = session.amount_total === 39900 ? 'yearly' : 'monthly';
+    const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
+                           session.amount_total === 1299 ? 'discovery' : 'monthly';
     console.log(`💰 Type abonnement détecté: ${subscriptionType} (${session.amount_total})`);
 
     if (existingUser) {

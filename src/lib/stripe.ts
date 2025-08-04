@@ -3,10 +3,10 @@ import { loadStripe } from '@stripe/stripe-js';
 // Initialiser Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
 
-// Prix Stripe - PRODUCTION
+// Prix Stripe - PRODUCTION (vrais Price IDs)
 export const STRIPE_PRICES = {
-  monthly: 'price_1AqKgvDaQ8XsywAvq2A06dT7',  // À remplacer par votre vrai prix
-  yearly: 'price_1AqKrQDaQ8XsywAvahFQAwMA',   // À remplacer par votre vrai prix
+  monthly: 'price_1RqkgvDaQ8XsywAvq2A06dT7',  // 39,99€/mois
+  yearly: 'price_1RqkrQDaQ8XsywAvahFQAwMA',   // 399€/an
 };
 
 export const createCheckoutSession = async (planType: 'monthly' | 'yearly', userEmail?: string) => {
