@@ -148,13 +148,13 @@ export default function Checkout() {
           <button
             onClick={handleCheckout}
             disabled={loading}
-            className={\`
+            className={`
               w-full px-8 py-4 rounded-full font-bold text-lg transition-all
-              \${loading
+              ${loading
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg transform hover:scale-105'
               }
-            \`}
+            `}
           >
             {loading ? (
               <div className="flex items-center justify-center">
