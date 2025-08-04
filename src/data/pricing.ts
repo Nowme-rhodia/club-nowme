@@ -1,5 +1,6 @@
 // Configuration des prix et offres Nowme Club
 
+// Force sync with GitHub - timestamp: 2025-01-04
 export interface PricingTier {
   id: string;
   name: string;
