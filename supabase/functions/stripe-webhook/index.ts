@@ -207,7 +207,8 @@ async function handleCheckoutCompleted(session) {
       .eq('email', email)
       .maybeSingle();
 
-    if (userError && userError.code !== 'PGRST116') {
+    if (userError) {
+      console.error('❌ Erreur recherche utilisateur:', userError);
       throw new Error(`Erreur recherche utilisateur: ${userError.message}`);
     }
 
@@ -236,6 +237,7 @@ async function handleCheckoutCompleted(session) {
         .eq('id', existingUser.id);
 
       if (updateError) {
+        console.error('❌ Erreur mise à jour profil:', updateError);
         throw new Error(`Erreur mise à jour: ${updateError.message}`);
       }
 
@@ -255,6 +257,7 @@ async function handleCheckoutCompleted(session) {
       });
 
       if (authError || !authUser.user) {
+        console.error('❌ Erreur création auth:', authError);
         throw new Error(`Erreur création auth: ${authError?.message}`);
       }
 
@@ -264,6 +267,7 @@ async function handleCheckoutCompleted(session) {
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
+          id: crypto.randomUUID(),
           user_id: authUser.user.id,
           email,
           stripe_customer_id: session.customer,
@@ -275,13 +279,18 @@ async function handleCheckoutCompleted(session) {
         });
 
       if (profileError) {
+        console.error('❌ Erreur création profil:', profileError);
         throw new Error(`Erreur création profil: ${profileError.message}`);
       }
 
       console.log('✅ Profil créé');
 
-      // Envoyer email d'invitation
-      await sendWelcomeEmail(email);
+      // Envoyer email d'invitation (sans faire échouer si erreur)
+      try {
+        await sendWelcomeEmail(email);
+      } catch (emailError) {
+        console.error('⚠️ Erreur email (non bloquante):', emailError.message);
+      }
 
       return { success: true, message: `Nouvel utilisateur créé: ${authUser.user.id}` };
     }
