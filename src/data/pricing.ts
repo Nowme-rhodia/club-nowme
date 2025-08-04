@@ -33,7 +33,7 @@ export const PRICING_TIERS: PricingTier[] = [
     originalPrice: 39.99,
     period: '1er mois, puis 39,99€/mois',
     description: 'Premier mois à 12,99€ avec le code KIFFE (-27€)',
-    stripePriceId: 'price_1RqkgvDaQ8XsywAvq2A06dT7',
+    stripePriceId: 'price_1RqraiDaQ8XsywAvAAmxoAFW',
     promoCode: 'KIFFE',
     features: [
       'Accès complet à tous les services dès le 1er mois',
@@ -58,7 +58,7 @@ export const PRICING_TIERS: PricingTier[] = [
     period: 'par an',
     description: 'Presque 2 mois OFFERTS + bonus exclusifs',
     highlighted: true,
-    stripePriceId: 'price_1RqkrQDaQ8XsywAvahFQAwMA',
+    stripePriceId: 'price_1Rqrb6DaQ8XsywAvvF8fsaJi',
     bonusValue: 100,
     features: [
       'Tout du plan mensuel inclus',

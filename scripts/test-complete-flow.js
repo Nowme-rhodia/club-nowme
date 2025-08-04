@@ -111,7 +111,7 @@ async function createTestCheckoutSession() {
           'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          priceId: 'price_1RqkgvDaQ8XsywAvq2A06dT7', // Prix mensuel 39,99€
+          priceId: 'price_1RqraiDaQ8XsywAvAAmxoAFW', // Prix mensuel test
           planType: 'monthly',
           email: TEST_EMAIL,
           success_url: 'https://club.nowme.fr/subscription-success?session_id={CHECKOUT_SESSION_ID}',
