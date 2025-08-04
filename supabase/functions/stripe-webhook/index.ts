@@ -134,6 +134,9 @@ Deno.serve(async (req) => {
         case 'checkout.session.completed':
           result = await handleCheckoutCompleted(event.data.object);
           break;
+        case 'invoice.payment_succeeded':
+          result = await handleInvoicePaymentSucceeded(event.data.object);
+          break;
         case 'customer.subscription.updated':
           result = await handleSubscriptionUpdated(event.data.object);
           break;
@@ -144,7 +147,8 @@ Deno.serve(async (req) => {
           result = await handlePaymentFailed(event.data.object);
           break;
         default:
-          console.log(`ℹ️ Événement non géré: ${event.type}`);
+          console.log(`ℹ️ Événement non géré mais enregistré: ${event.type}`);
+          result = { success: true, message: `Événement ${event.type} enregistré` };
       }
 
       // Marquer comme complété
@@ -184,6 +188,38 @@ Deno.serve(async (req) => {
     return new Response(`Erreur: ${err.message}`, { status: 500 });
   }
 });
+
+async function handleInvoicePaymentSucceeded(invoice) {
+  console.log('💳 Traitement invoice.payment_succeeded');
+  
+  try {
+    const email = invoice.customer_email;
+    if (!email) {
+      console.log('⚠️ Pas d\'email dans la facture');
+      return { success: true, message: 'Facture sans email, ignorée' };
+    }
+
+    // Mettre à jour le statut de paiement
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({
+        subscription_status: 'active',
+        subscription_updated_at: new Date().toISOString()
+      })
+      .eq('email', email);
+
+    if (error) {
+      console.error('❌ Erreur mise à jour paiement:', error.message);
+      return { success: false, message: `Erreur mise à jour: ${error.message}` };
+    }
+
+    console.log('✅ Paiement confirmé pour:', email);
+    return { success: true, message: `Paiement confirmé pour ${email}` };
+  } catch (error) {
+    console.error('❌ Erreur handleInvoicePaymentSucceeded:', error.message);
+    return { success: false, message: error.message };
+  }
+}
 
 async function handleCheckoutCompleted(session) {
   console.log('🎉 Traitement checkout.session.completed');

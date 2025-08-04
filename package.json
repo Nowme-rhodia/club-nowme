@@ -22,7 +22,8 @@
     "webhook:test": "node scripts/stripe-webhook-test.js webhook",
     "webhook:cleanup": "node scripts/stripe-webhook-test.js cleanup",
     "webhook:debug": "node scripts/debug-webhook.js debug",
-    "webhook:watch": "node scripts/debug-webhook.js watch"
+    "webhook:watch": "node scripts/debug-webhook.js watch",
+    "test:complete-flow": "node scripts/test-complete-flow.js"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",
