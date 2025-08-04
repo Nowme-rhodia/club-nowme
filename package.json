@@ -15,7 +15,12 @@
     "db:push": "node scripts/db-migrate.js --push",
     "db:list": "node scripts/db-migrate.js --list",
     "db:reset": "node scripts/db-migrate.js --reset",
-    "migrate": "node scripts/db-migrate.js"
+    "migrate": "node scripts/db-migrate.js",
+    "test:stripe": "node scripts/test-stripe-flow.js",
+    "stripe:listen": "stripe listen --forward-to https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/stripe-webhook",
+    "stripe:test": "stripe trigger checkout.session.completed",
+    "webhook:test": "node scripts/stripe-webhook-test.js webhook",
+    "webhook:cleanup": "node scripts/stripe-webhook-test.js cleanup"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",

@@ -5,7 +5,6 @@ const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const resendApiKey = Deno.env.get('RESEND_API_KEY') || '';
 
 const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2023-10-16',
@@ -14,363 +13,343 @@ const stripe = new Stripe(stripeSecretKey, {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Approche alternative: Utiliser directement le corps de la requête sans vérification de signature
-// Nous allons nous fier à la sécurité de l'environnement Supabase Edge Functions
 Deno.serve(async (req) => {
+  console.log('🎯 Webhook Stripe reçu');
+
   try {
     if (req.method !== 'POST') {
       return new Response('Méthode non autorisée', { status: 405 });
     }
 
-    // Récupérer le corps de la requête en tant que texte
     const rawBody = await req.text();
-    console.log(`📦 Longueur du corps reçu: ${rawBody.length} caractères`);
-    
-    // Analyser le corps JSON manuellement
+    const signature = req.headers.get('stripe-signature');
+
     let event;
-    try {
-      event = JSON.parse(rawBody);
-      console.log(`✅ Événement Stripe analysé: ${event.type} (ID: ${event.id})`);
-    } catch (err) {
-      console.error(`❌ Erreur d'analyse JSON: ${err.message}`);
-      return new Response(`Erreur d'analyse JSON: ${err.message}`, { status: 400 });
-    }
     
-    // Vérifier que c'est bien un événement Stripe valide
-    if (!event.id || !event.type || !event.data || !event.data.object) {
-      console.error('❌ Format d\'événement Stripe invalide');
-      return new Response('Format d\'événement Stripe invalide', { status: 400 });
+    // Vérifier la signature si configurée
+    if (stripeWebhookSecret && signature) {
+      try {
+        event = stripe.webhooks.constructEvent(rawBody, signature, stripeWebhookSecret);
+        console.log('✅ Signature vérifiée');
+      } catch (err) {
+        console.error('❌ Signature invalide:', err.message);
+        return new Response(`Signature invalide: ${err.message}`, { status: 400 });
+      }
+    } else {
+      // Mode développement sans vérification de signature
+      try {
+        event = JSON.parse(rawBody);
+        console.log('⚠️ Mode dev - signature non vérifiée');
+      } catch (err) {
+        console.error('❌ JSON invalide:', err.message);
+        return new Response(`JSON invalide: ${err.message}`, { status: 400 });
+      }
     }
 
-    // Préparer les données pour l'insertion
-    const eventData = {
-      stripe_event_id: event.id,
-      event_type: event.type,
-      customer_id: event.data.object.customer || null,
-      customer_email: event.data.object.customer_email || 
-                     (event.data.object.customer_details ? event.data.object.customer_details.email : null),
-      subscription_id: event.data.object.subscription || null,
-      amount: event.data.object.amount_total || event.data.object.amount || null,
-      status: 'pending',
-      raw_event: event,
-      role: null, // Champ obligatoire pour éviter l'erreur CASE
-    };
+    console.log(`📦 Événement: ${event.type} (${event.id})`);
 
-    // Juste avant l'insertion
-
-console
-.log(
-'📥 Données envoyées à Supabase :'
-, 
-JSON
-.stringify(eventData, 
-null
-, 
-2
-));
-    // Insérer l'événement dans la base de données
+    // Enregistrer l'événement
     const { data: webhookEvent, error: insertError } = await supabase
       .from('stripe_webhook_events')
-      .insert(eventData)
+      .insert({
+        stripe_event_id: event.id,
+        event_type: event.type,
+        customer_id: event.data.object.customer || null,
+        customer_email: event.data.object.customer_email || 
+                       event.data.object.customer_details?.email || null,
+        subscription_id: event.data.object.subscription || null,
+        amount: event.data.object.amount_total || event.data.object.amount || null,
+        status: 'processing',
+        raw_event: event,
+        role: 'webhook'
+      })
       .select('id')
       .single();
 
     if (insertError) {
-      console.error(`❌ Erreur insertion événement webhook: ${insertError.message}`);
-      return new Response(`Erreur insertion événement webhook: ${insertError.message}`, { status: 500 });
+      console.error('❌ Erreur enregistrement:', insertError.message);
+      return new Response(`Erreur DB: ${insertError.message}`, { status: 500 });
     }
 
-    console.log(`✅ Événement ${event.id} enregistré avec succès (ID: ${webhookEvent.id})`);
+    console.log(`💾 Événement enregistré: ${webhookEvent.id}`);
 
-    // Traiter l'événement selon son type
+    // Traiter l'événement
     try {
       switch (event.type) {
         case 'checkout.session.completed':
-          await handleCheckoutSessionCompleted(event.data.object);
+          await handleCheckoutCompleted(event.data.object);
           break;
-        case 'customer.subscription.created':
         case 'customer.subscription.updated':
-          await handleSubscriptionChange(event.data.object);
+          await handleSubscriptionUpdated(event.data.object);
           break;
         case 'customer.subscription.deleted':
-          await handleSubscriptionCancelled(event.data.object);
+          await handleSubscriptionDeleted(event.data.object);
           break;
         case 'invoice.payment_failed':
           await handlePaymentFailed(event.data.object);
           break;
         default:
-          console.log(`ℹ️ Type d'événement non géré: ${event.type}`);
-          break;
+          console.log(`ℹ️ Événement non géré: ${event.type}`);
       }
+
+      // Marquer comme complété
+      await supabase
+        .from('stripe_webhook_events')
+        .update({ status: 'completed' })
+        .eq('id', webhookEvent.id);
+
+      console.log('✅ Traitement terminé');
+
     } catch (err) {
-      console.error(`❌ Erreur lors du traitement de l'événement: ${err.message}`);
+      console.error('❌ Erreur traitement:', err.message);
       
-      // Mettre à jour le statut de l'événement en cas d'erreur
       await supabase
         .from('stripe_webhook_events')
         .update({ 
-          status: 'error',
+          status: 'failed',
           error: err.message
         })
         .eq('id', webhookEvent.id);
-        
-      // On continue pour renvoyer une réponse 200 à Stripe
     }
 
-    // Mettre à jour le statut de l'événement
-    await supabase
-      .from('stripe_webhook_events')
-      .update({ status: 'completed' })
-      .eq('id', webhookEvent.id);
-
-    console.log(`✅ Traitement de l'événement ${event.id} terminé`);
-
-    // Toujours renvoyer 200 à Stripe pour éviter les retentatives
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
+
   } catch (err) {
-    console.error(`❌ Erreur non gérée: ${err.message}`);
-    return new Response(`Erreur interne: ${err.message}`, { status: 500 });
+    console.error('❌ Erreur globale:', err.message);
+    return new Response(`Erreur: ${err.message}`, { status: 500 });
   }
 });
 
-async function handleCheckoutSessionCompleted(session) {
-  try {
-    console.log(`🔄 Traitement checkout.session.completed`);
-    
-    // Extraire l'email de différentes sources possibles
-    const email = session.customer_email || 
-                 (session.customer_details ? session.customer_details.email : null);
-                 
-    if (!email) {
-      console.error('❌ Email manquant dans la session checkout');
-      return;
-    }
-    
-    console.log(`📧 Email client: ${email}`);
-    
-    const customerId = session.customer;
-    const subscriptionId = session.subscription;
+async function handleCheckoutCompleted(session: any) {
+  console.log('🎉 Checkout complété');
+  
+  const email = session.customer_email || session.customer_details?.email;
+  if (!email) {
+    throw new Error('Email manquant dans la session');
+  }
 
-    // Vérifier si l'utilisateur existe déjà
-    const { data: existingUser, error: userError } = await supabase
+  console.log(`📧 Email client: ${email}`);
+
+  // Vérifier si l'utilisateur existe
+  const { data: existingUser } = await supabase
+    .from('user_profiles')
+    .select('id, user_id')
+    .eq('email', email)
+    .single();
+
+  if (existingUser) {
+    console.log('👤 Utilisateur existant, mise à jour');
+    
+    // Mettre à jour le profil existant
+    const { error } = await supabase
       .from('user_profiles')
-      .select('id')
-      .eq('email', email)
-      .single();
-      
-    if (userError && !userError.message.includes('No rows found')) {
-      console.error(`❌ Erreur recherche utilisateur: ${userError.message}`);
-      return;
+      .update({
+        stripe_customer_id: session.customer,
+        stripe_subscription_id: session.subscription,
+        subscription_status: 'active',
+        subscription_type: session.metadata?.plan_type || 'monthly',
+        subscription_updated_at: new Date().toISOString()
+      })
+      .eq('id', existingUser.id);
+
+    if (error) throw error;
+    
+  } else {
+    console.log('➕ Nouvel utilisateur, création complète');
+    
+    // Créer l'utilisateur auth
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        created_via: 'stripe_checkout',
+        plan_type: session.metadata?.plan_type || 'monthly'
+      }
+    });
+
+    if (authError || !authUser.user) {
+      throw new Error(`Erreur création auth: ${authError?.message}`);
     }
 
-    if (!existingUser) {
-      console.log(`➕ Création d'un nouvel utilisateur pour ${email}`);
-      
-      // Créer un utilisateur dans auth.users
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        email_confirm: true,
-      });
-      
-      if (authError || !authUser.user?.id) {
-        console.error(`❌ Erreur création utilisateur auth: ${authError?.message}`);
-        return;
-      }
-      
-      console.log(`✅ Utilisateur auth créé: ${authUser.user.id}`);
+    console.log(`✅ Utilisateur auth créé: ${authUser.user.id}`);
 
-      // Créer le profil utilisateur
-      const { error: profileError } = await supabase.from('user_profiles').insert({
+    // Créer le profil
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
         user_id: authUser.user.id,
         email,
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
+        stripe_customer_id: session.customer,
+        stripe_subscription_id: session.subscription,
         subscription_status: 'active',
-        subscription_type: session.metadata?.plan || 'monthly',
+        subscription_type: session.metadata?.plan_type || 'monthly'
       });
-      
-      if (profileError) {
-        console.error(`❌ Erreur création profil: ${profileError.message}`);
-        return;
-      }
-      
-      console.log(`✅ Profil utilisateur créé pour ${email}`);
 
-      // Générer un lien de création de mot de passe
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: 'signup',
-        email,
-        options: { redirectTo: 'https://club.nowme.fr/auth/update-password' },
-      });
-      
-      if (linkError) {
-        console.error(`❌ Erreur génération lien: ${linkError.message}`);
-        return;
-      }
-
-      const confirmationUrl = linkData?.properties?.action_link;
-      if (confirmationUrl) {
-        console.log(`📧 Envoi email de bienvenue à ${email}`);
-        
-        // Envoyer l'email avec Resend
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'Nowme <contact@nowme.fr>',
-            to: email,
-            subject: 'Bienvenue sur Nowme ✨ Crée ton mot de passe',
-            html: `<p>Bienvenue dans la communauté Nowme 💃</p>
-                   <p>Tu peux créer ton mot de passe ici 👇</p>
-                   <p><a href="${confirmationUrl}">${confirmationUrl}</a></p>`,
-          }),
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`❌ Erreur envoi email: ${errorText}`);
-        } else {
-          console.log(`✅ Email de bienvenue envoyé à ${email}`);
-        }
-      }
-    } else {
-      console.log(`🔄 Mise à jour de l'utilisateur existant pour ${email}`);
-      
-      // Mettre à jour le profil existant
-      const { error: updateError } = await supabase.from('user_profiles').update({
-        stripe_customer_id: customerId,
-        stripe_subscription_id: subscriptionId,
-        subscription_status: 'active',
-        subscription_updated_at: new Date().toISOString(),
-      }).eq('id', existingUser.id);
-      
-      if (updateError) {
-        console.error(`❌ Erreur mise à jour profil: ${updateError.message}`);
-        return;
-      }
-      
-      console.log(`✅ Profil utilisateur mis à jour pour ${email}`);
+    if (profileError) {
+      throw new Error(`Erreur création profil: ${profileError.message}`);
     }
-  } catch (err) {
-    console.error(`❌ Erreur dans handleCheckoutSessionCompleted: ${err.message}`);
-    throw err; // Propager l'erreur pour la journalisation
+
+    console.log('✅ Profil créé');
+
+    // Envoyer email d'invitation
+    await sendWelcomeEmail(email, authUser.user.id);
   }
 }
 
-async function handleSubscriptionChange(subscription) {
-  try {
-    console.log(`🔄 Traitement changement d'abonnement pour customer ${subscription.customer}`);
-    
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('stripe_customer_id', subscription.customer)
-      .single();
-      
-    if (error) {
-      console.error(`❌ Erreur recherche profil: ${error.message}`);
-      return;
-    }
-    
-    if (!profile) {
-      console.log(`⚠️ Aucun profil trouvé pour customer ${subscription.customer}`);
-      return;
-    }
-    
-    const { error: updateError } = await supabase.from('user_profiles').update({
-      stripe_subscription_id: subscription.id,
-      subscription_status: subscription.status,
-      subscription_updated_at: new Date().toISOString(),
-    }).eq('id', profile.id);
-    
-    if (updateError) {
-      console.error(`❌ Erreur mise à jour profil: ${updateError.message}`);
-      return;
-    }
-    
-    console.log(`✅ Statut d'abonnement mis à jour pour profil ${profile.id}`);
-  } catch (err) {
-    console.error(`❌ Erreur dans handleSubscriptionChange: ${err.message}`);
-    throw err; // Propager l'erreur pour la journalisation
-  }
+async function handleSubscriptionUpdated(subscription: any) {
+  console.log('🔄 Abonnement mis à jour');
+  
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      subscription_status: mapStripeStatus(subscription.status),
+      subscription_updated_at: new Date().toISOString()
+    })
+    .eq('stripe_customer_id', subscription.customer);
+
+  if (error) throw error;
 }
 
-async function handleSubscriptionCancelled(subscription) {
-  try {
-    console.log(`🔄 Traitement annulation d'abonnement pour customer ${subscription.customer}`);
-    
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('stripe_customer_id', subscription.customer)
-      .single();
-      
-    if (error) {
-      console.error(`❌ Erreur recherche profil: ${error.message}`);
-      return;
-    }
-    
-    if (!profile) {
-      console.log(`⚠️ Aucun profil trouvé pour customer ${subscription.customer}`);
-      return;
-    }
-    
-    const { error: updateError } = await supabase.from('user_profiles').update({
-      subscription_status: 'canceled',
-      subscription_updated_at: new Date().toISOString(),
-    }).eq('id', profile.id);
-    
-    if (updateError) {
-      console.error(`❌ Erreur mise à jour profil: ${updateError.message}`);
-      return;
-    }
-    
-    console.log(`✅ Abonnement marqué comme annulé pour profil ${profile.id}`);
-  } catch (err) {
-    console.error(`❌ Erreur dans handleSubscriptionCancelled: ${err.message}`);
-    throw err; // Propager l'erreur pour la journalisation
-  }
+async function handleSubscriptionDeleted(subscription: any) {
+  console.log('❌ Abonnement annulé');
+  
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
+      subscription_status: 'cancelled',
+      subscription_updated_at: new Date().toISOString()
+    })
+    .eq('stripe_customer_id', subscription.customer);
+
+  if (error) throw error;
 }
 
-async function handlePaymentFailed(invoice) {
-  try {
-    console.log(`🔄 Traitement échec de paiement pour customer ${invoice.customer}`);
-    
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('stripe_customer_id', invoice.customer)
-      .single();
-      
-    if (error) {
-      console.error(`❌ Erreur recherche profil: ${error.message}`);
-      return;
-    }
-    
-    if (!profile) {
-      console.log(`⚠️ Aucun profil trouvé pour customer ${invoice.customer}`);
-      return;
-    }
-    
-    const { error: updateError } = await supabase.from('user_profiles').update({
+async function handlePaymentFailed(invoice: any) {
+  console.log('💳 Paiement échoué');
+  
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({
       subscription_status: 'past_due',
-      payment_failed_at: new Date().toISOString(),
-    }).eq('id', profile.id);
+      subscription_updated_at: new Date().toISOString()
+    })
+    .eq('stripe_customer_id', invoice.customer);
+
+  if (error) throw error;
+}
+
+async function sendWelcomeEmail(email: string, userId: string) {
+  try {
+    console.log('📧 Envoi email de bienvenue');
     
-    if (updateError) {
-      console.error(`❌ Erreur mise à jour profil: ${updateError.message}`);
-      return;
+    // Générer le lien de création de mot de passe
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: {
+        redirectTo: 'https://club.nowme.fr/auth/update-password'
+      }
+    });
+
+    if (linkError) {
+      throw new Error(`Erreur génération lien: ${linkError.message}`);
     }
-    
-    console.log(`✅ Statut de paiement mis à jour pour profil ${profile.id}`);
-  } catch (err) {
-    console.error(`❌ Erreur dans handlePaymentFailed: ${err.message}`);
-    throw err; // Propager l'erreur pour la journalisation
+
+    const resetLink = linkData?.properties?.action_link;
+    if (!resetLink) {
+      throw new Error('Lien de réinitialisation non généré');
+    }
+
+    // Ajouter l'email à la queue
+    const { error: emailError } = await supabase
+      .from('emails')
+      .insert({
+        to_address: email,
+        subject: 'Bienvenue dans le Nowme Club ! 🎉',
+        content: generateWelcomeEmailHTML(email, resetLink),
+        status: 'pending'
+      });
+
+    if (emailError) {
+      throw new Error(`Erreur ajout email: ${emailError.message}`);
+    }
+
+    console.log('✅ Email ajouté à la queue');
+
+  } catch (error) {
+    console.error('❌ Erreur envoi email:', error.message);
+    // Ne pas faire échouer le webhook pour un problème d'email
   }
+}
+
+function mapStripeStatus(stripeStatus: string): string {
+  const statusMap: Record<string, string> = {
+    'active': 'active',
+    'past_due': 'past_due',
+    'unpaid': 'unpaid',
+    'canceled': 'cancelled',
+    'incomplete': 'pending',
+    'incomplete_expired': 'cancelled',
+    'trialing': 'active'
+  };
+  
+  return statusMap[stripeStatus] || 'pending';
+}
+
+function generateWelcomeEmailHTML(email: string, resetLink: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Bienvenue dans le Nowme Club !</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #BF2778; font-size: 28px; margin-bottom: 10px;">🎉 Bienvenue dans le Nowme Club !</h1>
+    <p style="font-size: 18px; color: #666;">Ton aventure kiff commence maintenant !</p>
+  </div>
+
+  <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton compte est créé !</h2>
+    <p style="margin: 0; font-size: 16px;">Il ne reste qu'une étape : créer ton mot de passe pour accéder à ton espace membre.</p>
+  </div>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="${resetLink}" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+      🔐 Créer mon mot de passe
+    </a>
+  </div>
+
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
+    <h3 style="color: #BF2778; margin-top: 0;">🎯 Ce qui t'attend :</h3>
+    <ul style="margin: 0; padding-left: 20px;">
+      <li>Événements premium chaque mois</li>
+      <li>Masterclass avec des expertes</li>
+      <li>Box surprise trimestrielle</li>
+      <li>Consultations bien-être gratuites</li>
+      <li>Réductions jusqu'à -70%</li>
+      <li>Communauté de femmes inspirantes</li>
+    </ul>
+  </div>
+
+  <div style="text-align: center; margin: 30px 0; padding: 20px; border: 2px dashed #BF2778; border-radius: 10px;">
+    <p style="margin: 0; color: #BF2778; font-weight: bold;">🚨 Important : Ce lien expire dans 24h</p>
+    <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Clique dessus dès maintenant pour ne pas le perdre !</p>
+  </div>
+
+  <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+    <p style="margin: 0; color: #666; font-size: 14px;">
+      Des questions ? Réponds à cet email ou contacte-nous sur 
+      <a href="mailto:contact@nowme.fr" style="color: #BF2778;">contact@nowme.fr</a>
+    </p>
+    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
+      L'équipe Nowme 💕
+    </p>
+  </div>
+</body>
+</html>`;
 }
