@@ -9,8 +9,9 @@ export interface PricingTier {
   features: string[];
   highlighted?: boolean;
   stripePriceId: string;
-  yearlyPrice?: number;
-  yearlyStripePriceId?: string;
+  promoCode?: string;
+  originalPrice?: number;
+  bonusValue?: number;
 }
 
 export interface ServiceOffering {
@@ -26,11 +27,13 @@ export interface ServiceOffering {
 export const PRICING_TIERS: PricingTier[] = [
   {
     id: 'monthly',
-    name: 'Mensuel',
-    price: 12.99,
+    name: 'Mensuel avec code KIFFE',
+    price: 27,
+    originalPrice: 39.99,
     period: '1er mois, puis 39,99€/mois',
-    description: 'Accès complet dès le premier mois, puis tarif normal',
-    stripePriceId: 'price_monthly_1299',
+    description: 'Économise 13€ sur ton premier mois avec le code KIFFE',
+    stripePriceId: 'price_monthly_kiffe',
+    promoCode: 'KIFFE',
     features: [
       'Accès complet à tous les services dès le 1er mois',
       '2-3 événements premium par mois',
@@ -52,9 +55,10 @@ export const PRICING_TIERS: PricingTier[] = [
     name: 'Annuel',
     price: 399,
     period: 'par an',
-    description: 'Tout inclus + bonus exclusifs pour un engagement annuel',
+    description: 'Presque 2 mois OFFERTS + bonus exclusifs',
     highlighted: true,
-    stripePriceId: 'price_yearly_39900',
+    stripePriceId: 'price_yearly_399',
+    bonusValue: 100,
     features: [
       'Tout du plan mensuel inclus',
       '100€ de réduction sur tous les séjours',
@@ -154,9 +158,9 @@ export const calculateTotalValue = (): number => {
 // Messages marketing
 export const MARKETING_MESSAGES = {
   monthly: {
-    headline: "Accès complet dès le 1er mois !",
-    subheadline: "12,99€ pour découvrir, puis 39,99€ pour continuer à kiffer",
-    cta: "Je commence à 12,99€"
+    headline: "Économise 13€ avec le code KIFFE !",
+    subheadline: "27€ le premier mois au lieu de 39,99€, puis tarif normal",
+    cta: "J'utilise le code KIFFE"
   },
   yearly: {
     headline: "Presque 2 mois OFFERTS + 100€ de réduction séjours",
@@ -166,7 +170,7 @@ export const MARKETING_MESSAGES = {
 };
 
 export const YEARLY_SAVINGS = {
-  monthlyTotal: 12.99 + (39.99 * 11), // 1er mois + 11 mois à 39,99€
+  monthlyTotal: 27 + (39.99 * 11), // 1er mois avec KIFFE + 11 mois à 39,99€
   yearlyPrice: 399,
-  savings: (12.99 + (39.99 * 11)) - 399 // Économie réelle
+  savings: (27 + (39.99 * 11)) - 399 // Économie réelle
 };
