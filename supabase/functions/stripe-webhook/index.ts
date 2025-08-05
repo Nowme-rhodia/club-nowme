@@ -277,6 +277,11 @@ async function handleCheckoutCompleted(session) {
     }
 
     logger.info(`Customer email: ${email}`);
+    logger.info(`Session data:`, {
+      customer: session.customer,
+      subscription: session.subscription,
+      amount_total: session.amount_total
+    });
 
     // Check if user exists
     const { data: existingUser, error: userError } = await supabase
@@ -286,8 +291,11 @@ async function handleCheckoutCompleted(session) {
       .maybeSingle();
 
     if (userError && userError.code !== 'PGRST116') {
+      logger.error('User lookup failed', userError);
       throw new Error(`User lookup error: ${userError.message}`);
     }
+
+    logger.info(`Existing user found: ${!!existingUser}`);
 
     // Determine subscription type
     const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
@@ -309,14 +317,17 @@ async function handleCheckoutCompleted(session) {
         .eq('id', existingUser.id);
 
       if (updateError) {
+        logger.error('Profile update failed', updateError);
         throw new Error(`Update error: ${updateError.message}`);
       }
 
+      logger.success(`Profile updated for user: ${existingUser.id}`);
       return { success: true, message: `User ${existingUser.id} updated` };
       
     } else {
       logger.info('New user, creating complete profile');
       
+      logger.info('Step 1: Creating auth user...');
       // Create profile with temporary user_id (will be linked later)
       const tempUserId = crypto.randomUUID();
       
@@ -482,11 +493,13 @@ async function handlePaymentFailed(invoice) {
 async function sendWelcomeEmail(email) {
   try {
     logger.info(`Preparing welcome email for: ${email}`);
+        logger.error('Profile creation failed', profileError);
     
     // Generate password reset link
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email,
+      logger.info('Step 3: Creating member rewards...');
       options: {
         redirectTo: 'https://club.nowme.fr/auth/update-password'
       }
@@ -507,18 +520,23 @@ async function sendWelcomeEmail(email) {
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
+            logger.error('Member rewards creation failed', rewardsError);
         to_address: email,
         subject: 'Bienvenue dans le Nowme Club ! 🎉',
         content: generateWelcomeEmailHTML(email, resetLink),
         status: 'pending'
       });
 
+        logger.error('Member rewards exception', rewardsError);
     if (emailError) {
+        logger.error('Auth user creation failed', authError);
       throw new Error(`Email queue error: ${emailError.message}`);
+      logger.info('Step 4: Sending welcome email...');
     }
 
     logger.success('Email added to queue');
 
+      logger.info('Step 2: Creating user profile...');
   } catch (error) {
     logger.error('Email sending error', error);
     // Don't fail the webhook for email issues
