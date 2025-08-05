@@ -282,6 +282,11 @@ async function handleCheckoutCompleted(session) {
       subscription: session.subscription,
       amount_total: session.amount_total
     });
+    logger.info(`Session data:`, {
+      customer: session.customer,
+      subscription: session.subscription,
+      amount_total: session.amount_total
+    });
 
     // Check if user exists
     const { data: existingUser, error: userError } = await supabase
@@ -292,8 +297,11 @@ async function handleCheckoutCompleted(session) {
 
     if (userError && userError.code !== 'PGRST116') {
       logger.error('User lookup failed', userError);
+      logger.error('User lookup failed', userError);
       throw new Error(`User lookup error: ${userError.message}`);
     }
+
+    logger.info(`Existing user found: ${!!existingUser}`);
 
     logger.info(`Existing user found: ${!!existingUser}`);
 
@@ -301,8 +309,11 @@ async function handleCheckoutCompleted(session) {
     const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
                            session.amount_total === 1299 ? 'discovery' : 'monthly';
     logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
+    logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
 
     if (existingUser) {
+      logger.info('Existing user, updating profile');
+      
       logger.info('Existing user, updating profile');
       
       const { error: updateError } = await supabase
@@ -318,9 +329,11 @@ async function handleCheckoutCompleted(session) {
 
       if (updateError) {
         logger.error('Profile update failed', updateError);
+        logger.error('Profile update failed', updateError);
         throw new Error(`Update error: ${updateError.message}`);
       }
 
+      logger.success(`Profile updated for user: ${existingUser.id}`);
       logger.success(`Profile updated for user: ${existingUser.id}`);
       return { success: true, message: `User ${existingUser.id} updated` };
       
@@ -328,10 +341,17 @@ async function handleCheckoutCompleted(session) {
       logger.info('New user, creating complete profile');
       
       logger.info('Step 1: Creating auth user...');
+      logger.info('New user, creating complete profile');
+      
+        logger.error('Auth user creation failed', authError);
+      logger.info('Step 1: Creating auth user...');
       // Create profile with temporary user_id (will be linked later)
       const tempUserId = crypto.randomUUID();
+      logger.success(`Auth user created: ${authUser.user.id}`);
+
+      logger.info('Step 2: Creating user profile...');
       
-      const { error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .insert({
           user_id: tempUserId,
@@ -343,75 +363,45 @@ async function handleCheckoutCompleted(session) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
+        .select('id')
+        .single();
 
       if (profileError) {
+        logger.error('Profile creation failed', profileError);
         throw new Error(`Profile creation error: ${profileError.message}`);
       }
 
       logger.success('Profile created');
 
-      // Manually create member_rewards to avoid trigger issues
-      try {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('user_id', authUser.user.id)
-          .single();
-
-        if (profile) {
-          const { error: rewardsError } = await supabase
-            .from('member_rewards')
-            .insert({
-              user_id: profile.id,
-              points_earned: 0,
-              points_spent: 0,
-              points_balance: 0,
-              tier_level: 'bronze'
-            });
-
-          if (rewardsError) {
-            logger.warn('Could not create member rewards (non-blocking)', rewardsError);
-          } else {
-            logger.success('Member rewards created');
-          }
-        }
-      } catch (rewardsError) {
-        logger.warn('Member rewards creation failed (non-blocking)', rewardsError);
-      }
+      logger.info('Step 3: Creating member rewards...');
+      logger.success('Profile created');
 
       // Manually create member_rewards to avoid trigger issues
       try {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('id')
-          .eq('user_id', authUser.user.id)
-          .single();
+        const { error: rewardsError } = await supabase
+          .from('member_rewards')
+          .insert({
+            user_id: profile.id,
+            points_earned: 0,
+            points_spent: 0,
+            points_balance: 0,
+            tier_level: 'bronze'
+          });
 
-        if (profile) {
-          const { error: rewardsError } = await supabase
-            .from('member_rewards')
-            .insert({
-              user_id: profile.id,
-              points_earned: 0,
-              points_spent: 0,
-              points_balance: 0,
-              tier_level: 'bronze'
-            });
-
-          if (rewardsError) {
-            logger.warn('Could not create member rewards (non-blocking)', rewardsError);
-          } else {
-            logger.success('Member rewards created');
-          }
+        if (rewardsError) {
+          logger.error('Member rewards creation failed', rewardsError);
+        } else {
+          logger.success('Member rewards created');
         }
       } catch (rewardsError) {
-        logger.warn('Member rewards creation failed (non-blocking)', rewardsError);
+        logger.error('Member rewards exception', rewardsError);
       }
 
+      logger.info('Step 4: Sending welcome email...');
       // Send welcome email
       await sendWelcomeEmail(email);
 
-      return { success: true, message: `Profile created for: ${email}` };
+      return { success: true, message: `New user created: ${authUser.user.id}` };
     }
   } catch (error) {
     logger.error('Error in handleCheckoutCompleted', error);
@@ -493,13 +483,11 @@ async function handlePaymentFailed(invoice) {
 async function sendWelcomeEmail(email) {
   try {
     logger.info(`Preparing welcome email for: ${email}`);
-        logger.error('Profile creation failed', profileError);
     
     // Generate password reset link
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email,
-      logger.info('Step 3: Creating member rewards...');
       options: {
         redirectTo: 'https://club.nowme.fr/auth/update-password'
       }
@@ -520,23 +508,18 @@ async function sendWelcomeEmail(email) {
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
-            logger.error('Member rewards creation failed', rewardsError);
         to_address: email,
         subject: 'Bienvenue dans le Nowme Club ! 🎉',
         content: generateWelcomeEmailHTML(email, resetLink),
         status: 'pending'
       });
 
-        logger.error('Member rewards exception', rewardsError);
     if (emailError) {
-        logger.error('Auth user creation failed', authError);
       throw new Error(`Email queue error: ${emailError.message}`);
-      logger.info('Step 4: Sending welcome email...');
     }
 
     logger.success('Email added to queue');
 
-      logger.info('Step 2: Creating user profile...');
   } catch (error) {
     logger.error('Email sending error', error);
     // Don't fail the webhook for email issues
