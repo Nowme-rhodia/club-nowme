@@ -283,107 +283,69 @@ async function handleCheckoutCompleted(session) {
       amount_total: session.amount_total
     });
 
-    // Check if user exists
-    const { data: existingUser, error: userError } = await supabase
-      .from('user_profiles')
-      .select('id, user_id')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (userError && userError.code !== 'PGRST116') {
-      logger.error('User lookup failed', userError);
-      throw new Error(`User lookup error: ${userError.message}`);
-    }
-
-    logger.info(`Existing user found: ${!!existingUser}`);
 
     // Determine subscription type
     const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
                            session.amount_total === 1299 ? 'discovery' : 'monthly';
     logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
 
-    if (existingUser) {
-      logger.info('Existing user, updating profile');
-      
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({
-          stripe_customer_id: session.customer,
-          stripe_subscription_id: session.subscription,
-          subscription_status: 'active',
-          subscription_type: subscriptionType,
-          subscription_updated_at: new Date().toISOString()
-        })
-        .eq('id', existingUser.id);
+    // Use UPSERT approach with ON CONFLICT
+    logger.info('Creating or updating user profile with UPSERT');
+    
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .upsert({
+        user_id: crypto.randomUUID(), // Temporary UUID, will be updated on signup
+        email,
+        stripe_customer_id: session.customer,
+        stripe_subscription_id: session.subscription,
+        subscription_status: 'active',
+        subscription_type: subscriptionType,
+        subscription_start_date: new Date().toISOString(),
+        subscription_updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'email',
+        ignoreDuplicates: false
+      })
+      .select('id')
+      .single();
 
-      if (updateError) {
-        logger.error('Profile update failed', updateError);
-        throw new Error(`Update error: ${updateError.message}`);
-      }
-
-      logger.success(`Profile updated for user: ${existingUser.id}`);
-      return { success: true, message: `User ${existingUser.id} updated` };
-      
-    } else {
-      logger.info('New user, creating complete profile');
-      
-      // Create profile without auth user (user will sign up manually later)
-      logger.info('Creating profile for future manual signup');
-
-      // Generate a temporary user_id that will be updated when user signs up
-      const tempUserId = crypto.randomUUID();
-      
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          user_id: tempUserId,
-          email,
-          stripe_customer_id: session.customer,
-          stripe_subscription_id: session.subscription,
-          subscription_status: 'active',
-          subscription_type: subscriptionType,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select('id')
-        .single();
-
-      if (profileError) {
-        logger.error('Profile creation failed', profileError);
-        throw new Error(`Profile creation error: ${profileError.message}`);
-      }
-
-      logger.success(`Profile created with temp user_id: ${tempUserId}`);
-
-      // Manually create member_rewards to avoid trigger issues
-      try {
-        if (profile?.id) {
-          const { error: rewardsError } = await supabase
-            .from('member_rewards')
-            .insert({
-              user_id: profile.id,
-              points_earned: 0,
-              points_spent: 0,
-              points_balance: 0,
-              tier_level: 'bronze'
-            });
-
-          if (rewardsError) {
-            logger.error('Member rewards creation failed', rewardsError);
-          } else {
-            logger.success('Member rewards created');
-          }
-        }
-      } catch (rewardsError) {
-        logger.error('Member rewards exception', rewardsError);
-        // Continue even if rewards creation fails
-      }
-
-      // Send welcome email with signup instructions
-      await sendSignupInstructionEmail(email);
-
-      return { success: true, message: `Profile created for ${email} - manual signup required` };
+    if (profileError) {
+      logger.error('Profile upsert failed', profileError);
+      throw new Error(`Profile upsert error: ${profileError.message}`);
     }
+
+    logger.success(`Profile created/updated: ${profile.id}`);
+
+    // Create member_rewards if it doesn't exist
+    try {
+      const { error: rewardsError } = await supabase
+        .from('member_rewards')
+        .upsert({
+          user_id: profile.id,
+          points_earned: 0,
+          points_spent: 0,
+          points_balance: 0,
+          tier_level: 'bronze'
+        }, {
+          onConflict: 'user_id',
+          ignoreDuplicates: true
+        });
+
+      if (rewardsError) {
+        logger.error('Member rewards upsert failed', rewardsError);
+      } else {
+        logger.success('Member rewards created/updated');
+      }
+    } catch (rewardsError) {
+      logger.error('Member rewards exception', rewardsError);
+      // Continue even if rewards creation fails
+    }
+
+    // Send signup instruction email
+    await sendSignupInstructionEmail(email);
+
+    return { success: true, message: `Profile processed for ${email} - signup email sent` };
   } catch (error) {
     logger.error('Error in handleCheckoutCompleted', error);
     return { success: false, message: error.message };
