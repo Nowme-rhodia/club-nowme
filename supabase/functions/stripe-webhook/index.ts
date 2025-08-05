@@ -368,6 +368,35 @@ async function handleCheckoutCompleted(session) {
         logger.warn('Member rewards creation failed (non-blocking)', rewardsError);
       }
 
+      // Manually create member_rewards to avoid trigger issues
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', authUser.user.id)
+          .single();
+
+        if (profile) {
+          const { error: rewardsError } = await supabase
+            .from('member_rewards')
+            .insert({
+              user_id: profile.id,
+              points_earned: 0,
+              points_spent: 0,
+              points_balance: 0,
+              tier_level: 'bronze'
+            });
+
+          if (rewardsError) {
+            logger.warn('Could not create member rewards (non-blocking)', rewardsError);
+          } else {
+            logger.success('Member rewards created');
+          }
+        }
+      } catch (rewardsError) {
+        logger.warn('Member rewards creation failed (non-blocking)', rewardsError);
+      }
+
       // Send welcome email
       await sendWelcomeEmail(email);
 
