@@ -21,21 +21,35 @@ export default function UpdatePassword() {
     const query = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.slice(1));
 
-    const tokenFromQuery = query.get('token_hash') || query.get('token');
+    const tokenFromQuery = query.get('token_hash') || query.get('token') || query.get('access_token');
     const typeFromQuery = query.get('type');
 
-    const tokenFromHash = hash.get('token_hash') || hash.get('token');
+    const tokenFromHash = hash.get('token_hash') || hash.get('token') || hash.get('access_token');
     const typeFromHash = hash.get('type');
 
     const token = tokenFromQuery || tokenFromHash;
     const tokenType = typeFromQuery || typeFromHash;
 
+    console.log('UpdatePassword - URL params:', {
+      search: window.location.search,
+      hash: window.location.hash,
+      token: !!token,
+      type: tokenType
+    });
+
     if (token && tokenType === 'recovery') {
       setTokenHash(token);
       setType(tokenType);
       setIsValidToken(true);
+    } else if (token && !tokenType) {
+      // Fallback pour les liens sans type explicite
+      setTokenHash(token);
+      setType('recovery');
+      setIsValidToken(true);
+      console.log('UpdatePassword - Using fallback recovery type');
     } else {
-      setError("Lien invalide ou expiré.");
+      setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
+      console.error('UpdatePassword - Invalid token or type:', { token: !!token, type: tokenType });
     }
 
     setChecking(false);
@@ -71,14 +85,40 @@ export default function UpdatePassword() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type,
-        new_password: password,
-      });
+      // Essayer d'abord avec verifyOtp
+      let updateError = null;
+      
+      try {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type as any,
+        });
+        
+        if (verifyError) throw verifyError;
+        
+        // Puis mettre à jour le mot de passe
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: password
+        });
+        
+        if (passwordError) throw passwordError;
+        
+      } catch (verifyErr) {
+        console.log('verifyOtp failed, trying direct password update:', verifyErr.message);
+        
+        // Fallback : essayer directement updateUser avec le token
+        const { error: directError } = await supabase.auth.updateUser(
+          { password: password },
+          { accessToken: tokenHash }
+        );
+        
+        if (directError) {
+          updateError = directError;
+        }
+      }
 
-      if (error) {
-        throw new Error(error.message || 'Échec de la réinitialisation.');
+      if (updateError) {
+        throw new Error(updateError.message || 'Échec de la réinitialisation.');
       }
 
       setSuccess(true);

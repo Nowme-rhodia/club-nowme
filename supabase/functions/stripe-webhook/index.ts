@@ -473,13 +473,33 @@ async function sendSignupInstructionEmail(email) {
   try {
     logger.info(`Preparing signup instruction email for: ${email}`);
     
-    // Add email to queue with signup instructions
+    // Generate password reset link
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: 'https://club.nowme.fr/auth/update-password'
+      }
+    });
+
+    if (linkError) {
+      throw new Error(`Link generation error: ${linkError.message}`);
+    }
+
+    const resetLink = linkData?.properties?.action_link;
+    if (!resetLink) {
+      throw new Error('Reset link not generated');
+    }
+
+    logger.info('Password reset link generated successfully');
+
+    // Add email to queue with the actual reset link
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
         to_address: email,
         subject: 'Ton abonnement Nowme est activé ! Crée ton compte 🎉',
-        content: generateSignupInstructionHTML(email),
+        content: generateSignupInstructionHTML(email, resetLink),
         status: 'pending'
       });
 
@@ -509,7 +529,7 @@ function mapStripeStatus(stripeStatus) {
   return statusMap[stripeStatus] || 'pending';
 }
 
-function generateSignupInstructionHTML(email) {
+function generateSignupInstructionHTML(email, resetLink) {
   return `
 <!DOCTYPE html>
 <html>
@@ -529,7 +549,7 @@ function generateSignupInstructionHTML(email) {
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="https://club.nowme.fr/auth/update-password" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+    <a href="${resetLink}" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
       🚀 Créer mon compte
     </a>
   </div>
@@ -537,9 +557,9 @@ function generateSignupInstructionHTML(email) {
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
     <h3 style="color: #BF2778; margin-top: 0;">📝 Comment faire :</h3>
     <ol style="margin: 0; padding-left: 20px;">
-      <li>Clique sur "Créer mon compte" ci-dessus</li>
-      <li>Utilise cette adresse email : <strong>${email}</strong></li>
-      <li>Choisis un mot de passe sécurisé</li>
+      <li>Clique sur le lien "Créer mon compte" ci-dessus</li>
+      <li>Tu seras redirigée vers la page de création de mot de passe</li>
+      <li>Choisis un mot de passe sécurisé (minimum 8 caractères)</li>
       <li>Commence à kiffer ! 🎯</li>
     </ol>
   </div>
