@@ -317,27 +317,13 @@ async function handleCheckoutCompleted(session) {
     } else {
       logger.info('New user, creating complete profile');
       
-      // Create auth user
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: {
-          created_via: 'stripe_checkout',
-          plan_type: subscriptionType
-        }
-      });
-
-      if (authError || !authUser.user) {
-        throw new Error(`Auth creation error: ${authError?.message}`);
-      }
-
-      logger.success(`Auth user created: ${authUser.user.id}`);
-
-      // Create profile WITHOUT triggering member_rewards creation
+      // Create profile with temporary user_id (will be linked later)
+      const tempUserId = crypto.randomUUID();
+      
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
-          user_id: authUser.user.id,
+          user_id: tempUserId,
           email,
           stripe_customer_id: session.customer,
           stripe_subscription_id: session.subscription,
@@ -385,7 +371,7 @@ async function handleCheckoutCompleted(session) {
       // Send welcome email
       await sendWelcomeEmail(email);
 
-      return { success: true, message: `New user created: ${authUser.user.id}` };
+      return { success: true, message: `Profile created for: ${email}` };
     }
   } catch (error) {
     logger.error('Error in handleCheckoutCompleted', error);
