@@ -1,68 +1,98 @@
 import Stripe from 'npm:stripe@14.25.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// Environment variables
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
+// Initialize Stripe with proper API version
 const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2023-10-16',
   httpClient: Stripe.createFetchHttpClient(),
 });
 
+// Initialize Supabase client
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Helper for consistent logging
+const logger = {
+  info: (message, data = {}) => console.log(`ℹ️ ${message}`, data),
+  success: (message, data = {}) => console.log(`✅ ${message}`, data),
+  warn: (message, data = {}) => console.warn(`⚠️ ${message}`, data),
+  error: (message, error = null) => {
+    console.error(`❌ ${message}`);
+    if (error) {
+      console.error(`  Error details: ${error.message || error}`);
+      if (error.stack) console.error(`  Stack: ${error.stack}`);
+    }
+  }
+};
+
 Deno.serve(async (req) => {
-  console.log('🎯 Webhook Stripe reçu - Method:', req.method);
+  // Only accept POST requests
+  if (req.method !== 'POST') {
+    logger.warn(`Method not allowed: ${req.method}`);
+    return new Response('Method not allowed', { status: 405 });
+  }
 
   try {
-    if (req.method !== 'POST') {
-      console.log('❌ Méthode non autorisée:', req.method);
-      return new Response('Méthode non autorisée', { status: 405 });
-    }
-
+    // Get the raw request body as text
     const rawBody = await req.text();
-    console.log('📦 Body reçu, longueur:', rawBody.length);
-
+    logger.info(`Webhook received - Body length: ${rawBody.length}`);
+    
     if (!rawBody || rawBody.length === 0) {
-      console.log('❌ Body vide');
-      return new Response('Body vide', { status: 400 });
+      logger.error('Empty request body');
+      return new Response('Empty request body', { status: 400 });
     }
 
+    // Get the Stripe signature from headers
     const signature = req.headers.get('stripe-signature');
-    console.log('🔐 Signature présente:', !!signature);
-
-    let event;
     
-    // Vérifier la signature si configurée
+    // Parse and verify the event
+    let event;
+    let isVerified = false;
+    
+    // Try to verify with signature if webhook secret is configured
     if (stripeWebhookSecret && signature) {
       try {
         event = stripe.webhooks.constructEvent(rawBody, signature, stripeWebhookSecret);
-        console.log('✅ Signature vérifiée pour événement:', event.type);
+        isVerified = true;
+        logger.success(`Signature verified for event: ${event.type}`);
       } catch (err) {
-        console.error('❌ Signature invalide:', err.message);
-        return new Response(`Signature invalide: ${err.message}`, { status: 400 });
+        logger.error('Signature verification failed', err);
+        return new Response(`Webhook signature verification failed: ${err.message}`, { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     } else {
-      // Mode développement sans vérification de signature
+      // Development mode - parse without verification
       try {
         event = JSON.parse(rawBody);
-        console.log('⚠️ Mode dev - événement parsé:', event.type);
+        logger.warn('Dev mode - event parsed without signature verification');
       } catch (err) {
-        console.error('❌ JSON invalide:', err.message);
-        return new Response(`JSON invalide: ${err.message}`, { status: 400 });
+        logger.error('JSON parsing failed', err);
+        return new Response(`Invalid JSON payload: ${err.message}`, { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
 
+    // Validate the event
     if (!event || !event.type) {
-      console.log('❌ Événement invalide');
-      return new Response('Événement invalide', { status: 400 });
+      logger.error('Invalid event structure');
+      return new Response('Invalid event structure', { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    console.log(`📦 Traitement événement: ${event.type} (${event.id})`);
+    logger.info(`Processing event: ${event.type} (${event.id})`);
 
-    // Préparer les données pour l'insertion
+    // Prepare data for database insertion
     const eventData = {
       stripe_event_id: event.id,
       event_type: event.type,
@@ -75,7 +105,7 @@ Deno.serve(async (req) => {
       role: 'webhook'
     };
 
-    // Extraire les données selon le type d'événement
+    // Extract relevant data based on event type
     try {
       switch (event.type) {
         case 'checkout.session.completed':
@@ -102,128 +132,170 @@ Deno.serve(async (req) => {
           break;
       }
     } catch (extractError) {
-      console.error('⚠️ Erreur extraction données:', extractError.message);
-      // Continuer quand même avec les données de base
+      logger.warn('Error extracting event data', extractError);
+      // Continue with basic data
     }
 
-    console.log('💾 Données à insérer:', {
+    logger.info('Data to insert:', {
       type: eventData.event_type,
       email: eventData.customer_email,
       customer: eventData.customer_id
     });
 
-    // Enregistrer l'événement
-    const { data: webhookEvent, error: insertError } = await supabase
-      .from('stripe_webhook_events')
-      .insert(eventData)
-      .select('id')
-      .single();
-
-    if (insertError) {
-      console.error('❌ Erreur enregistrement:', insertError.message);
-      return new Response(`Erreur DB: ${insertError.message}`, { status: 500 });
-    }
-
-    console.log(`✅ Événement enregistré: ${webhookEvent.id}`);
-
-    // Traiter l'événement directement (sans fonctions SQL)
+    // Save the event to database
     try {
-      let result = { success: true, message: 'Événement traité' };
+      const { data: webhookEvent, error: insertError } = await supabase
+        .from('stripe_webhook_events')
+        .insert(eventData)
+        .select('id')
+        .single();
 
-      switch (event.type) {
-        case 'checkout.session.completed':
-          result = await handleCheckoutCompleted(event.data.object);
-          break;
-        case 'invoice.payment_succeeded':
-          result = await handleInvoicePaymentSucceeded(event.data.object);
-          break;
-        case 'customer.subscription.updated':
-          result = await handleSubscriptionUpdated(event.data.object);
-          break;
-        case 'customer.subscription.deleted':
-          result = await handleSubscriptionDeleted(event.data.object);
-          break;
-        case 'invoice.payment_failed':
-          result = await handlePaymentFailed(event.data.object);
-          break;
-        default:
-          console.log(`ℹ️ Événement non géré mais enregistré: ${event.type}`);
-          result = { success: true, message: `Événement ${event.type} enregistré` };
+      if (insertError) {
+        logger.error('Database insertion error', insertError);
+        return new Response(`Database error: ${insertError.message}`, { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
 
-      // Marquer comme complété
-      await supabase
-        .from('stripe_webhook_events')
-        .update({ 
-          status: result.success ? 'completed' : 'failed',
-          error: result.success ? null : result.message
-        })
-        .eq('id', webhookEvent.id);
+      logger.success(`Event recorded with ID: ${webhookEvent.id}`);
 
-      console.log('✅ Traitement terminé:', result.message);
+      // Process the event based on type
+      let result = { success: true, message: 'Event recorded' };
 
-    } catch (err) {
-      console.error('❌ Erreur traitement:', err.message);
-      
-      await supabase
-        .from('stripe_webhook_events')
-        .update({ 
-          status: 'failed',
-          error: err.message
-        })
-        .eq('id', webhookEvent.id);
+      try {
+        switch (event.type) {
+          case 'checkout.session.completed':
+            result = await handleCheckoutCompleted(event.data.object);
+            break;
+          case 'invoice.payment_succeeded':
+            result = await handleInvoicePaymentSucceeded(event.data.object);
+            break;
+          case 'customer.subscription.updated':
+            result = await handleSubscriptionUpdated(event.data.object);
+            break;
+          case 'customer.subscription.deleted':
+            result = await handleSubscriptionDeleted(event.data.object);
+            break;
+          case 'invoice.payment_failed':
+            result = await handlePaymentFailed(event.data.object);
+            break;
+          default:
+            logger.info(`Event type ${event.type} recorded but not processed`);
+        }
+
+        // Update event status
+        await supabase
+          .from('stripe_webhook_events')
+          .update({ 
+            status: result.success ? 'completed' : 'failed',
+            error: result.success ? null : result.message
+          })
+          .eq('id', webhookEvent.id);
+
+        logger.success(`Processing completed: ${result.message}`);
+
+      } catch (processingError) {
+        logger.error('Event processing error', processingError);
+        
+        // Update event status to failed
+        await supabase
+          .from('stripe_webhook_events')
+          .update({ 
+            status: 'failed',
+            error: processingError.message
+          })
+          .eq('id', webhookEvent.id);
+      }
+
+      // Always return 200 to Stripe to prevent retries
+      return new Response(JSON.stringify({ 
+        received: true, 
+        event_id: event.id,
+        event_type: event.type,
+        verified: isVerified
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (dbError) {
+      logger.error('Database operation failed', dbError);
+      return new Response(`Database operation failed: ${dbError.message}`, { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-
-    return new Response(JSON.stringify({ 
-      received: true, 
-      event_id: event.id,
-      event_type: event.type 
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
-
   } catch (err) {
-    console.error('❌ Erreur globale:', err.message);
-    return new Response(`Erreur: ${err.message}`, { status: 500 });
+    logger.error('Unhandled exception', err);
+    return new Response(`Internal server error: ${err.message}`, { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 });
 
+// Event handler functions
+async function handleInvoicePaymentSucceeded(invoice) {
+  logger.info('Processing invoice.payment_succeeded');
+  
+  try {
+    const email = invoice.customer_email;
+    if (!email) {
+      logger.warn('No email in invoice');
+      return { success: true, message: 'Invoice without email, ignored' };
+    }
+
+    // Update payment status
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({
+        subscription_status: 'active',
+        subscription_updated_at: new Date().toISOString()
+      })
+      .eq('email', email);
+
+    if (error) {
+      logger.error('Error updating payment status', error);
+      return { success: false, message: `Update error: ${error.message}` };
+    }
+
+    logger.success(`Payment confirmed for: ${email}`);
+    return { success: true, message: `Payment confirmed for ${email}` };
+  } catch (error) {
+    logger.error('Error in handleInvoicePaymentSucceeded', error);
+    return { success: false, message: error.message };
+  }
+}
+
 async function handleCheckoutCompleted(session) {
-  console.log('🎉 Traitement checkout.session.completed');
+  logger.info('Processing checkout.session.completed');
   
   try {
     const email = session.customer_email || session.customer_details?.email;
     if (!email) {
-      throw new Error('Email manquant dans la session');
+      throw new Error('Email missing in session');
     }
 
-    console.log(`📧 Email client: ${email}`);
+    logger.info(`Customer email: ${email}`);
 
-    // Vérifier si l'utilisateur existe
+    // Check if user exists
     const { data: existingUser, error: userError } = await supabase
       .from('user_profiles')
       .select('id, user_id')
       .eq('email', email)
       .maybeSingle();
 
-    if (userError) {
-      console.error('❌ Erreur recherche utilisateur:', userError);
-      throw new Error(`Erreur recherche utilisateur: ${userError.message}`);
+    if (userError && userError.code !== 'PGRST116') {
+      throw new Error(`User lookup error: ${userError.message}`);
     }
 
-    // Déterminer le type d'abonnement basé sur le montant
-    let subscriptionType = 'monthly';
-    if (session.amount_total === 39900) { // 399€
-      subscriptionType = 'yearly';
-    } else if (session.amount_total === 1299) { // 12,99€ avec code KIFFE
-      subscriptionType = 'discovery';
-    }
-
-    console.log(`💰 Type abonnement détecté: ${subscriptionType} (${session.amount_total})`);
+    // Determine subscription type
+    const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
+                           session.amount_total === 1299 ? 'discovery' : 'monthly';
+    logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
 
     if (existingUser) {
-      console.log('👤 Utilisateur existant, mise à jour');
+      logger.info('Existing user, updating profile');
       
       const { error: updateError } = await supabase
         .from('user_profiles')
@@ -237,16 +309,15 @@ async function handleCheckoutCompleted(session) {
         .eq('id', existingUser.id);
 
       if (updateError) {
-        console.error('❌ Erreur mise à jour profil:', updateError);
-        throw new Error(`Erreur mise à jour: ${updateError.message}`);
+        throw new Error(`Update error: ${updateError.message}`);
       }
 
-      return { success: true, message: `Utilisateur ${existingUser.id} mis à jour` };
+      return { success: true, message: `User ${existingUser.id} updated` };
       
     } else {
-      console.log('➕ Nouvel utilisateur, création complète');
+      logger.info('New user, creating complete profile');
       
-      // Créer l'utilisateur auth
+      // Create auth user
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email,
         email_confirm: true,
@@ -257,17 +328,15 @@ async function handleCheckoutCompleted(session) {
       });
 
       if (authError || !authUser.user) {
-        console.error('❌ Erreur création auth:', authError);
-        throw new Error(`Erreur création auth: ${authError?.message}`);
+        throw new Error(`Auth creation error: ${authError?.message}`);
       }
 
-      console.log(`✅ Utilisateur auth créé: ${authUser.user.id}`);
+      logger.success(`Auth user created: ${authUser.user.id}`);
 
-      // Créer le profil
+      // Create profile WITHOUT triggering member_rewards creation
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
-          id: crypto.randomUUID(),
           user_id: authUser.user.id,
           email,
           stripe_customer_id: session.customer,
@@ -279,61 +348,53 @@ async function handleCheckoutCompleted(session) {
         });
 
       if (profileError) {
-        console.error('❌ Erreur création profil:', profileError);
-        throw new Error(`Erreur création profil: ${profileError.message}`);
+        throw new Error(`Profile creation error: ${profileError.message}`);
       }
 
-      console.log('✅ Profil créé');
+      logger.success('Profile created');
 
-      // Envoyer email d'invitation (sans faire échouer si erreur)
+      // Manually create member_rewards to avoid trigger issues
       try {
-        await sendWelcomeEmail(email);
-      } catch (emailError) {
-        console.error('⚠️ Erreur email (non bloquante):', emailError.message);
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('user_id', authUser.user.id)
+          .single();
+
+        if (profile) {
+          const { error: rewardsError } = await supabase
+            .from('member_rewards')
+            .insert({
+              user_id: profile.id,
+              points_earned: 0,
+              points_spent: 0,
+              points_balance: 0,
+              tier_level: 'bronze'
+            });
+
+          if (rewardsError) {
+            logger.warn('Could not create member rewards (non-blocking)', rewardsError);
+          } else {
+            logger.success('Member rewards created');
+          }
+        }
+      } catch (rewardsError) {
+        logger.warn('Member rewards creation failed (non-blocking)', rewardsError);
       }
 
-      return { success: true, message: `Nouvel utilisateur créé: ${authUser.user.id}` };
+      // Send welcome email
+      await sendWelcomeEmail(email);
+
+      return { success: true, message: `New user created: ${authUser.user.id}` };
     }
   } catch (error) {
-    console.error('❌ Erreur handleCheckoutCompleted:', error.message);
-    return { success: false, message: error.message };
-  }
-}
-
-async function handleInvoicePaymentSucceeded(invoice) {
-  console.log('💳 Traitement invoice.payment_succeeded');
-  
-  try {
-    const email = invoice.customer_email;
-    if (!email) {
-      console.log('⚠️ Pas d\'email dans la facture');
-      return { success: true, message: 'Facture sans email, ignorée' };
-    }
-
-    // Mettre à jour le statut de paiement
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'active',
-        subscription_updated_at: new Date().toISOString()
-      })
-      .eq('email', email);
-
-    if (error) {
-      console.error('❌ Erreur mise à jour paiement:', error.message);
-      return { success: false, message: `Erreur mise à jour: ${error.message}` };
-    }
-
-    console.log('✅ Paiement confirmé pour:', email);
-    return { success: true, message: `Paiement confirmé pour ${email}` };
-  } catch (error) {
-    console.error('❌ Erreur handleInvoicePaymentSucceeded:', error.message);
+    logger.error('Error in handleCheckoutCompleted', error);
     return { success: false, message: error.message };
   }
 }
 
 async function handleSubscriptionUpdated(subscription) {
-  console.log('🔄 Traitement subscription.updated');
+  logger.info('Processing subscription.updated');
   
   try {
     const status = mapStripeStatus(subscription.status);
@@ -347,18 +408,18 @@ async function handleSubscriptionUpdated(subscription) {
       .eq('stripe_customer_id', subscription.customer);
 
     if (error) {
-      throw new Error(`Erreur mise à jour: ${error.message}`);
+      throw new Error(`Update error: ${error.message}`);
     }
 
-    return { success: true, message: `Abonnement mis à jour: ${status}` };
+    return { success: true, message: `Subscription updated: ${status}` };
   } catch (error) {
-    console.error('❌ Erreur handleSubscriptionUpdated:', error.message);
+    logger.error('Error in handleSubscriptionUpdated', error);
     return { success: false, message: error.message };
   }
 }
 
 async function handleSubscriptionDeleted(subscription) {
-  console.log('❌ Traitement subscription.deleted');
+  logger.info('Processing subscription.deleted');
   
   try {
     const { error } = await supabase
@@ -370,18 +431,18 @@ async function handleSubscriptionDeleted(subscription) {
       .eq('stripe_customer_id', subscription.customer);
 
     if (error) {
-      throw new Error(`Erreur annulation: ${error.message}`);
+      throw new Error(`Cancellation error: ${error.message}`);
     }
 
-    return { success: true, message: 'Abonnement annulé' };
+    return { success: true, message: 'Subscription cancelled' };
   } catch (error) {
-    console.error('❌ Erreur handleSubscriptionDeleted:', error.message);
+    logger.error('Error in handleSubscriptionDeleted', error);
     return { success: false, message: error.message };
   }
 }
 
 async function handlePaymentFailed(invoice) {
-  console.log('💳 Traitement payment.failed');
+  logger.info('Processing payment.failed');
   
   try {
     const { error } = await supabase
@@ -393,21 +454,21 @@ async function handlePaymentFailed(invoice) {
       .eq('stripe_customer_id', invoice.customer);
 
     if (error) {
-      throw new Error(`Erreur paiement échoué: ${error.message}`);
+      throw new Error(`Failed payment update error: ${error.message}`);
     }
 
-    return { success: true, message: 'Statut paiement mis à jour' };
+    return { success: true, message: 'Payment status updated' };
   } catch (error) {
-    console.error('❌ Erreur handlePaymentFailed:', error.message);
+    logger.error('Error in handlePaymentFailed', error);
     return { success: false, message: error.message };
   }
 }
 
 async function sendWelcomeEmail(email) {
   try {
-    console.log('📧 Préparation email de bienvenue pour:', email);
+    logger.info(`Preparing welcome email for: ${email}`);
     
-    // Générer le lien de création de mot de passe
+    // Generate password reset link
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email,
@@ -417,17 +478,17 @@ async function sendWelcomeEmail(email) {
     });
 
     if (linkError) {
-      throw new Error(`Erreur génération lien: ${linkError.message}`);
+      throw new Error(`Link generation error: ${linkError.message}`);
     }
 
     const resetLink = linkData?.properties?.action_link;
     if (!resetLink) {
-      throw new Error('Lien de réinitialisation non généré');
+      throw new Error('Reset link not generated');
     }
 
-    console.log('🔗 Lien généré, ajout à la queue email');
+    logger.info('Link generated, adding to email queue');
 
-    // Ajouter l'email à la queue
+    // Add email to queue
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
@@ -438,14 +499,14 @@ async function sendWelcomeEmail(email) {
       });
 
     if (emailError) {
-      throw new Error(`Erreur ajout email: ${emailError.message}`);
+      throw new Error(`Email queue error: ${emailError.message}`);
     }
 
-    console.log('✅ Email ajouté à la queue');
+    logger.success('Email added to queue');
 
   } catch (error) {
-    console.error('❌ Erreur envoi email:', error.message);
-    // Ne pas faire échouer le webhook pour un problème d'email
+    logger.error('Email sending error', error);
+    // Don't fail the webhook for email issues
   }
 }
 
