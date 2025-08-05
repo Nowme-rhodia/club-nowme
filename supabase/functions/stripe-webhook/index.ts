@@ -529,7 +529,7 @@ function generateSignupInstructionHTML(email) {
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="https://club.nowme.fr/auth/signin" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+    <a href="https://club.nowme.fr/auth/update-password" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
       🚀 Créer mon compte
     </a>
   </div>
