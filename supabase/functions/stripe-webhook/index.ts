@@ -327,28 +327,16 @@ async function handleCheckoutCompleted(session) {
     } else {
       logger.info('New user, creating complete profile');
       
-      // Create auth user
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        email_confirm: true,
-        user_metadata: {
-          created_via: 'stripe_checkout',
-          plan_type: subscriptionType
-        }
-      });
+      // Create profile without auth user (user will sign up manually later)
+      logger.info('Creating profile for future manual signup');
 
-      if (authError || !authUser?.user) {
-        logger.error('Auth user creation failed', authError);
-        throw new Error(`Auth creation error: ${authError?.message || 'Unknown error'}`);
-      }
-
-      logger.success(`Auth user created: ${authUser.user.id}`);
-
-      // Create profile
+      // Generate a temporary user_id that will be updated when user signs up
+      const tempUserId = crypto.randomUUID();
+      
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .insert({
-          user_id: authUser.user.id,
+          user_id: tempUserId,
           email,
           stripe_customer_id: session.customer,
           stripe_subscription_id: session.subscription,
@@ -365,9 +353,9 @@ async function handleCheckoutCompleted(session) {
         throw new Error(`Profile creation error: ${profileError.message}`);
       }
 
-      logger.success('Profile created');
+      logger.success(`Profile created with temp user_id: ${tempUserId}`);
 
-      // Create member rewards
+      // Manually create member_rewards to avoid trigger issues
       try {
         if (profile?.id) {
           const { error: rewardsError } = await supabase
@@ -391,10 +379,10 @@ async function handleCheckoutCompleted(session) {
         // Continue even if rewards creation fails
       }
 
-      // Send welcome email
-      await sendWelcomeEmail(email);
+      // Send welcome email with signup instructions
+      await sendSignupInstructionEmail(email);
 
-      return { success: true, message: `New user created: ${authUser.user.id}` };
+      return { success: true, message: `Profile created for ${email} - manual signup required` };
     }
   } catch (error) {
     logger.error('Error in handleCheckoutCompleted', error);
@@ -519,6 +507,32 @@ async function sendWelcomeEmail(email) {
   }
 }
 
+async function sendSignupInstructionEmail(email) {
+  try {
+    logger.info(`Preparing signup instruction email for: ${email}`);
+    
+    // Add email to queue with signup instructions
+    const { error: emailError } = await supabase
+      .from('emails')
+      .insert({
+        to_address: email,
+        subject: 'Ton abonnement Nowme est activé ! Crée ton compte 🎉',
+        content: generateSignupInstructionHTML(email),
+        status: 'pending'
+      });
+
+    if (emailError) {
+      throw new Error(`Email queue error: ${emailError.message}`);
+    }
+
+    logger.success('Signup instruction email added to queue');
+
+  } catch (error) {
+    logger.error('Email sending error', error);
+    // Don't fail the webhook for email issues
+  }
+}
+
 function mapStripeStatus(stripeStatus) {
   const statusMap = {
     'active': 'active',
@@ -531,6 +545,66 @@ function mapStripeStatus(stripeStatus) {
   };
   
   return statusMap[stripeStatus] || 'pending';
+}
+
+function generateSignupInstructionHTML(email) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Ton abonnement Nowme est activé !</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #BF2778; font-size: 28px; margin-bottom: 10px;">🎉 Ton abonnement est activé !</h1>
+    <p style="font-size: 18px; color: #666;">Bienvenue dans le Nowme Club !</p>
+  </div>
+
+  <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton paiement est confirmé !</h2>
+    <p style="margin: 0; font-size: 16px;">Il ne reste qu'à créer ton compte pour accéder à tous tes avantages.</p>
+  </div>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="https://club.nowme.fr/auth/signin" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+      🚀 Créer mon compte
+    </a>
+  </div>
+
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
+    <h3 style="color: #BF2778; margin-top: 0;">📝 Comment faire :</h3>
+    <ol style="margin: 0; padding-left: 20px;">
+      <li>Clique sur "Créer mon compte" ci-dessus</li>
+      <li>Utilise cette adresse email : <strong>${email}</strong></li>
+      <li>Choisis un mot de passe sécurisé</li>
+      <li>Commence à kiffer ! 🎯</li>
+    </ol>
+  </div>
+
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
+    <h3 style="color: #BF2778; margin-top: 0;">🎯 Ce qui t'attend :</h3>
+    <ul style="margin: 0; padding-left: 20px;">
+      <li>Événements premium chaque mois</li>
+      <li>Masterclass avec des expertes</li>
+      <li>Box surprise trimestrielle</li>
+      <li>Consultations bien-être gratuites</li>
+      <li>Réductions jusqu'à -70%</li>
+      <li>Communauté de femmes inspirantes</li>
+    </ul>
+  </div>
+
+  <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+    <p style="margin: 0; color: #666; font-size: 14px;">
+      Des questions ? Réponds à cet email ou contacte-nous sur 
+      <a href="mailto:contact@nowme.fr" style="color: #BF2778;">contact@nowme.fr</a>
+    </p>
+    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
+      L'équipe Nowme 💕
+    </p>
+  </div>
+</body>
+</html>`;
 }
 
 function generateWelcomeEmailHTML(email, resetLink) {
