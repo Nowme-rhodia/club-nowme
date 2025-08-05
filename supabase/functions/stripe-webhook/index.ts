@@ -473,13 +473,33 @@ async function sendSignupInstructionEmail(email) {
   try {
     logger.info(`Preparing signup instruction email for: ${email}`);
     
-    // Add email to queue with signup instructions
+    // Generate password reset link
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: {
+        redirectTo: 'https://club.nowme.fr/auth/update-password'
+      }
+    });
+
+    if (linkError) {
+      throw new Error(`Link generation error: ${linkError.message}`);
+    }
+
+    const resetLink = linkData?.properties?.action_link;
+    if (!resetLink) {
+      throw new Error('Reset link not generated');
+    }
+
+    logger.info('Password reset link generated');
+
+    // Add email to queue with the actual reset link
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
         to_address: email,
         subject: 'Ton abonnement Nowme est activé ! Crée ton compte 🎉',
-        content: generateSignupInstructionHTML(email),
+        content: generateSignupInstructionHTML(email, resetLink),
         status: 'pending'
       });
 
@@ -487,7 +507,7 @@ async function sendSignupInstructionEmail(email) {
       throw new Error(`Email queue error: ${emailError.message}`);
     }
 
-    logger.success('Signup instruction email added to queue');
+    logger.success('Welcome email with password reset link added to queue');
 
   } catch (error) {
     logger.error('Email sending error', error);
@@ -509,7 +529,7 @@ function mapStripeStatus(stripeStatus) {
   return statusMap[stripeStatus] || 'pending';
 }
 
-function generateSignupInstructionHTML(email) {
+function generateSignupInstructionHTML(email, resetLink) {
   return `
 <!DOCTYPE html>
 <html>
@@ -525,23 +545,29 @@ function generateSignupInstructionHTML(email) {
 
   <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
     <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton paiement est confirmé !</h2>
-    <p style="margin: 0; font-size: 16px;">Il ne reste qu'à créer ton compte pour accéder à tous tes avantages.</p>
+    <p style="margin: 0; font-size: 16px;">Il ne reste qu'à créer ton mot de passe pour accéder à tous tes avantages.</p>
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="https://club.nowme.fr/auth/signin" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
-      🚀 Créer mon compte
+    <a href="${resetLink}" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+      🔐 Créer mon mot de passe
     </a>
   </div>
 
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
-    <h3 style="color: #BF2778; margin-top: 0;">📝 Comment faire :</h3>
+    <h3 style="color: #BF2778; margin-top: 0;">📝 Étapes simples :</h3>
     <ol style="margin: 0; padding-left: 20px;">
-      <li>Clique sur "Créer mon compte" ci-dessus</li>
-      <li>Utilise cette adresse email : <strong>${email}</strong></li>
+      <li>Clique sur "Créer mon mot de passe" ci-dessus</li>
       <li>Choisis un mot de passe sécurisé</li>
+      <li>Tu seras automatiquement connecté</li>
       <li>Commence à kiffer ! 🎯</li>
     </ol>
+  </div>
+
+  <div style="background-color: #fff3cd; padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #ffc107;">
+    <p style="margin: 0; color: #856404; font-size: 14px;">
+      🚨 <strong>Important :</strong> Ce lien expire dans 24h. Clique dessus dès maintenant !
+    </p>
   </div>
 
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
