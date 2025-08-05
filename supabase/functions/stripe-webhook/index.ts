@@ -362,7 +362,7 @@ async function handleCheckoutCompleted(session) {
           subscription_type: subscriptionType,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        });
+        })
         .select('id')
         .single();
 
