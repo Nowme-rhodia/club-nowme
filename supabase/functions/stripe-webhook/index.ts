@@ -1,7 +1,7 @@
 import Stripe from 'npm:stripe@14.25.0';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-// Environment variables
+// Environment variables 
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET') || '';
 const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
