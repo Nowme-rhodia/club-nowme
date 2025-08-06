@@ -50,19 +50,26 @@ Deno.serve(async (req) => {
     // Process each orphaned profile
     for (const profile of orphanedProfiles) {
       try {
-        // Check if user already exists with this email
-        const { data: existingUser } = await supabase.auth.admin.listUsers({
-          filter: {
-            email: profile.email
-          }
+        // Check if user already exists with this email using our safe function
+        const { data: existingUsers, error: lookupError } = await supabase.rpc('safe_get_user_by_email', {
+          p_email: profile.email
         });
+        
+        if (lookupError) {
+          results.push({
+            email: profile.email,
+            status: 'error',
+            error: lookupError.message
+          });
+          continue;
+        }
         
         let userId;
         let status = 'created';
         
-        if (existingUser && existingUser.users.length > 0) {
+        if (existingUsers && existingUsers.length > 0) {
           // User exists, use existing ID
-          userId = existingUser.users[0].id;
+          userId = existingUsers[0].id;
           status = 'linked_existing';
         } else {
           // Create new auth user

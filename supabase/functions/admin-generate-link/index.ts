@@ -23,14 +23,26 @@ Deno.serve(async (req) => {
       });
     }
     
-    // First check if user exists to provide better error handling
-    const { data: user, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    // Use our safe function to check if user exists
+    const { data: users, error: userError } = await supabase.rpc('safe_get_user_by_email', {
+      p_email: email
+    });
     
-    if (userError || !user) {
+    if (userError) {
+      console.error('Error checking user:', userError);
       return new Response(JSON.stringify({ 
         success: false, 
-        message: `User with email ${email} not found`,
-        details: userError?.message || 'User does not exist'
+        message: userError.message 
+      }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    if (!users || users.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: `User with email ${email} not found`
       }), { 
         status: 404,
         headers: { 'Content-Type': 'application/json' }
@@ -47,13 +59,42 @@ Deno.serve(async (req) => {
     });
     
     if (resetError) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        message: resetError.message 
-      }), { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      console.error('Error generating link:', resetError);
+      
+      // If the standard method fails, try a direct password reset as fallback
+      try {
+        const { error: resetPasswordError } = await supabase.auth.resetPasswordForEmail(
+          email,
+          { redirectTo: 'https://club.nowme.fr/auth/update-password' }
+        );
+        
+        if (resetPasswordError) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            message: `Failed to generate link: ${resetError.message}. Fallback also failed: ${resetPasswordError.message}`
+          }), { 
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'Password reset email sent directly to user',
+          directEmail: true
+        }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (fallbackErr) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: `Failed to generate link: ${resetError.message}. Fallback also failed: ${fallbackErr.message}`
+        }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
     
     return new Response(JSON.stringify({ 
@@ -65,6 +106,7 @@ Deno.serve(async (req) => {
     });
     
   } catch (err) {
+    console.error('Unexpected error:', err);
     return new Response(JSON.stringify({ 
       success: false, 
       message: err.message 

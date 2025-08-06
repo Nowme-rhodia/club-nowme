@@ -130,11 +130,9 @@ async function handleCheckoutCompleted(session) {
     throw new Error('Customer email not found in checkout session');
   }
   
-  // Check if user already exists
-  const { data: existingUser, error: lookupError } = await supabase.auth.admin.listUsers({
-    filter: {
-      email: email
-    }
+  // Check if user already exists using our safe function
+  const { data: existingUsers, error: lookupError } = await supabase.rpc('safe_get_user_by_email', {
+    p_email: email
   });
   
   if (lookupError) {
@@ -145,7 +143,7 @@ async function handleCheckoutCompleted(session) {
   let userId;
   
   // Create user if doesn't exist
-  if (!existingUser || existingUser.users.length === 0) {
+  if (!existingUsers || existingUsers.length === 0) {
     // Generate a secure random password
     const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
     
@@ -164,7 +162,7 @@ async function handleCheckoutCompleted(session) {
     
     console.log(`Created new user with ID: ${userId}`);
   } else {
-    userId = existingUser.users[0].id;
+    userId = existingUsers[0].id;
     console.log(`Using existing user with ID: ${userId}`);
   }
   
@@ -219,38 +217,54 @@ async function handleCheckoutCompleted(session) {
     console.log(`Updated profile for user: ${userId}`);
   }
   
-  // Generate password reset link for new users
-  const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-    type: 'recovery',
-    email,
-    options: {
-      redirectTo: 'https://club.nowme.fr/auth/update-password'
-    }
-  });
-  
-  if (resetError) {
-    console.error(`Error generating reset link: ${resetError.message}`);
-    // Don't throw here, continue with email
-  }
-  
-  // Send welcome email with login instructions
-  const resetLink = resetError ? null : resetData.properties.action_link;
-  const emailContent = resetLink 
-    ? `Welcome to Nowme Club! Your account is ready. Please set your password using this link: ${resetLink}`
-    : `Welcome to Nowme Club! Your account is ready. Please use the "Forgot Password" option to set your password.`;
-    
-  const { error: emailError } = await supabase
-    .from('emails')
-    .insert({
-      to_address: email,
-      subject: 'Welcome to Nowme Club!',
-      content: emailContent,
-      status: 'pending',
-      created_at: new Date().toISOString()
+  // Use our improved function to generate password reset link
+  try {
+    const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: {
+        redirectTo: 'https://club.nowme.fr/auth/update-password'
+      }
     });
     
-  if (emailError) {
-    console.error(`Error queueing email: ${emailError.message}`);
+    if (!resetError && resetData) {
+      const resetLink = resetData.properties.action_link;
+      
+      // Send welcome email with login instructions
+      const emailContent = `Welcome to Nowme Club! Your account is ready. Please set your password using this link: ${resetLink}`;
+        
+      const { error: emailError } = await supabase
+        .from('emails')
+        .insert({
+          to_address: email,
+          subject: 'Welcome to Nowme Club!',
+          content: emailContent,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        });
+        
+      if (emailError) {
+        console.error(`Error queueing email: ${emailError.message}`);
+        // Don't throw here, the main account creation succeeded
+      }
+    } else {
+      // Fallback to a generic welcome email
+      const { error: emailError } = await supabase
+        .from('emails')
+        .insert({
+          to_address: email,
+          subject: 'Welcome to Nowme Club!',
+          content: 'Welcome to Nowme Club! Your account is ready. Please use the "Forgot Password" option to set your password.',
+          status: 'pending',
+          created_at: new Date().toISOString()
+        });
+        
+      if (emailError) {
+        console.error(`Error queueing email: ${emailError.message}`);
+      }
+    }
+  } catch (err) {
+    console.error(`Error with password reset: ${err.message}`);
     // Don't throw here, the main account creation succeeded
   }
   
