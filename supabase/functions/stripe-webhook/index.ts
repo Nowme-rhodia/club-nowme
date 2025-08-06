@@ -283,170 +283,108 @@ async function handleCheckoutCompleted(session) {
       amount_total: session.amount_total
     });
 
-
     // Determine subscription type
     const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
                            session.amount_total === 1299 ? 'discovery' : 'monthly';
     logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
 
     // Check if user already exists in auth.users
-    const { data: existingAuthUser } = await supabase.auth.admin.listUsers({
-      filter: `email.eq.${email}`,
-      page: 1,
-      perPage: 1
-    });
+    try {
+      // First check if user already exists in user_profiles
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('id, user_id, email')
+        .eq('email', email)
+        .maybeSingle();
 
-    const userExists = existingAuthUser?.users && existingAuthUser.users.length > 0;
-    logger.info(`Auth user exists: ${userExists}`);
-
-    let userId;
-
-    if (userExists) {
-      // User already exists in auth system
-      userId = existingAuthUser.users[0].id;
-      logger.info(`Using existing auth user: ${userId}`);
-    } else {
-      // Create new auth user
-      logger.info('Creating new auth user');
-      try {
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-          email,
-          email_confirm: true,
-          user_metadata: {
-            subscription_type: subscriptionType,
-            stripe_customer_id: session.customer,
-            created_via: 'stripe_checkout'
-          }
-        });
-
-        if (authError) {
-          logger.error('Auth user creation failed', authError);
-          throw new Error(`Auth user creation error: ${authError.message}`);
-        }
-
-        userId = authUser.user.id;
-        logger.success(`Auth user created: ${userId}`);
-      } catch (authCreateError) {
-        logger.error('Auth user creation exception', authCreateError);
+      if (existingProfile) {
+        logger.info(`User profile already exists for ${email}, updating subscription info`);
         
-        // Store in pending_signups as fallback
-        const { data: pendingSignup, error: pendingError } = await supabase
-          .from('pending_signups')
-          .insert({
-            email,
+        // Update existing profile with new subscription info
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({
             stripe_customer_id: session.customer,
             stripe_subscription_id: session.subscription,
+            subscription_status: 'active',
             subscription_type: subscriptionType,
-            amount_paid: session.amount_total,
-            created_at: new Date().toISOString(),
-            status: 'pending'
+            subscription_start_date: new Date().toISOString(),
+            subscription_updated_at: new Date().toISOString()
           })
-          .select('id')
-          .single();
+          .eq('email', email);
 
-        if (pendingError) {
-          logger.error('Pending signup creation failed', pendingError);
-          throw new Error(`Pending signup error: ${pendingError.message}`);
+        if (updateError) {
+          logger.error('Error updating existing profile', updateError);
+          throw new Error(`Profile update error: ${updateError.message}`);
         }
 
-        logger.success(`Fallback: Pending signup created with ID: ${pendingSignup?.id}`);
+        logger.success(`Updated existing profile for ${email}`);
         
-        // Send welcome email with signup instructions
-        await sendWelcomeEmail(email);
+        // Send subscription activated email
+        await sendSubscriptionActivatedEmail(email);
         
-        return { success: true, message: `Pending signup created for: ${email}` };
+        return { success: true, message: `Updated existing profile for ${email}` };
       }
-    }
-
-    // Create or update user profile
-    logger.info('Creating/updating user profile');
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .upsert({
-        user_id: userId,
-        email,
-        stripe_customer_id: session.customer,
-        stripe_subscription_id: session.subscription,
-        subscription_status: 'active',
-        subscription_type: subscriptionType,
-        subscription_start_date: new Date().toISOString(),
-        subscription_updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'user_id',
-        ignoreDuplicates: false
-      })
-      .select('id')
-      .single();
-
-    if (profileError) {
-      logger.error('Profile creation/update failed', profileError);
-      throw new Error(`Profile creation error: ${profileError.message}`);
-    }
-
-    logger.success(`Profile created/updated: ${profile.id}`);
-
-    // Try to create member_rewards but don't fail if it errors
-    try {
-      // Check if member_rewards table exists and if we have permission
-      const { data: tableInfo, error: tableError } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_name', 'member_rewards')
-        .eq('table_schema', 'public')
-        .single();
       
-      if (!tableError && tableInfo) {
-        const { error: rewardsError } = await supabase
-          .from('member_rewards')
-          .upsert({
-            user_id: profile.id,
-            points_earned: 0,
-            points_spent: 0,
-            points_balance: 0,
-            tier_level: 'bronze'
-          }, {
-            onConflict: 'user_id',
-            ignoreDuplicates: true
-          });
+      // If no existing profile, store in pending_signups
+      logger.info(`No existing profile for ${email}, creating pending signup`);
+      
+      const { data: pendingSignup, error: pendingError } = await supabase
+        .from('pending_signups')
+        .insert({
+          email,
+          stripe_customer_id: session.customer,
+          stripe_subscription_id: session.subscription,
+          subscription_type: subscriptionType,
+          amount_paid: session.amount_total,
+          created_at: new Date().toISOString(),
+          status: 'pending'
+        })
+        .select('id')
+        .single();
 
-        if (rewardsError) {
-          logger.warn('Member rewards creation skipped due to error', rewardsError);
-        } else {
-          logger.success('Member rewards created/updated');
-        }
-      } else {
-        logger.info('Member rewards table not accessible, skipping');
+      if (pendingError) {
+        logger.error('Pending signup creation failed', pendingError);
+        throw new Error(`Pending signup error: ${pendingError.message}`);
       }
-    } catch (rewardsError) {
-      logger.warn('Member rewards exception, continuing', rewardsError);
-      // Continue even if rewards creation fails
-    }
 
-    // Send password setup email for new users or welcome back for existing
-    if (!userExists) {
-      await sendPasswordSetupEmail(email);
-      logger.success('Password setup email queued');
-    } else {
-      // For existing users, send a "subscription activated" email
-      try {
-        const { error: emailError } = await supabase
-          .from('emails')
-          .insert({
-            to_address: email,
-            subject: 'Ton abonnement Nowme est activé ! 🎉',
-            content: generateSubscriptionActivatedHTML(email),
-            status: 'pending'
-          });
+      logger.success(`Pending signup created with ID: ${pendingSignup?.id}`);
 
-        if (!emailError) {
-          logger.success('Subscription activated email queued');
-        }
-      } catch (emailError) {
-        logger.warn('Subscription email error, continuing', emailError);
+      // Send welcome email with signup instructions
+      await sendWelcomeEmail(email);
+
+      return { success: true, message: `Pending signup created for: ${email}` };
+      
+    } catch (authError) {
+      logger.error('Error checking/creating user', authError);
+      
+      // Fallback to pending_signups
+      const { data: pendingSignup, error: pendingError } = await supabase
+        .from('pending_signups')
+        .insert({
+          email,
+          stripe_customer_id: session.customer,
+          stripe_subscription_id: session.subscription,
+          subscription_type: subscriptionType,
+          amount_paid: session.amount_total,
+          created_at: new Date().toISOString(),
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (pendingError) {
+        logger.error('Pending signup creation failed', pendingError);
+        throw new Error(`Pending signup error: ${pendingError.message}`);
       }
-    }
 
-    return { success: true, message: `Profile processed for ${email}` };
+      logger.success(`Fallback: Pending signup created with ID: ${pendingSignup?.id}`);
+      
+      // Send welcome email with signup instructions
+      await sendWelcomeEmail(email);
+      
+      return { success: true, message: `Pending signup created for: ${email}` };
+    }
   } catch (error) {
     logger.error('Error in handleCheckoutCompleted', error);
     return { success: false, message: error.message };
@@ -459,7 +397,8 @@ async function handleSubscriptionUpdated(subscription) {
   try {
     const status = mapStripeStatus(subscription.status);
     
-    const { error } = await supabase
+    // Update in user_profiles if exists
+    const { error: profileError } = await supabase
       .from('user_profiles')
       .update({
         subscription_status: status,
@@ -467,8 +406,16 @@ async function handleSubscriptionUpdated(subscription) {
       })
       .eq('stripe_customer_id', subscription.customer);
 
-    if (error) {
-      throw new Error(`Update error: ${error.message}`);
+    // Also update in pending_signups if exists
+    const { error: pendingError } = await supabase
+      .from('pending_signups')
+      .update({
+        status: status === 'active' ? 'pending' : status
+      })
+      .eq('stripe_customer_id', subscription.customer);
+
+    if (profileError && pendingError) {
+      logger.warn('No profiles updated', { profileError, pendingError });
     }
 
     return { success: true, message: `Subscription updated: ${status}` };
@@ -482,7 +429,8 @@ async function handleSubscriptionDeleted(subscription) {
   logger.info('Processing subscription.deleted');
   
   try {
-    const { error } = await supabase
+    // Update in user_profiles if exists
+    const { error: profileError } = await supabase
       .from('user_profiles')
       .update({
         subscription_status: 'cancelled',
@@ -490,8 +438,16 @@ async function handleSubscriptionDeleted(subscription) {
       })
       .eq('stripe_customer_id', subscription.customer);
 
-    if (error) {
-      throw new Error(`Cancellation error: ${error.message}`);
+    // Also update in pending_signups if exists
+    const { error: pendingError } = await supabase
+      .from('pending_signups')
+      .update({
+        status: 'cancelled'
+      })
+      .eq('stripe_customer_id', subscription.customer);
+
+    if (profileError && pendingError) {
+      logger.warn('No profiles updated', { profileError, pendingError });
     }
 
     return { success: true, message: 'Subscription cancelled' };
@@ -505,7 +461,8 @@ async function handlePaymentFailed(invoice) {
   logger.info('Processing payment.failed');
   
   try {
-    const { error } = await supabase
+    // Update in user_profiles if exists
+    const { error: profileError } = await supabase
       .from('user_profiles')
       .update({
         subscription_status: 'past_due',
@@ -513,8 +470,16 @@ async function handlePaymentFailed(invoice) {
       })
       .eq('stripe_customer_id', invoice.customer);
 
-    if (error) {
-      throw new Error(`Failed payment update error: ${error.message}`);
+    // Also update in pending_signups if exists
+    const { error: pendingError } = await supabase
+      .from('pending_signups')
+      .update({
+        status: 'past_due'
+      })
+      .eq('stripe_customer_id', invoice.customer);
+
+    if (profileError && pendingError) {
+      logger.warn('No profiles updated', { profileError, pendingError });
     }
 
     return { success: true, message: 'Payment status updated' };
@@ -528,33 +493,13 @@ async function sendWelcomeEmail(email) {
   try {
     logger.info(`Preparing welcome email for: ${email}`);
     
-    // Generate password reset link
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: {
-        redirectTo: 'https://club.nowme.fr/auth/update-password'
-      }
-    });
-
-    if (linkError) {
-      throw new Error(`Link generation error: ${linkError.message}`);
-    }
-
-    const resetLink = linkData?.properties?.action_link;
-    if (!resetLink) {
-      throw new Error('Reset link not generated');
-    }
-
-    logger.info('Link generated, adding to email queue');
-
     // Add email to queue
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
         to_address: email,
         subject: 'Bienvenue dans le Nowme Club ! 🎉',
-        content: generateWelcomeEmailHTML(email, resetLink),
+        content: generateWelcomeEmailHTML(email),
         status: 'pending'
       });
 
@@ -562,7 +507,7 @@ async function sendWelcomeEmail(email) {
       throw new Error(`Email queue error: ${emailError.message}`);
     }
 
-    logger.success('Email added to queue');
+    logger.success('Welcome email added to queue');
 
   } catch (error) {
     logger.error('Email sending error', error);
@@ -570,37 +515,17 @@ async function sendWelcomeEmail(email) {
   }
 }
 
-async function sendPasswordSetupEmail(email) {
+async function sendSubscriptionActivatedEmail(email) {
   try {
-    logger.info(`Preparing password setup email for: ${email}`);
+    logger.info(`Preparing subscription activated email for: ${email}`);
     
-    // Generate password reset link for existing user
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: {
-        redirectTo: 'https://club.nowme.fr/auth/update-password'
-      }
-    });
-
-    if (linkError) {
-      throw new Error(`Link generation error: ${linkError.message}`);
-    }
-
-    const resetLink = linkData?.properties?.action_link;
-    if (!resetLink) {
-      throw new Error('Reset link not generated');
-    }
-
-    logger.success('Password setup link generated successfully');
-
     // Add email to queue
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
         to_address: email,
-        subject: 'Ton abonnement Nowme est activé ! Crée ton mot de passe 🎉',
-        content: generatePasswordSetupHTML(email, resetLink),
+        subject: 'Ton abonnement Nowme est activé ! 🎉',
+        content: generateSubscriptionActivatedHTML(email),
         status: 'pending'
       });
 
@@ -608,7 +533,7 @@ async function sendPasswordSetupEmail(email) {
       throw new Error(`Email queue error: ${emailError.message}`);
     }
 
-    logger.success('Password setup email added to queue');
+    logger.success('Subscription activated email added to queue');
 
   } catch (error) {
     logger.error('Email sending error', error);
@@ -630,38 +555,38 @@ function mapStripeStatus(stripeStatus) {
   return statusMap[stripeStatus] || 'pending';
 }
 
-function generatePasswordSetupHTML(email, resetLink) {
+function generateWelcomeEmailHTML(email) {
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Ton abonnement Nowme est activé !</title>
+  <title>Bienvenue dans le Nowme Club !</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="color: #BF2778; font-size: 28px; margin-bottom: 10px;">🎉 Ton abonnement est activé !</h1>
-    <p style="font-size: 18px; color: #666;">Bienvenue dans le Nowme Club !</p>
+    <h1 style="color: #BF2778; font-size: 28px; margin-bottom: 10px;">🎉 Bienvenue dans le Nowme Club !</h1>
+    <p style="font-size: 18px; color: #666;">Ton aventure kiff commence maintenant !</p>
   </div>
 
   <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton compte est créé !</h2>
-    <p style="margin: 0; font-size: 16px;">Il ne reste qu'à choisir ton mot de passe pour accéder à tous tes avantages.</p>
+    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton abonnement est activé !</h2>
+    <p style="margin: 0; font-size: 16px;">Pour accéder à tous tes avantages, crée ton compte en cliquant sur le bouton ci-dessous.</p>
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${resetLink}" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
-      🔐 Choisir mon mot de passe
+    <a href="https://club.nowme.fr/auth/signup" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+      🔐 Créer mon compte
     </a>
   </div>
 
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
     <h3 style="color: #BF2778; margin-top: 0;">📝 Comment faire :</h3>
     <ol style="margin: 0; padding-left: 20px;">
-      <li>Clique sur le lien "Choisir mon mot de passe" ci-dessus</li>
-      <li>Tu seras redirigée vers la page de choix de mot de passe</li>
-      <li>Choisis un mot de passe sécurisé (minimum 8 caractères)</li>
-      <li>Connecte-toi et commence à kiffer ! 🎯</li>
+      <li>Clique sur le bouton "Créer mon compte"</li>
+      <li>Utilise cette adresse email: ${email}</li>
+      <li>Choisis un mot de passe sécurisé</li>
+      <li>Ton abonnement sera automatiquement associé à ton compte</li>
     </ol>
   </div>
 
@@ -690,62 +615,6 @@ function generatePasswordSetupHTML(email, resetLink) {
 </html>`;
 }
 
-function generateWelcomeEmailHTML(email, resetLink) {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Bienvenue dans le Nowme Club !</title>
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="color: #BF2778; font-size: 28px; margin-bottom: 10px;">🎉 Bienvenue dans le Nowme Club !</h1>
-    <p style="font-size: 18px; color: #666;">Ton aventure kiff commence maintenant !</p>
-  </div>
-
-  <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton compte est créé !</h2>
-    <p style="margin: 0; font-size: 16px;">Il ne reste qu'une étape : créer ton mot de passe pour accéder à ton espace membre.</p>
-  </div>
-
-  <div style="text-align: center; margin: 30px 0;">
-    <a href="${resetLink}" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
-      🔐 Créer mon mot de passe
-    </a>
-  </div>
-
-  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
-    <h3 style="color: #BF2778; margin-top: 0;">🎯 Ce qui t'attend :</h3>
-    <ul style="margin: 0; padding-left: 20px;">
-      <li>Événements premium chaque mois</li>
-      <li>Masterclass avec des expertes</li>
-      <li>Box surprise trimestrielle</li>
-      <li>Consultations bien-être gratuites</li>
-      <li>Réductions jusqu'à -70%</li>
-      <li>Communauté de femmes inspirantes</li>
-    </ul>
-  </div>
-
-  <div style="text-align: center; margin: 30px 0; padding: 20px; border: 2px dashed #BF2778; border-radius: 10px;">
-    <p style="margin: 0; color: #BF2778; font-weight: bold;">🚨 Important : Ce lien expire dans 24h</p>
-    <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Clique dessus dès maintenant pour ne pas le perdre !</p>
-  </div>
-
-  <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-    <p style="margin: 0; color: #666; font-size: 14px;">
-      Des questions ? Réponds à cet email ou contacte-nous sur 
-      <a href="mailto:contact@nowme.fr" style="color: #BF2778;">contact@nowme.fr</a>
-    </p>
-    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
-      L'équipe Nowme 💕
-    </p>
-  </div>
-</body>
-</html>`;
-}
-
-// Nouvelle fonction pour générer l'email d'activation d'abonnement
 function generateSubscriptionActivatedHTML(email) {
   return `
 <!DOCTYPE html>
