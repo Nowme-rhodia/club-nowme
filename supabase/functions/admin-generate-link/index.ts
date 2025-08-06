@@ -57,14 +57,14 @@ Deno.serve(async (req) => {
 
     logger.info(`Processing link generation for: ${email}`);
     
-    // Check if user exists in auth.users
+    // Check if user exists in auth.users using listUsers without filter
     const { data: existingAuthUsers } = await supabase.auth.admin.listUsers({
-      filter: `email.eq.${email}`,
       page: 1,
-      perPage: 1
+      perPage: 1000 // Get more users to search through
     });
     
-    const authUserExists = existingAuthUsers?.users && existingAuthUsers.users.length > 0;
+    const authUserExists = existingAuthUsers?.users && 
+                          existingAuthUsers.users.some(user => user.email === email);
     
     // Check if user exists in user_profiles
     const { data: userProfile } = await supabase
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     else if (authUserExists) {
       logger.info(`User ${email} exists in auth.users - generating password reset link`);
       
-      const authUser = existingAuthUsers.users[0];
+      const authUser = existingAuthUsers.users.find(user => user.email === email);
       
       // Generate a password reset link
       const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
