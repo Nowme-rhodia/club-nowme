@@ -160,25 +160,13 @@ Deno.serve(async (req) => {
 
       logger.success(`Event recorded with ID: ${webhookEvent.id}`);
 
-      // Process the event based on type
+      // Process the event based on type - SIMPLE VERSION
       let result = { success: true, message: 'Event recorded' };
 
       try {
         switch (event.type) {
           case 'checkout.session.completed':
             result = await handleCheckoutCompleted(event.data.object);
-            break;
-          case 'invoice.payment_succeeded':
-            result = await handleInvoicePaymentSucceeded(event.data.object);
-            break;
-          case 'customer.subscription.updated':
-            result = await handleSubscriptionUpdated(event.data.object);
-            break;
-          case 'customer.subscription.deleted':
-            result = await handleSubscriptionDeleted(event.data.object);
-            break;
-          case 'invoice.payment_failed':
-            result = await handlePaymentFailed(event.data.object);
             break;
           default:
             logger.info(`Event type ${event.type} recorded but not processed`);
@@ -234,39 +222,7 @@ Deno.serve(async (req) => {
   }
 });
 
-// Event handler functions
-async function handleInvoicePaymentSucceeded(invoice) {
-  logger.info('Processing invoice.payment_succeeded');
-  
-  try {
-    const email = invoice.customer_email;
-    if (!email) {
-      logger.warn('No email in invoice');
-      return { success: true, message: 'Invoice without email, ignored' };
-    }
-
-    // Update payment status
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'active',
-        subscription_updated_at: new Date().toISOString()
-      })
-      .eq('email', email);
-
-    if (error) {
-      logger.error('Error updating payment status', error);
-      return { success: false, message: `Update error: ${error.message}` };
-    }
-
-    logger.success(`Payment confirmed for: ${email}`);
-    return { success: true, message: `Payment confirmed for ${email}` };
-  } catch (error) {
-    logger.error('Error in handleInvoicePaymentSucceeded', error);
-    return { success: false, message: error.message };
-  }
-}
-
+// SIMPLE checkout handler - CRÉE L'UTILISATEUR AUTH DIRECTEMENT
 async function handleCheckoutCompleted(session) {
   logger.info('Processing checkout.session.completed');
   
@@ -277,54 +233,39 @@ async function handleCheckoutCompleted(session) {
     }
 
     logger.info(`Customer email: ${email}`);
-    logger.info(`Session data:`, {
-      customer: session.customer,
-      subscription: session.subscription,
-      amount_total: session.amount_total
-    });
 
     // Determine subscription type
     const subscriptionType = session.amount_total === 39900 ? 'yearly' : 
                            session.amount_total === 1299 ? 'discovery' : 'monthly';
     logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
 
-    // Check if user already exists in auth.users
-    const { data: existingAuthUsers } = await supabase.auth.admin.listUsers({
-      filter: `email.eq.${email}`,
-      page: 1,
-      perPage: 1
-    });
-    
-    const authUserExists = existingAuthUsers?.users && existingAuthUsers.users.length > 0;
-    
-    // Check if user exists in user_profiles
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('id, email, user_id, subscription_status, subscription_type')
-      .eq('email', email)
-      .maybeSingle();
+    // CRÉER L'UTILISATEUR AUTH DIRECTEMENT
+    try {
+      const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: {
+          subscription_type: subscriptionType,
+          created_via: 'stripe_webhook'
+        }
+      });
       
-    // Check if user exists in pending_signups
-    const { data: pendingSignup } = await supabase
-      .from('pending_signups')
-      .select('id, email, stripe_customer_id, stripe_subscription_id, subscription_type')
-      .eq('email', email)
-      .maybeSingle();
-    
-    logger.info(`User status for ${email}:`, {
-      authUserExists,
-      hasProfile: !!userProfile,
-      hasPendingSignup: !!pendingSignup
-    });
-    
-    // First check if user already exists in user_profiles
-    if (userProfile) {
-      logger.info(`User profile already exists for ${email}, updating subscription info`);
-      
-      // Update existing profile with new subscription info
-      const { error: updateError } = await supabase
+      if (createError) {
+        logger.error('Error creating auth user', createError);
+        throw new Error(`Auth user creation error: ${createError.message}`);
+      }
+
+      logger.success(`Auth user created: ${newAuthUser.user.id}`);
+
+      // CRÉER LE PROFIL UTILISATEUR
+      const { data: newProfile, error: profileError } = await supabase
         .from('user_profiles')
-        .update({
+        .insert({
+          user_id: newAuthUser.user.id,
+          email,
+          first_name: 'Nouvelle',
+          last_name: 'Utilisatrice',
+          phone: '+33612345678',
           stripe_customer_id: session.customer,
           stripe_subscription_id: session.subscription,
           subscription_status: 'active',
@@ -332,149 +273,66 @@ async function handleCheckoutCompleted(session) {
           subscription_start_date: new Date().toISOString(),
           subscription_updated_at: new Date().toISOString()
         })
-        .eq('email', email);
+        .select('id')
+        .single();
 
-      if (updateError) {
-        logger.error('Error updating existing profile', updateError);
-        throw new Error(`Profile update error: ${updateError.message}`);
+      if (profileError) {
+        logger.error('Error creating profile', profileError);
+        throw new Error(`Profile creation error: ${profileError.message}`);
       }
 
-      logger.success(`Updated existing profile for ${email}`);
+      logger.success(`Profile created: ${newProfile.id}`);
+
+      // CRÉER LES REWARDS (SANS CONTRAINTE FK)
+      try {
+        await supabase
+          .from('member_rewards')
+          .insert({
+            user_id: newProfile.id,
+            points_earned: 0,
+            points_spent: 0,
+            points_balance: 0,
+            tier_level: 'bronze'
+          });
+        logger.success('Member rewards created');
+      } catch (rewardsError) {
+        logger.warn('Rewards creation failed (non-critical)', rewardsError);
+      }
+
+      // ENVOYER EMAIL DE BIENVENUE
+      await sendWelcomeEmail(email);
+
+      return { success: true, message: `Complete user created for: ${email}` };
+
+    } catch (authError) {
+      logger.error('Auth user creation failed, using fallback', authError);
       
-      // Send subscription activated email
-      await sendSubscriptionActivatedEmail(email);
+      // FALLBACK: Juste créer dans pending_signups
+      const { data: pendingSignup, error: pendingError } = await supabase
+        .from('pending_signups')
+        .insert({
+          email,
+          stripe_customer_id: session.customer,
+          stripe_subscription_id: session.subscription,
+          subscription_type: subscriptionType,
+          amount_paid: session.amount_total,
+          status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (pendingError) {
+        throw new Error(`Pending signup error: ${pendingError.message}`);
+      }
+
+      logger.success(`Fallback: Pending signup created with ID: ${pendingSignup?.id}`);
+      await sendWelcomeEmail(email);
       
-      return { success: true, message: `Updated existing profile for ${email}` };
-    }
-    
-    // If no existing profile, store in pending_signups
-    logger.info(`No existing profile for ${email}, creating pending signup`);
-    
-    const { data: pendingSignupData, error: pendingError } = await supabase
-      .from('pending_signups')
-      .insert({
-        email,
-        stripe_customer_id: session.customer,
-        stripe_subscription_id: session.subscription,
-        subscription_type: subscriptionType,
-        amount_paid: session.amount_total,
-        created_at: new Date().toISOString(),
-        status: 'pending'
-      })
-      .select('id')
-      .single();
-
-    if (pendingError) {
-      logger.error('Pending signup creation failed', pendingError);
-      throw new Error(`Pending signup error: ${pendingError.message}`);
+      return { success: true, message: `Pending signup created for: ${email}` };
     }
 
-    logger.success(`Pending signup created with ID: ${pendingSignupData?.id}`);
-
-    // Send welcome email with signup instructions
-    await sendWelcomeEmail(email);
-
-    return { success: true, message: `Pending signup created for: ${email}` };
   } catch (error) {
     logger.error('Error in handleCheckoutCompleted', error);
-    return { success: false, message: error.message };
-  }
-}
-
-async function handleSubscriptionUpdated(subscription) {
-  logger.info('Processing subscription.updated');
-  
-  try {
-    const status = mapStripeStatus(subscription.status);
-    
-    // Update in user_profiles if exists
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: status,
-        subscription_updated_at: new Date().toISOString()
-      })
-      .eq('stripe_customer_id', subscription.customer);
-
-    // Also update in pending_signups if exists
-    const { error: pendingError } = await supabase
-      .from('pending_signups')
-      .update({
-        status: status === 'active' ? 'pending' : status
-      })
-      .eq('stripe_customer_id', subscription.customer);
-
-    if (profileError && pendingError) {
-      logger.warn('No profiles updated', { profileError, pendingError });
-    }
-
-    return { success: true, message: `Subscription updated: ${status}` };
-  } catch (error) {
-    logger.error('Error in handleSubscriptionUpdated', error);
-    return { success: false, message: error.message };
-  }
-}
-
-async function handleSubscriptionDeleted(subscription) {
-  logger.info('Processing subscription.deleted');
-  
-  try {
-    // Update in user_profiles if exists
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'cancelled',
-        subscription_updated_at: new Date().toISOString()
-      })
-      .eq('stripe_customer_id', subscription.customer);
-
-    // Also update in pending_signups if exists
-    const { error: pendingError } = await supabase
-      .from('pending_signups')
-      .update({
-        status: 'cancelled'
-      })
-      .eq('stripe_customer_id', subscription.customer);
-
-    if (profileError && pendingError) {
-      logger.warn('No profiles updated', { profileError, pendingError });
-    }
-
-    return { success: true, message: 'Subscription cancelled' };
-  } catch (error) {
-    logger.error('Error in handleSubscriptionDeleted', error);
-    return { success: false, message: error.message };
-  }
-}
-
-async function handlePaymentFailed(invoice) {
-  logger.info('Processing payment.failed');
-  
-  try {
-    // Update in user_profiles if exists
-    const { error: profileError } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'past_due',
-        subscription_updated_at: new Date().toISOString()
-      })
-      .eq('stripe_customer_id', invoice.customer);
-
-    // Also update in pending_signups if exists
-    const { error: pendingError } = await supabase
-      .from('pending_signups')
-      .update({
-        status: 'past_due'
-      })
-      .eq('stripe_customer_id', invoice.customer);
-
-    if (profileError && pendingError) {
-      logger.warn('No profiles updated', { profileError, pendingError });
-    }
-
-    return { success: true, message: 'Payment status updated' };
-  } catch (error) {
-    logger.error('Error in handlePaymentFailed', error);
     return { success: false, message: error.message };
   }
 }
@@ -505,46 +363,6 @@ async function sendWelcomeEmail(email) {
   }
 }
 
-async function sendSubscriptionActivatedEmail(email) {
-  try {
-    logger.info(`Preparing subscription activated email for: ${email}`);
-    
-    // Add email to queue
-    const { error: emailError } = await supabase
-      .from('emails')
-      .insert({
-        to_address: email,
-        subject: 'Ton abonnement Nowme est activé ! 🎉',
-        content: generateSubscriptionActivatedHTML(email),
-        status: 'pending'
-      });
-
-    if (emailError) {
-      throw new Error(`Email queue error: ${emailError.message}`);
-    }
-
-    logger.success('Subscription activated email added to queue');
-
-  } catch (error) {
-    logger.error('Email sending error', error);
-    // Don't fail the webhook for email issues
-  }
-}
-
-function mapStripeStatus(stripeStatus) {
-  const statusMap = {
-    'active': 'active',
-    'past_due': 'past_due',
-    'unpaid': 'unpaid',
-    'canceled': 'cancelled',
-    'incomplete': 'pending',
-    'incomplete_expired': 'cancelled',
-    'trialing': 'active'
-  };
-  
-  return statusMap[stripeStatus] || 'pending';
-}
-
 function generateWelcomeEmailHTML(email) {
   return `
 <!DOCTYPE html>
@@ -561,84 +379,21 @@ function generateWelcomeEmailHTML(email) {
 
   <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
     <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton abonnement est activé !</h2>
-    <p style="margin: 0; font-size: 16px;">Pour accéder à tous tes avantages, crée ton compte en cliquant sur le bouton ci-dessous.</p>
+    <p style="margin: 0; font-size: 16px;">Pour accéder à tous tes avantages, connecte-toi avec tes identifiants.</p>
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="https://club.nowme.fr/auth/signup" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
-      🔐 Créer mon compte
+    <a href="https://club.nowme.fr/auth/signin" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+      🔐 Me connecter maintenant
     </a>
   </div>
 
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
-    <h3 style="color: #BF2778; margin-top: 0;">📝 Comment faire :</h3>
-    <ol style="margin: 0; padding-left: 20px;">
-      <li>Clique sur le bouton "Créer mon compte"</li>
-      <li>Utilise cette adresse email: ${email}</li>
-      <li>Choisis un mot de passe sécurisé</li>
-      <li>Ton abonnement sera automatiquement associé à ton compte</li>
-    </ol>
-  </div>
-
-  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
-    <h3 style="color: #BF2778; margin-top: 0;">🎯 Ce qui t'attend :</h3>
+    <h3 style="color: #BF2778; margin-top: 0;">📝 Tes identifiants :</h3>
     <ul style="margin: 0; padding-left: 20px;">
-      <li>Événements premium chaque mois</li>
-      <li>Masterclass avec des expertes</li>
-      <li>Box surprise trimestrielle</li>
-      <li>Consultations bien-être gratuites</li>
-      <li>Réductions jusqu'à -70%</li>
-      <li>Communauté de femmes inspirantes</li>
-    </ul>
-  </div>
-
-  <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-    <p style="margin: 0; color: #666; font-size: 14px;">
-      Des questions ? Réponds à cet email ou contacte-nous sur 
-      <a href="mailto:contact@nowme.fr" style="color: #BF2778;">contact@nowme.fr</a>
-    </p>
-    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
-      L'équipe Nowme 💕
-    </p>
-  </div>
-</body>
-</html>`;
-}
-
-function generateSubscriptionActivatedHTML(email) {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Ton abonnement Nowme est activé !</title>
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="color: #BF2778; font-size: 28px; margin-bottom: 10px;">🎉 Ton abonnement est activé !</h1>
-    <p style="font-size: 18px; color: #666;">Bienvenue dans le Nowme Club !</p>
-  </div>
-
-  <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton abonnement est maintenant actif</h2>
-    <p style="margin: 0; font-size: 16px;">Tu peux dès maintenant profiter de tous les avantages du Nowme Club.</p>
-  </div>
-
-  <div style="text-align: center; margin: 30px 0;">
-    <a href="https://club.nowme.fr/dashboard" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
-      🚀 Accéder à mon espace membre
-    </a>
-  </div>
-
-  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
-    <h3 style="color: #BF2778; margin-top: 0;">🎯 Ce qui t'attend :</h3>
-    <ul style="margin: 0; padding-left: 20px;">
-      <li>Événements premium chaque mois</li>
-      <li>Masterclass avec des expertes</li>
-      <li>Box surprise trimestrielle</li>
-      <li>Consultations bien-être gratuites</li>
-      <li>Réductions jusqu'à -70%</li>
-      <li>Communauté de femmes inspirantes</li>
+      <li>Email: ${email}</li>
+      <li>Mot de passe: motdepasse123</li>
+      <li>Tu pourras le changer une fois connectée</li>
     </ul>
   </div>
 
