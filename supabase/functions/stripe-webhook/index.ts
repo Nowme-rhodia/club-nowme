@@ -289,31 +289,81 @@ async function handleCheckoutCompleted(session) {
                            session.amount_total === 1299 ? 'discovery' : 'monthly';
     logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
 
-    // Step 1: Create auth user first
-    logger.info('Creating auth user');
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: {
-        subscription_type: subscriptionType,
-        stripe_customer_id: session.customer,
-        created_via: 'stripe_checkout'
-      }
+    // Check if user already exists in auth.users
+    const { data: existingAuthUser } = await supabase.auth.admin.listUsers({
+      filter: `email.eq.${email}`,
+      page: 1,
+      perPage: 1
     });
 
-    if (authError) {
-      logger.error('Auth user creation failed', authError);
-      throw new Error(`Auth user creation error: ${authError.message}`);
+    const userExists = existingAuthUser?.users && existingAuthUser.users.length > 0;
+    logger.info(`Auth user exists: ${userExists}`);
+
+    let userId;
+
+    if (userExists) {
+      // User already exists in auth system
+      userId = existingAuthUser.users[0].id;
+      logger.info(`Using existing auth user: ${userId}`);
+    } else {
+      // Create new auth user
+      logger.info('Creating new auth user');
+      try {
+        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+          email,
+          email_confirm: true,
+          user_metadata: {
+            subscription_type: subscriptionType,
+            stripe_customer_id: session.customer,
+            created_via: 'stripe_checkout'
+          }
+        });
+
+        if (authError) {
+          logger.error('Auth user creation failed', authError);
+          throw new Error(`Auth user creation error: ${authError.message}`);
+        }
+
+        userId = authUser.user.id;
+        logger.success(`Auth user created: ${userId}`);
+      } catch (authCreateError) {
+        logger.error('Auth user creation exception', authCreateError);
+        
+        // Store in pending_signups as fallback
+        const { data: pendingSignup, error: pendingError } = await supabase
+          .from('pending_signups')
+          .insert({
+            email,
+            stripe_customer_id: session.customer,
+            stripe_subscription_id: session.subscription,
+            subscription_type: subscriptionType,
+            amount_paid: session.amount_total,
+            created_at: new Date().toISOString(),
+            status: 'pending'
+          })
+          .select('id')
+          .single();
+
+        if (pendingError) {
+          logger.error('Pending signup creation failed', pendingError);
+          throw new Error(`Pending signup error: ${pendingError.message}`);
+        }
+
+        logger.success(`Fallback: Pending signup created with ID: ${pendingSignup?.id}`);
+        
+        // Send welcome email with signup instructions
+        await sendWelcomeEmail(email);
+        
+        return { success: true, message: `Pending signup created for: ${email}` };
+      }
     }
 
-    logger.success(`Auth user created: ${authUser.user.id}`);
-
-    // Step 2: Create user profile with real user_id
-    logger.info('Creating user profile');
+    // Create or update user profile
+    logger.info('Creating/updating user profile');
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .upsert({
-        user_id: authUser.user.id, // Real auth user ID
+        user_id: userId,
         email,
         stripe_customer_id: session.customer,
         stripe_subscription_id: session.subscription,
@@ -322,48 +372,81 @@ async function handleCheckoutCompleted(session) {
         subscription_start_date: new Date().toISOString(),
         subscription_updated_at: new Date().toISOString()
       }, {
-        onConflict: 'email',
+        onConflict: 'user_id',
         ignoreDuplicates: false
       })
       .select('id')
       .single();
 
     if (profileError) {
-      logger.error('Profile creation failed', profileError);
+      logger.error('Profile creation/update failed', profileError);
       throw new Error(`Profile creation error: ${profileError.message}`);
     }
 
-    logger.success(`Profile created: ${profile.id}`);
+    logger.success(`Profile created/updated: ${profile.id}`);
 
-    // Step 3: Create member_rewards
+    // Try to create member_rewards but don't fail if it errors
     try {
-      const { error: rewardsError } = await supabase
-        .from('member_rewards')
-        .upsert({
-          user_id: profile.id,
-          points_earned: 0,
-          points_spent: 0,
-          points_balance: 0,
-          tier_level: 'bronze'
-        }, {
-          onConflict: 'user_id',
-          ignoreDuplicates: true
-        });
+      // Check if member_rewards table exists and if we have permission
+      const { data: tableInfo, error: tableError } = await supabase
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_name', 'member_rewards')
+        .eq('table_schema', 'public')
+        .single();
+      
+      if (!tableError && tableInfo) {
+        const { error: rewardsError } = await supabase
+          .from('member_rewards')
+          .upsert({
+            user_id: profile.id,
+            points_earned: 0,
+            points_spent: 0,
+            points_balance: 0,
+            tier_level: 'bronze'
+          }, {
+            onConflict: 'user_id',
+            ignoreDuplicates: true
+          });
 
-      if (rewardsError) {
-        logger.error('Member rewards creation failed', rewardsError);
+        if (rewardsError) {
+          logger.warn('Member rewards creation skipped due to error', rewardsError);
+        } else {
+          logger.success('Member rewards created/updated');
+        }
       } else {
-        logger.success('Member rewards created');
+        logger.info('Member rewards table not accessible, skipping');
       }
     } catch (rewardsError) {
-      logger.error('Member rewards exception', rewardsError);
+      logger.warn('Member rewards exception, continuing', rewardsError);
       // Continue even if rewards creation fails
     }
 
-    // Step 4: Send password setup email
-    await sendPasswordSetupEmail(email);
+    // Send password setup email for new users or welcome back for existing
+    if (!userExists) {
+      await sendPasswordSetupEmail(email);
+      logger.success('Password setup email queued');
+    } else {
+      // For existing users, send a "subscription activated" email
+      try {
+        const { error: emailError } = await supabase
+          .from('emails')
+          .insert({
+            to_address: email,
+            subject: 'Ton abonnement Nowme est activé ! 🎉',
+            content: generateSubscriptionActivatedHTML(email),
+            status: 'pending'
+          });
 
-    return { success: true, message: `Profile processed for ${email} - signup email sent` };
+        if (!emailError) {
+          logger.success('Subscription activated email queued');
+        }
+      } catch (emailError) {
+        logger.warn('Subscription email error, continuing', emailError);
+      }
+    }
+
+    return { success: true, message: `Profile processed for ${email}` };
   } catch (error) {
     logger.error('Error in handleCheckoutCompleted', error);
     return { success: false, message: error.message };
@@ -647,6 +730,57 @@ function generateWelcomeEmailHTML(email, resetLink) {
   <div style="text-align: center; margin: 30px 0; padding: 20px; border: 2px dashed #BF2778; border-radius: 10px;">
     <p style="margin: 0; color: #BF2778; font-weight: bold;">🚨 Important : Ce lien expire dans 24h</p>
     <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Clique dessus dès maintenant pour ne pas le perdre !</p>
+  </div>
+
+  <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+    <p style="margin: 0; color: #666; font-size: 14px;">
+      Des questions ? Réponds à cet email ou contacte-nous sur 
+      <a href="mailto:contact@nowme.fr" style="color: #BF2778;">contact@nowme.fr</a>
+    </p>
+    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
+      L'équipe Nowme 💕
+    </p>
+  </div>
+</body>
+</html>`;
+}
+
+// Nouvelle fonction pour générer l'email d'activation d'abonnement
+function generateSubscriptionActivatedHTML(email) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Ton abonnement Nowme est activé !</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #BF2778; font-size: 28px; margin-bottom: 10px;">🎉 Ton abonnement est activé !</h1>
+    <p style="font-size: 18px; color: #666;">Bienvenue dans le Nowme Club !</p>
+  </div>
+
+  <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton abonnement est maintenant actif</h2>
+    <p style="margin: 0; font-size: 16px;">Tu peux dès maintenant profiter de tous les avantages du Nowme Club.</p>
+  </div>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="https://club.nowme.fr/dashboard" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+      🚀 Accéder à mon espace membre
+    </a>
+  </div>
+
+  <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
+    <h3 style="color: #BF2778; margin-top: 0;">🎯 Ce qui t'attend :</h3>
+    <ul style="margin: 0; padding-left: 20px;">
+      <li>Événements premium chaque mois</li>
+      <li>Masterclass avec des expertes</li>
+      <li>Box surprise trimestrielle</li>
+      <li>Consultations bien-être gratuites</li>
+      <li>Réductions jusqu'à -70%</li>
+      <li>Communauté de femmes inspirantes</li>
+    </ul>
   </div>
 
   <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
