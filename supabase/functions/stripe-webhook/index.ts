@@ -289,13 +289,31 @@ async function handleCheckoutCompleted(session) {
                            session.amount_total === 1299 ? 'discovery' : 'monthly';
     logger.info(`Subscription type: ${subscriptionType} (${session.amount_total})`);
 
-    // Use UPSERT approach with ON CONFLICT
-    logger.info('Creating or updating user profile with UPSERT');
-    
+    // Step 1: Create auth user first
+    logger.info('Creating auth user');
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        subscription_type: subscriptionType,
+        stripe_customer_id: session.customer,
+        created_via: 'stripe_checkout'
+      }
+    });
+
+    if (authError) {
+      logger.error('Auth user creation failed', authError);
+      throw new Error(`Auth user creation error: ${authError.message}`);
+    }
+
+    logger.success(`Auth user created: ${authUser.user.id}`);
+
+    // Step 2: Create user profile with real user_id
+    logger.info('Creating user profile');
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .upsert({
-        user_id: crypto.randomUUID(), // Temporary UUID, will be updated on signup
+        user_id: authUser.user.id, // Real auth user ID
         email,
         stripe_customer_id: session.customer,
         stripe_subscription_id: session.subscription,
@@ -311,13 +329,13 @@ async function handleCheckoutCompleted(session) {
       .single();
 
     if (profileError) {
-      logger.error('Profile upsert failed', profileError);
-      throw new Error(`Profile upsert error: ${profileError.message}`);
+      logger.error('Profile creation failed', profileError);
+      throw new Error(`Profile creation error: ${profileError.message}`);
     }
 
-    logger.success(`Profile created/updated: ${profile.id}`);
+    logger.success(`Profile created: ${profile.id}`);
 
-    // Create member_rewards if it doesn't exist
+    // Step 3: Create member_rewards
     try {
       const { error: rewardsError } = await supabase
         .from('member_rewards')
@@ -333,17 +351,17 @@ async function handleCheckoutCompleted(session) {
         });
 
       if (rewardsError) {
-        logger.error('Member rewards upsert failed', rewardsError);
+        logger.error('Member rewards creation failed', rewardsError);
       } else {
-        logger.success('Member rewards created/updated');
+        logger.success('Member rewards created');
       }
     } catch (rewardsError) {
       logger.error('Member rewards exception', rewardsError);
       // Continue even if rewards creation fails
     }
 
-    // Send signup instruction email
-    await sendSignupInstructionEmail(email);
+    // Step 4: Send password setup email
+    await sendPasswordSetupEmail(email);
 
     return { success: true, message: `Profile processed for ${email} - signup email sent` };
   } catch (error) {
@@ -469,14 +487,14 @@ async function sendWelcomeEmail(email) {
   }
 }
 
-async function sendSignupInstructionEmail(email) {
+async function sendPasswordSetupEmail(email) {
   try {
-    logger.info(`Preparing signup instruction email for: ${email}`);
+    logger.info(`Preparing password setup email for: ${email}`);
     
-    // Generate password reset link
+    // Generate password reset link for existing user
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
-      email: email,
+      email,
       options: {
         redirectTo: 'https://club.nowme.fr/auth/update-password'
       }
@@ -491,15 +509,15 @@ async function sendSignupInstructionEmail(email) {
       throw new Error('Reset link not generated');
     }
 
-    logger.info('Password reset link generated successfully');
+    logger.success('Password setup link generated successfully');
 
-    // Add email to queue with the actual reset link
+    // Add email to queue
     const { error: emailError } = await supabase
       .from('emails')
       .insert({
         to_address: email,
-        subject: 'Ton abonnement Nowme est activé ! Crée ton compte 🎉',
-        content: generateSignupInstructionHTML(email, resetLink),
+        subject: 'Ton abonnement Nowme est activé ! Crée ton mot de passe 🎉',
+        content: generatePasswordSetupHTML(email, resetLink),
         status: 'pending'
       });
 
@@ -507,7 +525,7 @@ async function sendSignupInstructionEmail(email) {
       throw new Error(`Email queue error: ${emailError.message}`);
     }
 
-    logger.success('Signup instruction email added to queue');
+    logger.success('Password setup email added to queue');
 
   } catch (error) {
     logger.error('Email sending error', error);
@@ -529,13 +547,13 @@ function mapStripeStatus(stripeStatus) {
   return statusMap[stripeStatus] || 'pending';
 }
 
-function generateSignupInstructionHTML(email, resetLink) {
+function generatePasswordSetupHTML(email, resetLink) {
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Ton abonnement Nowme est activé  !</title>
+  <title>Ton abonnement Nowme est activé !</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="text-align: center; margin-bottom: 30px;">
@@ -544,23 +562,23 @@ function generateSignupInstructionHTML(email, resetLink) {
   </div>
 
   <div style="background: linear-gradient(135deg, #BF2778, #E4D44C); color: white; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
-    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton paiement est confirmé !</h2>
-    <p style="margin: 0; font-size: 16px;">Il ne reste qu'à créer ton compte pour accéder à tous tes avantages.</p>
+    <h2 style="margin: 0 0 15px 0; font-size: 22px;">✨ Ton compte est créé !</h2>
+    <p style="margin: 0; font-size: 16px;">Il ne reste qu'à choisir ton mot de passe pour accéder à tous tes avantages.</p>
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
     <a href="${resetLink}" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
-      🚀 Créer mon compte
+      🔐 Choisir mon mot de passe
     </a>
   </div>
 
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
     <h3 style="color: #BF2778; margin-top: 0;">📝 Comment faire :</h3>
     <ol style="margin: 0; padding-left: 20px;">
-      <li>Clique sur le lien "Créer mon compte" ci-dessus</li>
-      <li>Tu seras redirigée vers la page de création de mot de passe</li>
+      <li>Clique sur le lien "Choisir mon mot de passe" ci-dessus</li>
+      <li>Tu seras redirigée vers la page de choix de mot de passe</li>
       <li>Choisis un mot de passe sécurisé (minimum 8 caractères)</li>
-      <li>Commence à kiffer ! 🎯</li>
+      <li>Connecte-toi et commence à kiffer ! 🎯</li>
     </ol>
   </div>
 
