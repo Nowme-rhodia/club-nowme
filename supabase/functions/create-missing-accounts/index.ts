@@ -67,6 +67,9 @@ Deno.serve(async (req) => {
         let userId;
         let status = 'created';
         
+        // Check if user already exists with this email - simple approach
+        let existingUser = null;
+        
         if (existingUser) {
           // User exists, use existing ID
           userId = existingUser.id;
@@ -96,11 +99,13 @@ Deno.serve(async (req) => {
         // Update profile with user_id
         const { error: updateError } = await supabase
           .from('user_profiles')
-          .update({ user_id: userId })
-          .eq('id', profile.id);
+          .update({ 
+            user_id: userId,
             first_name: 'Nouvelle',
             last_name: 'Utilisatrice',
-            phone: '+33612345678',
+            phone: '+33612345678'
+          })
+          .eq('id', profile.id);
           
         if (updateError) {
           results.push({
@@ -113,10 +118,10 @@ Deno.serve(async (req) => {
         
         // Generate password reset link
         const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-        }
-        )
-        // Check if user already exists with this email - simple approach
-        let existingUser = null;
+          type: 'recovery',
+          email: profile.email
+        });
+        
         // Queue welcome email
         await supabase
           .from('emails')
@@ -212,4 +217,4 @@ function generateWelcomeEmailHTML(email) {
   </div>
 </body>
 </html>`;
-});
+}
