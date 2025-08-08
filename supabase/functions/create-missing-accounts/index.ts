@@ -67,9 +67,9 @@ Deno.serve(async (req) => {
         let userId;
         let status = 'created';
         
-        if (existingUsers && existingUsers.length > 0) {
+        if (existingUser) {
           // User exists, use existing ID
-          userId = existingUsers[0].id;
+          userId = existingUser.id;
           status = 'linked_existing';
         } else {
           // Create new auth user
@@ -110,12 +110,16 @@ Deno.serve(async (req) => {
         
         // Generate password reset link
         const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
-          type: 'recovery',
-          email: profile.email,
-          options: {
-            redirectTo: 'https://club.nowme.fr/auth/update-password'
+        // Check if user already exists with this email - simple approach
+        let existingUser = null;
+        try {
+          const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(profile.email);
+          if (!userError && userData?.user) {
+            existingUser = userData.user;
           }
-        });
+        } catch (err) {
+          console.log(`Could not check existing user: ${err.message}`);
+        }
         
         let resetLink = null;
         if (!resetError && resetData) {

@@ -23,23 +23,16 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Use our safe function to check if user exists
-    const { data: users, error: userError } = await supabase.rpc('safe_get_user_by_email', {
-      p_email: email
-    });
-    
-    if (userError) {
-      console.error('Error checking user:', userError);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        message: userError.message 
-      }), { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Check if user exists - simple approach
+    let userExists = false;
+    try {
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      userExists = !userError && userData?.user;
+    } catch (err) {
+      console.log(`Could not check user existence: ${err.message}`);
     }
     
-    if (!users || users.length === 0) {
+    if (!userExists) {
       return new Response(JSON.stringify({ 
         success: false, 
         message: `User with email ${email} not found`

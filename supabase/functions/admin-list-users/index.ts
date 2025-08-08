@@ -19,12 +19,21 @@ Deno.serve(async (req) => {
   const email = url.searchParams.get('email') || null;
   
   try {
-    // Direct SQL query to avoid the NULL confirmation_token issue
-    const { data: users, error } = await supabase.rpc('safe_list_users', { 
-      p_page: page,
-      p_per_page: perPage,
-      p_email: email
-    });
+    // Use direct database query to avoid Auth API issues
+    let query = supabase
+      .from('user_profiles')
+      .select('user_id, email, first_name, last_name, subscription_status, created_at')
+      .order('created_at', { ascending: false });
+    
+    if (email) {
+      query = query.eq('email', email);
+    }
+    
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
+    
+    const { data: users, error, count } = await query
+      .range(from, to);
     
     if (error) {
       console.error('Error fetching users:', error);
@@ -40,7 +49,7 @@ Deno.serve(async (req) => {
       users: users || [],
       page: page,
       per_page: perPage,
-      total: users?.length || 0
+      total: count || 0
     }), { 
       status: 200,
       headers: { 'Content-Type': 'application/json' }

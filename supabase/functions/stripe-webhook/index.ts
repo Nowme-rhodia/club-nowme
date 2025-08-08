@@ -130,20 +130,21 @@ async function handleCheckoutCompleted(session) {
     throw new Error('Customer email not found in checkout session');
   }
   
-  // Check if user already exists using our safe function
-  const { data: existingUsers, error: lookupError } = await supabase.rpc('safe_get_user_by_email', {
-    p_email: email
-  });
-  
-  if (lookupError) {
-    console.error(`Error looking up user: ${lookupError.message}`);
-    throw lookupError;
+  // Check if user already exists - simple approach
+  let existingUser = null;
+  try {
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+    if (!userError && userData?.user) {
+      existingUser = userData.user;
+    }
+  } catch (err) {
+    console.log(`Could not check existing user: ${err.message}`);
   }
   
   let userId;
   
   // Create user if doesn't exist
-  if (!existingUsers || existingUsers.length === 0) {
+  if (!existingUser) {
     // Generate a secure random password
     const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
     
@@ -162,7 +163,7 @@ async function handleCheckoutCompleted(session) {
     
     console.log(`Created new user with ID: ${userId}`);
   } else {
-    userId = existingUsers[0].id;
+    userId = existingUser.id;
     console.log(`Using existing user with ID: ${userId}`);
   }
   
