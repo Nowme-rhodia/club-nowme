@@ -110,6 +110,8 @@ Deno.serve(async (req) => {
         
         // Generate password reset link
         const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
+        }
+        )
         // Check if user already exists with this email - simple approach
         let existingUser = null;
         try {
