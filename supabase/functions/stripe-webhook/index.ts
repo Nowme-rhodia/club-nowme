@@ -217,7 +217,7 @@ async function handleCheckoutCompleted(session) {
     console.log(`Updated profile for user: ${userId}`);
   }
   
-  // Use our improved function to generate password reset link
+  // Generate password reset link
   try {
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
@@ -245,7 +245,6 @@ async function handleCheckoutCompleted(session) {
         
       if (emailError) {
         console.error(`Error queueing email: ${emailError.message}`);
-        // Don't throw here, the main account creation succeeded
       }
     } else {
       // Fallback to a generic welcome email
@@ -265,7 +264,6 @@ async function handleCheckoutCompleted(session) {
     }
   } catch (err) {
     console.error(`Error with password reset: ${err.message}`);
-    // Don't throw here, the main account creation succeeded
   }
   
   return { userId, email };
