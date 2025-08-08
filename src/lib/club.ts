@@ -228,50 +228,26 @@ export async function trackBoxShipment(shipmentId: string): Promise<any> {
 
 // ---------- RÉCOMPENSES ----------
 
-export async function getUserRewards(): Promise<MemberRewards & { tier_benefits: any; next_tier: string; points_to_next_tier: number }> {
-  const user = await getUserProfileId();
-  const { data, error } = await supabase
-    .from('member_rewards')
-    .select('*')
-    .eq('user_id', user)
-    .single();
-  if (error) throw error;
+// MEMBER REWARDS TEMPORARILY DISABLED
+// Will be re-enabled once the main user flow is working
 
-  const tierBenefits = getTierBenefits(data.tier_level);
-  const nextTier = getNextTier(data.tier_level);
-  const pointsToNextTier = nextTier ? getTierThreshold(nextTier) - data.points_earned : 0;
-
+export async function getUserRewards(): Promise<any> {
+  // Return mock data for now
   return {
-    ...data,
-    tier_benefits: tierBenefits,
-    next_tier: nextTier,
-    points_to_next_tier: pointsToNextTier
+    points_earned: 0,
+    points_spent: 0,
+    points_balance: 0,
+    tier_level: 'bronze',
+    tier_benefits: { discount: 0, description: "Bienvenue dans le club !" },
+    next_tier: 'silver',
+    points_to_next_tier: 500
   };
 }
 
 export async function addRewardPoints(points: number, reason: string): Promise<void> {
-  const user = await getUserProfileId();
-  const { data, error } = await supabase
-    .from('member_rewards')
-    .select('*')
-    .eq('user_id', user)
-    .single();
-  if (error) throw error;
-
-  const updated = {
-    points_earned: data.points_earned + points,
-    points_balance: data.points_balance + points,
-    tier_level: calculateTier(data.points_earned + points),
-    last_activity_date: new Date().toISOString()
-  };
-
-  const { error: updateError } = await supabase
-    .from('member_rewards')
-    .update(updated)
-    .eq('user_id', user);
-  if (updateError) throw updateError;
+  // Temporarily disabled - will be re-enabled later
+  console.log(`Points would be added: ${points} for ${reason}`);
 }
-
 // ---------- UTILS ----------
 
 function getTierBenefits(tier: string) {
