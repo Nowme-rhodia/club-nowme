@@ -140,52 +140,74 @@ async function handleCheckoutCompleted(session) {
   } catch (err) {
     console.log(`Could not check existing user: ${err.message}`);
   }
+  // MÉTHODE SIMPLE : Vérifier d'abord dans user_profiles
+  const { data: existingProfile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('user_id, id')
+    .eq('email', email)
+    .maybeSingle();
+    
+  if (profileError) {
+    console.error(`Error checking existing profile: ${profileError.message}`);
+    throw profileError;
+  }
   
   let userId;
+  let profileId;
   
-  // Create user if doesn't exist
-  if (!existingUser) {
-    // Generate a secure random password
-    const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 12);
-    
+  if (existingProfile && existingProfile.user_id) {
+    // Utilisateur complet existe déjà
+    userId = existingProfile.user_id;
+    profileId = existingProfile.id;
+    console.log(`Using existing complete user: ${userId}`);
+  } else if (existingProfile && !existingProfile.user_id) {
+    // Profil orphelin - créer juste l'auth user
     const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
       email,
-      password: tempPassword,
+      password: 'motdepasse123', // Mot de passe fixe simple
       email_confirm: true
     });
     
     if (createError) {
-      console.error(`Error creating user: ${createError.message}`);
-      throw createError;
+      console.error(`Error creating auth user: ${createError.message}`);
+      // FALLBACK : Continuer sans créer l'auth user
+      console.log('Continuing without auth user creation...');
+      userId = null;
+      profileId = existingProfile.id;
+    } else {
+      userId = newAuthUser.user.id;
+      profileId = existingProfile.id;
+      console.log(`Created auth user for existing profile: ${userId}`);
+      
+      // Lier le profil à l'auth user
+      await supabase
+        .from('user_profiles')
+        .update({ user_id: userId })
+        .eq('id', profileId);
+    }
+  } else {
+    // Aucun profil - créer tout
+    const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password: 'motdepasse123',
+      email_confirm: true
+    });
+    
+    if (createError) {
+      console.error(`Error creating new auth user: ${createError.message}`);
+      // FALLBACK : Créer juste le profil sans auth user
+      userId = null;
+      console.log('Creating profile without auth user...');
+    } else {
+      userId = newAuthUser.user.id;
+      console.log(`Created new auth user: ${userId}`);
     }
     
-    userId = newAuthUser.user.id;
-    
-    console.log(`Created new user with ID: ${userId}`);
-  } else {
-    userId = existingUser.id;
-    console.log(`Using existing user with ID: ${userId}`);
-  }
-  
-  // Check if profile exists
-  const { data: existingProfile, error: profileLookupError } = await supabase
-    .from('user_profiles')
-    .select('id')
-    .eq('user_id', userId)
-    .maybeSingle();
-    
-  if (profileLookupError) {
-    console.error(`Error looking up profile: ${profileLookupError.message}`);
-    throw profileLookupError;
-  }
-  
-  // Create or update user profile
-  if (!existingProfile) {
-    // Create new profile
-    const { error: profileError } = await supabase
+    // Créer le profil
+    const { data: newProfile, error: profileCreateError } = await supabase
       .from('user_profiles')
       .insert({
-        user_id: userId,
+        user_id: userId, // Peut être null si auth user failed
         email,
         first_name: 'Nouvelle',
         last_name: 'Utilisatrice',
@@ -194,34 +216,39 @@ async function handleCheckoutCompleted(session) {
         subscription_type: session.metadata?.plan || 'premium',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      });
-      
-    if (profileError) {
-      console.error(`Error creating profile: ${profileError.message}`);
-      throw profileError;
-    }
-    
-    console.log(`Created new profile for user: ${userId}`);
-  } else {
-    // Update existing profile
-    const { error: updateError } = await supabase
-      .from('user_profiles')
-      .update({
-        subscription_status: 'active',
-        subscription_type: session.metadata?.plan || 'premium',
-        updated_at: new Date().toISOString()
       })
-      .eq('user_id', userId);
+      .select('id')
+      .single();
       
-    if (updateError) {
-      console.error(`Error updating profile: ${updateError.message}`);
-      throw updateError;
+    if (profileCreateError) {
+      console.error(`Error creating profile: ${profileCreateError.message}`);
+      throw profileCreateError;
     }
     
-    console.log(`Updated profile for user: ${userId}`);
+    profileId = newProfile.id;
+    console.log(`Created new profile: ${profileId}`);
   }
   
-  // Send welcome email with simple credentials
+  // Mettre à jour le profil avec les infos Stripe
+  const { error: updateError } = await supabase
+    .from('user_profiles')
+    .update({
+      stripe_customer_id: session.customer,
+      stripe_subscription_id: session.subscription,
+      subscription_status: 'active',
+      subscription_type: session.metadata?.plan || 'premium',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', profileId);
+    
+  if (updateError) {
+    console.error(`Error updating profile: ${updateError.message}`);
+    throw updateError;
+  }
+  
+  console.log(`Updated profile ${profileId} with Stripe data`);
+  
+  // Envoyer email simple avec identifiants
   const { error: emailError } = await supabase
     .from('emails')
     .insert({
@@ -233,6 +260,7 @@ async function handleCheckoutCompleted(session) {
     
   if (emailError) {
     console.error(`Error queueing email: ${emailError.message}`);
+    // Ne pas faire échouer le webhook pour un problème d'email
   }
   
   // Generate password reset link
@@ -284,7 +312,7 @@ async function handleCheckoutCompleted(session) {
     console.error(`Error with password reset: ${err.message}`);
   }
   
-  return { userId, email };
+  return { userId, profileId, email };
 }
 
 function generateWelcomeEmailHTML(email) {
