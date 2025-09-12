@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`❌ Erreur réseau vers ${target}:`, msg);
     return new Response(`Network error forwarding to ${target}: ${msg}`, { status: 502 });
-  }
+  } 
 
   return new Response("OK", { status: 200 });
 });
