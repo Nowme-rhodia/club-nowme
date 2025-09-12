@@ -1,19 +1,7 @@
 // supabase/functions/stripe-webhook-router/index.ts
-// Vérifie la signature Stripe, LOG l'event dans ta table "stripe_webhook_events"
-// en utilisant TES colonnes, puis route vers les fonctions utiles.
-//
-// Colonnes détectées :
-// id (uuid, défaut en DB), stripe_event_id (text), event_type (text),
-// customer_id (text), customer_email (text), subscription_id (text),
-// amount (numeric), status (text), raw_event (jsonb), error (text),
-// error_message (text), created_at (timestamptz), role (text)
-//
-// ENV requis côté Functions:
-//  - STRIPE_SECRET_KEY
-//  - STRIPE_WEBHOOK_SECRET
-//  - SUPABASE_URL
-//  - SUPABASE_SERVICE_ROLE_KEY
-//  - (optionnel) SUPABASE_PROJECT_ID
+// MODE DEBUG : enregistre TOUS les événements, même si la signature Stripe échoue.
+// -> Objectif : voir exactement le contenu reçu et pourquoi l’insert échoue.
+// IMPORTANT : après debug OK, on remettra la réponse 400 en cas de signature invalide.
 
 import Stripe from "npm:stripe@14.25.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -24,62 +12,63 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const projectRef = Deno.env.get("SUPABASE_PROJECT_ID") || "";
 
-const stripe = new Stripe(stripeSecretKey, {
+// Petit log des ENV présentes (sans afficher les valeurs sensibles)
+console.log("ENV CHECK:", {
+  has_STRIPE_SECRET_KEY: !!stripeSecretKey,
+  has_STRIPE_WEBHOOK_SECRET: !!stripeWebhookSecret,
+  supabaseUrl,
+  has_serviceRole: !!serviceRole,
+  projectRef,
+});
+
+const stripe = new Stripe(stripeSecretKey || "sk_test_dummy", {
   apiVersion: "2023-10-16",
   httpClient: Stripe.createFetchHttpClient(),
 });
 
-function getSupabaseServiceClient() {
+function getSupabase() {
   return createClient(supabaseUrl, serviceRole, {
     auth: { persistSession: false },
-    global: { headers: { "x-application-name": "stripe-webhook-router" } },
   });
 }
 
-// Helpers pour extraire quelques champs selon le type d'event
 function extractBasics(event: Stripe.Event) {
   const type = event.type;
-  // valeurs par défaut
   let customer_id: string | null = null;
   let customer_email: string | null = null;
   let subscription_id: string | null = null;
   let amount: number | null = null;
   let status: string | null = null;
 
-  // On couvre les cas les plus utiles
-  switch (type) {
-    case "checkout.session.completed": {
-      const s = event.data.object as Stripe.Checkout.Session;
-      customer_id = typeof s.customer === "string" ? s.customer : s.customer?.id ?? null;
-      customer_email = s.customer_details?.email ?? null;
-      subscription_id = typeof s.subscription === "string" ? s.subscription : null;
-      status = s.status ?? null;
-      // montant total: data.price unitaire * quantity si present
-      // (pas toujours présent dans la session, donc on laisse null si inconnu)
-      break;
+  try {
+    switch (type) {
+      case "checkout.session.completed": {
+        const s = event.data.object as Stripe.Checkout.Session;
+        customer_id = typeof s.customer === "string" ? s.customer : (s.customer as any)?.id ?? null;
+        customer_email = s.customer_details?.email ?? null;
+        subscription_id = typeof s.subscription === "string" ? s.subscription : null;
+        status = s.status ?? null;
+        break;
+      }
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        subscription_id = sub.id;
+        status = sub.status ?? null;
+        customer_id = typeof sub.customer === "string" ? sub.customer : (sub.customer as any)?.id ?? null;
+        break;
+      }
+      case "payment_intent.succeeded": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        customer_id = typeof pi.customer === "string" ? pi.customer : (pi.customer as any)?.id ?? null;
+        amount = (pi.amount ?? null) !== null ? Number(pi.amount) : null;
+        status = pi.status ?? null;
+        break;
+      }
     }
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted": {
-      const sub = event.data.object as Stripe.Subscription;
-      subscription_id = sub.id;
-      status = sub.status ?? null;
-      // customer peut être string ou object
-      customer_id = typeof sub.customer === "string" ? sub.customer : (sub.customer as any)?.id ?? null;
-      // email pas directement sur sub → laissé null
-      break;
-    }
-    case "payment_intent.succeeded": {
-      const pi = event.data.object as Stripe.PaymentIntent;
-      customer_id = typeof pi.customer === "string" ? pi.customer : (pi.customer as any)?.id ?? null;
-      amount = (pi.amount ?? null) !== null ? Number(pi.amount) : null;
-      status = pi.status ?? null;
-      // email pas directement sur PI
-      break;
-    }
-    default: {
-      // on laisse les defaults
-    }
+  } catch (e) {
+    console.error("extractBasics error:", e);
   }
 
   return { customer_id, customer_email, subscription_id, amount, status };
@@ -90,110 +79,115 @@ Deno.serve(async (req: Request) => {
     return new Response("Méthode non autorisée", { status: 405 });
   }
 
-  // 1) Vérification de signature Stripe
+  const supabase = getSupabase();
+
+  // 1) Lire RAW body pour vérif de signature
   const raw = await req.text();
-  let event: Stripe.Event;
-  try {
-    const signature = req.headers.get("stripe-signature");
-    if (!signature) {
-      return new Response("Signature Stripe manquante", { status: 400 });
-    }
-    event = stripe.webhooks.constructEvent(raw, signature, stripeWebhookSecret);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("❌ Signature Stripe invalide:", msg);
-    // On loggue aussi en DB côté "error"
+  const sig = req.headers.get("stripe-signature");
+  console.log("Headers reçus:", { hasStripeSignatureHeader: !!sig });
+
+  let event: Stripe.Event | null = null;
+  let signatureOk = false;
+
+  // 2) Tenter la vérification de signature
+  if (sig && stripeWebhookSecret) {
     try {
-      const supabase = getSupabaseServiceClient();
-      await supabase.from("stripe_webhook_events").insert({
-        stripe_event_id: null,
-        event_type: "webhook.signature_error",
-        customer_id: null,
-        customer_email: null,
-        subscription_id: null,
-        amount: null,
-        status: null,
-        raw_event: null,
-        error: "signature_failed",
-        error_message: msg,
-      });
-    } catch {}
-    return new Response(`Webhook signature verification failed: ${msg}`, { status: 400 });
+      event = stripe.webhooks.constructEvent(raw, sig, stripeWebhookSecret);
+      signatureOk = true;
+      console.log("✅ Signature Stripe OK. type:", event.type, "id:", event.id);
+    } catch (err) {
+      console.error("❌ Signature Stripe invalide:", err instanceof Error ? err.message : String(err));
+    }
+  } else {
+    console.error("❌ Manque header signature ou STRIPE_WEBHOOK_SECRET");
   }
 
-  // 2) Insert dans TA table avec TES colonnes
+  // 3) Si signature invalide, ESSAYER quand même de parser le body pour le log
+  if (!event) {
+    try {
+      const parsed = JSON.parse(raw);
+      // Stripe envoie { type, id, data: { object: ... } }
+      // si c’est bien un event Stripe, on le traite "best effort" pour log.
+      event = parsed as Stripe.Event;
+      console.log("ℹ️ Event parsé sans vérif de signature. type:", event?.type, "id:", event?.id);
+    } catch (e) {
+      console.error("❌ Body non JSON. raw length:", raw?.length);
+    }
+  }
+
+  // 4) INSERER dans ta table quoi qu’il arrive (pour debug)
   try {
-    const supabase = getSupabaseServiceClient();
-    const basics = extractBasics(event);
+    const basics = event ? extractBasics(event) : {};
+    const insertPayload: any = {
+      stripe_event_id: event?.id ?? null,
+      event_type: event?.type ?? "unknown",
+      customer_id: (basics as any).customer_id ?? null,
+      customer_email: (basics as any).customer_email ?? null,
+      subscription_id: (basics as any).subscription_id ?? null,
+      amount: (basics as any).amount ?? null,
+      status: (basics as any).status ?? null,
+      raw_event: event ?? { raw },
+      error: signatureOk ? null : "signature_failed_or_missing",
+      error_message: signatureOk ? null : (!sig ? "missing stripe-signature header or secret" : "verification failed"),
+    };
 
-    const { error } = await supabase.from("stripe_webhook_events").insert({
-      stripe_event_id: event.id,
-      event_type: event.type,
-      customer_id: basics.customer_id,
-      customer_email: basics.customer_email,
-      subscription_id: basics.subscription_id,
-      amount: basics.amount,         // numeric (en cents si PI)
-      status: basics.status,
-      raw_event: event as any,       // jsonb
-      error: null,
-      error_message: null,
-      // id (uuid) et created_at sont gérés côté DB si defaults
-    });
-
+    const { error } = await supabase.from("stripe_webhook_events").insert(insertPayload);
     if (error) {
-      console.error("❌ Insert stripe_webhook_events échoué:", error.message);
-      // On n'arrête pas Stripe, on continue le routing
+      console.error("❌ Insert stripe_webhook_events KO:", error.message);
     } else {
-      console.log(`✅ Event ${event.id} (${event.type}) enregistré`);
+      console.log("✅ Insert stripe_webhook_events OK");
     }
   } catch (e) {
-    console.error("❌ Erreur inattendue insert stripe_webhook_events:", e);
-    // On continue quand même
+    console.error("❌ Exception insert stripe_webhook_events:", e);
   }
 
-  // 3) Routing des events utiles à l'abonnement
-  let target = "";
-  switch (event.type) {
-    case "checkout.session.completed":
-      target = "stripe-checkout-completed";
-      break;
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted":
-      target = "sync-stripe-subscriptions";
-      break;
-    default:
-      console.log(`ℹ️ Event ignoré côté process: ${event.type}`);
-      return new Response("Logged only", { status: 200 });
-  }
-
-  // 4) Forward vers la fonction cible (si elle est protégée, on passe la service role)
-  const functionsBase = projectRef
-    ? `https://${projectRef}.functions.supabase.co`
-    : new URL(req.url).origin;
-
-  const headers: Record<string, string> = { "content-type": "application/json" };
-  if (serviceRole) {
-    headers["Authorization"] = `Bearer ${serviceRole}`;
-    headers["apikey"] = serviceRole;
-  }
-
-  try {
-    const res = await fetch(`${functionsBase}/${target}`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(event),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      console.error(`❌ Forward ${target} KO:`, text);
-      return new Response(`Forward to ${target} failed: ${text}`, { status: 500 });
+  // 5) ROUTING (uniquement si on a un event et que la signature est OK)
+  if (event && signatureOk) {
+    let target = "";
+    switch (event.type) {
+      case "checkout.session.completed":
+        target = "stripe-checkout-completed";
+        break;
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+        target = "sync-stripe-subscriptions";
+        break;
     }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`❌ Erreur réseau vers ${target}:`, msg);
-    return new Response(`Network error forwarding to ${target}: ${msg}`, { status: 502 });
+
+    if (target) {
+      const base = projectRef
+        ? `https://${projectRef}.functions.supabase.co`
+        : new URL(req.url).origin;
+
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      if (serviceRole) {
+        headers["Authorization"] = `Bearer ${serviceRole}`;
+        headers["apikey"] = serviceRole;
+      }
+
+      try {
+        const res = await fetch(`${base}/${target}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(event),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          console.error(`❌ Forward ${target} KO:`, text);
+        } else {
+          console.log(`✅ Forward ${target} OK`);
+        }
+      } catch (err) {
+        console.error(`❌ Erreur réseau vers ${target}:`, err instanceof Error ? err.message : String(err));
+      }
+    } else {
+      console.log("ℹ️ Event non routé (type ignoré):", event.type);
+    }
+  } else {
+    console.log("ℹ️ Pas de routing car signature non OK ou event null");
   }
 
-  return new Response("OK", { status: 200 });
+  // 6) EN MODE DEBUG → on répond 200 pour que Stripe n’insiste pas
+  return new Response("DEBUG OK", { status: 200 });
 });
