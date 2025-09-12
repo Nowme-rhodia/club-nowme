@@ -31,5 +31,19 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
+# Ancienne config
 [functions.stripe-webhook]
+verify_jwt = false
+
+# Les bonnes fonctions à ouvrir
+[functions.stripe-webhook-router]
+verify_jwt = false
+
+[functions.stripe-checkout-completed]
+verify_jwt = false
+
+[functions.sync-stripe-subscriptions]
+verify_jwt = false
+
+[functions.reset-password]
 verify_jwt = false
