@@ -930,6 +930,14 @@ const { error: createError } = await supabase
                       </p>
                     </div>
                   )}
+{selectedOffer.has_stock && selectedOffer.stock !== null && (
+  <div>
+    <h4 className="font-semibold text-gray-900 mb-1">Stock disponible</h4>
+    <p className="text-gray-600">
+      {selectedOffer.stock} restant{selectedOffer.stock > 1 ? 's' : ''}
+    </p>
+  </div>
+)}
 
                   {/* --- Affichage agenda si activé --- */}
                   {selectedOffer.requires_agenda && selectedOffer.calendly_url && (
