@@ -552,6 +552,12 @@ const { error: createError } = await supabase
                                       À partir de {mainPrice.price}€
                                     </span>
                                   )}
+                                  {offer.has_stock && offer.stock !== null && (
+  <span className="text-sm text-blue-700 font-medium">
+    Stock : {offer.stock}
+  </span>
+)}
+
                                   {offer.is_active === false && (
                                     <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
                                       Désactivée
