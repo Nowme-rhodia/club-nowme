@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapPin, Share2, ArrowLeft, Star, Navigation } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
 import { MapComponent } from '../components/MapComponent';
 import { SimilarOffers } from '../components/SimilarOffers';
 import { getCategoryGradient } from '../utils/categoryColors';
