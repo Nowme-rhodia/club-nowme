@@ -1,7 +1,7 @@
 // src/pages/admin/Payouts.tsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { Download, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Download, CheckCircle2, Clock } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface PartnerPayout {
@@ -59,7 +59,7 @@ export default function Payouts() {
 
       if (error) throw error;
 
-      toast.success("Payout marqué comme payé");
+      toast.success("✅ Reversement marqué comme payé");
       await loadPayouts();
     } catch (err) {
       console.error("Erreur update payout:", err);
@@ -67,11 +67,18 @@ export default function Payouts() {
     }
   };
 
-  const exportCSV = () => {
-    const pending = payouts.filter((p) => p.status === "pending");
+  const exportCSV = (type: "pending" | "all") => {
+    let exportData = payouts;
+    if (type === "pending") {
+      exportData = payouts.filter((p) => p.status === "pending");
+    }
 
-    if (pending.length === 0) {
-      toast.error("Aucun payout en attente à exporter");
+    if (exportData.length === 0) {
+      toast.error(
+        type === "pending"
+          ? "Aucun reversement en attente à exporter"
+          : "Aucun reversement trouvé à exporter"
+      );
       return;
     }
 
@@ -83,10 +90,11 @@ export default function Payouts() {
       "Devise",
       "Période début",
       "Période fin",
+      "Statut",
       "Créé le",
     ];
 
-    const rows = pending.map((p) => [
+    const rows = exportData.map((p) => [
       p.id,
       p.partner?.business_name || "",
       p.partner?.contact_email || "",
@@ -94,6 +102,7 @@ export default function Payouts() {
       p.currency,
       p.period_start || "",
       p.period_end || "",
+      p.status,
       p.created_at,
     ]);
 
@@ -103,10 +112,20 @@ export default function Payouts() {
 
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `payouts-pending-${Date.now()}.csv`);
+    link.setAttribute(
+      "download",
+      `payouts-${type}-${Date.now()}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const formatAmount = (amount: number, currency: string) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: currency || "EUR",
+    }).format(amount);
   };
 
   if (loading) {
@@ -118,16 +137,27 @@ export default function Payouts() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Reversements partenaires</h1>
-        <button
-          onClick={exportCSV}
-          className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Exporter CSV (pending)
-        </button>
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Reversements partenaires
+        </h1>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportCSV("pending")}
+            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Exporter CSV (en attente)
+          </button>
+          <button
+            onClick={() => exportCSV("all")}
+            className="inline-flex items-center px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-900"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Exporter CSV (tous)
+          </button>
+        </div>
       </div>
 
       {payouts.length === 0 ? (
@@ -152,6 +182,9 @@ export default function Payouts() {
                   Période
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Créé le
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Statut
                 </th>
                 <th className="px-6 py-3"></th>
@@ -167,7 +200,7 @@ export default function Payouts() {
                     {payout.partner?.contact_email}
                   </td>
                   <td className="px-6 py-4 text-sm font-semibold text-primary">
-                    {payout.amount} {payout.currency}
+                    {formatAmount(payout.amount, payout.currency)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {payout.period_start
@@ -177,6 +210,9 @@ export default function Payouts() {
                     {payout.period_end
                       ? new Date(payout.period_end).toLocaleDateString("fr-FR")
                       : "-"}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {new Date(payout.created_at).toLocaleDateString("fr-FR")}
                   </td>
                   <td className="px-6 py-4 text-sm">
                     {payout.status === "pending" ? (
