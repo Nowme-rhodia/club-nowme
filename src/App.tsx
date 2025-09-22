@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './lib/auth';
@@ -47,6 +47,8 @@ const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
 const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
 const PartnerOffers = React.lazy(() => import('./pages/partner/Offers'));
 const PartnerBookingDetail = React.lazy(() => import('./pages/partner/BookingDetail'));
+const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
+const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
 
 // Club pages
 const ClubDashboard = React.lazy(() => import('./pages/club/ClubDashboard'));
@@ -105,6 +107,18 @@ function App() {
                   <Route path="/partner/bookings/:id" element={
                     <PrivateRoute allowedRoles={['partner']}>
                       <PartnerBookingDetail />
+                    </PrivateRoute>
+                  } />
+                  {/* Settings Partner */}
+                  <Route path="/partner/settings" element={<Navigate to="/partner/settings/general" replace />} />
+                  <Route path="/partner/settings/general" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <SettingsGeneral />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/partner/settings/payments" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <SettingsPayments />
                     </PrivateRoute>
                   } />
 
