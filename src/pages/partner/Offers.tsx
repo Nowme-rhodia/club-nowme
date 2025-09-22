@@ -183,21 +183,24 @@ export default function Offers() {
       if (partnerError) throw partnerError;
 
       // Créer l'offre en attente
-      const { error: createError } = await supabase
-        .from('pending_offers')
-        .insert({
-          pending_partner_id: partnerData.id,
-          title: newOffer.title,
-          description: newOffer.description,
-          category_slug: newOffer.category_slug,
-          subcategory_slug: newOffer.subcategory_slug,
-          price: newOffer.price ? parseFloat(newOffer.price) : null,
-          location: newOffer.location,
-          image_url: newOffer.image_url || null,
-          requires_agenda: newOffer.requires_agenda,
-          calendly_url: newOffer.requires_agenda ? newOffer.calendly_url : null,
-          status: 'pending'
-        });
+const { error: createError } = await supabase
+  .from('pending_offers')
+  .insert({
+    pending_partner_id: partnerData.id,
+    title: newOffer.title,
+    description: newOffer.description,
+    category_slug: newOffer.category_slug,
+    subcategory_slug: newOffer.subcategory_slug,
+    price: newOffer.price ? parseFloat(newOffer.price) : null,
+    location: newOffer.location,
+    image_url: newOffer.image_url || null,
+    requires_agenda: newOffer.requires_agenda,
+    calendly_url: newOffer.requires_agenda ? newOffer.calendly_url : null,
+    has_stock: newOffer.has_stock,                                 // 👈 ajout
+    stock: newOffer.has_stock ? parseInt(newOffer.stock, 10) : null, // 👈 ajout
+    status: 'pending'
+  });
+
 
       if (createError) throw createError;
 
