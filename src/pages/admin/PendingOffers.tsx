@@ -11,8 +11,8 @@ import {
   ChevronDown,
   Mail,
   MapPin,
-  Euro,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Clock
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
@@ -27,6 +27,8 @@ interface PendingOffer {
   price?: number;
   location?: string;
   image_url?: string;
+  requires_agenda?: boolean;
+  calendly_url?: string | null;
   status?: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string;
   created_at: string;
@@ -95,9 +97,8 @@ export default function PendingOffers() {
 
   const handleApprove = async (offer: PendingOffer) => {
     try {
-      // 1. Créer le partenaire s'il n'existe pas déjà
       let partnerId = null;
-      
+
       // Vérifier si le partenaire existe déjà
       const { data: existingPartner, error: partnerCheckError } = await supabase
         .from('partners')
@@ -113,7 +114,6 @@ export default function PendingOffers() {
       if (existingPartner) {
         partnerId = existingPartner.id;
       } else {
-        // Créer le partenaire
         const { data: newPartner, error: partnerError } = await supabase
           .from('partners')
           .insert({
@@ -129,7 +129,7 @@ export default function PendingOffers() {
         partnerId = newPartner.id;
       }
 
-      // 2. Créer l'offre validée
+      // Créer l'offre validée
       const { data: newOffer, error: offerError } = await supabase
         .from('offers')
         .insert({
@@ -139,14 +139,17 @@ export default function PendingOffers() {
           category_slug: offer.category_slug,
           subcategory_slug: offer.subcategory_slug,
           location: offer.location || 'Paris',
-          status: 'active'
+          requires_agenda: offer.requires_agenda || false,
+          calendly_url: offer.requires_agenda ? offer.calendly_url : null,
+          status: 'active',
+          is_active: true
         })
         .select('id')
         .single();
 
       if (offerError) throw offerError;
 
-      // 3. Créer le prix si spécifié
+      // Ajouter un prix
       if (offer.price) {
         const { error: priceError } = await supabase
           .from('offer_prices')
@@ -156,11 +159,10 @@ export default function PendingOffers() {
             price: offer.price,
             duration: 'Séance'
           });
-
         if (priceError) throw priceError;
       }
 
-      // 4. Ajouter l'image si spécifiée
+      // Ajouter une image
       if (offer.image_url) {
         const { error: mediaError } = await supabase
           .from('offer_media')
@@ -170,21 +172,17 @@ export default function PendingOffers() {
             type: 'image',
             order: 1
           });
-
         if (mediaError) throw mediaError;
       }
 
-      // 5. Marquer l'offre en attente comme approuvée
-      const { error: updateError } = await supabase
+      // Supprimer de pending_offers
+      const { error: deleteError } = await supabase
         .from('pending_offers')
-        .update({ 
-          status: 'approved'
-        })
+        .delete()
         .eq('id', offer.id);
+      if (deleteError) throw deleteError;
 
-      if (updateError) throw updateError;
-
-      // 6. Envoyer notification d'approbation
+      // Envoyer notif
       await supabase.functions.invoke('send-offer-approval', {
         body: {
           to: offer.pending_partner.email,
@@ -197,7 +195,7 @@ export default function PendingOffers() {
       await loadOffers();
     } catch (error) {
       console.error('Error approving offer:', error);
-      toast.error('Erreur lors de l\'approbation');
+      toast.error("Erreur lors de l'approbation");
     }
   };
 
@@ -208,7 +206,6 @@ export default function PendingOffers() {
     }
 
     try {
-      // Marquer l'offre comme rejetée avec la raison
       const { error: updateError } = await supabase
         .from('pending_offers')
         .update({ 
@@ -219,7 +216,6 @@ export default function PendingOffers() {
 
       if (updateError) throw updateError;
 
-      // Envoyer notification de rejet
       await supabase.functions.invoke('send-offer-rejection', {
         body: {
           to: offerToReject.pending_partner.email,
