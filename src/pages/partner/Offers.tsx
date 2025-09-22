@@ -216,16 +216,19 @@ const { error: createError } = await supabase
       toast.success('Offre soumise avec succès !');
       setShowCreateForm(false);
       setNewOffer({
-        title: '',
-        description: '',
-        category_slug: '',
-        subcategory_slug: '',
-        price: '',
-        image_url: '',
-        location: '',
-        requires_agenda: false,
-        calendly_url: ''
-      });
+  title: '',
+  description: '',
+  category_slug: '',
+  subcategory_slug: '',
+  price: '',
+  image_url: '',
+  location: '',
+  requires_agenda: false,
+  calendly_url: '',
+  has_stock: false,
+  stock: ''
+});
+
       await loadOffers();
     } catch (error) {
       console.error('Error creating offer:', error);
