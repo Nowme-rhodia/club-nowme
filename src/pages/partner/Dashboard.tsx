@@ -31,6 +31,7 @@ type Offer = Database['public']['Tables']['offers']['Row'] & {
 type Booking = {
   id: string;
   offer_id: string;
+  partner_id: string;
   user_id: string;
   date: string;
   status: 'pending' | 'confirmed' | 'cancelled';
@@ -80,6 +81,9 @@ export default function Dashboard() {
     thisMonth: 0
   });
 
+  const [hasAgenda, setHasAgenda] = useState(false);
+  const [globalCalendly, setGlobalCalendly] = useState<string | null>(null);
+
   useEffect(() => {
     if (!user) return;
 
@@ -88,7 +92,7 @@ export default function Dashboard() {
       try {
         const { data: partnerData, error: partnerError } = await supabase
           .from('partners')
-          .select('id')
+          .select('id, calendly_url')
           .eq('user_id', user.id)
           .single();
 
@@ -106,8 +110,9 @@ export default function Dashboard() {
         }
 
         const partnerId = partnerData.id;
+        setGlobalCalendly(partnerData.calendly_url || null);
 
-        // Offres
+        // 🔹 Offres
         const { data: offersData } = await supabase
           .from('offers')
           .select(`
@@ -119,7 +124,11 @@ export default function Dashboard() {
           .order('created_at', { ascending: false });
         setOffers((offersData || []) as Offer[]);
 
-        // Réservations enrichies
+        if (offersData?.some(o => o.requires_agenda)) {
+          setHasAgenda(true);
+        }
+
+        // 🔹 Réservations enrichies
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select(`
@@ -131,16 +140,22 @@ export default function Dashboard() {
           .order('created_at', { ascending: false });
         setBookings((bookingsData || []) as Booking[]);
 
-        // Payouts
+        // 🔹 Payouts
+        let grossTotal = 0;
         let netTotal = 0;
+        let commissionTotal = 0;
         let netThisMonth = 0;
+
         const { data: payouts } = await supabase
           .from('partner_payouts')
-          .select('amount, created_at')
+          .select('gross_amount, net_amount, commission_amount, created_at')
           .eq('partner_id', partnerId);
 
         if (payouts) {
-          netTotal = payouts.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+          grossTotal = payouts.reduce((sum, p) => sum + (Number(p.gross_amount) || 0), 0);
+          netTotal = payouts.reduce((sum, p) => sum + (Number(p.net_amount) || 0), 0);
+          commissionTotal = payouts.reduce((sum, p) => sum + (Number(p.commission_amount) || 0), 0);
+
           const monthStart = startOfMonth(new Date());
           const monthEnd = endOfMonth(new Date());
           netThisMonth = payouts
@@ -148,16 +163,13 @@ export default function Dashboard() {
               const d = new Date(p.created_at);
               return d >= monthStart && d <= monthEnd;
             })
-            .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            .reduce((sum, p) => sum + (Number(p.net_amount) || 0), 0);
         }
-
-        const totalRevenue = netTotal > 0 ? netTotal / 0.8 : 0;
-        const nowmeCommission = totalRevenue - netTotal;
 
         setRevenueStats({
           totalBookings: bookingsData?.length || 0,
-          totalRevenue: Math.round(totalRevenue * 100) / 100,
-          nowmeCommission: Math.round(nowmeCommission * 100) / 100,
+          totalRevenue: Math.round(grossTotal * 100) / 100,
+          nowmeCommission: Math.round(commissionTotal * 100) / 100,
           netAmount: Math.round(netTotal * 100) / 100,
           thisMonth: Math.round(netThisMonth * 100) / 100
         });
@@ -210,12 +222,102 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold mb-6">Tableau de bord</h1>
 
         {/* 👉 Section stats revenus */}
-        {/* (ton code complet des revenus ici, inchangé) */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Réservations</p>
+            <p className="text-xl font-bold">{revenueStats.totalBookings}</p>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Revenu brut</p>
+            <p className="text-xl font-bold">{revenueStats.totalRevenue} €</p>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Commission Nowme</p>
+            <p className="text-xl font-bold text-red-600">-{revenueStats.nowmeCommission} €</p>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Revenu net</p>
+            <p className="text-xl font-bold text-green-600">{revenueStats.netAmount} €</p>
+            <p className="text-xs text-gray-400">Ce mois-ci : {revenueStats.thisMonth} €</p>
+          </div>
+        </div>
+
+        {/* 👉 Section Agenda Calendly */}
+        {hasAgenda && (
+          <div className="mt-10 bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5" /> Mon agenda
+            </h2>
+            <div className="w-full h-[700px]">
+              <iframe
+                src={globalCalendly || offers.find(o => o.requires_agenda)?.calendly_url || ''}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                title="Calendly Agenda"
+              ></iframe>
+            </div>
+          </div>
+        )}
 
         {/* 👉 Section Offres */}
-        {/* (ton code complet des offres ici, inchangé) */}
+        <div className="mt-10 bg-white shadow rounded-lg p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5" /> Mes offres
+          </h2>
+          <div className="flex items-center gap-2 mb-4">
+            <Search className="w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Rechercher une offre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border rounded px-2 py-1 w-full"
+            />
+            <Filter className="w-4 h-4 text-gray-500" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border rounded px-2 py-1"
+            >
+              <option value="all">Toutes</option>
+              <option value="draft">Brouillons</option>
+              <option value="pending">En attente</option>
+              <option value="approved">Approuvées</option>
+              <option value="rejected">Refusées</option>
+            </select>
+          </div>
 
-        {/* 👉 Nouvelle section Réservations */}
+          {filteredOffers.length === 0 ? (
+            <p className="text-gray-500">Aucune offre trouvée.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredOffers.map((offer) => (
+                <div key={offer.id} className="border rounded-lg p-4 shadow-sm bg-white">
+                  <h3 className="font-bold">{offer.title}</h3>
+                  <p className="text-sm text-gray-500 mb-2">{offer.description}</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    {statusConfig[offer.status as keyof typeof statusConfig] && (
+                      <span className={`px-2 py-1 rounded text-xs ${statusConfig[offer.status as keyof typeof statusConfig].className}`}>
+                        {statusConfig[offer.status as keyof typeof statusConfig].label}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    <Link to={`/partner/offers/${offer.id}/edit`} className="text-blue-600 flex items-center gap-1">
+                      <Edit3 className="w-4 h-4" /> Modifier
+                    </Link>
+                    <button onClick={() => handleDelete(offer.id)} className="text-red-600 flex items-center gap-1">
+                      <Trash2 className="w-4 h-4" /> Supprimer
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 👉 Section Réservations */}
         <div className="mt-10 bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4">Mes réservations</h2>
           {bookings.length === 0 ? (
