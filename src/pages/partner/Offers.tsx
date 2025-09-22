@@ -796,6 +796,43 @@ const { error: createError } = await supabase
                       />
                     </div>
                   )}
+{/* --- Stock --- */}
+<div className="flex items-center gap-2">
+  <input
+    type="checkbox"
+    checked={newOffer.has_stock}
+    onChange={(e) =>
+      setNewOffer({
+        ...newOffer,
+        has_stock: e.target.checked,
+        stock: e.target.checked ? newOffer.stock : ''
+      })
+    }
+    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+  />
+  <label className="text-sm text-gray-700">
+    Cette offre a-t-elle un stock limité ?
+  </label>
+</div>
+
+{newOffer.has_stock && (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Stock disponible
+    </label>
+    <input
+      type="number"
+      min="1"
+      value={newOffer.stock}
+      onChange={(e) =>
+        setNewOffer({ ...newOffer, stock: e.target.value })
+      }
+      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+      placeholder="Ex: 20"
+      required={newOffer.has_stock}
+    />
+  </div>
+)}
 
                   {/* --- Actions --- */}
                   <div className="flex justify-end gap-4">
