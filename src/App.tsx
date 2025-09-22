@@ -44,8 +44,10 @@ const Payouts = React.lazy(() => import('./pages/admin/Payouts'));
 
 // Partner pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
+const PartnerLayout = React.lazy(() => import('./pages/partner/PartnerLayout'));
 const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
 const PartnerOffers = React.lazy(() => import('./pages/partner/Offers'));
+const PartnerBookings = React.lazy(() => import('./pages/partner/Bookings'));
 const PartnerBookingDetail = React.lazy(() => import('./pages/partner/BookingDetail'));
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
@@ -94,33 +96,22 @@ function App() {
 
                   {/* Partner routes */}
                   <Route path="/partner/signin" element={<PartnerSignIn />} />
-                  <Route path="/partner/dashboard" element={
-                    <PrivateRoute allowedRoles={['partner']}>
-                      <PartnerDashboard />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/partner/offers" element={
-                    <PrivateRoute allowedRoles={['partner']}>
-                      <PartnerOffers />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/partner/bookings/:id" element={
-                    <PrivateRoute allowedRoles={['partner']}>
-                      <PartnerBookingDetail />
-                    </PrivateRoute>
-                  } />
-                  {/* Settings Partner */}
-                  <Route path="/partner/settings" element={<Navigate to="/partner/settings/general" replace />} />
-                  <Route path="/partner/settings/general" element={
-                    <PrivateRoute allowedRoles={['partner']}>
-                      <SettingsGeneral />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/partner/settings/payments" element={
-                    <PrivateRoute allowedRoles={['partner']}>
-                      <SettingsPayments />
-                    </PrivateRoute>
-                  } />
+                  <Route
+                    path="/partner/*"
+                    element={
+                      <PrivateRoute allowedRoles={['partner']}>
+                        <PartnerLayout />
+                      </PrivateRoute>
+                    }
+                  >
+                    <Route path="dashboard" element={<PartnerDashboard />} />
+                    <Route path="offers" element={<PartnerOffers />} />
+                    <Route path="bookings" element={<PartnerBookings />} />
+                    <Route path="bookings/:id" element={<PartnerBookingDetail />} />
+                    <Route path="settings" element={<Navigate to="settings/general" replace />} />
+                    <Route path="settings/general" element={<SettingsGeneral />} />
+                    <Route path="settings/payments" element={<SettingsPayments />} />
+                  </Route>
 
                   {/* Protected user routes */}
                   <Route path="/account" element={
