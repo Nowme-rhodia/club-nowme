@@ -39,17 +39,23 @@ const AdminOffers = React.lazy(() => import('./pages/admin/Offers'));
 const Subscribers = React.lazy(() => import('./pages/admin/Subscribers'));
 const Newsletter = React.lazy(() => import('./pages/admin/Newsletter'));
 const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers'));
+const AdminBookings = React.lazy(() => import('./pages/admin/Bookings'));
+const Payouts = React.lazy(() => import('./pages/admin/Payouts'));
 
 // Partner pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
 const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
 const PartnerOffers = React.lazy(() => import('./pages/partner/Offers'));
+const PartnerBookingDetail = React.lazy(() => import('./pages/partner/BookingDetail'));
 
 // Club pages
 const ClubDashboard = React.lazy(() => import('./pages/club/ClubDashboard'));
 const Events = React.lazy(() => import('./pages/club/Events'));
 const Masterclasses = React.lazy(() => import('./pages/club/Masterclasses'));
 const Wellness = React.lazy(() => import('./pages/club/Wellness'));
+
+// Booking publique (Calendly intégré)
+const Booking = React.lazy(() => import('./pages/Booking'));
 
 function App() {
   return (
@@ -75,6 +81,9 @@ function App() {
                   <Route path="/community-space" element={<CommunitySpace />} />
                   <Route path="/communaute" element={<Communaute />} />
 
+                  {/* Booking publique */}
+                  <Route path="/booking/:id" element={<Booking />} />
+
                   {/* Auth routes */}
                   <Route path="/auth/signin" element={<SignIn />} />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
@@ -91,6 +100,11 @@ function App() {
                   <Route path="/partner/offers" element={
                     <PrivateRoute allowedRoles={['partner']}>
                       <PartnerOffers />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/partner/bookings/:id" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <PartnerBookingDetail />
                     </PrivateRoute>
                   } />
 
@@ -141,6 +155,8 @@ function App() {
                     <Route path="subscribers" element={<Subscribers />} />
                     <Route path="newsletter" element={<Newsletter />} />
                     <Route path="create-users" element={<CreateUsers />} />
+                    <Route path="bookings" element={<AdminBookings />} />
+                    <Route path="payouts" element={<Payouts />} />
                   </Route>
 
                   {/* 404 */}
