@@ -102,16 +102,18 @@ export default function Offers() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<PendingOffer | null>(null);
   const [newOffer, setNewOffer] = useState({
-    title: '',
-    description: '',
-    category_slug: '',
-    subcategory_slug: '',
-    price: '',
-    image_url: '',
-    location: '',
-    requires_agenda: false,
-    calendly_url: ''
-  });
+  title: '',
+  description: '',
+  category_slug: '',
+  subcategory_slug: '',
+  price: '',
+  image_url: '',
+  location: '',
+  requires_agenda: false,
+  calendly_url: '',
+  has_stock: false,   // 👈 AJOUT
+  stock: ''           // 👈 AJOUT
+});
 
   useEffect(() => {
     if (user) {
