@@ -13,9 +13,12 @@ serve(async (req) => {
     const payload = await req.json();
     console.log("📩 Nouvelle réservation reçue:", payload);
 
-    const bookingId = payload.record.id;
-    const offerId = payload.record.offer_id;
-    const userId = payload.record.user_id;
+    // ✅ Tolérance aux 2 formats : { record: {...} } ou directement {...}
+    const record = payload.record || payload;
+
+    const bookingId = record.id;
+    const offerId = record.offer_id;
+    const userId = record.user_id;
 
     // ---- 1) Récupérer infos de l’offre ----
     const { data: offer, error: offerError } = await supabase
