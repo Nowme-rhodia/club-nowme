@@ -92,7 +92,6 @@ const statusConfig = {
     className: 'bg-gray-100 text-gray-700'
   }
 };
-
 export default function Offers() {
   const { user } = useAuth();
   const [pendingOffers, setPendingOffers] = useState<PendingOffer[]>([]);
@@ -163,7 +162,7 @@ export default function Offers() {
     }
   };
 
-   const handleCreateOffer = async (e: React.FormEvent) => {
+  const handleCreateOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newOffer.title || !newOffer.description || !newOffer.category_slug) {
@@ -225,7 +224,7 @@ export default function Offers() {
       await loadOffers();
     } catch (error) {
       console.error('Error creating offer:', error);
-      toast.error('Erreur lors de la création de l\'offre');
+      toast.error("Erreur lors de la création de l'offre");
     }
   };
 
@@ -261,7 +260,6 @@ export default function Offers() {
     const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
@@ -330,6 +328,7 @@ export default function Offers() {
             </div>
           </div>
         </div>
+
         {/* Statistiques rapides */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-soft">
@@ -378,7 +377,6 @@ export default function Offers() {
             </div>
           </div>
         </div>
-
         {/* Offres en attente */}
         {filteredPendingOffers.length > 0 && (
           <div className="mb-8">
@@ -416,7 +414,9 @@ export default function Offers() {
                                   {offer.title}
                                 </h3>
                                 <div className="mt-1 flex items-center gap-4">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[offer.status || 'pending'].className}`}>
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[offer.status || 'pending'].className}`}
+                                  >
                                     <StatusIcon className="w-4 h-4 mr-1" />
                                     {statusConfig[offer.status || 'pending'].label}
                                   </span>
@@ -492,7 +492,6 @@ export default function Offers() {
             </div>
           </div>
         )}
-
         {/* Offres approuvées */}
         {filteredApprovedOffers.length > 0 && (
           <div className="mb-8">
@@ -531,7 +530,9 @@ export default function Offers() {
                                   {offer.title}
                                 </h3>
                                 <div className="mt-1 flex items-center gap-4">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[offer.status].className}`}>
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[offer.status].className}`}
+                                  >
                                     <StatusIcon className="w-4 h-4 mr-1" />
                                     {statusConfig[offer.status].label}
                                   </span>
@@ -622,7 +623,6 @@ export default function Offers() {
             </button>
           </div>
         )}
-
         {/* Formulaire de création */}
         {showCreateForm && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -813,7 +813,6 @@ export default function Offers() {
             </div>
           </div>
         )}
-
         {/* Modal de détails */}
         {selectedOffer && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
