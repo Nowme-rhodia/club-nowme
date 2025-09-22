@@ -34,6 +34,8 @@ const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback'));
 // Admin pages
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const Partners = React.lazy(() => import('./pages/admin/Partners'));
+const PendingOffers = React.lazy(() => import('./pages/admin/PendingOffers'));
+const AdminOffers = React.lazy(() => import('./pages/admin/Offers'));
 const Subscribers = React.lazy(() => import('./pages/admin/Subscribers'));
 const Newsletter = React.lazy(() => import('./pages/admin/Newsletter'));
 const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers'));
@@ -41,6 +43,7 @@ const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers'));
 // Partner pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
 const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
+const PartnerOffers = React.lazy(() => import('./pages/partner/Offers'));
 
 // Club pages
 const ClubDashboard = React.lazy(() => import('./pages/club/ClubDashboard'));
@@ -83,6 +86,11 @@ function App() {
                   <Route path="/partner/dashboard" element={
                     <PrivateRoute allowedRoles={['partner']}>
                       <PartnerDashboard />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/partner/offers" element={
+                    <PrivateRoute allowedRoles={['partner']}>
+                      <PartnerOffers />
                     </PrivateRoute>
                   } />
 
@@ -128,6 +136,8 @@ function App() {
                   }>
                     <Route index element={<Partners />} />
                     <Route path="partners" element={<Partners />} />
+                    <Route path="pending-offers" element={<PendingOffers />} />
+                    <Route path="offers" element={<AdminOffers />} />
                     <Route path="subscribers" element={<Subscribers />} />
                     <Route path="newsletter" element={<Newsletter />} />
                     <Route path="create-users" element={<CreateUsers />} />

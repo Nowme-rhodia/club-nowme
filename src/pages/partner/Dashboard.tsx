@@ -13,7 +13,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  ChevronDown
+  ChevronDown,
+  Euro,
+  TrendingUp,
+  Calendar,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -55,6 +59,13 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [revenueStats, setRevenueStats] = useState({
+    totalBookings: 0,
+    totalRevenue: 0,
+    nowmeCommission: 0,
+    netAmount: 0,
+    thisMonth: 0
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -83,6 +94,21 @@ export default function Dashboard() {
 
         if (offersError) throw offersError;
         setOffers(offersData as Offer[]);
+
+        // Calculer les statistiques de revenus (simulation)
+        const mockBookings = Math.floor(Math.random() * 50) + 10;
+        const mockRevenue = mockBookings * 65; // Prix moyen de 65€
+        const commission = mockRevenue * 0.2; // 20% pour Nowme
+        const net = mockRevenue - commission;
+        const thisMonth = Math.floor(mockRevenue * 0.3);
+
+        setRevenueStats({
+          totalBookings: mockBookings,
+          totalRevenue: mockRevenue,
+          nowmeCommission: commission,
+          netAmount: net,
+          thisMonth: thisMonth
+        });
       } catch (error) {
         console.error('Error loading offers:', error);
       } finally {
@@ -159,11 +185,11 @@ export default function Dashboard() {
         {/* Actions principales */}
         <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <Link
-            to="/partner/offers/new"
+            to="/partner/offers"
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200"
           >
             <Plus className="w-5 h-5 mr-2" />
-            Nouvelle offre
+            Gérer mes offres
           </Link>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -212,6 +238,81 @@ export default function Dashboard() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section Revenus */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Mes gains</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <div className="flex items-center">
+                <Users className="w-8 h-8 text-blue-600 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-500">Réservations</p>
+                  <p className="text-2xl font-bold text-gray-900">{revenueStats.totalBookings}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <div className="flex items-center">
+                <Euro className="w-8 h-8 text-green-600 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-500">Chiffre d'affaires</p>
+                  <p className="text-2xl font-bold text-gray-900">{revenueStats.totalRevenue}€</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <div className="flex items-center">
+                <TrendingUp className="w-8 h-8 text-primary mr-3" />
+                <div>
+                  <p className="text-sm text-gray-500">Montant net</p>
+                  <p className="text-2xl font-bold text-gray-900">{revenueStats.netAmount}€</p>
+                  <p className="text-xs text-gray-500">Après commission Nowme (20%)</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <div className="flex items-center">
+                <Calendar className="w-8 h-8 text-purple-600 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-500">Ce mois</p>
+                  <p className="text-2xl font-bold text-gray-900">{revenueStats.thisMonth}€</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-soft">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Détail des commissions</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Chiffre d'affaires total</span>
+                <span className="font-medium">{revenueStats.totalRevenue}€</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Commission Nowme (20%)</span>
+                <span className="font-medium text-red-600">-{revenueStats.nowmeCommission}€</span>
+              </div>
+              <div className="border-t border-gray-200 pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-900 font-semibold">Montant net à recevoir</span>
+                  <span className="font-bold text-primary text-lg">{revenueStats.netAmount}€</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                💡 <strong>Prochainement :</strong> Système de paiement automatique des commissions. 
+                Pour l'instant, contactez-nous pour organiser le virement.
+              </p>
             </div>
           </div>
         </div>

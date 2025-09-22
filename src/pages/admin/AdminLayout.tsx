@@ -36,6 +36,18 @@ export default function AdminLayout() {
       current: location.pathname === '/admin/partners'
     },
     {
+      name: 'Offres en attente',
+      href: '/admin/pending-offers',
+      icon: Clock,
+      current: location.pathname === '/admin/pending-offers'
+    },
+    {
+      name: 'Offres validées',
+      href: '/admin/offers',
+      icon: CheckCircle,
+      current: location.pathname === '/admin/offers'
+    },
+    {
       name: 'Abonnées',
       href: '/admin/subscribers',
       icon: Users,
