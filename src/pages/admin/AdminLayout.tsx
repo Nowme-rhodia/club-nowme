@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Users, Building2, Settings, Mail } from 'lucide-react';
+import { Users, Building2, Settings, Mail, Clock, CheckCircle, CreditCard } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 
 export default function AdminLayout() {
@@ -64,6 +64,13 @@ export default function AdminLayout() {
       href: '/admin/create-users',
       icon: Users,
       current: location.pathname === '/admin/create-users'
+    },
+    // ➕ NOUVEAU : Paiements
+    {
+      name: 'Paiements partenaires',
+      href: '/admin/payouts',
+      icon: CreditCard,
+      current: location.pathname === '/admin/payouts'
     }
   ];
 

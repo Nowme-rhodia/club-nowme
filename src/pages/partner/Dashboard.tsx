@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Plus, 
@@ -59,29 +59,46 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // ✅ stats calculées réellement (plus de mock)
   const [revenueStats, setRevenueStats] = useState({
-    totalBookings: 0,
-    totalRevenue: 0,
-    nowmeCommission: 0,
-    netAmount: 0,
-    thisMonth: 0
+    totalBookings: 0,  // nombre de réservations (bookings)
+    totalRevenue: 0,   // CA brut estimé (= net / 0.8 si commission 20%)
+    nowmeCommission: 0,// commission Nowme (20%)
+    netAmount: 0,      // net dû au partenaire (= somme de partner_payouts.amount)
+    thisMonth: 0       // net ce mois
   });
 
   useEffect(() => {
     if (!user) return;
 
-    const loadOffers = async () => {
+    const loadData = async () => {
+      setLoading(true);
       try {
-        // Récupérer d'abord le partner_id
+        // 1) Récupérer le partner_id depuis le user_id
         const { data: partnerData, error: partnerError } = await supabase
           .from('partners')
           .select('id')
           .eq('user_id', user.id)
           .single();
 
-        if (partnerError) throw partnerError;
+        if (partnerError || !partnerData) {
+          console.error('Partner lookup error:', partnerError);
+          // Pas de partner → on termine proprement
+          setOffers([]);
+          setRevenueStats({
+            totalBookings: 0,
+            totalRevenue: 0,
+            nowmeCommission: 0,
+            netAmount: 0,
+            thisMonth: 0
+          });
+          return;
+        }
 
-        // Récupérer les offres avec leurs prix et médias
+        const partnerId = partnerData.id;
+
+        // 2) Offres du partenaire (avec prix + médias)
         const { data: offersData, error: offersError } = await supabase
           .from('offers')
           .select(`
@@ -89,34 +106,80 @@ export default function Dashboard() {
             prices:offer_prices(*),
             media:offer_media(*)
           `)
-          .eq('partner_id', partnerData.id)
+          .eq('partner_id', partnerId)
           .order('created_at', { ascending: false });
 
-        if (offersError) throw offersError;
-        setOffers(offersData as Offer[]);
+        if (offersError) {
+          console.error('Error loading offers:', offersError);
+          setOffers([]);
+        } else {
+          setOffers((offersData || []) as Offer[]);
+        }
 
-        // Calculer les statistiques de revenus (simulation)
-        const mockBookings = Math.floor(Math.random() * 50) + 10;
-        const mockRevenue = mockBookings * 65; // Prix moyen de 65€
-        const commission = mockRevenue * 0.2; // 20% pour Nowme
-        const net = mockRevenue - commission;
-        const thisMonth = Math.floor(mockRevenue * 0.3);
+        // 3) Stats de réservations (si la table existe)
+        let totalBookings = 0;
+        try {
+          const bookingsCountReq = await supabase
+            .from('bookings')
+            .select('id', { count: 'exact', head: true })
+            .eq('partner_id', partnerId);
+
+          totalBookings = bookingsCountReq.count || 0;
+        } catch (err) {
+          // table bookings absente → on garde 0
+          console.warn('bookings count skipped:', err);
+          totalBookings = 0;
+        }
+
+        // 4) Payouts du partenaire (net)
+        let netTotal = 0;
+        let netThisMonth = 0;
+        try {
+          const { data: payouts, error: payoutsError } = await supabase
+            .from('partner_payouts')
+            .select('amount, created_at')
+            .eq('partner_id', partnerId);
+
+          if (payoutsError) {
+            console.warn('payouts fetch error:', payoutsError);
+          } else {
+            const all = payouts || [];
+            netTotal = all.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+            const monthStart = startOfMonth(new Date());
+            const monthEnd = endOfMonth(new Date());
+            netThisMonth = all
+              .filter(p => {
+                const d = new Date(p.created_at);
+                return d >= monthStart && d <= monthEnd;
+              })
+              .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+          }
+        } catch (err) {
+          console.warn('payouts query skipped:', err);
+          netTotal = 0;
+          netThisMonth = 0;
+        }
+
+        // 5) Conversion net → brut (si commission 20%)
+        const totalRevenue = netTotal > 0 ? netTotal / 0.8 : 0; // CA brut estimé
+        const nowmeCommission = totalRevenue - netTotal; // = 20% du brut = 25% du net
 
         setRevenueStats({
-          totalBookings: mockBookings,
-          totalRevenue: mockRevenue,
-          nowmeCommission: commission,
-          netAmount: net,
-          thisMonth: thisMonth
+          totalBookings,
+          totalRevenue: Math.round(totalRevenue * 100) / 100,
+          nowmeCommission: Math.round(nowmeCommission * 100) / 100,
+          netAmount: Math.round(netTotal * 100) / 100,
+          thisMonth: Math.round(netThisMonth * 100) / 100
         });
       } catch (error) {
-        console.error('Error loading offers:', error);
+        console.error('Error loading dashboard:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadOffers();
+    loadData();
   }, [user]);
 
   const filteredOffers = offers
