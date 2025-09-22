@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  ChevronDown,
   Image as ImageIcon,
   Euro,
   MapPin,
@@ -35,6 +34,8 @@ interface PendingOffer {
   status?: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string;
   created_at: string;
+  requires_agenda?: boolean;
+  calendly_url?: string | null;
 }
 
 interface ApprovedOffer {
@@ -47,6 +48,8 @@ interface ApprovedOffer {
   status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
   is_active?: boolean;
   created_at: string;
+  requires_agenda?: boolean;
+  calendly_url?: string | null;
   prices: Array<{
     id: string;
     name: string;
@@ -106,7 +109,9 @@ export default function Offers() {
     subcategory_slug: '',
     price: '',
     image_url: '',
-    location: ''
+    location: '',
+    requires_agenda: false,
+    calendly_url: ''
   });
 
   useEffect(() => {
@@ -158,7 +163,7 @@ export default function Offers() {
     }
   };
 
-  const handleCreateOffer = async (e: React.FormEvent) => {
+   const handleCreateOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newOffer.title || !newOffer.description || !newOffer.category_slug) {
@@ -170,7 +175,7 @@ export default function Offers() {
       // Récupérer le partner_id
       const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
-        .select('id')
+        .select('id, business_name')
         .eq('user_id', user?.id)
         .single();
 
@@ -188,6 +193,8 @@ export default function Offers() {
           price: newOffer.price ? parseFloat(newOffer.price) : null,
           location: newOffer.location,
           image_url: newOffer.image_url || null,
+          requires_agenda: newOffer.requires_agenda,
+          calendly_url: newOffer.requires_agenda ? newOffer.calendly_url : null,
           status: 'pending'
         });
 
@@ -211,7 +218,9 @@ export default function Offers() {
         subcategory_slug: '',
         price: '',
         image_url: '',
-        location: ''
+        location: '',
+        requires_agenda: false,
+        calendly_url: ''
       });
       await loadOffers();
     } catch (error) {
@@ -321,7 +330,6 @@ export default function Offers() {
             </div>
           </div>
         </div>
-
         {/* Statistiques rapides */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-soft">
@@ -335,7 +343,7 @@ export default function Offers() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-6 shadow-soft">
             <div className="flex items-center">
               <CheckCircle2 className="w-8 h-8 text-green-600 mr-3" />
@@ -345,7 +353,7 @@ export default function Offers() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-6 shadow-soft">
             <div className="flex items-center">
               <XCircle className="w-8 h-8 text-red-600 mr-3" />
@@ -357,7 +365,7 @@ export default function Offers() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-6 shadow-soft">
             <div className="flex items-center">
               <CheckCircle2 className="w-8 h-8 text-primary mr-3" />
@@ -381,7 +389,7 @@ export default function Offers() {
                   const StatusIcon = statusConfig[offer.status || 'pending'].icon;
                   const category = categories.find(c => c.slug === offer.category_slug);
                   const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
-                  
+
                   return (
                     <li key={offer.id}>
                       <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
@@ -431,7 +439,21 @@ export default function Offers() {
                                     </span>
                                   )}
                                 </div>
-                                
+
+                                {/* Affichage du lien Calendly si requis */}
+                                {offer.requires_agenda && offer.calendly_url && (
+                                  <div className="mt-2 text-sm">
+                                    <a
+                                      href={offer.calendly_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary underline"
+                                    >
+                                      Voir les créneaux disponibles
+                                    </a>
+                                  </div>
+                                )}
+
                                 {/* Raison du rejet */}
                                 {offer.status === 'rejected' && offer.rejection_reason && (
                                   <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
@@ -482,7 +504,7 @@ export default function Offers() {
                   const category = categories.find(c => c.slug === offer.category_slug);
                   const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
                   const mainPrice = offer.prices?.[0];
-                  
+
                   return (
                     <li key={offer.id}>
                       <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
@@ -535,6 +557,20 @@ export default function Offers() {
                                     {offer.location}
                                   </span>
                                 </div>
+
+                                {/* Affichage du lien Calendly si requis */}
+                                {offer.requires_agenda && offer.calendly_url && (
+                                  <div className="mt-2 text-sm">
+                                    <a
+                                      href={offer.calendly_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary underline"
+                                    >
+                                      Réserver un créneau
+                                    </a>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -563,7 +599,6 @@ export default function Offers() {
             </div>
           </div>
         )}
-
         {/* Message si aucune offre */}
         {filteredPendingOffers.length === 0 && filteredApprovedOffers.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
@@ -598,6 +633,7 @@ export default function Offers() {
                 </h2>
 
                 <form onSubmit={handleCreateOffer} className="space-y-6">
+                  {/* --- Titre --- */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Titre de l'offre *
@@ -612,6 +648,7 @@ export default function Offers() {
                     />
                   </div>
 
+                  {/* --- Description --- */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Description *
@@ -626,6 +663,7 @@ export default function Offers() {
                     />
                   </div>
 
+                  {/* --- Catégorie & sous-catégorie --- */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -669,6 +707,7 @@ export default function Offers() {
                     </div>
                   </div>
 
+                  {/* --- Prix & image --- */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -704,6 +743,7 @@ export default function Offers() {
                     </div>
                   </div>
 
+                  {/* --- Localisation --- */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Localisation
@@ -715,6 +755,44 @@ export default function Offers() {
                     />
                   </div>
 
+                  {/* --- Agenda --- */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={newOffer.requires_agenda}
+                      onChange={(e) =>
+                        setNewOffer({
+                          ...newOffer,
+                          requires_agenda: e.target.checked,
+                          calendly_url: e.target.checked ? newOffer.calendly_url : "",
+                        })
+                      }
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <label className="text-sm text-gray-700">
+                      Cette offre nécessite une réservation via agenda (Calendly)
+                    </label>
+                  </div>
+
+                  {newOffer.requires_agenda && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Lien Calendly
+                      </label>
+                      <input
+                        type="url"
+                        value={newOffer.calendly_url}
+                        onChange={(e) =>
+                          setNewOffer({...newOffer, calendly_url: e.target.value})
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                        placeholder="https://calendly.com/votre-lien"
+                        required={newOffer.requires_agenda}
+                      />
+                    </div>
+                  )}
+
+                  {/* --- Actions --- */}
                   <div className="flex justify-end gap-4">
                     <button
                       type="button"
@@ -800,6 +878,21 @@ export default function Offers() {
                         <MapPin className="w-4 h-4 mr-1" />
                         {selectedOffer.location}
                       </p>
+                    </div>
+                  )}
+
+                  {/* --- Affichage agenda si activé --- */}
+                  {selectedOffer.requires_agenda && selectedOffer.calendly_url && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Réservations</h4>
+                      <a
+                        href={selectedOffer.calendly_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline"
+                      >
+                        Voir les créneaux disponibles
+                      </a>
                     </div>
                   )}
 
