@@ -1,8 +1,6 @@
 import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
-import fetch from 'node-fetch'
 
-// ⚠️ Variables d'environnement (dans ton .env)
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -13,34 +11,32 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-// 📌 Liste des utilisateurs de test
 const USERS = [
-  { email: "abonne-testmoibienski@nowme.fr", password: "Password123!", role: "subscriber" },
-  { email: "partner-testmoibienski@nowme.fr", password: "Password123!", role: "partner" }
+  { email: "abonne-tesabtmoibienskist@nowme.fr", password: "Password123!", role: "subscriber" },
+  { email: "partner-tesabtmoibienskist@nowme.fr", password: "Password123!", role: "partner" }
 ]
+
+// 💤 Pause utilitaire
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 // 🔹 Supprimer les profils existants
 async function resetProfiles(emails) {
   for (const email of emails) {
     console.log(`🗑️ Suppression éventuelle du profil ${email}...`)
-    const resp = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_profiles?email=eq.${encodeURIComponent(email)}`,
-      {
-        method: "DELETE",
-        headers: {
-          apikey: SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-          Prefer: "return=representation"
-        }
-      }
-    )
-    if (!resp.ok) {
-      console.error(`❌ Échec suppression profil ${email}: ${resp.status} ${await resp.text()}`)
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .delete()
+      .eq('email', email)
+      .select()
+
+    if (error) {
+      console.error(`❌ Erreur suppression profil ${email}:`, error.message)
       continue
     }
-    const rows = resp.status === 200 ? await resp.json() : []
-    if (rows.length) {
-      console.log(`✅ Profil supprimé: ${rows.length} lignes pour ${email}`)
+    if (data?.length) {
+      console.log(`✅ Profil supprimé: ${data.length} lignes pour ${email}`)
     } else {
       console.log(`ℹ️ Aucun profil existant pour ${email}`)
     }
@@ -67,96 +63,60 @@ async function createAuthUser({ email, password, role }) {
 // 🔹 Lier profil via Edge Function
 async function link(email, authUserId) {
   console.log(`🔗 Liaison profil pour ${email} avec authUserId ${authUserId}...`)
-  const r = await fetch(`${SUPABASE_URL}/functions/v1/link-auth-to-profile`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ email, authUserId })
+  const { error } = await supabase.functions.invoke('link-auth-to-profile', {
+    body: { email, authUserId }
   })
-  const t = await r.text()
-  if (!r.ok) throw new Error(`❌ Échec liaison ${email}: ${r.status} ${t}`)
+  if (error) throw new Error(`❌ Échec liaison ${email}: ${error.message}`)
   console.log(`✅ Profil lié avec succès: ${email}`)
 }
 
-// 🔹 Vérifier les profils créés
-async function listProfiles(emails) {
-  console.log("\n📋 Vérification dans user_profiles:")
-  const { data, error } = await supabase
-    .from("user_profiles")
-    .select("id, email, user_id, subscription_status, created_at")
-    .in("email", emails)
+// 🔹 Vérification via user_profiles (backoff si besoin)
+async function waitForProfile(userId, email) {
+  const delays = [200, 400, 800, 1600, 3200]
+  for (const d of delays) {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("id, email, user_id, subscription_status, created_at")
+      .eq("user_id", userId)
+      .maybeSingle()
 
-  if (error) {
-    console.error("❌ Erreur récupération user_profiles:", error.message)
-    return []
-  }
-  if (!data || data.length === 0) {
-    console.log("⚠️ Aucun profil trouvé pour ces emails.")
-    return []
-  }
-  for (const p of data) {
-    console.log(`   • ${p.email} → profile_id=${p.id}, user_id=${p.user_id}, status=${p.subscription_status}, créé le ${p.created_at}`)
-  }
-  return data
-}
-
-// 🔹 Vérifier aussi côté auth.users
-async function listAuthUsers(emails) {
-  console.log("\n📋 Vérification dans auth.users:")
-  const { data, error } = await supabase.auth.admin.listUsers()
-  if (error) {
-    console.error("❌ Erreur récupération auth.users:", error.message)
-    return []
-  }
-  const found = data.users.filter(u => emails.includes(u.email))
-  for (const user of found) {
-    console.log(`   • ${user.email} → auth_id=${user.id}, confirmé=${user.email_confirmed_at ? "✅" : "❌"}`)
-  }
-  return found
-}
-
-// 🔹 Vérification croisée user_profiles <-> auth.users
-function crossCheck(profiles, authUsers) {
-  console.log("\n🔎 Vérification croisée user_profiles.user_id === auth.users.id:")
-  for (const profile of profiles) {
-    const match = authUsers.find(u => u.email === profile.email)
-    if (!match) {
-      console.log(`❌ Pas de auth.user trouvé pour ${profile.email}`)
-      continue
+    if (data) {
+      console.log(`✅ Profil trouvé pour ${email}: user_id=${data.user_id}`)
+      return data
     }
-    if (profile.user_id === match.id) {
-      console.log(`✅ OK: ${profile.email} → profile.user_id et auth.id correspondent (${profile.user_id})`)
-    } else {
-      console.log(`⚠️ Mismatch: ${profile.email} → profile.user_id=${profile.user_id}, auth.id=${match.id}`)
+
+    if (error && error.code !== "PGRST116") {
+      console.error(`❌ Erreur récupération profil ${email}:`, error.message)
+      throw error
     }
+
+    console.log(`⏳ Profil ${email} introuvable, retry dans ${d}ms...`)
+    await sleep(d)
   }
+
+  throw new Error(`❌ Profil non trouvé après retries: ${email}`)
 }
 
 async function main() {
   try {
     console.log("🚀 Démarrage script de création des utilisateurs de test...")
 
-    // 1️⃣ Nettoyer anciens profils
     await resetProfiles(USERS.map(u => u.email))
 
-    // 2️⃣ Créer les utilisateurs
     const created = []
     for (const u of USERS) {
       const user = await createAuthUser(u)
       if (user) created.push({ ...u, id: user.id })
     }
 
-    // 3️⃣ Lier profils aux comptes auth
     for (const u of created) {
       await link(u.email, u.id)
     }
 
-    // 4️⃣ Vérification finale
-    const profiles = await listProfiles(USERS.map(u => u.email))
-    const authUsers = await listAuthUsers(USERS.map(u => u.email))
-    crossCheck(profiles, authUsers)
+    console.log("\n📋 Vérification dans user_profiles:")
+    for (const u of created) {
+      await waitForProfile(u.id, u.email)
+    }
 
     console.log("\n🎯 Script terminé avec succès ✅")
   } catch (e) {
