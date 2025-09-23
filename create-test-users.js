@@ -15,8 +15,8 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 // 📌 Liste des utilisateurs de test
 const USERS = [
-  { email: "abonne-testmoibien@nowme.fr", password: "Password123!", role: "subscriber" },
-  { email: "partner-testmoibien@nowme.fr", password: "Password123!", role: "partner" }
+  { email: "abonne-testmoibiensk@nowme.fr", password: "Password123!", role: "subscriber" },
+  { email: "partner-testmoibiensk@nowme.fr", password: "Password123!", role: "partner" }
 ]
 
 // 🔹 Supprimer les profils existants

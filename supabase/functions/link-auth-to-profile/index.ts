@@ -23,6 +23,9 @@ Deno.serve(async (req) => {
       throw new Error('Email et authUserId requis');
     }
 
+    // 🔖 Marqueur de version pour vérifier le déploiement
+    console.info("🚀 link-auth-to-profile v2025-09-23-UP-SERT");
+
     console.log(`🔗 Liaison du profil ${email} avec l'utilisateur auth ${authUserId}`);
 
     // Vérifier que l'utilisateur auth existe
