@@ -36,6 +36,8 @@ interface PendingOffer {
   created_at: string;
   requires_agenda?: boolean;
   calendly_url?: string | null;
+  has_stock?: boolean;   // 👈 à rajouter
+  stock?: number | null; // 👈 à rajouter
 }
 
 interface ApprovedOffer {
@@ -436,6 +438,12 @@ const { error: createError } = await supabase
                                       {offer.price}€
                                     </span>
                                   )}
+                                  {offer.has_stock && offer.stock !== null && (
+  <span className="text-sm text-blue-700 font-medium">
+    Stock : {offer.stock}
+  </span>
+)}
+
                                 </div>
                                 <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
                                   <span>{category?.name}</span>
@@ -938,6 +946,7 @@ const { error: createError } = await supabase
     </p>
   </div>
 )}
+
 
                   {/* --- Affichage agenda si activé --- */}
                   {selectedOffer.requires_agenda && selectedOffer.calendly_url && (

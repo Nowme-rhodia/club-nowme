@@ -81,6 +81,12 @@ export default function Dashboard() {
     thisMonth: 0
   });
 
+  // 👉 Nouveaux dérivés
+  const lowStockOffers = offers.filter(o => o.has_stock && (o.stock ?? 0) <= 5);
+  const upcomingBookings = bookings
+    .filter(b => b.status === 'confirmed')
+    .slice(0, 5); // afficher seulement les 5 prochaines
+
   const [hasAgenda, setHasAgenda] = useState(false);
   const [globalCalendly, setGlobalCalendly] = useState<string | null>(null);
 
@@ -241,7 +247,52 @@ export default function Dashboard() {
             <p className="text-xs text-gray-400">Ce mois-ci : {revenueStats.thisMonth} €</p>
           </div>
         </div>
+        {/* 👉 Widget Stock bas + Prochaines réservations */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+  {/* Stock bas */}
+  <div className="bg-white shadow rounded-lg p-6">
+    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+      <AlertCircle className="w-5 h-5 text-red-600" /> Stock bas
+    </h2>
+    {lowStockOffers.length === 0 ? (
+      <p className="text-gray-500 text-sm">Aucune offre en rupture imminente.</p>
+    ) : (
+      <ul className="space-y-2">
+        {lowStockOffers.map(o => (
+          <li key={o.id} className="flex justify-between text-sm">
+            <span>{o.title}</span>
+            <span className="font-semibold text-red-600">
+              {o.stock} restant{o.stock && o.stock > 1 ? 's' : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
 
+  {/* Prochaines réservations */}
+  <div className="bg-white shadow rounded-lg p-6">
+    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+      <Users className="w-5 h-5 text-primary" /> Prochaines réservations
+    </h2>
+    {upcomingBookings.length === 0 ? (
+      <p className="text-gray-500 text-sm">Aucune réservation confirmée.</p>
+    ) : (
+      <ul className="space-y-2">
+        {upcomingBookings.map(b => (
+          <li key={b.id} className="flex justify-between text-sm">
+            <span>
+              {b.user ? `${b.user.first_name} ${b.user.last_name}` : 'Client'} — {b.offer?.title}
+            </span>
+            <span className="text-gray-600">
+              {new Date(b.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</div>
         {/* 👉 Section Agenda Calendly */}
         {hasAgenda && (
           <div className="mt-10 bg-white shadow rounded-lg p-6">
