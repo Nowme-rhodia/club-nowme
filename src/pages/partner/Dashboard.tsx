@@ -80,7 +80,13 @@ export default function Dashboard() {
     netAmount: 0,
     thisMonth: 0
   });
-
+  const [partnerReport, setPartnerReport] = useState<{
+    total_bookings: number;
+    gross_total: number;
+    commission: number;
+    net_total: number;
+  } | null>(null);
+  
   // 👉 Nouveaux dérivés
   const lowStockOffers = offers.filter(o => o.has_stock && (o.stock ?? 0) <= 5);
   const upcomingBookings = bookings
@@ -96,12 +102,13 @@ export default function Dashboard() {
     const loadData = async () => {
       setLoading(true);
       try {
+        // 👉 Récupérer le partenaire
         const { data: partnerData, error: partnerError } = await supabase
           .from('partners')
           .select('id, calendly_url')
           .eq('user_id', user.id)
           .single();
-
+    
         if (partnerError || !partnerData) {
           console.error('Partner lookup error:', partnerError);
           setOffers([]);
@@ -114,11 +121,11 @@ export default function Dashboard() {
           });
           return;
         }
-
+    
         const partnerId = partnerData.id;
         setGlobalCalendly(partnerData.calendly_url || null);
-
-        // 🔹 Offres
+    
+        // 👉 Offres
         const { data: offersData } = await supabase
           .from('offers')
           .select(`
@@ -129,12 +136,12 @@ export default function Dashboard() {
           .eq('partner_id', partnerId)
           .order('created_at', { ascending: false });
         setOffers((offersData || []) as Offer[]);
-
+    
         if (offersData?.some(o => o.requires_agenda)) {
           setHasAgenda(true);
         }
-
-        // 🔹 Réservations enrichies
+    
+        // 👉 Réservations enrichies
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select(`
@@ -145,23 +152,23 @@ export default function Dashboard() {
           .eq('partner_id', partnerId)
           .order('created_at', { ascending: false });
         setBookings((bookingsData || []) as Booking[]);
-
-        // 🔹 Payouts
+    
+        // 👉 Payouts
         let grossTotal = 0;
         let netTotal = 0;
         let commissionTotal = 0;
         let netThisMonth = 0;
-
+    
         const { data: payouts } = await supabase
           .from('partner_payouts')
           .select('gross_amount, net_amount, commission_amount, created_at')
           .eq('partner_id', partnerId);
-
+    
         if (payouts) {
           grossTotal = payouts.reduce((sum, p) => sum + (Number(p.gross_amount) || 0), 0);
           netTotal = payouts.reduce((sum, p) => sum + (Number(p.net_amount) || 0), 0);
           commissionTotal = payouts.reduce((sum, p) => sum + (Number(p.commission_amount) || 0), 0);
-
+    
           const monthStart = startOfMonth(new Date());
           const monthEnd = endOfMonth(new Date());
           netThisMonth = payouts
@@ -171,7 +178,7 @@ export default function Dashboard() {
             })
             .reduce((sum, p) => sum + (Number(p.net_amount) || 0), 0);
         }
-
+    
         setRevenueStats({
           totalBookings: bookingsData?.length || 0,
           totalRevenue: Math.round(grossTotal * 100) / 100,
@@ -179,6 +186,22 @@ export default function Dashboard() {
           netAmount: Math.round(netTotal * 100) / 100,
           thisMonth: Math.round(netThisMonth * 100) / 100
         });
+    
+        // 🔹 Rapport partenaire (via RPC)
+        const { data: reportData, error: reportError } = await supabase.rpc(
+          "partner_payouts_report_by_partner",
+          { partner_uuid: partnerId }
+        );
+    
+        if (!reportError && reportData && reportData.length > 0) {
+          setPartnerReport({
+            total_bookings: reportData[0].total_bookings || 0,
+            gross_total: reportData[0].gross_total || 0,
+            commission: reportData[0].commission || 0,
+            net_total: reportData[0].net_total || 0,
+          });
+        }
+    
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {
@@ -247,6 +270,40 @@ export default function Dashboard() {
             <p className="text-xs text-gray-400">Ce mois-ci : {revenueStats.thisMonth} €</p>
           </div>
         </div>
+        {/* 👉 Rapport détaillé du partenaire */}
+{partnerReport && (
+  <>
+    <h2 className="text-xl font-bold mb-4">Rapport détaillé</h2>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+      <div className="bg-white shadow rounded-lg p-4">
+        <p className="text-sm text-gray-500">Réservations confirmées</p>
+        <p className="text-xl font-bold">{partnerReport.total_bookings}</p>
+      </div>
+      <div className="bg-white shadow rounded-lg p-4">
+        <p className="text-sm text-gray-500">Revenu brut</p>
+        <p className="text-xl font-bold">
+          {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+            .format(partnerReport.gross_total)}
+        </p>
+      </div>
+      <div className="bg-white shadow rounded-lg p-4">
+        <p className="text-sm text-gray-500">Commission Nowme</p>
+        <p className="text-xl font-bold text-red-600">
+          -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+            .format(partnerReport.commission)}
+        </p>
+      </div>
+      <div className="bg-white shadow rounded-lg p-4">
+        <p className="text-sm text-gray-500">Revenu net</p>
+        <p className="text-xl font-bold text-green-600">
+          {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+            .format(partnerReport.net_total)}
+        </p>
+      </div>
+    </div>
+  </>
+)}
+
         {/* 👉 Widget Stock bas + Prochaines réservations */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
   {/* Stock bas */}

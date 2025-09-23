@@ -19,12 +19,23 @@ interface PartnerPayout {
   };
 }
 
+interface Report {
+  total_bookings: number;
+  gross_total: number;
+  commission: number;
+  net_total: number;
+}
+
 export default function Payouts() {
   const [payouts, setPayouts] = useState<PartnerPayout[]>([]);
+  const [globalReport, setGlobalReport] = useState<Report | null>(null);
+  const [partnerReports, setPartnerReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadPayouts();
+    loadGlobalReport();
+    loadPartnerReports();
   }, []);
 
   const loadPayouts = async () => {
@@ -47,6 +58,54 @@ export default function Payouts() {
       toast.error("Impossible de charger les reversements");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadGlobalReport = async () => {
+    try {
+      const { data, error } = await supabase.rpc("admin_payouts_report");
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setGlobalReport({
+          total_bookings: data[0].total_bookings || 0,
+          gross_total: data[0].gross_total || 0,
+          commission: data[0].commission || 0,
+          net_total: data[0].net_total || 0,
+        });
+      }
+    } catch (err) {
+      console.error("Erreur chargement rapport global:", err);
+      toast.error("Impossible de charger le rapport global");
+    }
+  };
+
+  const loadPartnerReports = async () => {
+    try {
+      const { data: partners, error } = await supabase
+        .from("partners")
+        .select("id, business_name, contact_email");
+
+      if (error) throw error;
+      if (!partners) return;
+
+      const reports: any[] = [];
+      for (const p of partners) {
+        const { data, error: repError } = await supabase.rpc(
+          "admin_payouts_report_by_partner",
+          { partner_uuid: p.id }
+        );
+        if (!repError && data && data.length > 0) {
+          reports.push({
+            partner: p,
+            ...data[0],
+          });
+        }
+      }
+
+      setPartnerReports(reports);
+    } catch (err) {
+      console.error("Erreur chargement rapports partenaires:", err);
+      toast.error("Impossible de charger les rapports partenaires");
     }
   };
 
@@ -112,19 +171,16 @@ export default function Payouts() {
 
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute(
-      "download",
-      `payouts-${type}-${Date.now()}.csv`
-    );
+    link.setAttribute("download", `payouts-${type}-${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const formatAmount = (amount: number, currency: string) => {
+  const formatAmount = (amount: number, currency: string = "EUR") => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
-      currency: currency || "EUR",
+      currency,
     }).format(amount);
   };
 
@@ -160,6 +216,68 @@ export default function Payouts() {
         </div>
       </div>
 
+      {/* 👉 Rapport global */}
+      {globalReport && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Réservations confirmées</p>
+            <p className="text-xl font-bold">{globalReport.total_bookings}</p>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Revenu brut</p>
+            <p className="text-xl font-bold">
+              {formatAmount(globalReport.gross_total)}
+            </p>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Commission Nowme</p>
+            <p className="text-xl font-bold text-red-600">
+              -{formatAmount(globalReport.commission)}
+            </p>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4">
+            <p className="text-sm text-gray-500">Revenu net</p>
+            <p className="text-xl font-bold text-green-600">
+              {formatAmount(globalReport.net_total)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 👉 Rapports par partenaire */}
+      <div className="bg-white rounded-lg shadow p-6 mb-10">
+        <h2 className="text-xl font-bold mb-4">Rapports financiers par partenaire</h2>
+        {partnerReports.length === 0 ? (
+          <p className="text-gray-500">Aucun rapport trouvé.</p>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th className="px-4 py-2 text-left">Partenaire</th>
+                <th className="px-4 py-2 text-left">Email</th>
+                <th className="px-4 py-2 text-left">Réservations</th>
+                <th className="px-4 py-2 text-left">Brut</th>
+                <th className="px-4 py-2 text-left">Commission</th>
+                <th className="px-4 py-2 text-left">Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              {partnerReports.map((r) => (
+                <tr key={r.partner.id} className="border-t">
+                  <td className="px-4 py-2">{r.partner.business_name}</td>
+                  <td className="px-4 py-2">{r.partner.contact_email}</td>
+                  <td className="px-4 py-2">{r.total_bookings}</td>
+                  <td className="px-4 py-2">{formatAmount(r.gross_total)}</td>
+                  <td className="px-4 py-2 text-red-600">-{formatAmount(r.commission)}</td>
+                  <td className="px-4 py-2 text-green-600">{formatAmount(r.net_total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* 👉 Liste des reversements */}
       {payouts.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
           Aucun reversement trouvé.
