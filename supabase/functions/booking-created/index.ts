@@ -10,6 +10,8 @@ const supabase = createClient(
 
 serve(async () => {
   try {
+    console.log("🚀 booking-created function démarrée");
+
     // 1️⃣ Récupérer les events non traités
     const { data: events, error: evError } = await supabase
       .from("booking_events")
@@ -17,13 +19,21 @@ serve(async () => {
       .is("processed_at", null)
       .limit(10);
 
-    if (evError) throw evError;
+    if (evError) {
+      console.error("❌ Erreur récupération events:", evError);
+      throw evError;
+    }
     if (!events || events.length === 0) {
+      console.log("⏸ Aucun nouvel event");
       return new Response("⏸ Aucun nouvel event", { status: 200 });
     }
 
+    console.log(`📩 ${events.length} event(s) trouvé(s)`);
+
     for (const e of events) {
       const record = e.payload;
+      console.log("➡️ Traitement event:", record);
+
       const offerId = record.offer_id;
       const userId = record.user_id;
 
@@ -33,7 +43,10 @@ serve(async () => {
         .select("id, title, partner_id")
         .eq("id", offerId)
         .single();
-      if (offerError || !offer) throw new Error("Erreur récupération offre");
+      if (offerError || !offer) {
+        console.error("❌ Erreur récupération offre:", offerError);
+        continue;
+      }
 
       // 3️⃣ Infos partenaire
       const { data: partner, error: partnerError } = await supabase
@@ -41,15 +54,21 @@ serve(async () => {
         .select("business_name, contact_email")
         .eq("id", offer.partner_id)
         .single();
-      if (partnerError || !partner) throw new Error("Erreur récupération partenaire");
+      if (partnerError || !partner) {
+        console.error("❌ Erreur récupération partenaire:", partnerError);
+        continue;
+      }
 
       // 4️⃣ Infos abonnée
       const { data: user, error: userError } = await supabase
         .from("user_profiles")
         .select("first_name, last_name, email")
-        .eq("id", userId) // ⚠️ user_id dans bookings = user_profiles.id
+        .eq("id", userId) // ⚠️ bookings.user_id correspond à user_profiles.id
         .single();
-      if (userError || !user) throw new Error("Erreur récupération abonnée");
+      if (userError || !user) {
+        console.error("❌ Erreur récupération abonnée:", userError);
+        continue;
+      }
 
       // 5️⃣ Construire email
       const subject = `Nouvelle réservation - ${offer.title}`;
@@ -60,6 +79,7 @@ Nouvelle réservation sur Nowme Club :
 🎁 Offre : ${offer.title}
 🏢 Partenaire : ${partner.business_name}
 `;
+
       const htmlMessage = `
   <div style="font-family: Arial, sans-serif; line-height:1.5; color:#333;">
     <h2>✨ Nouvelle réservation confirmée ✨</h2>
@@ -73,6 +93,7 @@ Nouvelle réservation sur Nowme Club :
 `;
 
       // 6️⃣ Envoi via Resend
+      console.log(`📨 Envoi email à ${partner.contact_email || "contact@nowme.fr"}`);
       const emailRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -90,9 +111,11 @@ Nouvelle réservation sur Nowme Club :
 
       if (!emailRes.ok) {
         const errText = await emailRes.text();
-        console.error("❌ Erreur Resend:", errText);
-        continue; // ne bloque pas les autres events
+        console.error(`❌ Erreur envoi email (booking ${record.id}):`, errText);
+        continue;
       }
+
+      console.log(`✅ Email envoyé pour booking ${record.id}`);
 
       // 7️⃣ Marquer l’event comme traité
       await supabase
@@ -100,12 +123,12 @@ Nouvelle réservation sur Nowme Club :
         .update({ processed_at: new Date().toISOString() })
         .eq("id", e.id);
 
-      console.log(`✅ Email envoyé pour booking ${record.id}`);
+      console.log(`📌 Event ${e.id} marqué comme traité`);
     }
 
     return new Response("✅ Events traités", { status: 200 });
   } catch (err) {
-    console.error("Erreur booking-created:", err);
+    console.error("💥 Erreur booking-created:", err);
     return new Response("Erreur booking-created: " + err.message, { status: 500 });
   }
 });
