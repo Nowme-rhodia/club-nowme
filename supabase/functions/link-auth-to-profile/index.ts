@@ -6,6 +6,41 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// 🔁 Fonction utilitaire pour récupérer un user avec retry/backoff + fallback DB
+async function getUserWithRetry(client: ReturnType<typeof createClient>, id: string) {
+  const delays = [100, 300, 900, 1500]; // en millisecondes
+
+  for (let i = 0; i < delays.length; i++) {
+    const { data, error } = await client.auth.admin.getUserById(id);
+
+    if (!error && data?.user) {
+      console.log(`✅ Utilisateur auth récupéré (tentative ${i + 1})`);
+      return data.user;
+    }
+
+    if (error && error.status >= 500) {
+      console.warn(`⚠️ Erreur 5xx sur getUserById, retry dans ${delays[i]}ms...`);
+      await new Promise((r) => setTimeout(r, delays[i]));
+    } else {
+      break; // si 4xx, on arrête directement
+    }
+  }
+
+  // 🔁 Fallback direct via PostgREST si l’admin API échoue
+  const { data: row, error: dbErr } = await client
+    .from('auth.users')
+    .select('id')
+    .eq('id', id)
+    .single();
+
+  if (dbErr || !row) {
+    throw new Error(`❌ Utilisateur auth introuvable après retry: ${id}`);
+  }
+
+  console.log(`✅ Utilisateur auth récupéré via fallback PostgREST`);
+  return { id: row.id };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -24,15 +59,12 @@ Deno.serve(async (req) => {
     }
 
     // 🔖 Marqueur de version pour vérifier le déploiement
-    console.info("🚀 link-auth-to-profile v2025-09-23-UP-SERT");
+    console.info("🚀 link-auth-to-profile v2025-09-23-UP-SERT-RETRY");
 
     console.log(`🔗 Liaison du profil ${email} avec l'utilisateur auth ${authUserId}`);
 
-    // Vérifier que l'utilisateur auth existe
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(authUserId);
-    if (authError || !authUser.user) {
-      throw new Error(`Utilisateur auth non trouvé: ${authUserId}`);
-    }
+    // ✅ Vérifier que l'utilisateur auth existe (avec retry/fallback)
+    const authUser = await getUserWithRetry(supabase, authUserId);
 
     // 🔹 Créer ou mettre à jour le profil (UPSERT)
     const { data: upsertedProfile, error: upsertError } = await supabase
