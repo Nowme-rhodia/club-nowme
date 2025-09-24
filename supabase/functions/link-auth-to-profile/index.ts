@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       throw new Error('Email, authUserId et role requis')
     }
 
-    console.info('🚀 link-auth-to-profile v2025-09-23-ROLES')
+    console.info('🚀 link-auth-to-profile v2025-09-24-single-table')
     const now = new Date().toISOString()
 
     // --- CAS 1 : SUBSCRIBER ---
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     if (role === 'partner') {
       const { data: existingPartner } = await supabase
         .from('partners')
-        .select('id')
+        .select('id, status, email')
         .eq('user_id', authUserId)
         .maybeSingle()
 
@@ -95,16 +95,49 @@ Deno.serve(async (req) => {
             email,
             user_id: authUserId,
             business_name: null,
+            contact_name: null,
+            phone: null,
             contact_email: email,
+            status: existingPartner?.status || 'pending',
             updated_at: now,
           },
           { onConflict: 'user_id' }
         )
-        .select('id, user_id')
+        .select('id, user_id, status, email, contact_name')
         .single()
 
       if (upsertError) throw upsertError
       const wasCreated = !existingPartner
+
+      // 🔔 Nouvel enregistrement → email automatique
+      if (wasCreated && partner?.email) {
+        try {
+          await fetch(`${Deno.env.get('RESEND_API_URL')}/send`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+            },
+            body: JSON.stringify({
+              to: partner.email,
+              subject: 'Votre demande de partenariat a bien été reçue',
+              content: `
+                Bonjour ${partner.contact_name ?? ''},
+
+                Merci d’avoir soumis votre demande de partenariat à Nowme Club 💫
+
+                Votre demande est en cours de vérification par notre équipe.
+                Vous recevrez un email dès qu’elle sera validée ou si nous avons besoin d’informations complémentaires.
+
+                L’équipe Nowme Club
+              `,
+            }),
+          })
+          console.info('📧 Email de confirmation envoyé à', partner.email)
+        } catch (err) {
+          console.error('❌ Erreur envoi email confirmation partner:', err)
+        }
+      }
 
       return new Response(
         JSON.stringify({
@@ -112,6 +145,7 @@ Deno.serve(async (req) => {
           type: 'partner',
           partnerId: partner.id,
           authUserId: partner.user_id,
+          status: partner.status,
         }),
         {
           status: wasCreated ? 201 : 200,

@@ -12,8 +12,9 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 const USERS = [
-  { email: "abonne-tesabtmoibienskist@nowme.fr", password: "Password123!", role: "subscriber" },
-  { email: "partner-tesabtmoibienskist@nowme.fr", password: "Password123!", role: "partner" }
+  { email: "abonnex-test@nowme.fr", password: "Password123!", role: "subscriber" },
+  { email: "partnerx-test@nowme.fr", password: "Password123!", role: "partner" },
+  { email: "adminx-test@nowme.fr", password: "Password123!", role: "admin" }
 ]
 
 // 💤 Pause utilitaire
@@ -23,24 +24,10 @@ function sleep(ms) {
 
 // 🔹 Supprimer les profils existants
 async function resetProfiles(emails) {
-  for (const email of emails) {
-    console.log(`🗑️ Suppression éventuelle du profil ${email}...`)
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .delete()
-      .eq('email', email)
-      .select()
-
-    if (error) {
-      console.error(`❌ Erreur suppression profil ${email}:`, error.message)
-      continue
-    }
-    if (data?.length) {
-      console.log(`✅ Profil supprimé: ${data.length} lignes pour ${email}`)
-    } else {
-      console.log(`ℹ️ Aucun profil existant pour ${email}`)
-    }
-  }
+  console.log("🗑️ Suppression éventuelle des anciens profils...")
+  await supabase.from('user_profiles').delete().in('email', emails)
+  await supabase.from('partners').delete().in('email', emails)
+  console.log("✅ Nettoyage terminé")
 }
 
 // 🔹 Créer un utilisateur auth
@@ -62,7 +49,7 @@ async function createAuthUser({ email, password, role }) {
 
 // 🔹 Lier profil via Edge Function
 async function link(email, authUserId, role) {
-  console.log(`🔗 Liaison profil pour ${email} (${role}) avec authUserId ${authUserId}...`)
+  console.log(`🔗 Liaison profil pour ${email} (${role})...`)
   const { error } = await supabase.functions.invoke('link-auth-to-profile', {
     body: { email, authUserId, role }
   })
@@ -70,18 +57,31 @@ async function link(email, authUserId, role) {
   console.log(`✅ Profil lié avec succès: ${email}`)
 }
 
-// 🔹 Vérification via user_profiles (backoff si besoin)
-async function waitForProfile(userId, email) {
+// 🔹 Vérification selon rôle
+async function waitForProfile(userId, email, role) {
   const delays = [200, 400, 800, 1600, 3200]
+
   for (const d of delays) {
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select("id, email, user_id, subscription_status, created_at")
-      .eq("user_id", userId)
-      .maybeSingle()
+    let data, error
+
+    if (role === "subscriber" || role === "admin") {
+      ({ data, error } = await supabase
+        .from("user_profiles")
+        .select("id, email, user_id, created_at")
+        .eq("user_id", userId)
+        .maybeSingle())
+    } else if (role === "partner") {
+      ({ data, error } = await supabase
+        .from("partners")
+        .select("id, email, user_id, status, created_at")
+        .eq("user_id", userId)
+        .maybeSingle())
+    }
 
     if (data) {
-      console.log(`✅ Profil trouvé pour ${email}: user_id=${data.user_id}`)
+      console.log(
+        `✅ ${role} trouvé pour ${email}: user_id=${data.user_id} status=${data.status ?? 'n/a'}`
+      )
       return data
     }
 
@@ -97,6 +97,7 @@ async function waitForProfile(userId, email) {
   throw new Error(`❌ Profil non trouvé après retries: ${email}`)
 }
 
+// 🔹 Main
 async function main() {
   try {
     console.log("🚀 Démarrage script de création des utilisateurs de test...")
@@ -110,12 +111,12 @@ async function main() {
     }
 
     for (const u of created) {
-      await link(u.email, u.id, u.role)  // ✅ rôle ajouté
+      await link(u.email, u.id, u.role)
     }
 
-    console.log("\n📋 Vérification dans user_profiles:")
+    console.log("\n📋 Vérification des créations:")
     for (const u of created) {
-      await waitForProfile(u.id, u.email)
+      await waitForProfile(u.id, u.email, u.role)
     }
 
     console.log("\n🎯 Script terminé avec succès ✅")
