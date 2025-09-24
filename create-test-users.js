@@ -61,10 +61,10 @@ async function createAuthUser({ email, password, role }) {
 }
 
 // 🔹 Lier profil via Edge Function
-async function link(email, authUserId) {
-  console.log(`🔗 Liaison profil pour ${email} avec authUserId ${authUserId}...`)
+async function link(email, authUserId, role) {
+  console.log(`🔗 Liaison profil pour ${email} (${role}) avec authUserId ${authUserId}...`)
   const { error } = await supabase.functions.invoke('link-auth-to-profile', {
-    body: { email, authUserId }
+    body: { email, authUserId, role }
   })
   if (error) throw new Error(`❌ Échec liaison ${email}: ${error.message}`)
   console.log(`✅ Profil lié avec succès: ${email}`)
@@ -110,7 +110,7 @@ async function main() {
     }
 
     for (const u of created) {
-      await link(u.email, u.id)
+      await link(u.email, u.id, u.role)  // ✅ rôle ajouté
     }
 
     console.log("\n📋 Vérification dans user_profiles:")
