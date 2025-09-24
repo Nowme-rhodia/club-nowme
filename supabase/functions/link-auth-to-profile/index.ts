@@ -17,98 +17,153 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, authUserId } = await req.json();
-    if (!email || !authUserId) {
-      throw new Error('Email et authUserId requis');
+    const { email, authUserId, role } = await req.json();
+    if (!email || !authUserId || !role) {
+      throw new Error('Email, authUserId et role requis');
     }
 
-    console.info('🚀 link-auth-to-profile v2025-09-23-REWARDS');
+    console.info('🚀 link-auth-to-profile v2025-09-23-ROLES');
 
     const now = new Date().toISOString();
 
-    // 🔹 Vérifier si le profil existe déjà
-    const { data: existingProfile, error: checkError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('user_id', authUserId)
-      .maybeSingle();
+    // --- CAS 1 : SUBSCRIBER ---
+    if (role === 'subscriber') {
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', authUserId)
+        .maybeSingle();
 
-    if (checkError) {
-      console.warn(`⚠️ Erreur lors de la vérification du profil: ${checkError.message}`);
-    }
+      const { data: profile, error: upsertError } = await supabase
+        .from('user_profiles')
+        .upsert(
+          {
+            email,
+            user_id: authUserId,
+            updated_at: now,
+          },
+          { onConflict: 'user_id' }
+        )
+        .select('id, user_id')
+        .single();
 
-    // 🔹 UPSERT basé sur user_id
-    const { data: profile, error: upsertError } = await supabase
-      .from('user_profiles')
-      .upsert(
-        {
-          email,
-          user_id: authUserId,
-          updated_at: now,
-        },
-        {
-          onConflict: 'user_id',
-          ignoreDuplicates: false,
-        }
-      )
-      .select('id, user_id')
-      .single();
+      if (upsertError) throw upsertError;
 
-    if (upsertError) throw upsertError;
+      const wasCreated = !existingProfile;
 
-    const wasCreated = !existingProfile;
-    console.log(
-      wasCreated
-        ? `🎉 Nouveau profil créé: ${profile.id} pour ${email}`
-        : `♻️ Profil mis à jour: ${profile.id} pour ${email}`
-    );
-
-    // 🔹 Vérifier si reward existe déjà
-    let rewardData = null;
-
-    const { data: reward } = await supabase
-      .from('member_rewards')
-      .select('id, tier_level, points_balance')
-      .eq('user_id', profile.id)
-      .maybeSingle();
-
-    if (!reward) {
-      const { data: newReward, error: rewardErr } = await supabase
+      // Rewards uniquement pour les abonnés
+      const { data: reward } = await supabase
         .from('member_rewards')
-        .insert({
+        .select('id')
+        .eq('user_id', profile.id)
+        .maybeSingle();
+
+      if (!reward) {
+        await supabase.from('member_rewards').insert({
           user_id: profile.id,
           points_earned: 0,
           points_spent: 0,
           points_balance: 0,
           tier_level: 'platinum',
-        })
-        .select('id, tier_level, points_balance')
-        .single();
-
-      if (rewardErr) {
-        console.warn(`⚠️ Erreur création rewards: ${rewardErr.message}`);
-      } else {
-        rewardData = newReward;
-        console.log(`✅ Reward créé pour ${email}`);
+        });
       }
-    } else {
-      rewardData = reward;
-      console.log(`ℹ️ Reward déjà existant pour ${email}`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          type: 'subscriber',
+          profileId: profile.id,
+          authUserId: profile.user_id,
+        }),
+        {
+          status: wasCreated ? 201 : 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: wasCreated ? 'Profil créé avec succès' : 'Profil mis à jour avec succès',
-        profileId: profile.id,
-        authUserId: profile.user_id,
-        rewards: rewardData || null,
-      }),
-      {
-        status: wasCreated ? 201 : 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    // --- CAS 2 : PARTNER ---
+    if (role === 'partner') {
+      const { data: existingPartner } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', authUserId)
+        .maybeSingle();
+
+      const { data: partner, error: upsertError } = await supabase
+        .from('partners')
+        .upsert(
+          {
+            email,
+            user_id: authUserId,
+            business_name: null,
+            contact_email: email,
+            updated_at: now,
+          },
+          { onConflict: 'user_id' }
+        )
+        .select('id, user_id')
+        .single();
+
+      if (upsertError) throw upsertError;
+
+      const wasCreated = !existingPartner;
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          type: 'partner',
+          partnerId: partner.id,
+          authUserId: partner.user_id,
+        }),
+        {
+          status: wasCreated ? 201 : 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // --- CAS 3 : ADMIN ---
+    if (role === 'admin') {
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('user_id', authUserId)
+        .maybeSingle();
+
+      const { data: profile, error: upsertError } = await supabase
+        .from('user_profiles')
+        .upsert(
+          {
+            email,
+            user_id: authUserId,
+            is_admin: true,
+            updated_at: now,
+          },
+          { onConflict: 'user_id' }
+        )
+        .select('id, user_id')
+        .single();
+
+      if (upsertError) throw upsertError;
+
+      const wasCreated = !existingProfile;
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          type: 'admin',
+          profileId: profile.id,
+          authUserId: profile.user_id,
+        }),
+        {
+          status: wasCreated ? 201 : 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    throw new Error(`Role ${role} non supporté`);
   } catch (error) {
     console.error('❌ Erreur liaison profil:', error);
     return new Response(
