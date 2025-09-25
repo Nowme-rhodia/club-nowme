@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Building2, 
-  FileText, 
-  Globe,
-  Instagram,
-  Facebook,
+import {
+  Building2,
+  FileText,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { LocationSearch } from '../components/LocationSearch';
 import { categories } from '../data/categories';
@@ -24,6 +21,7 @@ interface FormData {
     website?: string;
     instagram?: string;
     facebook?: string;
+    logo_url?: string;
     description: string;
     address: string;
     openingHours: {
@@ -38,22 +36,14 @@ interface FormData {
     price: number;
     promoPrice?: number;
     location: string;
+    coordinates?: { lat: number; lng: number };
   };
   coordinates?: {
     lat: number;
     lng: number;
   };
+  acceptedTerms?: boolean;
 }
-
-const days = [
-  { id: 'monday', label: 'Lundi' },
-  { id: 'tuesday', label: 'Mardi' },
-  { id: 'wednesday', label: 'Mercredi' },
-  { id: 'thursday', label: 'Jeudi' },
-  { id: 'friday', label: 'Vendredi' },
-  { id: 'saturday', label: 'Samedi' },
-  { id: 'sunday', label: 'Dimanche' }
-];
 
 export default function SubmitOffer() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -67,6 +57,7 @@ export default function SubmitOffer() {
       website: '',
       instagram: '',
       facebook: '',
+      logo_url: '',
       description: '',
       address: '',
       openingHours: {
@@ -76,8 +67,8 @@ export default function SubmitOffer() {
         thursday: { open: '09:00', close: '19:00' },
         friday: { open: '09:00', close: '19:00' },
         saturday: { open: '10:00', close: '17:00' },
-        sunday: null
-      }
+        sunday: null,
+      },
     },
     offer: {
       title: '',
@@ -85,93 +76,128 @@ export default function SubmitOffer() {
       categorySlug: '',
       subcategorySlug: '',
       price: 0,
-      location: ''
-    }
+      location: '',
+    },
+    acceptedTerms: false,
   });
   const [errors, setErrors] = useState<{
     business?: Record<string, string>;
     offer?: Record<string, string>;
+    recap?: string;
     submit?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // ✅ Validation renforcée
   const validateStep = (step: number): boolean => {
     const newErrors: typeof errors = {};
 
     if (step === 1) {
-      if (!formData.business.name) newErrors.business = { ...newErrors.business, name: "Le nom de l'entreprise est requis" };
-      if (!formData.business.contactName) newErrors.business = { ...newErrors.business, contactName: "Le nom du contact est requis" };
-      if (!formData.business.email) {
-        newErrors.business = { ...newErrors.business, email: "L'email est requis" };
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.business.email)) {
-        newErrors.business = { ...newErrors.business, email: "L'email n'est pas valide" };
+      if (!formData.business.name)
+        newErrors.business = { ...newErrors.business, name: "Le nom de l'entreprise est requis" };
+      if (!formData.business.contactName)
+        newErrors.business = { ...newErrors.business, contactName: 'Le nom du contact est requis' };
+      if (!formData.business.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.business.email)) {
+        newErrors.business = { ...newErrors.business, email: 'Un email valide est requis' };
       }
-      if (!formData.business.phone) newErrors.business = { ...newErrors.business, phone: "Le téléphone est requis" };
-      if (!formData.business.siret) newErrors.business = { ...newErrors.business, siret: "Le numéro SIRET est requis" };
-      if (!formData.business.description) newErrors.business = { ...newErrors.business, description: "La description est requise" };
-      if (!formData.business.address) newErrors.business = { ...newErrors.business, address: "L'adresse est requise" };
+      if (!/^[0-9]{10}$/.test(formData.business.phone)) {
+        newErrors.business = { ...newErrors.business, phone: 'Un téléphone à 10 chiffres est requis' };
+      }
+      if (!/^[0-9]{14}$/.test(formData.business.siret)) {
+        newErrors.business = { ...newErrors.business, siret: 'Un SIRET à 14 chiffres est requis' };
+      }
+      if (!formData.business.description)
+        newErrors.business = { ...newErrors.business, description: 'La description est requise' };
+      if (!formData.business.address)
+        newErrors.business = { ...newErrors.business, address: "L'adresse est requise" };
     } else if (step === 2) {
-      if (!formData.offer.title) newErrors.offer = { ...newErrors.offer, title: "Le titre est requis" };
-      if (!formData.offer.description) newErrors.offer = { ...newErrors.offer, description: "La description est requise" };
-      if (!formData.offer.categorySlug) newErrors.offer = { ...newErrors.offer, categorySlug: "La catégorie est requise" };
-      if (!formData.offer.subcategorySlug) newErrors.offer = { ...newErrors.offer, subcategorySlug: "La sous-catégorie est requise" };
-      if (!formData.offer.price || formData.offer.price <= 0) newErrors.offer = { ...newErrors.offer, price: "Le prix doit être supérieur à 0" };
+      if (!formData.offer.title) newErrors.offer = { ...newErrors.offer, title: 'Le titre est requis' };
+      if (!formData.offer.description)
+        newErrors.offer = { ...newErrors.offer, description: 'La description est requise' };
+      if (!formData.offer.categorySlug)
+        newErrors.offer = { ...newErrors.offer, categorySlug: 'La catégorie est requise' };
+      if (!formData.offer.subcategorySlug)
+        newErrors.offer = { ...newErrors.offer, subcategorySlug: 'La sous-catégorie est requise' };
+      if (!formData.offer.price || formData.offer.price <= 0)
+        newErrors.offer = { ...newErrors.offer, price: 'Le prix doit être supérieur à 0' };
       if (formData.offer.promoPrice && formData.offer.promoPrice >= formData.offer.price) {
-        newErrors.offer = { ...newErrors.offer, promoPrice: "Le prix promotionnel doit être inférieur au prix standard" };
+        newErrors.offer = {
+          ...newErrors.offer,
+          promoPrice: 'Le prix promotionnel doit être inférieur au prix standard',
+        };
       }
-      if (!formData.offer.location) newErrors.offer = { ...newErrors.offer, location: "La localisation est requise" };
+      if (!formData.offer.location)
+        newErrors.offer = { ...newErrors.offer, location: 'La localisation est requise' };
+    } else if (step === 3) {
+      if (!formData.acceptedTerms) newErrors.recap = 'Vous devez accepter les conditions générales';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleBusinessChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleBusinessChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       business: {
         ...prev.business,
-        [name]: value
-      }
+        [name]: value,
+      },
     }));
   };
 
-  const handleOfferChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleOfferChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       offer: {
         ...prev.offer,
-        [name]: name === 'price' || name === 'promoPrice' ? parseFloat(value) || 0 : value
-      }
+        [name]: name === 'price' || name === 'promoPrice' ? parseFloat(value) || 0 : value,
+      },
     }));
   };
 
-  const handleLocationSelect = (location: { lat: number; lng: number; address: string }) => {
-    setFormData(prev => ({
+  // ✅ Coordonnées GPS
+  const handleBusinessLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+    setFormData((prev) => ({
       ...prev,
       business: {
         ...prev.business,
-        address: location.address
+        address: location.address,
       },
       coordinates: {
         lat: location.lat,
-        lng: location.lng
-      }
+        lng: location.lng,
+      },
+    }));
+  };
+
+  const handleOfferLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+    setFormData((prev) => ({
+      ...prev,
+      offer: {
+        ...prev.offer,
+        location: location.address,
+        coordinates: { lat: location.lat, lng: location.lng },
+      },
     }));
   };
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => prev + 1);
+      setCurrentStep((prev) => prev + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleBack = () => {
-    setCurrentStep(prev => prev - 1);
+    setCurrentStep((prev) => prev - 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -183,7 +209,7 @@ export default function SubmitOffer() {
     setErrors({});
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-partner-submission", {
+      const { data, error } = await supabase.functions.invoke('send-partner-submission', {
         body: {
           business: formData.business,
           offer: formData.offer,
@@ -197,10 +223,10 @@ export default function SubmitOffer() {
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      console.error("Error:", error);
-      setErrors(prev => ({
+      console.error('Error:', error);
+      setErrors((prev) => ({
         ...prev,
-        submit: "Une erreur est survenue. Veuillez réessayer."
+        submit: 'Une erreur est survenue. Veuillez réessayer.',
       }));
     } finally {
       setIsSubmitting(false);
@@ -220,7 +246,10 @@ export default function SubmitOffer() {
             Nous avons bien reçu votre demande de partenariat. Notre équipe va l'étudier et vous recontactera dans les plus brefs délais.
           </p>
           <div className="mt-6">
-            <Link to="/" className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-primary hover:bg-primary-dark transition-colors duration-200">
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-primary hover:bg-primary-dark transition-colors duration-200"
+            >
               Retour à l'accueil
             </Link>
           </div>
@@ -235,6 +264,17 @@ export default function SubmitOffer() {
       <div className="max-w-3xl mx-auto bg-white shadow rounded-lg p-8">
         <h1 className="text-3xl font-bold mb-6">Devenir partenaire</h1>
 
+        {/* ✅ Progress bar */}
+        <div className="mb-6">
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-primary h-2 rounded-full"
+              style={{ width: `${(currentStep / 3) * 100}%` }}
+            ></div>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">Étape {currentStep} sur 3</p>
+        </div>
+
         {errors.submit && (
           <div className="mb-4 flex items-center text-red-600">
             <AlertCircle className="w-5 h-5 mr-2" />
@@ -243,6 +283,7 @@ export default function SubmitOffer() {
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* Step 1 - Entreprise */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold flex items-center">
@@ -250,80 +291,26 @@ export default function SubmitOffer() {
                 Informations sur l’entreprise
               </h2>
 
-              <input
-                type="text"
-                name="name"
-                placeholder="Nom de l’entreprise"
-                value={formData.business.name}
-                onChange={handleBusinessChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.business?.name && <p className="text-red-600">{errors.business.name}</p>}
-
-              <input
-                type="text"
-                name="contactName"
-                placeholder="Nom du contact"
-                value={formData.business.contactName}
-                onChange={handleBusinessChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.business?.contactName && <p className="text-red-600">{errors.business.contactName}</p>}
-
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={formData.business.email}
-                onChange={handleBusinessChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.business?.email && <p className="text-red-600">{errors.business.email}</p>}
-
-              <input
-                type="tel"
-                name="phone"
-                placeholder="Téléphone"
-                value={formData.business.phone}
-                onChange={handleBusinessChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.business?.phone && <p className="text-red-600">{errors.business.phone}</p>}
-
-              <input
-                type="text"
-                name="siret"
-                placeholder="Numéro SIRET"
-                value={formData.business.siret}
-                onChange={handleBusinessChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.business?.siret && <p className="text-red-600">{errors.business.siret}</p>}
-
-              <textarea
-                name="description"
-                placeholder="Décrivez votre activité"
-                value={formData.business.description}
-                onChange={handleBusinessChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.business?.description && <p className="text-red-600">{errors.business.description}</p>}
-
-              <LocationSearch onSelect={handleLocationSelect} />
+              <input type="text" name="name" placeholder="Nom de l’entreprise" value={formData.business.name} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="text" name="contactName" placeholder="Nom du contact" value={formData.business.contactName} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="email" name="email" placeholder="Email" value={formData.business.email} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="tel" name="phone" placeholder="Téléphone (10 chiffres)" value={formData.business.phone} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="text" name="siret" placeholder="Numéro SIRET (14 chiffres)" value={formData.business.siret} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="url" name="website" placeholder="Site web" value={formData.business.website} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="text" name="instagram" placeholder="Instagram" value={formData.business.instagram} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="text" name="facebook" placeholder="Facebook" value={formData.business.facebook} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <input type="file" name="logo_url" className="w-full p-3 border rounded" onChange={(e) => setFormData(prev => ({ ...prev, business: { ...prev.business, logo_url: e.target.value } }))} />
+              <textarea name="description" placeholder="Décrivez votre activité" value={formData.business.description} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+              <LocationSearch onSelect={handleBusinessLocationSelect} error={errors.business?.address} />
+              {formData.business.address && <input type="text" value={formData.business.address} readOnly className="w-full p-3 border rounded bg-gray-50 text-gray-700" />}
               {errors.business?.address && <p className="text-red-600">{errors.business.address}</p>}
-
               <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="bg-primary text-white px-6 py-2 rounded-full"
-                >
-                  Suivant
-                </button>
+                <button type="button" onClick={handleNext} className="bg-primary text-white px-6 py-2 rounded-full">Suivant</button>
               </div>
             </div>
           )}
 
+          {/* Step 2 - Offre */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold flex items-center">
@@ -331,102 +318,71 @@ export default function SubmitOffer() {
                 Détails de l’offre
               </h2>
 
-              <input
-                type="text"
-                name="title"
-                placeholder="Titre de l’offre"
-                value={formData.offer.title}
-                onChange={handleOfferChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.offer?.title && <p className="text-red-600">{errors.offer.title}</p>}
-
-              <textarea
-                name="description"
-                placeholder="Description de l’offre"
-                value={formData.offer.description}
-                onChange={handleOfferChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.offer?.description && <p className="text-red-600">{errors.offer.description}</p>}
-
-              <select
-                name="categorySlug"
-                value={formData.offer.categorySlug}
-                onChange={handleOfferChange}
-                className="w-full p-3 border rounded"
-              >
+              <input type="text" name="title" placeholder="Titre de l’offre" value={formData.offer.title} onChange={handleOfferChange} className="w-full p-3 border rounded" />
+              <textarea name="description" placeholder="Description de l’offre" value={formData.offer.description} onChange={handleOfferChange} className="w-full p-3 border rounded" />
+              <select name="categorySlug" value={formData.offer.categorySlug} onChange={handleOfferChange} className="w-full p-3 border rounded">
                 <option value="">Choisir une catégorie</option>
-                {categories.map(cat => (
+                {categories.map((cat) => (
                   <option key={cat.slug} value={cat.slug}>
                     {cat.name}
                   </option>
                 ))}
               </select>
-              {errors.offer?.categorySlug && <p className="text-red-600">{errors.offer.categorySlug}</p>}
-
-              <select
-                name="subcategorySlug"
-                value={formData.offer.subcategorySlug}
-                onChange={handleOfferChange}
-                className="w-full p-3 border rounded"
-              >
+              <select name="subcategorySlug" value={formData.offer.subcategorySlug} onChange={handleOfferChange} className="w-full p-3 border rounded">
                 <option value="">Choisir une sous-catégorie</option>
                 {formData.offer.categorySlug &&
-                  categories
-                    .find(cat => cat.slug === formData.offer.categorySlug)
-                    ?.subcategories.map(sub => (
-                      <option key={sub.slug} value={sub.slug}>
-                        {sub.name}
-                      </option>
-                    ))}
+                  categories.find((cat) => cat.slug === formData.offer.categorySlug)?.subcategories.map((sub) => (
+                    <option key={sub.slug} value={sub.slug}>
+                      {sub.name}
+                    </option>
+                  ))}
               </select>
-              {errors.offer?.subcategorySlug && <p className="text-red-600">{errors.offer.subcategorySlug}</p>}
-
-              <input
-                type="number"
-                name="price"
-                placeholder="Prix standard"
-                value={formData.offer.price}
-                onChange={handleOfferChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.offer?.price && <p className="text-red-600">{errors.offer.price}</p>}
-
-              <input
-                type="number"
-                name="promoPrice"
-                placeholder="Prix promotionnel (optionnel)"
-                value={formData.offer.promoPrice || ''}
-                onChange={handleOfferChange}
-                className="w-full p-3 border rounded"
-              />
-              {errors.offer?.promoPrice && <p className="text-red-600">{errors.offer.promoPrice}</p>}
-
-              <input
-                type="text"
-                name="location"
-                placeholder="Lieu"
-                value={formData.offer.location}
-                onChange={handleOfferChange}
-                className="w-full p-3 border rounded"
-              />
+              <input type="number" name="price" placeholder="Prix standard" value={formData.offer.price} onChange={handleOfferChange} className="w-full p-3 border rounded" />
+              <input type="number" name="promoPrice" placeholder="Prix promo (optionnel)" value={formData.offer.promoPrice || ''} onChange={handleOfferChange} className="w-full p-3 border rounded" />
+              <LocationSearch onSelect={handleOfferLocationSelect} error={errors.offer?.location} />
+              {formData.offer.location && <input type="text" value={formData.offer.location} readOnly className="w-full p-3 border rounded bg-gray-50 text-gray-700" />}
               {errors.offer?.location && <p className="text-red-600">{errors.offer.location}</p>}
-
               <div className="flex justify-between">
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="bg-gray-300 text-gray-800 px-6 py-2 rounded-full"
-                >
-                  Retour
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="bg-primary text-white px-6 py-2 rounded-full disabled:opacity-50"
-                >
-                  {isSubmitting ? "Envoi..." : "Soumettre"}
+                <button type="button" onClick={handleBack} className="bg-gray-300 text-gray-800 px-6 py-2 rounded-full">Retour</button>
+                <button type="button" onClick={handleNext} className="bg-primary text-white px-6 py-2 rounded-full">Suivant</button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 - Récapitulatif */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold">Récapitulatif</h2>
+              <div className="bg-gray-50 p-4 rounded">
+                <p><strong>Entreprise :</strong> {formData.business.name}</p>
+                <p><strong>Contact :</strong> {formData.business.contactName}</p>
+                <p><strong>Email :</strong> {formData.business.email}</p>
+                <p><strong>Téléphone :</strong> {formData.business.phone}</p>
+                <p><strong>SIRET :</strong> {formData.business.siret}</p>
+                <p><strong>Site web :</strong> {formData.business.website}</p>
+                <p><strong>Instagram :</strong> {formData.business.instagram}</p>
+                <p><strong>Facebook :</strong> {formData.business.facebook}</p>
+                <p><strong>Description :</strong> {formData.business.description}</p>
+                <p><strong>Adresse :</strong> {formData.business.address}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded">
+                <p><strong>Offre :</strong> {formData.offer.title}</p>
+                <p><strong>Description :</strong> {formData.offer.description}</p>
+                <p><strong>Catégorie :</strong> {formData.offer.categorySlug}</p>
+                <p><strong>Sous-catégorie :</strong> {formData.offer.subcategorySlug}</p>
+                <p><strong>Prix :</strong> {formData.offer.price} €</p>
+                {formData.offer.promoPrice && <p><strong>Prix promo :</strong> {formData.offer.promoPrice} €</p>}
+                <p><strong>Lieu :</strong> {formData.offer.location}</p>
+              </div>
+              <label className="flex items-center space-x-2">
+                <input type="checkbox" checked={formData.acceptedTerms} onChange={(e) => setFormData(prev => ({ ...prev, acceptedTerms: e.target.checked }))} />
+                <span>J’accepte les conditions d’utilisation</span>
+              </label>
+              {errors.recap && <p className="text-red-600">{errors.recap}</p>}
+              <div className="flex justify-between">
+                <button type="button" onClick={handleBack} className="bg-gray-300 px-6 py-2 rounded-full">Retour</button>
+                <button type="submit" disabled={isSubmitting} className="bg-primary text-white px-6 py-2 rounded-full disabled:opacity-50">
+                  {isSubmitting ? 'Envoi...' : 'Confirmer et envoyer'}
                 </button>
               </div>
             </div>
