@@ -303,7 +303,6 @@ export default function SubmitOffer() {
               <input type="file" name="logo_url" className="w-full p-3 border rounded" onChange={(e) => setFormData(prev => ({ ...prev, business: { ...prev.business, logo_url: e.target.value } }))} />
               <textarea name="description" placeholder="Décrivez votre activité" value={formData.business.description} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
               <LocationSearch onSelect={handleBusinessLocationSelect} error={errors.business?.address} />
-              {formData.business.address && <input type="text" value={formData.business.address} readOnly className="w-full p-3 border rounded bg-gray-50 text-gray-700" />}
               {errors.business?.address && <p className="text-red-600">{errors.business.address}</p>}
               <div className="flex justify-end">
                 <button type="button" onClick={handleNext} className="bg-primary text-white px-6 py-2 rounded-full">Suivant</button>
@@ -341,7 +340,6 @@ export default function SubmitOffer() {
               <input type="number" name="price" placeholder="Prix standard" value={formData.offer.price} onChange={handleOfferChange} className="w-full p-3 border rounded" />
               <input type="number" name="promoPrice" placeholder="Prix promo (optionnel)" value={formData.offer.promoPrice || ''} onChange={handleOfferChange} className="w-full p-3 border rounded" />
               <LocationSearch onSelect={handleOfferLocationSelect} error={errors.offer?.location} />
-              {formData.offer.location && <input type="text" value={formData.offer.location} readOnly className="w-full p-3 border rounded bg-gray-50 text-gray-700" />}
               {errors.offer?.location && <p className="text-red-600">{errors.offer.location}</p>}
               <div className="flex justify-between">
                 <button type="button" onClick={handleBack} className="bg-gray-300 text-gray-800 px-6 py-2 rounded-full">Retour</button>
