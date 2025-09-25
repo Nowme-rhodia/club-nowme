@@ -50,6 +50,8 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
       setSelectedAddress(description);
       clearSuggestions();
 
+      console.log(">>> Sélection :", description, placeId); // debug
+
       const results = await getGeocode({ placeId });
       const { lat, lng } = await getLatLng(results[0]);
       const formattedAddress = results[0].formatted_address;
@@ -124,6 +126,8 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
           {data.map(({ place_id, description }) => (
             <li
               key={place_id}
+              role="button"
+              tabIndex={0}
               onClick={() => handleSelect(place_id, description)}
               className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 text-gray-700 text-sm"
             >
