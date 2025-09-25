@@ -4,7 +4,7 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export interface Database {
   public: {
@@ -50,56 +50,67 @@ export interface Database {
           subscription_type?: 'monthly' | 'yearly';
         };
       };
+
       partners: {
         Row: {
           id: string;
-          user_id: string;
+          user_id?: string | null;
           business_name: string;
           contact_name: string;
+          contact_email: string;
           phone: string;
-          website?: string;
-          description?: string;
-          logo_url?: string;
-          address?: string;
-          coordinates?: [number, number];
+          website?: string | null;
+          description?: string | null;
+          logo_url?: string | null;
+          address?: string | null;
+          coordinates?: [number, number] | null;
           social_media?: Json;
           opening_hours?: Json;
+          status: 'pending' | 'approved' | 'rejected';
+          admin_notes?: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          user_id: string;
+          user_id?: string | null;
           business_name: string;
           contact_name: string;
+          contact_email: string;
           phone: string;
-          website?: string;
-          description?: string;
-          logo_url?: string;
-          address?: string;
-          coordinates?: [number, number];
+          website?: string | null;
+          description?: string | null;
+          logo_url?: string | null;
+          address?: string | null;
+          coordinates?: [number, number] | null;
           social_media?: Json;
           opening_hours?: Json;
+          status?: 'pending' | 'approved' | 'rejected';
+          admin_notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          user_id?: string;
+          user_id?: string | null;
           business_name?: string;
           contact_name?: string;
+          contact_email?: string;
           phone?: string;
-          website?: string;
-          description?: string;
-          logo_url?: string;
-          address?: string;
-          coordinates?: [number, number];
+          website?: string | null;
+          description?: string | null;
+          logo_url?: string | null;
+          address?: string | null;
+          coordinates?: [number, number] | null;
           social_media?: Json;
           opening_hours?: Json;
+          status?: 'pending' | 'approved' | 'rejected';
+          admin_notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
       };
+
       offers: {
         Row: {
           id: string;
@@ -141,6 +152,7 @@ export interface Database {
           updated_at?: string;
         };
       };
+
       offer_prices: {
         Row: {
           id: string;
@@ -170,6 +182,7 @@ export interface Database {
           created_at?: string;
         };
       };
+
       offer_media: {
         Row: {
           id: string;
@@ -196,6 +209,7 @@ export interface Database {
           created_at?: string;
         };
       };
+
       pending_partners: {
         Row: {
           id: string;
@@ -234,6 +248,7 @@ export interface Database {
           updated_at?: string;
         };
       };
+
       pending_offers: {
         Row: {
           id: string;
@@ -269,6 +284,7 @@ export interface Database {
           created_at?: string;
         };
       };
+
       emails: {
         Row: {
           id: string;
@@ -313,6 +329,7 @@ export interface Database {
           error_log?: string;
         };
       };
+
       email_logs: {
         Row: {
           id: string;
@@ -336,6 +353,7 @@ export interface Database {
           created_at?: string;
         };
       };
+
       partner_notifications: {
         Row: {
           id: string;
@@ -371,6 +389,7 @@ export interface Database {
           created_at?: string;
         };
       };
+
       stripe_webhook_events: {
         Row: {
           id: string;
@@ -413,6 +432,7 @@ export interface Database {
         };
       };
     };
+
     Functions: {
       handle_payment_succeeded: {
         Args: { event_id: string; customer_email: string; customer_id: string; subscription_id: string };
@@ -443,6 +463,7 @@ export interface Database {
         Returns: void;
       };
     };
+
     Enums: {
       offer_status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
       media_type: 'image' | 'video';

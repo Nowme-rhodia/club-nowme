@@ -9,7 +9,7 @@ import {
   Search,
   Filter,
   ChevronDown,
-  Mail
+  Mail,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { approvePartner, rejectPartner } from '../../lib/partner';
@@ -21,18 +21,18 @@ const statusConfig: Record<string, { label: string; icon: any; className: string
   pending: {
     label: 'En attente',
     icon: AlertCircle,
-    className: 'bg-yellow-100 text-yellow-700'
+    className: 'bg-yellow-100 text-yellow-700',
   },
   approved: {
     label: 'Approuvée',
     icon: CheckCircle2,
-    className: 'bg-green-100 text-green-700'
+    className: 'bg-green-100 text-green-700',
   },
   rejected: {
     label: 'Refusée',
     icon: XCircle,
-    className: 'bg-red-100 text-red-700'
-  }
+    className: 'bg-red-100 text-red-700',
+  },
 };
 
 export default function PendingPartners() {
@@ -41,10 +41,13 @@ export default function PendingPartners() {
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('pending'); // par défaut, on affiche les pending
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+
+  // Raison du refus (par id partenaire)
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadPartners();
@@ -83,7 +86,8 @@ export default function PendingPartners() {
 
   const handleReject = async (partner: Partner) => {
     try {
-      await rejectPartner(partner.id as string, 'Demande refusée par l’admin');
+      const reason = rejectReasons[partner.id as string] || 'Demande refusée par l’admin';
+      await rejectPartner(partner.id as string, reason);
       await loadPartners();
     } catch (error) {
       console.error('Error rejecting partner:', error);
@@ -97,7 +101,7 @@ export default function PendingPartners() {
       return (
         (p.business_name ?? '').toLowerCase().includes(s) ||
         (p.contact_name ?? '').toLowerCase().includes(s) ||
-        (p.email ?? '').toLowerCase().includes(s)
+        (p.contact_email ?? '').toLowerCase().includes(s)
       );
     })
     .sort((a, b) => {
@@ -106,7 +110,6 @@ export default function PendingPartners() {
         const bT = b.created_at ? new Date(b.created_at).getTime() : 0;
         return sortOrder === 'desc' ? bT - aT : aT - bT;
       }
-      // sortBy === 'name'
       const aN = (a.business_name ?? '').toLowerCase();
       const bN = (b.business_name ?? '').toLowerCase();
       return sortOrder === 'desc' ? bN.localeCompare(aN) : aN.localeCompare(bN);
@@ -143,7 +146,6 @@ export default function PendingPartners() {
 
         {/* Filtres et recherche */}
         <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          {/* Recherche */}
           <div className="relative flex-1">
             <input
               type="text"
@@ -155,9 +157,7 @@ export default function PendingPartners() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
 
-          {/* Sélecteurs */}
           <div className="flex gap-2">
-            {/* Filtre statut */}
             <div className="relative">
               <select
                 value={statusFilter}
@@ -174,7 +174,6 @@ export default function PendingPartners() {
               <Filter className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
 
-            {/* Tri */}
             <div className="relative">
               <select
                 value={`${sortBy}-${sortOrder}`}
@@ -224,49 +223,54 @@ export default function PendingPartners() {
                     <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-4">
-                            <div>
-                              <h3 className="text-lg font-medium text-gray-900">
-                                {partner.business_name || 'Sans nom'}
-                              </h3>
-                              <div className="mt-1 flex items-center gap-4">
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}`}
-                                >
-                                  <StatusIcon className="w-4 h-4 mr-1" />
-                                  {statusConfig[key]?.label}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {partner.created_at
-                                    ? format(new Date(partner.created_at), 'dd MMMM yyyy', { locale: fr })
-                                    : '-'}
-                                </span>
-                              </div>
-                              <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                                <span>{partner.contact_name}</span>
-                                <a
-                                  href={`mailto:${partner.email}`}
-                                  className="inline-flex items-center text-primary hover:text-primary-dark"
-                                >
-                                  <Mail className="w-4 h-4 mr-1" />
-                                  {partner.email}
-                                </a>
-                                <span>{partner.phone}</span>
-                              </div>
-                            </div>
+                          <h3 className="text-lg font-medium text-gray-900">
+                            {partner.business_name || 'Sans nom'}
+                          </h3>
+                          <div className="mt-1 flex items-center gap-4">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}`}
+                            >
+                              <StatusIcon className="w-4 h-4 mr-1" />
+                              {statusConfig[key]?.label}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {partner.created_at
+                                ? format(new Date(partner.created_at), 'dd MMMM yyyy', { locale: fr })
+                                : '-'}
+                            </span>
                           </div>
+                          <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                            <span>{partner.contact_name}</span>
+                            <a
+                              href={`mailto:${partner.contact_email}`}
+                              className="inline-flex items-center text-primary hover:text-primary-dark"
+                            >
+                              <Mail className="w-4 h-4 mr-1" />
+                              {partner.contact_email}
+                            </a>
+                            <span>{partner.phone}</span>
+                          </div>
+
+                          {/* Champ raison du refus */}
+                          {partner.status === 'pending' && (
+                            <div className="mt-3">
+                              <textarea
+                                placeholder="Raison du refus (optionnelle)"
+                                className="w-full p-2 border rounded text-sm"
+                                value={rejectReasons[partner.id as string] || ''}
+                                onChange={(e) =>
+                                  setRejectReasons({
+                                    ...rejectReasons,
+                                    [partner.id as string]: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
                         </div>
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 ml-4">
-                          <button
-                            onClick={() => setSelectedPartner(partner)}
-                            className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
-                            title="Voir les détails"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
-
                           {partner.status === 'pending' && (
                             <>
                               <button
@@ -294,97 +298,6 @@ export default function PendingPartners() {
             </ul>
           </div>
         )}
-
-        {/* Modal de détails */}
-        {selectedPartner && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                  Détails de la demande
-                </h2>
-
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Informations du partenaire
-                    </h3>
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">Entreprise</dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedPartner.business_name || '—'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">Contact</dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedPartner.contact_name || '—'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">Email</dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedPartner.email || '—'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">Téléphone</dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedPartner.phone || '—'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">SIRET</dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedPartner.siret || '—'}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">Adresse</dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {selectedPartner.address || '—'}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    onClick={() => setSelectedPartner(null)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Fermer
-                  </button>
-                  {selectedPartner.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => {
-                          handleReject(selectedPartner);
-                          setSelectedPartner(null);
-                        }}
-                        className="px-4 py-2 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
-                      >
-                        Refuser
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleApprove(selectedPartner);
-                          setSelectedPartner(null);
-                        }}
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
-                      >
-                        Approuver
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );

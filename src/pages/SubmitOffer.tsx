@@ -12,6 +12,7 @@ import {
 import { LocationSearch } from '../components/LocationSearch';
 import { categories } from '../data/categories';
 import { SEO } from '../components/SEO';
+import { supabase } from '../lib/supabase';
 
 interface FormData {
   business: {
@@ -182,23 +183,16 @@ export default function SubmitOffer() {
     setErrors({});
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTION_URL}/send-partner-submission`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.business.name,
-          contactName: formData.business.contactName,
-          email: formData.business.email,
-          phone: formData.business.phone,
-          website: formData.business.website,
-          siret: formData.business.siret,
-          address: formData.business.address,
-          message: formData.business.description
-        })
+      const { data, error } = await supabase.functions.invoke("send-partner-submission", {
+        body: {
+          business: formData.business,
+          offer: formData.offer,
+          coordinates: formData.coordinates,
+        },
       });
 
-      const result = await res.json();
-      if (!res.ok || !result.success) throw new Error(result.error || "Erreur lors de l'envoi");
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erreur lors de l'envoi");
 
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -236,6 +230,209 @@ export default function SubmitOffer() {
   }
 
   return (
-    // ... le reste du JSX (inchangé, ton wizard avec étapes 1 et 2)
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <SEO title="Devenir partenaire" description="Proposez votre offre bien-être sur Nowme Club." />
+      <div className="max-w-3xl mx-auto bg-white shadow rounded-lg p-8">
+        <h1 className="text-3xl font-bold mb-6">Devenir partenaire</h1>
+
+        {errors.submit && (
+          <div className="mb-4 flex items-center text-red-600">
+            <AlertCircle className="w-5 h-5 mr-2" />
+            <span>{errors.submit}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold flex items-center">
+                <Building2 className="w-5 h-5 mr-2 text-primary" />
+                Informations sur l’entreprise
+              </h2>
+
+              <input
+                type="text"
+                name="name"
+                placeholder="Nom de l’entreprise"
+                value={formData.business.name}
+                onChange={handleBusinessChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.business?.name && <p className="text-red-600">{errors.business.name}</p>}
+
+              <input
+                type="text"
+                name="contactName"
+                placeholder="Nom du contact"
+                value={formData.business.contactName}
+                onChange={handleBusinessChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.business?.contactName && <p className="text-red-600">{errors.business.contactName}</p>}
+
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.business.email}
+                onChange={handleBusinessChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.business?.email && <p className="text-red-600">{errors.business.email}</p>}
+
+              <input
+                type="tel"
+                name="phone"
+                placeholder="Téléphone"
+                value={formData.business.phone}
+                onChange={handleBusinessChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.business?.phone && <p className="text-red-600">{errors.business.phone}</p>}
+
+              <input
+                type="text"
+                name="siret"
+                placeholder="Numéro SIRET"
+                value={formData.business.siret}
+                onChange={handleBusinessChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.business?.siret && <p className="text-red-600">{errors.business.siret}</p>}
+
+              <textarea
+                name="description"
+                placeholder="Décrivez votre activité"
+                value={formData.business.description}
+                onChange={handleBusinessChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.business?.description && <p className="text-red-600">{errors.business.description}</p>}
+
+              <LocationSearch onSelect={handleLocationSelect} />
+              {errors.business?.address && <p className="text-red-600">{errors.business.address}</p>}
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="bg-primary text-white px-6 py-2 rounded-full"
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-primary" />
+                Détails de l’offre
+              </h2>
+
+              <input
+                type="text"
+                name="title"
+                placeholder="Titre de l’offre"
+                value={formData.offer.title}
+                onChange={handleOfferChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.offer?.title && <p className="text-red-600">{errors.offer.title}</p>}
+
+              <textarea
+                name="description"
+                placeholder="Description de l’offre"
+                value={formData.offer.description}
+                onChange={handleOfferChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.offer?.description && <p className="text-red-600">{errors.offer.description}</p>}
+
+              <select
+                name="categorySlug"
+                value={formData.offer.categorySlug}
+                onChange={handleOfferChange}
+                className="w-full p-3 border rounded"
+              >
+                <option value="">Choisir une catégorie</option>
+                {categories.map(cat => (
+                  <option key={cat.slug} value={cat.slug}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              {errors.offer?.categorySlug && <p className="text-red-600">{errors.offer.categorySlug}</p>}
+
+              <select
+                name="subcategorySlug"
+                value={formData.offer.subcategorySlug}
+                onChange={handleOfferChange}
+                className="w-full p-3 border rounded"
+              >
+                <option value="">Choisir une sous-catégorie</option>
+                {formData.offer.categorySlug &&
+                  categories
+                    .find(cat => cat.slug === formData.offer.categorySlug)
+                    ?.subcategories.map(sub => (
+                      <option key={sub.slug} value={sub.slug}>
+                        {sub.name}
+                      </option>
+                    ))}
+              </select>
+              {errors.offer?.subcategorySlug && <p className="text-red-600">{errors.offer.subcategorySlug}</p>}
+
+              <input
+                type="number"
+                name="price"
+                placeholder="Prix standard"
+                value={formData.offer.price}
+                onChange={handleOfferChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.offer?.price && <p className="text-red-600">{errors.offer.price}</p>}
+
+              <input
+                type="number"
+                name="promoPrice"
+                placeholder="Prix promotionnel (optionnel)"
+                value={formData.offer.promoPrice || ''}
+                onChange={handleOfferChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.offer?.promoPrice && <p className="text-red-600">{errors.offer.promoPrice}</p>}
+
+              <input
+                type="text"
+                name="location"
+                placeholder="Lieu"
+                value={formData.offer.location}
+                onChange={handleOfferChange}
+                className="w-full p-3 border rounded"
+              />
+              {errors.offer?.location && <p className="text-red-600">{errors.offer.location}</p>}
+
+              <div className="flex justify-between">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="bg-gray-300 text-gray-800 px-6 py-2 rounded-full"
+                >
+                  Retour
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-primary text-white px-6 py-2 rounded-full disabled:opacity-50"
+                >
+                  {isSubmitting ? "Envoi..." : "Soumettre"}
+                </button>
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }
