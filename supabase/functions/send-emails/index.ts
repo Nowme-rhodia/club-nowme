@@ -12,7 +12,7 @@ serve(async (req) => {
   if (corsResponse) return corsResponse;
 
   const supabase = createSupabaseClient();
-
+ 
   try {
     const { data: pendingEmails, error: fetchError } = await supabase
       .from("emails")
