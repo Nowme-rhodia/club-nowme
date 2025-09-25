@@ -163,7 +163,7 @@ export default function SubmitOffer() {
     }));
   };
 
-  // ✅ Coordonnées GPS
+  // ✅ Coordonnées GPS (Business)
   const handleBusinessLocationSelect = (location: { lat: number; lng: number; address: string }) => {
     setFormData((prev) => ({
       ...prev,
@@ -178,6 +178,7 @@ export default function SubmitOffer() {
     }));
   };
 
+  // ✅ Coordonnées GPS (Offer)
   const handleOfferLocationSelect = (location: { lat: number; lng: number; address: string }) => {
     setFormData((prev) => ({
       ...prev,
