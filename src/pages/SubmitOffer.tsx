@@ -137,9 +137,7 @@ export default function SubmitOffer() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleBusinessChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleBusinessChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -150,9 +148,7 @@ export default function SubmitOffer() {
     }));
   };
 
-  const handleOfferChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
+  const handleOfferChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -302,8 +298,14 @@ export default function SubmitOffer() {
               <input type="text" name="facebook" placeholder="Facebook" value={formData.business.facebook} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
               <input type="file" name="logo_url" className="w-full p-3 border rounded" onChange={(e) => setFormData(prev => ({ ...prev, business: { ...prev.business, logo_url: e.target.value } }))} />
               <textarea name="description" placeholder="Décrivez votre activité" value={formData.business.description} onChange={handleBusinessChange} className="w-full p-3 border rounded" />
+
+              {/* Adresse entreprise */}
               <LocationSearch onSelect={handleBusinessLocationSelect} error={errors.business?.address} />
+              {formData.business.address && (
+                <input type="text" value={formData.business.address} readOnly className="w-full p-3 border rounded bg-gray-50 text-gray-700" />
+              )}
               {errors.business?.address && <p className="text-red-600">{errors.business.address}</p>}
+
               <div className="flex justify-end">
                 <button type="button" onClick={handleNext} className="bg-primary text-white px-6 py-2 rounded-full">Suivant</button>
               </div>
@@ -339,8 +341,14 @@ export default function SubmitOffer() {
               </select>
               <input type="number" name="price" placeholder="Prix standard" value={formData.offer.price} onChange={handleOfferChange} className="w-full p-3 border rounded" />
               <input type="number" name="promoPrice" placeholder="Prix promo (optionnel)" value={formData.offer.promoPrice || ''} onChange={handleOfferChange} className="w-full p-3 border rounded" />
+
+              {/* Adresse offre */}
               <LocationSearch onSelect={handleOfferLocationSelect} error={errors.offer?.location} />
+              {formData.offer.location && (
+                <input type="text" value={formData.offer.location} readOnly className="w-full p-3 border rounded bg-gray-50 text-gray-700" />
+              )}
               {errors.offer?.location && <p className="text-red-600">{errors.offer.location}</p>}
+
               <div className="flex justify-between">
                 <button type="button" onClick={handleBack} className="bg-gray-300 text-gray-800 px-6 py-2 rounded-full">Retour</button>
                 <button type="button" onClick={handleNext} className="bg-primary text-white px-6 py-2 rounded-full">Suivant</button>
@@ -363,7 +371,7 @@ export default function SubmitOffer() {
                 <p><strong>Facebook :</strong> {formData.business.facebook}</p>
                 <p><strong>Description :</strong> {formData.business.description}</p>
                 <p><strong>Adresse :</strong> {formData.business.address}</p>
-              </div>
+              </div
               <div className="bg-gray-50 p-4 rounded">
                 <p><strong>Offre :</strong> {formData.offer.title}</p>
                 <p><strong>Description :</strong> {formData.offer.description}</p>
@@ -373,14 +381,35 @@ export default function SubmitOffer() {
                 {formData.offer.promoPrice && <p><strong>Prix promo :</strong> {formData.offer.promoPrice} €</p>}
                 <p><strong>Lieu :</strong> {formData.offer.location}</p>
               </div>
+
               <label className="flex items-center space-x-2">
-                <input type="checkbox" checked={formData.acceptedTerms} onChange={(e) => setFormData(prev => ({ ...prev, acceptedTerms: e.target.checked }))} />
+                <input
+                  type="checkbox"
+                  checked={formData.acceptedTerms}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      acceptedTerms: e.target.checked,
+                    }))
+                  }
+                />
                 <span>J’accepte les conditions d’utilisation</span>
               </label>
               {errors.recap && <p className="text-red-600">{errors.recap}</p>}
+
               <div className="flex justify-between">
-                <button type="button" onClick={handleBack} className="bg-gray-300 px-6 py-2 rounded-full">Retour</button>
-                <button type="submit" disabled={isSubmitting} className="bg-primary text-white px-6 py-2 rounded-full disabled:opacity-50">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="bg-gray-300 px-6 py-2 rounded-full"
+                >
+                  Retour
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-primary text-white px-6 py-2 rounded-full disabled:opacity-50"
+                >
                   {isSubmitting ? 'Envoi...' : 'Confirmer et envoyer'}
                 </button>
               </div>
