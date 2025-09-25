@@ -68,6 +68,7 @@ export interface Database {
           opening_hours?: Json;
           status: 'pending' | 'approved' | 'rejected';
           admin_notes?: string | null;
+          siret?: string | null;        // ✅ ajouté ici
           created_at: string;
           updated_at: string;
         };
@@ -87,6 +88,7 @@ export interface Database {
           opening_hours?: Json;
           status?: 'pending' | 'approved' | 'rejected';
           admin_notes?: string | null;
+          siret?: string | null;        // ✅ ajouté ici
           created_at?: string;
           updated_at?: string;
         };
@@ -106,10 +108,12 @@ export interface Database {
           opening_hours?: Json;
           status?: 'pending' | 'approved' | 'rejected';
           admin_notes?: string | null;
+          siret?: string | null;        // ✅ ajouté ici
           created_at?: string;
           updated_at?: string;
         };
       };
+      
 
       offers: {
         Row: {

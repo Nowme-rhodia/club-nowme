@@ -1,7 +1,10 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// ❌ Ancien import (à supprimer)
+// import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
 import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
-serve(async (req) => {
+// ✅ Nouveau handler avec Deno.serve
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return handleCors(req);
 
   try {

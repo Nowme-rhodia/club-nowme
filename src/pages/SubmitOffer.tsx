@@ -371,8 +371,8 @@ export default function SubmitOffer() {
                 <p><strong>Facebook :</strong> {formData.business.facebook}</p>
                 <p><strong>Description :</strong> {formData.business.description}</p>
                 <p><strong>Adresse :</strong> {formData.business.address}</p>
-              </div
-              <div className="bg-gray-50 p-4 rounded">
+                </div>
+<div className="bg-gray-50 p-4 rounded">
                 <p><strong>Offre :</strong> {formData.offer.title}</p>
                 <p><strong>Description :</strong> {formData.offer.description}</p>
                 <p><strong>Catégorie :</strong> {formData.offer.categorySlug}</p>

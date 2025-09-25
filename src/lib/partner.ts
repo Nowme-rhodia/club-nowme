@@ -1,202 +1,185 @@
+// src/lib/partner.ts
 import { supabase } from './supabase';
+import type { Database } from '@/types/supabase';
 
-interface PartnerSubmission {
+/**
+ * Petits alias de confort pour taper les opérations Supabase
+ */
+type PublicTables = Database['public']['Tables'];
+type Insert<T extends keyof PublicTables> = PublicTables[T]['Insert'];
+type Row<T extends keyof PublicTables> = PublicTables[T]['Row'];
+type Update<T extends keyof PublicTables> = PublicTables[T]['Update'];
+
+/**
+ * Interfaces côté UI (formulaires)
+ * -> On garde un naming clair côté front
+ */
+export interface PartnerSubmission {
   business: {
     name: string;
     contactName: string;
     email: string;
-    phone: string;
+    phone: string;          // ⚠ d’après tes types, phone est NOT NULL. On le rend requis côté front.
     address?: string;
     siret?: string;
+    website?: string;
+    description?: string;
+    logoUrl?: string;
+    openingHours?: Record<string, { open: string; close: string } | null>; // sera stocké en JSON si besoin
+    social?: {
+      instagram?: string;
+      facebook?: string;
+      tiktok?: string;
+      youtube?: string;
+      [k: string]: string | undefined;
+    };
   };
 }
 
-interface PartnerOffer {
+export interface PartnerOfferForm {
+  partnerId: string;
   title: string;
   description: string;
   categorySlug: string;
   subcategorySlug: string;
-  price?: number;
-  imageUrl?: string;
   location: string;
+  coordinates?: { lat: number; lng: number }; // sera converti en [lng, lat] ou [lat, lng] selon ton schéma
 }
 
 /**
- * 🔹 Soumission d’une demande partenaire (status = pending)
+ * Utile : conversion {lat, lng} -> tuple attendu par PostGIS ou simple tuple [number, number]
+ */
+function toTuple(coords?: { lat: number; lng: number }): [number, number] | undefined {
+  if (!coords) return undefined;
+  // D’après ton type généré: coordinates?: [number, number] | null;
+  // On choisit [lat, lng]. Si tu veux [lng, lat], inverse-les ici.
+  return [coords.lat, coords.lng];
+}
+
+/**
+ * 1) Création d’un PARTNER en "pending"
+ *    - Typé avec Insert<'partners'> pour éviter le "never"
+ *    - Mappe le camelCase (front) -> snake_case (DB)
  */
 export async function submitPartnerApplication(submission: PartnerSubmission) {
-  try {
-    const { data, error } = await supabase
-      .from('partners')
-      .insert({
-        business_name: submission.business.name,
-        contact_name: submission.business.contactName,
-        contact_email: submission.business.email,
-        phone: submission.business.phone,
-        siret: submission.business.siret,
-        address: submission.business.address,
-        status: 'pending',
-      })
-      .select()
-      .single();
+  const payload: Insert<'partners'> = {
+    // Colonnes d'après src/types/supabase.ts
+    // required: business_name, contact_name, contact_email, phone, status
+    business_name: submission.business.name,
+    contact_name: submission.business.contactName,
+    contact_email: submission.business.email,
+    phone: submission.business.phone,
+    website: submission.business.website ?? null,
+    description: submission.business.description ?? null,
+    logo_url: submission.business.logoUrl ?? null,
+    address: submission.business.address ?? null,
+    siret: submission.business.siret ?? null,
+    opening_hours: submission.business.openingHours ?? null,
+    social_media: submission.business.social ?? null,
+    status: 'pending', // Enum: 'pending' | 'approved' | 'rejected'
+    // created_at / updated_at: générés par la DB
+  };
 
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('❌ Error submitting partner application:', error);
+  const { data, error } = await supabase
+    .from('partners')
+    .insert(payload)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('❌ submitPartnerApplication error:', error);
     throw error;
   }
+
+  return data as Row<'partners'>;
 }
 
 /**
- * 🔹 Création d’une offre (status = draft tant que le partenaire est en attente)
+ * 2) Création d’une OFFER liée au partenaire
+ *    - Typé avec Insert<'offers'>
  */
-export async function createPartnerOffer(offer: PartnerOffer, partnerId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('offers')
-      .insert({
-        partner_id: partnerId,
-        title: offer.title,
-        description: offer.description,
-        category_slug: offer.categorySlug,
-        subcategory_slug: offer.subcategorySlug,
-        price: offer.price,
-        location: offer.location,
-        image_url: offer.imageUrl,
-        status: 'draft',
-      })
-      .select()
-      .single();
+export async function createPartnerOffer(form: PartnerOfferForm) {
+  const payload: Insert<'offers'> = {
+    partner_id: form.partnerId,
+    title: form.title,
+    description: form.description,
+    category_slug: form.categorySlug,
+    subcategory_slug: form.subcategorySlug,
+    location: form.location,
+    coordinates: toTuple(form.coordinates),
+    status: 'draft', // au choix: 'draft' au départ, puis 'pending' si tu veux validation
+  };
 
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('❌ Error creating partner offer:', error);
+  const { data, error } = await supabase
+    .from('offers')
+    .insert(payload)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('❌ createPartnerOffer error:', error);
     throw error;
   }
+
+  return data as Row<'offers'>;
 }
 
 /**
- * 🔹 Récupérer les offres d’un partenaire
+ * 3) Insérer un email à envoyer (table emails)
+ *    - Typé Insert<'emails'>
+ *    - status par défaut = 'pending' (si nullable/valeur par défaut en DB)
  */
-export async function getPartnerOffers(partnerId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('offers')
-      .select(
-        `
-        *,
-        prices:offer_prices(*),
-        media:offer_media(*)
-      `
-      )
-      .eq('partner_id', partnerId)
-      .order('created_at', { ascending: false });
+export async function queueEmail(to: string, subject: string, htmlContent: string) {
+  const emailPayload: Insert<'emails'> = {
+    to_address: to,
+    subject,
+    content: htmlContent,
+    status: 'pending', // d'après ton enum: 'pending' | 'sent' | 'failed'
+  };
 
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('❌ Error getting partner offers:', error);
+  const { data, error } = await supabase
+    .from('emails')
+    .insert(emailPayload)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('❌ queueEmail error:', error);
     throw error;
   }
+
+  return data as Row<'emails'>;
 }
 
 /**
- * 🔹 Approuver un partenaire
+ * 4) Changer le statut d’un partenaire (approve / reject)
+ *    - On garde un helper commun
  */
-export async function approvePartner(partnerId: string) {
-  try {
-    const { data: partner, error } = await supabase
-      .from('partners')
-      .update({ status: 'approved' })
-      .eq('id', partnerId)
-      .select()
-      .single();
+async function updatePartnerStatus(partnerId: string, status: Row<'partners'>['status'], adminNotes?: string) {
+  const payload: Update<'partners'> = {
+    status,
+    admin_notes: adminNotes ?? null,
+  };
 
-    if (error) throw error;
+  const { data, error } = await supabase
+    .from('partners')
+    .update(payload)
+    .eq('id', partnerId)
+    .select('*')
+    .single();
 
-    if (partner?.contact_email) {
-      const signupUrl = `${window.location.origin}/partner/signup?token=${crypto.randomUUID()}`;
-
-      const htmlContent = `
-        <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
-          <h2 style="color:#BF2778;">Félicitations ${partner.contact_name} 🎉</h2>
-          <p>Votre demande de partenariat avec <strong>${partner.business_name}</strong> a été approuvée !</p>
-          <p>Vous pouvez maintenant créer votre mot de passe et accéder à votre espace partenaire.</p>
-          <p style="margin:20px 0;">
-            <a href="${signupUrl}" 
-              style="display:inline-block; padding:12px 24px; background:#BF2778; color:#fff; text-decoration:none; border-radius:8px;">
-              👉 Créer mon mot de passe
-            </a>
-          </p>
-          <p>Ce lien est valable 7 jours.</p>
-          <p style="margin-top:20px;">À très vite,<br/>💜 L’équipe Nowme Club</p>
-        </div>
-      `;
-
-      const { error: emailError } = await supabase.from('emails').insert([
-        {
-          to_address: partner.contact_email,
-          subject: 'Votre partenariat Nowme Club est validé 🎉',
-          content: htmlContent,
-          status: 'pending',
-        },
-      ]);
-
-      if (emailError) throw emailError;
-    }
-
-    return partner;
-  } catch (error) {
-    console.error('❌ Error approving partner:', error);
+  if (error) {
+    console.error(`❌ updatePartnerStatus(${status}) error:`, error);
     throw error;
   }
+
+  return data as Row<'partners'>;
 }
 
-/**
- * 🔹 Rejeter un partenaire
- */
-export async function rejectPartner(partnerId: string, reason?: string) {
-  try {
-    const { data: partner, error } = await supabase
-      .from('partners')
-      .update({
-        status: 'rejected',
-        admin_notes: reason ?? null,
-      })
-      .eq('id', partnerId)
-      .select()
-      .single();
+export function approvePartner(partnerId: string, adminNotes?: string) {
+  return updatePartnerStatus(partnerId, 'approved', adminNotes);
+}
 
-    if (error) throw error;
-
-    if (partner?.contact_email) {
-      const htmlContent = `
-        <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
-          <h2 style="color:#BF2778;">Bonjour ${partner.contact_name},</h2>
-          <p>Après étude de votre demande de partenariat pour <strong>${partner.business_name}</strong>, nous ne pouvons pas y donner suite pour le moment.</p>
-          ${reason ? `<p><strong>Raison :</strong> ${reason}</p>` : ""}
-          <p>Vous pouvez soumettre une nouvelle demande ultérieurement.</p>
-          <p style="margin-top:20px;">Merci pour l’intérêt que vous portez à Nowme Club 💜</p>
-        </div>
-      `;
-
-      const { error: emailError } = await supabase.from('emails').insert([
-        {
-          to_address: partner.contact_email,
-          subject: 'Votre demande de partenariat n’a pas été retenue',
-          content: htmlContent,
-          status: 'pending',
-        },
-      ]);
-
-      if (emailError) throw emailError;
-    }
-
-    return partner;
-  } catch (error) {
-    console.error('❌ Error rejecting partner:', error);
-    throw error;
-  }
+export function rejectPartner(partnerId: string, adminNotes?: string) {
+  return updatePartnerStatus(partnerId, 'rejected', adminNotes);
 }

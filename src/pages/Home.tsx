@@ -1,10 +1,11 @@
-// --- FICHIER COMPLET : Home.tsx corrigé ---
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import * as LucideIcons from 'lucide-react';
 import { Sparkles, MapPin, ChevronRight, Star } from 'lucide-react';
 import { SEO } from '../components/SEO';
+
+// ✅ On tape explicitement les noms d’icônes
+type IconName = keyof typeof LucideIcons;
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
@@ -15,7 +16,7 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const features = [
+  const features: { icon: IconName; title: string; description: string }[] = [
     {
       icon: 'Users',
       title: 'Validé par des meufs comme toi',
@@ -105,22 +106,23 @@ export default function Home() {
             Pourquoi Nowme va changer ton quotidien
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const Icon = LucideIcons[feature.icon];
-              return (
-                <div
-                  key={index}
-                  className="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all animate-slide-up"
-                  style={{ animationDelay: `${index * 0.2}s` }}
-                >
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-6">
-                    {Icon && <Icon className="w-8 h-8 text-pink-500" />}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
-                </div>
-              );
-            })}
+          {features.map((feature, index) => {
+  const Icon = LucideIcons[feature.icon] as React.ComponentType<{ className?: string }>;
+  return (
+    <div
+      key={index}
+      className="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all animate-slide-up"
+      style={{ animationDelay: `${index * 0.2}s` }}
+    >
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-6">
+        {Icon && <Icon className="w-8 h-8 text-pink-500" />}
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
+      <p className="text-gray-600">{feature.description}</p>
+    </div>
+  );
+})}
+
           </div>
         </div>
       </div>

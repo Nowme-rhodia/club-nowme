@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "deno.ns"],          // ✅ ajout de deno.ns
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -13,8 +13,8 @@
 
     /* Compilation */
     "composite": true,
-    "noEmit": false,
-    "outDir": "dist",
+    "noEmit": true,                        // ✅ changement ici
+    // "outDir": "dist",                   // ❌ plus nécessaire avec noEmit
 
     /* Linting */
     "strict": true,
@@ -22,5 +22,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "supabase"]  // ✅ inclut aussi ton dossier functions
 }
