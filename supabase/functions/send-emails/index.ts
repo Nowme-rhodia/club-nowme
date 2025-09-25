@@ -5,15 +5,15 @@ const MAX_RETRIES = 3;
 const BATCH_SIZE = 10;
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const FROM_EMAIL = Deno.env.get("FROM_EMAIL");
 
 serve(async (req) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
   const supabase = createSupabaseClient();
- 
+
   try {
+    // 🔹 1. Récupération des emails en attente
     const { data: pendingEmails, error: fetchError } = await supabase
       .from("emails")
       .select("*")
@@ -26,11 +26,13 @@ serve(async (req) => {
     if (!pendingEmails?.length) {
       return new Response(JSON.stringify({ message: "No pending emails" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
       });
     }
 
-    logger.info(`Processing ${pendingEmails.length} emails...`);
+    logger.info(`📧 Processing ${pendingEmails.length} emails...`);
 
+    // 🔹 2. Envoi des emails un par un
     for (const email of pendingEmails) {
       try {
         const res = await fetch("https://api.resend.com/emails", {
@@ -40,17 +42,19 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: `Nowme <${FROM_EMAIL}>`,
+            from: "Nowme Club <contact@nowme.fr>", // ✅ expéditeur fixé
             to: email.to_address,
             subject: email.subject,
-            html: email.content,
+            html: email.content, // ⚠️ assure-toi que content est bien du HTML
           }),
         });
 
         if (!res.ok) {
-          throw new Error(await res.text());
+          const errText = await res.text();
+          throw new Error(`Resend API error: ${errText}`);
         }
 
+        // 🔹 3. Mise à jour : succès
         await supabase
           .from("emails")
           .update({
@@ -69,11 +73,12 @@ serve(async (req) => {
 
         logger.success(`✅ Email sent to ${email.to_address}`);
       } catch (error) {
+        // 🔹 4. Gestion des échecs
         logger.error(`❌ Error sending email to ${email.to_address}`, error);
 
         const retryCount = (email.retry_count || 0) + 1;
         const status = retryCount >= MAX_RETRIES ? "failed" : "pending";
-        const retryDelay = Math.pow(2, retryCount) * 1000;
+        const retryDelay = Math.pow(2, retryCount) * 1000; // backoff exponentiel
 
         await supabase
           .from("emails")
@@ -104,10 +109,10 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    logger.error("Error processing email queue", error);
+    logger.error("🚨 Error processing email queue", error);
     return new Response(JSON.stringify({ error: String(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
   }
-}); 
+});
