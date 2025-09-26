@@ -1,15 +1,35 @@
-// ❌ Ancien import (à supprimer)
-// import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
+// ✅ Nouveau handler avec Deno.serve
 import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
-// ✅ Nouveau handler avec Deno.serve
-Deno.serve(async (req) => {
+// ✅ Type pour le payload JSON
+type PartnerPayload = {
+  name: string;
+  contactName?: string;
+  email: string;
+  phone?: string;
+  website?: string;
+  message?: string;
+  siret?: string;
+  address?: string;
+};
+
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return handleCors(req);
 
   try {
     const supabase = createSupabaseClient();
-    const { name, contactName, email, phone, website, message, siret, address } = await req.json();
+
+    // Typage explicite du body
+    const {
+      name,
+      contactName,
+      email,
+      phone,
+      website,
+      message,
+      siret,
+      address,
+    } = (await req.json()) as PartnerPayload;
 
     if (!email || !name) {
       return new Response(
@@ -39,7 +59,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      logger.error("Erreur insertion partenaire:", insertError);
+      logger.error("❌ Erreur insertion partenaire:", insertError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -90,7 +110,7 @@ Deno.serve(async (req) => {
     ]);
 
     if (emailError) {
-      logger.error("Erreur insertion emails:", emailError);
+      logger.error("❌ Erreur insertion emails:", emailError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -104,12 +124,12 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         partnerId: partner.id,
-        message: "Demande enregistrée et emails en attente d’envoi",
+        message: "✅ Demande enregistrée et emails en attente d’envoi",
       }),
       { status: 200, headers: corsHeaders }
     );
   } catch (err) {
-    logger.error("Erreur globale:", err);
+    logger.error("❌ Erreur globale:", err);
     return new Response(
       JSON.stringify({
         success: false,

@@ -1,3 +1,4 @@
+// ✅ Cron d’envoi des emails (batch depuis table "emails")
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
@@ -42,10 +43,10 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Nowme Club <contact@nowme.fr>", // ✅ expéditeur fixé
+            from: "Nowme Club <contact@nowme.fr>", // ✅ expéditeur fixe
             to: email.to_address,
             subject: email.subject,
-            html: email.content, // ⚠️ assure-toi que content est bien du HTML
+            html: email.content, // ⚠️ doit être du HTML
           }),
         });
 
@@ -54,7 +55,7 @@ serve(async (req) => {
           throw new Error(`Resend API error: ${errText}`);
         }
 
-        // 🔹 3. Mise à jour : succès
+        // 🔹 3. Mise à jour succès
         await supabase
           .from("emails")
           .update({
@@ -73,7 +74,7 @@ serve(async (req) => {
 
         logger.success(`✅ Email sent to ${email.to_address}`);
       } catch (error) {
-        // 🔹 4. Gestion des échecs
+        // 🔹 4. Gestion des échecs avec retry
         logger.error(`❌ Error sending email to ${email.to_address}`, error);
 
         const retryCount = (email.retry_count || 0) + 1;

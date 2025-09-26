@@ -22,6 +22,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "supabase"],   // ✅ inclut aussi ton dossier de functions
+  "include": ["src", "supabase", "types"],   // ✅ inclut aussi ton dossier de functions
   "references": [{ "path": "./tsconfig.node.json" }]
 }
