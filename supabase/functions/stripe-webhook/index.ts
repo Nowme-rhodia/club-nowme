@@ -172,16 +172,29 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
 // --- Paiement réussi ---
 async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
-  const chargeId = pi.charges.data?.[0]?.id ?? null;
+
+  // ✅ Récupérer le dernier charge de façon sûre
+  let chargeId: string | null = null;
+  if (pi.latest_charge && typeof pi.latest_charge === "string") {
+    try {
+      const charge = await stripe.charges.retrieve(pi.latest_charge);
+      chargeId = charge.id ?? null;
+    } catch (e) {
+      console.warn("⚠️ Could not retrieve latest_charge:", e);
+    }
+  }
+
   const paymentMethod =
     typeof pi.payment_method === "string" ? pi.payment_method : null;
-  const customerId = typeof pi.customer === "string" ? pi.customer : null;
+
+  const customerId =
+    typeof pi.customer === "string" ? pi.customer : null;
 
   const { error } = await supabase
     .from("bookings")
     .update({
       status: "paid",
-      stripe_charge_id: chargeId,
+      stripe_charge_id: chargeId, // toujours safe maintenant
       stripe_payment_method: paymentMethod,
       stripe_customer_id: customerId,
       paid_at: new Date().toISOString(),
@@ -189,8 +202,9 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
     })
     .eq("stripe_payment_intent_id", pi.id);
 
-  if (error)
+  if (error) {
     throw new Error("bookings update on succeeded failed: " + error.message);
+  }
 }
 
 // --- Paiement en cours ---
