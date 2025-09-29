@@ -16,7 +16,9 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken>();
 
   useEffect(() => {
-    sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+    if (window.google?.maps?.places) {
+      sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+    }
   }, []);
 
   // Charger suggestions quand l'utilisateur tape
@@ -26,7 +28,12 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
       return;
     }
 
-    const service = new google.maps.places.AutocompleteService();
+    if (!window.google?.maps?.places) {
+      console.warn("Google Maps API non chargée");
+      return;
+    }
+
+    const service = new window.google.maps.places.AutocompleteService();
     service.getPlacePredictions(
       {
         input: value,
@@ -39,11 +46,10 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
           setSuggestions(
             res.map((r) => ({
               placeId: r.place_id!,
-              description: r.description, // ✅ pas de formatted_address
+              description: r.description,
             }))
           );
-        }
-         else {
+        } else {
           setSuggestions([]);
         }
       }
@@ -51,11 +57,13 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
   }, [value]);
 
   const handleSelect = (placeId: string, description: string) => {
+    if (!window.google?.maps) return;
+
     setIsLoading(true);
     setValue(description);
     setSuggestions([]);
 
-    const geocoder = new google.maps.Geocoder();
+    const geocoder = new window.google.maps.Geocoder();
     geocoder.geocode({ placeId }, (results, status) => {
       setIsLoading(false);
       if (status === "OK" && results?.[0]) {
