@@ -74,23 +74,31 @@ function toIsoOrNull(ts?: number | null) {
 
 
 // --- HANDLERS -----------------------------------------------------------------------
+// --- Checkout Session Completed ---
 async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
   const rawSession = evt.data.object as Stripe.Checkout.Session;
 
-  // 1) Récupérer la session avec expansions limitées
+  // 1) Récupérer la session
   const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
     expand: ["payment_intent", "subscription"],
   });
 
-  // 2) Charger les line_items correctement
-  const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
-    expand: ["data.price.product"],
-  });
+  // 2) Récupérer les line_items
+  let lineItems: Stripe.ApiList<Stripe.LineItem> | null = null;
+  try {
+    lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+      expand: ["data.price.product"],
+    });
+  } catch (err) {
+    console.warn("⚠️ Impossible de charger les line_items:", err);
+  }
+
+  console.log("📦 Line items reçus:", lineItems?.data?.length ?? 0);
 
   const mode = session.mode;
   const meta = session.metadata ?? {};
 
-  // --- Paiement one-time (booking) ---
+  // --- Paiement one-time ---
   if (mode === "payment") {
     const bookingId = meta.booking_id;
     if (!bookingId) {
@@ -114,8 +122,9 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
         stripe_checkout_session_id: session.id,
         stripe_payment_intent_id: paymentIntentId,
         stripe_customer_id: customerId,
-        status: "requires_payment", // confirmation définitive au payment_intent.succeeded
-        line_items_snapshot: lineItems.data ?? [],
+        status: "requires_payment",
+        // sécuriser line_items_snapshot
+        line_items_snapshot: lineItems?.data ?? [],
         updated_at: new Date().toISOString(),
       })
       .eq("id", bookingId);
