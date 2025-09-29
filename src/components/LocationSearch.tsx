@@ -16,14 +16,14 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
   const { isLoaded, loadError } = useGoogleMapsScript();
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken>();
 
-  // Crée une session token quand Google Maps est prêt
+  // ✅ SessionToken pour meilleure facturation et suggestions
   useEffect(() => {
     if (isLoaded && window.google?.maps?.places) {
       sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
     }
   }, [isLoaded]);
 
-  // Charger suggestions quand l'utilisateur tape
+  // ✅ Récupération des suggestions
   useEffect(() => {
     if (!value) {
       setSuggestions([]);
@@ -31,6 +31,39 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
     }
     if (!isLoaded || !window.google?.maps?.places) return;
 
+    // Nouvelle API (si dispo)
+    if ((window.google.maps.places as any).AutocompleteSuggestion) {
+      console.info("✅ Utilisation de AutocompleteSuggestion");
+      const service = new (window.google.maps.places as any).AutocompleteSuggestion();
+
+      if (typeof service.getSuggestions === "function") {
+        service.getSuggestions(
+          {
+            input: value,
+            sessionToken: sessionTokenRef.current,
+            componentRestrictions: { country: "fr" },
+            language: "fr",
+          },
+          (res: any[], status: string) => {
+            console.log("📥 Résultat AutocompleteSuggestion:", { status, res });
+            if (status === "OK" && res) {
+              setSuggestions(
+                res.map((r) => ({
+                  placeId: r.placeId || r.id,
+                  description: r.description,
+                }))
+              );
+            } else {
+              setSuggestions([]);
+            }
+          }
+        );
+        return;
+      }
+    }
+
+    // Fallback → ancienne API
+    console.info("ℹ️ Fallback sur AutocompleteService");
     const service = new window.google.maps.places.AutocompleteService();
     service.getPlacePredictions(
       {
@@ -49,14 +82,13 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
             }))
           );
         } else {
-          console.warn("⚠️ AutocompleteService n’a rien retourné:", status);
           setSuggestions([]);
         }
       }
     );
   }, [value, isLoaded]);
 
-  // Sélection d'une suggestion
+  // ✅ Sélection d'une suggestion
   const handleSelect = (placeId: string, description: string) => {
     if (!window.google?.maps) return;
 
@@ -67,7 +99,6 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
     const geocoder = new window.google.maps.Geocoder();
     geocoder.geocode({ placeId }, (results, status) => {
       setIsLoading(false);
-      console.log("📍 Résultat geocode:", { status, results });
       if (status === "OK" && results?.[0]) {
         const { lat, lng } = results[0].geometry.location;
         onSelect({
@@ -75,20 +106,18 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
           lng: lng(),
           address: results[0].formatted_address,
         });
-      } else {
-        console.error("❌ Erreur geocode:", status);
       }
     });
   };
 
-  // Reset
+  // ✅ Reset
   const handleClear = () => {
     setValue("");
     setSuggestions([]);
     onSelect({ lat: 0, lng: 0, address: "" });
   };
 
-  // États de chargement
+  // ✅ États de chargement
   if (loadError) return <p className="text-red-500">Erreur de chargement Google Maps</p>;
   if (!isLoaded) return <p className="text-gray-500">Chargement de Google Maps...</p>;
 
