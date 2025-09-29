@@ -35,10 +35,6 @@ enable_confirmations = false
 [functions.stripe-webhook]
 verify_jwt = false
 
-# Les bonnes fonctions à ouvrir
-[functions.stripe-webhook-router]
-verify_jwt = false
-
 [functions.stripe-checkout-completed]
 verify_jwt = false
 
