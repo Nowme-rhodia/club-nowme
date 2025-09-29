@@ -1,5 +1,5 @@
 /// <reference lib="deno.ns" />
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.4";
 import Stripe from "https://esm.sh/stripe@13.11.0?target=deno";
 
 // --- ENV ----------------------------------------------------------------------------
