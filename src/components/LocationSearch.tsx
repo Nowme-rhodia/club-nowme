@@ -16,6 +16,7 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
   const { isLoaded, loadError } = useGoogleMapsScript();
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken>();
 
+  // Crée une session token quand Google Maps est prêt
   useEffect(() => {
     if (isLoaded && window.google?.maps?.places) {
       sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
@@ -28,64 +29,34 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
       setSuggestions([]);
       return;
     }
-
     if (!isLoaded || !window.google?.maps?.places) return;
 
-    let service: any;
-
-    if ((window.google.maps.places as any).AutocompleteSuggestion) {
-      console.info("✅ Utilisation de la nouvelle API: AutocompleteSuggestion");
-      service = new (window.google.maps.places as any).AutocompleteSuggestion();
-      service.getSuggestions(
-        {
-          input: value,
-          sessionToken: sessionTokenRef.current,
-          componentRestrictions: { country: "fr" },
-          language: "fr",
-        },
-        (res: any[], status: string) => {
-          console.log("📥 Résultat AutocompleteSuggestion:", { status, res });
-          if (status === "OK" && res) {
-            setSuggestions(
-              res.map((r) => ({
-                placeId: r.placeId || r.id, // compatibilité
-                description: r.description,
-              }))
-            );
-          } else {
-            console.warn("⚠️ AutocompleteSuggestion n’a rien retourné:", status);
-            setSuggestions([]);
-          }
+    const service = new window.google.maps.places.AutocompleteService();
+    service.getPlacePredictions(
+      {
+        input: value,
+        sessionToken: sessionTokenRef.current,
+        componentRestrictions: { country: "fr" },
+        language: "fr",
+      },
+      (res, status) => {
+        console.log("📥 Résultat AutocompleteService:", { status, res });
+        if (status === "OK" && res) {
+          setSuggestions(
+            res.map((r) => ({
+              placeId: r.place_id!,
+              description: r.description,
+            }))
+          );
+        } else {
+          console.warn("⚠️ AutocompleteService n’a rien retourné:", status);
+          setSuggestions([]);
         }
-      );
-    } else {
-      console.info("ℹ️ Utilisation de l’ancienne API: AutocompleteService");
-      service = new window.google.maps.places.AutocompleteService();
-      service.getPlacePredictions(
-        {
-          input: value,
-          sessionToken: sessionTokenRef.current,
-          componentRestrictions: { country: "fr" },
-          language: "fr",
-        },
-        (res, status) => {
-          console.log("📥 Résultat AutocompleteService:", { status, res });
-          if (status === "OK" && res) {
-            setSuggestions(
-              res.map((r) => ({
-                placeId: r.place_id!, // API actuelle
-                description: r.description,
-              }))
-            );
-          } else {
-            console.warn("⚠️ AutocompleteService n’a rien retourné:", status);
-            setSuggestions([]);
-          }
-        }
-      );
-    }
+      }
+    );
   }, [value, isLoaded]);
 
+  // Sélection d'une suggestion
   const handleSelect = (placeId: string, description: string) => {
     if (!window.google?.maps) return;
 
@@ -110,12 +81,14 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
     });
   };
 
+  // Reset
   const handleClear = () => {
     setValue("");
     setSuggestions([]);
     onSelect({ lat: 0, lng: 0, address: "" });
   };
 
+  // États de chargement
   if (loadError) return <p className="text-red-500">Erreur de chargement Google Maps</p>;
   if (!isLoaded) return <p className="text-gray-500">Chargement de Google Maps...</p>;
 
