@@ -1,6 +1,5 @@
 /// <reference lib="deno.ns" />
 
-// Utilisez des imports npm versionnés pour Deno Edge
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import Stripe from "npm:stripe@13.11.0";
 
@@ -8,7 +7,12 @@ import Stripe from "npm:stripe@13.11.0";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY")!;
-const STRIPE_WEBHOOK_SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET")!;
+
+// Support multi-secrets : Dashboard + CLI
+const STRIPE_WEBHOOK_SECRETS = [
+  Deno.env.get("STRIPE_WEBHOOK_SECRET_DASHBOARD")!,
+  Deno.env.get("STRIPE_WEBHOOK_SECRET_CLI")!,
+].filter(Boolean);
 
 // --- CLIENTS ------------------------------------------------------------------------
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -37,20 +41,21 @@ async function markEventStatus(
 }
 
 async function ensureEventLogged(evt: Stripe.Event) {
-  const { error: insertErr } = await supabase
+  const { error: upsertErr } = await supabase
     .from("stripe_webhook_events")
-    .insert({
-      stripe_event_id: evt.id,
-      event_type: evt.type,
-      status: "processing",
-      raw_event: (evt as unknown) as Record<string, unknown>,
-      received_at: new Date().toISOString(),
-    })
-    .onConflict("stripe_event_id")
-    .ignore();
+    .upsert(
+      {
+        stripe_event_id: evt.id,
+        event_type: evt.type,
+        status: "processing",
+        raw_event: evt as unknown as Record<string, unknown>,
+        received_at: new Date().toISOString(),
+      },
+      { onConflict: "stripe_event_id" }
+    );
 
-  if (insertErr && !/duplicate key/i.test(insertErr.message)) {
-    console.error("❌ ensureEventLogged insertErr:", insertErr.message);
+  if (upsertErr) {
+    console.error("❌ ensureEventLogged upsertErr:", upsertErr.message);
   }
 
   const { data: existing, error } = await supabase
@@ -67,16 +72,25 @@ function toIsoOrNull(ts?: number | null) {
   return ts ? new Date(ts * 1000).toISOString() : null;
 }
 
+
 // --- HANDLERS -----------------------------------------------------------------------
 async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
   const rawSession = evt.data.object as Stripe.Checkout.Session;
+
+  // 1) Récupérer la session avec expansions limitées
   const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
-    expand: ["payment_intent", "subscription", "line_items.data.price.product"],
+    expand: ["payment_intent", "subscription"],
+  });
+
+  // 2) Charger les line_items correctement
+  const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+    expand: ["data.price.product"],
   });
 
   const mode = session.mode;
   const meta = session.metadata ?? {};
 
+  // --- Paiement one-time (booking) ---
   if (mode === "payment") {
     const bookingId = meta.booking_id;
     if (!bookingId) {
@@ -100,7 +114,8 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
         stripe_checkout_session_id: session.id,
         stripe_payment_intent_id: paymentIntentId,
         stripe_customer_id: customerId,
-        status: "requires_payment",
+        status: "requires_payment", // confirmation définitive au payment_intent.succeeded
+        line_items_snapshot: lineItems.data ?? [],
         updated_at: new Date().toISOString(),
       })
       .eq("id", bookingId);
@@ -108,6 +123,7 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
     if (error) throw new Error("bookings update failed: " + error.message);
   }
 
+  // --- Abonnement ---
   if (mode === "subscription") {
     const sub =
       typeof session.subscription === "string"
@@ -129,13 +145,10 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
       {
         user_id: userId,
         stripe_subscription_id: stripeSubId,
-        product_id:
-          sub?.items?.data?.[0]?.price?.product?.toString() ?? null,
+        product_id: sub?.items?.data?.[0]?.price?.product?.toString() ?? null,
         price_id: sub?.items?.data?.[0]?.price?.id ?? null,
-        status: "incomplete",
-        current_period_start: toIsoOrNull(
-          sub?.current_period_start ?? null
-        ),
+        status: "incomplete", // sera mis à jour via invoice.payment_succeeded
+        current_period_start: toIsoOrNull(sub?.current_period_start ?? null),
         current_period_end: toIsoOrNull(sub?.current_period_end ?? null),
         updated_at: new Date().toISOString(),
       },
@@ -146,6 +159,7 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
   }
 }
 
+// --- Paiement réussi ---
 async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
   const chargeId = pi.charges.data?.[0]?.id ?? null;
@@ -169,6 +183,7 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
     throw new Error("bookings update on succeeded failed: " + error.message);
 }
 
+// --- Paiement en cours ---
 async function handlePaymentIntentProcessing(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
   const { error } = await supabase
@@ -183,6 +198,7 @@ async function handlePaymentIntentProcessing(evt: Stripe.Event) {
     throw new Error("bookings update on processing failed: " + error.message);
 }
 
+// --- Paiement échoué ---
 async function handlePaymentIntentFailed(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
   const { error } = await supabase
@@ -197,6 +213,7 @@ async function handlePaymentIntentFailed(evt: Stripe.Event) {
     throw new Error("bookings update on failed failed: " + error.message);
 }
 
+// --- Paiement annulé ---
 async function handlePaymentIntentCanceled(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
   const { error } = await supabase
@@ -211,6 +228,7 @@ async function handlePaymentIntentCanceled(evt: Stripe.Event) {
     throw new Error("bookings update on canceled failed: " + error.message);
 }
 
+// --- Facture payée (abonnement actif) ---
 async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
   const invoice = evt.data.object as Stripe.Invoice;
   if (!invoice.subscription) return;
@@ -228,8 +246,7 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
         typeof invoice.payment_intent === "string"
           ? invoice.payment_intent
           : null,
-      product_id:
-        sub.items?.data?.[0]?.price?.product?.toString() ?? null,
+      product_id: sub.items?.data?.[0]?.price?.product?.toString() ?? null,
       price_id: sub.items?.data?.[0]?.price?.id ?? null,
       status: "active",
       current_period_start: toIsoOrNull(sub.current_period_start),
@@ -245,6 +262,7 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
     );
 }
 
+// --- Facture échouée (abonnement past_due) ---
 async function handleInvoicePaymentFailed(evt: Stripe.Event) {
   const invoice = evt.data.object as Stripe.Invoice;
   if (!invoice.subscription) return;
@@ -263,6 +281,7 @@ async function handleInvoicePaymentFailed(evt: Stripe.Event) {
     );
 }
 
+// --- Lifecycle subscription ---
 async function handleCustomerSubscriptionLifecycle(evt: Stripe.Event) {
   const sub = evt.data.object as Stripe.Subscription;
 
@@ -323,20 +342,28 @@ Deno.serve(async (req: Request) => {
       return new Response("Bad Request", { status: 400 });
     }
 
-    // Debug minimal pour diagnostiquer 400
     console.info("stripe-signature present, length:", sig.length);
 
     const rawBody = await req.text();
+    let event: Stripe.Event | null = null;
+    let lastErr: any = null;
 
-    let event: Stripe.Event;
-    try {
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        sig,
-        STRIPE_WEBHOOK_SECRET
-      );
-    } catch (e: any) {
-      console.error("Invalid signature:", e?.message ?? e);
+    // 🔑 Essayer chaque secret
+    for (const secret of STRIPE_WEBHOOK_SECRETS) {
+      try {
+        event = await stripe.webhooks.constructEventAsync(
+          rawBody,
+          sig,
+          secret
+        );
+        break; // si succès, on arrête
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+
+    if (!event) {
+      console.error("❌ Invalid signature with all secrets:", lastErr?.message);
       return new Response("Invalid signature", { status: 400 });
     }
 
@@ -357,7 +384,6 @@ Deno.serve(async (req: Request) => {
     } catch (err: any) {
       console.error("❌ Handler error:", err?.message ?? err);
       await markEventStatus(event.id, "failed", err?.message ?? String(err));
-      // 500 pour forcer Stripe à retenter
       return new Response("Handler failed", { status: 500 });
     }
 
