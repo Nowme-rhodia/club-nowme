@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 import { createClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
+import Stripe from "https://esm.sh/stripe@13.11.0?target=deno";
 
 // --- ENV ----------------------------------------------------------------------------
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
