@@ -1,6 +1,6 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@14?target=denonext";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "std/http/server.ts";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,16 +8,18 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Stripe client
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2023-10-16",
 });
 
+// Supabase service client
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-serve(async (req) => {
+serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -32,7 +34,7 @@ serve(async (req) => {
     // 1) Charger l'offre depuis Supabase
     const { data: offer, error: offerError } = await supabase
       .from("offers")
-      .select("id, partner_id, title, promo_price")
+      .select("id, partner_id, title, promo_price, custom_commission_rate")
       .eq("id", offerId)
       .single();
 
@@ -42,9 +44,14 @@ serve(async (req) => {
 
     // Prix en centimes
     const unitAmount = offer.promo_price ? Math.round(Number(offer.promo_price) * 100) : 0;
-    const totalAmount = unitAmount * quantity;
+    if (unitAmount <= 0) throw new Error("Montant de l'offre invalide");
 
-    // 2) Créer une réservation (booking) en statut "unpaid"
+    const totalAmount = unitAmount * quantity;
+    const commissionRate = offer.custom_commission_rate ?? 0.2; // défaut 20%
+    const platformFee = Math.round(totalAmount * commissionRate);
+    const partnerEarnings = totalAmount - platformFee;
+
+    // 2) Créer une réservation (booking) en statut "pending"
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
@@ -52,10 +59,18 @@ serve(async (req) => {
         offer_id: offer.id,
         user_id: userId,
         date: new Date().toISOString(),
-        status: "unpaid",
+        status: "pending",
         quantity,
         unit_amount_cents: unitAmount,
         total_amount_cents: totalAmount,
+        commission_rate: commissionRate,
+        platform_fee_cents: platformFee,
+        partner_earnings_cents: partnerEarnings,
+        pricing_snapshot: {
+          unit_amount: unitAmount,
+          total_amount: totalAmount,
+          commission_rate: commissionRate,
+        },
       })
       .select()
       .single();
@@ -72,9 +87,7 @@ serve(async (req) => {
         {
           price_data: {
             currency: "eur",
-            product_data: {
-              name: offer.title,
-            },
+            product_data: { name: offer.title },
             unit_amount: unitAmount,
           },
           quantity,
@@ -83,6 +96,7 @@ serve(async (req) => {
       success_url,
       cancel_url,
       metadata: {
+        source: "one_time",
         offer_id: offer.id,
         booking_id: booking.id,
         partner_id: offer.partner_id,
@@ -91,16 +105,20 @@ serve(async (req) => {
     });
 
     // 4) Sauvegarder l'ID de la session Stripe dans la booking
-    await supabase
+    const { error: updateError } = await supabase
       .from("bookings")
       .update({ stripe_checkout_session_id: session.id })
       .eq("id", booking.id);
+
+    if (updateError) {
+      throw new Error("Impossible de lier la session Stripe à la réservation");
+    }
 
     return new Response(JSON.stringify({ sessionId: session.id }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Erreur création session:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,

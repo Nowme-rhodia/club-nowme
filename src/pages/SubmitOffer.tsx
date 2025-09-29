@@ -206,13 +206,31 @@ export default function SubmitOffer() {
     setErrors({});
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-partner-submission', {
+      const { data, error } = await supabase.functions.invoke("send-partner-submission", {
         body: {
-          business: formData.business,
-          offer: formData.offer,
-          coordinates: formData.coordinates,
+          business: {
+            name: formData.business.name,
+            contactName: formData.business.contactName,
+            email: formData.business.email,
+            phone: formData.business.phone,
+            website: formData.business.website,
+            siret: formData.business.siret,
+            address: formData.business.address,
+            message: formData.business.description, // ⚡ description → message
+          },
+          offer: {
+            title: formData.offer.title,
+            description: formData.offer.description,
+            categorySlug: formData.offer.categorySlug,
+            subcategorySlug: formData.offer.subcategorySlug,
+            price: formData.offer.price,
+            promoPrice: formData.offer.promoPrice,
+            location: formData.offer.location,
+            coordinates: formData.offer.coordinates,
+          },
         },
       });
+      
 
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Erreur lors de l'envoi");
