@@ -1,6 +1,7 @@
+// src/hooks/useGoogleMapsScript.ts
 import { useLoadScript, Libraries } from "@react-google-maps/api";
 
-// 👉 garde seulement ce qui t’est utile
+// 👉 garde seulement les libs utiles
 export const libraries: Libraries = ["places"];
 
 export function useGoogleMapsScript() {

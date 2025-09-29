@@ -1,30 +1,26 @@
-import { useEffect, useState } from "react";
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo-nowme.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-export function useLoadGoogleMaps(apiKey: string) {
-  const [loaded, setLoaded] = useState(false);
+    <!-- Ajout de la balise CSP pour Stripe + Google Maps -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://js.stripe.com;"
+    />
 
-  useEffect(() => {
-    // Si déjà chargé → on ne recharge pas
-    if (window.google?.maps) {
-      setLoaded(true);
-      return;
-    }
+    <title>Nowme - Ton kiff au féminin</title>
 
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setLoaded(true);
-    script.onerror = () => console.error("❌ Erreur de chargement Google Maps");
-    document.head.appendChild(script);
-
-    return () => {
-      // Optionnel : retirer le script si le composant est démonté
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
-  }, [apiKey]);
-
-  return loaded;
-}
+    <!-- Police -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
