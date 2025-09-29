@@ -1,6 +1,8 @@
 /// <reference lib="deno.ns" />
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.44.4";
-import Stripe from "https://esm.sh/stripe@13.11.0?target=deno";
+
+// Utilisez des imports npm versionnés pour Deno Edge
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import Stripe from "npm:stripe@13.11.0";
 
 // --- ENV ----------------------------------------------------------------------------
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -14,7 +16,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 });
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
 
-console.log("🚀 stripe-webhook boot");
+console.info("🚀 stripe-webhook boot");
 
 // --- HELPERS ------------------------------------------------------------------------
 async function markEventStatus(
@@ -77,7 +79,10 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
 
   if (mode === "payment") {
     const bookingId = meta.booking_id;
-    if (!bookingId) return console.warn("⚠️ Missing booking_id metadata");
+    if (!bookingId) {
+      console.warn("⚠️ Missing booking_id metadata");
+      return;
+    }
 
     const paymentIntentId =
       typeof session.payment_intent === "string"
@@ -89,13 +94,16 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
         ? session.customer
         : (session.customer as Stripe.Customer | null)?.id ?? null;
 
-    const { error } = await supabase.from("bookings").update({
-      stripe_checkout_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentId,
-      stripe_customer_id: customerId,
-      status: "requires_payment",
-      updated_at: new Date().toISOString(),
-    }).eq("id", bookingId);
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: paymentIntentId,
+        stripe_customer_id: customerId,
+        status: "requires_payment",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
 
     if (error) throw new Error("bookings update failed: " + error.message);
   }
@@ -107,19 +115,27 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
         : (session.subscription as Stripe.Subscription | null);
 
     const stripeSubId =
-      typeof session.subscription === "string" ? session.subscription : sub?.id ?? null;
+      typeof session.subscription === "string"
+        ? session.subscription
+        : sub?.id ?? null;
     const userId = meta.user_id ?? null;
 
-    if (!stripeSubId || !userId) return console.warn("⚠️ Missing subscription metadata");
+    if (!stripeSubId || !userId) {
+      console.warn("⚠️ Missing subscription metadata");
+      return;
+    }
 
     const { error } = await supabase.from("subscriptions").upsert(
       {
         user_id: userId,
         stripe_subscription_id: stripeSubId,
-        product_id: sub?.items?.data?.[0]?.price?.product?.toString() ?? null,
+        product_id:
+          sub?.items?.data?.[0]?.price?.product?.toString() ?? null,
         price_id: sub?.items?.data?.[0]?.price?.id ?? null,
         status: "incomplete",
-        current_period_start: toIsoOrNull(sub?.current_period_start ?? null),
+        current_period_start: toIsoOrNull(
+          sub?.current_period_start ?? null
+        ),
         current_period_end: toIsoOrNull(sub?.current_period_end ?? null),
         updated_at: new Date().toISOString(),
       },
@@ -133,49 +149,66 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
 async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
   const chargeId = pi.charges.data?.[0]?.id ?? null;
-  const paymentMethod = typeof pi.payment_method === "string" ? pi.payment_method : null;
+  const paymentMethod =
+    typeof pi.payment_method === "string" ? pi.payment_method : null;
   const customerId = typeof pi.customer === "string" ? pi.customer : null;
 
-  const { error } = await supabase.from("bookings").update({
-    status: "paid",
-    stripe_charge_id: chargeId,
-    stripe_payment_method: paymentMethod,
-    stripe_customer_id: customerId,
-    paid_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq("stripe_payment_intent_id", pi.id);
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: "paid",
+      stripe_charge_id: chargeId,
+      stripe_payment_method: paymentMethod,
+      stripe_customer_id: customerId,
+      paid_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_payment_intent_id", pi.id);
 
-  if (error) throw new Error("bookings update on succeeded failed: " + error.message);
+  if (error)
+    throw new Error("bookings update on succeeded failed: " + error.message);
 }
 
 async function handlePaymentIntentProcessing(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
-  const { error } = await supabase.from("bookings").update({
-    status: "processing",
-    updated_at: new Date().toISOString(),
-  }).eq("stripe_payment_intent_id", pi.id);
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: "processing",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_payment_intent_id", pi.id);
 
-  if (error) throw new Error("bookings update on processing failed: " + error.message);
+  if (error)
+    throw new Error("bookings update on processing failed: " + error.message);
 }
 
 async function handlePaymentIntentFailed(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
-  const { error } = await supabase.from("bookings").update({
-    status: "failed",
-    updated_at: new Date().toISOString(),
-  }).eq("stripe_payment_intent_id", pi.id);
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: "failed",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_payment_intent_id", pi.id);
 
-  if (error) throw new Error("bookings update on failed failed: " + error.message);
+  if (error)
+    throw new Error("bookings update on failed failed: " + error.message);
 }
 
 async function handlePaymentIntentCanceled(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
-  const { error } = await supabase.from("bookings").update({
-    status: "cancelled",
-    updated_at: new Date().toISOString(),
-  }).eq("stripe_payment_intent_id", pi.id);
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: "cancelled",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_payment_intent_id", pi.id);
 
-  if (error) throw new Error("bookings update on canceled failed: " + error.message);
+  if (error)
+    throw new Error("bookings update on canceled failed: " + error.message);
 }
 
 async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
@@ -192,8 +225,11 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
       stripe_subscription_id: sub.id,
       latest_invoice_id: invoice.id,
       latest_payment_intent_id:
-        typeof invoice.payment_intent === "string" ? invoice.payment_intent : null,
-      product_id: sub.items?.data?.[0]?.price?.product?.toString() ?? null,
+        typeof invoice.payment_intent === "string"
+          ? invoice.payment_intent
+          : null,
+      product_id:
+        sub.items?.data?.[0]?.price?.product?.toString() ?? null,
       price_id: sub.items?.data?.[0]?.price?.id ?? null,
       status: "active",
       current_period_start: toIsoOrNull(sub.current_period_start),
@@ -203,19 +239,28 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
     { onConflict: "stripe_subscription_id" }
   );
 
-  if (error) throw new Error("subscriptions upsert on invoice succeeded failed: " + error.message);
+  if (error)
+    throw new Error(
+      "subscriptions upsert on invoice succeeded failed: " + error.message
+    );
 }
 
 async function handleInvoicePaymentFailed(evt: Stripe.Event) {
   const invoice = evt.data.object as Stripe.Invoice;
   if (!invoice.subscription) return;
 
-  const { error } = await supabase.from("subscriptions").update({
-    status: "past_due",
-    updated_at: new Date().toISOString(),
-  }).eq("stripe_subscription_id", invoice.subscription as string);
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
+      status: "past_due",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("stripe_subscription_id", invoice.subscription as string);
 
-  if (error) throw new Error("subscriptions update on invoice failed failed: " + error.message);
+  if (error)
+    throw new Error(
+      "subscriptions update on invoice failed failed: " + error.message
+    );
 }
 
 async function handleCustomerSubscriptionLifecycle(evt: Stripe.Event) {
@@ -234,7 +279,8 @@ async function handleCustomerSubscriptionLifecycle(evt: Stripe.Event) {
     { onConflict: "stripe_subscription_id" }
   );
 
-  if (error) throw new Error("subscriptions upsert lifecycle failed: " + error.message);
+  if (error)
+    throw new Error("subscriptions upsert lifecycle failed: " + error.message);
 }
 
 // --- DISPATCH -----------------------------------------------------------------------
@@ -267,36 +313,52 @@ async function dispatch(evt: Stripe.Event) {
 // --- ENTRYPOINT ---------------------------------------------------------------------
 Deno.serve(async (req: Request) => {
   try {
-    if (req.method !== "POST")
+    if (req.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
+    }
 
     const sig = req.headers.get("stripe-signature");
-    if (!sig) return new Response("Bad Request", { status: 400 });
+    if (!sig) {
+      console.warn("⚠️ Missing stripe-signature header");
+      return new Response("Bad Request", { status: 400 });
+    }
+
+    // Debug minimal pour diagnostiquer 400
+    console.info("stripe-signature present, length:", sig.length);
 
     const rawBody = await req.text();
-    let event: Stripe.Event;
 
+    let event: Stripe.Event;
     try {
-      event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
-    } catch {
+      event = stripe.webhooks.constructEvent(
+        rawBody,
+        sig,
+        STRIPE_WEBHOOK_SECRET
+      );
+    } catch (e: any) {
+      console.error("Invalid signature:", e?.message ?? e);
       return new Response("Invalid signature", { status: 400 });
     }
 
     const status = await ensureEventLogged(event);
     if (status === "completed") {
-      return new Response(JSON.stringify({ received: true, duplicate: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ received: true, duplicate: true }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     try {
       await dispatch(event);
       await markEventStatus(event.id, "completed");
     } catch (err: any) {
-      console.error("❌ Handler error:", err.message);
-      await markEventStatus(event.id, "failed", err.message);
-      return new Response("Handler failed", { status: 500 }); // Stripe retry
+      console.error("❌ Handler error:", err?.message ?? err);
+      await markEventStatus(event.id, "failed", err?.message ?? String(err));
+      // 500 pour forcer Stripe à retenter
+      return new Response("Handler failed", { status: 500 });
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -304,7 +366,7 @@ Deno.serve(async (req: Request) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    console.error("🔥 Unhandled webhook error:", err.message);
+    console.error("🔥 Unhandled webhook error:", err?.message ?? err);
     return new Response("Internal Error", { status: 500 });
   }
 });
