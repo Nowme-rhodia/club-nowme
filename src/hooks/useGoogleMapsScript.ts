@@ -1,8 +1,8 @@
 // hooks/useGoogleMapsScript.ts
-import { useLoadScript } from '@react-google-maps/api';
+import { useLoadScript, Libraries } from '@react-google-maps/api';
 
-// Définir les bibliothèques en dehors pour éviter les re-rendus inutiles
-export const libraries: ("places" | "drawing" | "geometry" | "localContext" | "visualization")[] = ["places"];
+// 👉 supprime "localContext" (non supporté dans les types)
+export const libraries: Libraries = ["places", "drawing", "geometry", "visualization"];
 
 export function useGoogleMapsScript() {
   return useLoadScript({
@@ -10,6 +10,6 @@ export function useGoogleMapsScript() {
     libraries,
     language: 'fr',
     region: 'FR',
-    preventGoogleFontsLoading: true
+    preventGoogleFontsLoading: true,
   });
 }

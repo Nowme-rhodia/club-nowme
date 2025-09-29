@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
-import { MapPin, X, Loader2 } from 'lucide-react';
-import { useGoogleMapsScript } from '../hooks/useGoogleMapsScript';
+import React, { useState, useEffect, useRef } from "react";
+import { MapPin, X, Loader2 } from "lucide-react";
 
 interface LocationSearchProps {
   onSelect: (location: { lat: number; lng: number; address: string }) => void;
@@ -10,152 +8,119 @@ interface LocationSearchProps {
 }
 
 export function LocationSearch({ onSelect, initialValue, error }: LocationSearchProps) {
-  const [selectedAddress, setSelectedAddress] = useState(initialValue || '');
+  const [value, setValue] = useState(initialValue || "");
+  const [suggestions, setSuggestions] = useState<{ placeId: string; description: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { isLoaded, loadError } = useGoogleMapsScript();
 
-  const {
-    ready,
-    value,
-    suggestions: { status, data },
-    setValue,
-    clearSuggestions,
-  } = usePlacesAutocomplete({
-    requestOptions: {
-      componentRestrictions: { country: 'fr' },
-      types: ['address'],
-    },
-    debounce: 300,
-    initOnMount: isLoaded,
-  });
+  // 🔑 Token pour améliorer la précision des suggestions
+  const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken>();
 
   useEffect(() => {
-    if (initialValue) {
-      setValue(initialValue, false);
-      setSelectedAddress(initialValue);
+    sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+  }, []);
+
+  // Charger suggestions quand l'utilisateur tape
+  useEffect(() => {
+    if (!value) {
+      setSuggestions([]);
+      return;
     }
-  }, [initialValue, setValue]);
 
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue(e.target.value);
-    if (e.target.value === '') {
-      setSelectedAddress('');
-      onSelect({ lat: 0, lng: 0, address: '' });
-    }
-  };
+    const service = new google.maps.places.AutocompleteService();
+    service.getPlacePredictions(
+      {
+        input: value,
+        sessionToken: sessionTokenRef.current,
+        componentRestrictions: { country: "fr" },
+        language: "fr",
+      },
+      (res, status) => {
+        if (status === "OK" && res) {
+          setSuggestions(
+            res.map((r) => ({
+              placeId: r.place_id!,
+              description: r.description, // ✅ pas de formatted_address
+            }))
+          );
+        }
+         else {
+          setSuggestions([]);
+        }
+      }
+    );
+  }, [value]);
 
-  const handleSelect = async (placeId: string, description: string) => {
-    try {
-      setIsLoading(true);
-      setValue(description, false);
-      setSelectedAddress(description);
-      clearSuggestions();
+  const handleSelect = (placeId: string, description: string) => {
+    setIsLoading(true);
+    setValue(description);
+    setSuggestions([]);
 
-      const results = await getGeocode({ placeId });
-      const { lat, lng } = await getLatLng(results[0]);
-      const formattedAddress = results[0].formatted_address;
-
-      onSelect({ lat, lng, address: formattedAddress });
-    } catch (error) {
-      console.error("Error selecting location:", error);
-    } finally {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ placeId }, (results, status) => {
       setIsLoading(false);
-    }
+      if (status === "OK" && results?.[0]) {
+        const { lat, lng } = results[0].geometry.location;
+        onSelect({
+          lat: lat(),
+          lng: lng(),
+          address: results[0].formatted_address,
+        });
+      }
+    });
   };
 
   const handleClear = () => {
-    setValue('');
-    setSelectedAddress('');
-    clearSuggestions();
-    onSelect({ lat: 0, lng: 0, address: '' });
+    setValue("");
+    setSuggestions([]);
+    onSelect({ lat: 0, lng: 0, address: "" });
   };
-
-  if (loadError) {
-    return (
-      <div className="relative">
-        <input
-          disabled
-          value=""
-          placeholder="Erreur de chargement de Google Maps"
-          className="w-full px-6 py-4 pl-12 rounded-lg border-2 border-red-300 bg-red-50 text-red-700 cursor-not-allowed"
-        />
-        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-red-400" />
-      </div>
-    );
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="relative">
-        <input
-          disabled
-          value=""
-          placeholder="Chargement..."
-          className="w-full px-6 py-4 pl-12 rounded-lg border-2 border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
-        />
-        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-      </div>
-    );
-  }
 
   return (
     <div className="relative">
-      <div className="relative">
-        <input
-          value={value}
-          onChange={handleInput}
-          disabled={!ready}
-          placeholder="Entrez votre adresse..."
-          className={`w-full px-6 py-4 pl-12 pr-12 rounded-lg border-2 ${
-            error ? 'border-red-300' : 'border-gray-100'
-          } focus:border-primary focus:ring focus:ring-primary/20 focus:ring-opacity-50 outline-none transition-all duration-200 bg-white/90 backdrop-blur-sm shadow-md text-gray-800 placeholder-gray-400`}
-        />
-        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Entrez votre adresse..."
+        className={`w-full px-6 py-4 pl-12 pr-12 rounded-lg border-2 ${
+          error ? "border-red-300" : "border-gray-200"
+        } focus:border-primary focus:ring focus:ring-primary/20 outline-none bg-white text-gray-800`}
+      />
+      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
 
-        {/* Spinner avec fade-in/out */}
-        <div
-          className={`absolute right-4 top-1/2 -translate-y-1/2 transition-opacity duration-300 ${
-            isLoading ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-        >
-          <Loader2 className="w-5 h-5 text-primary animate-spin" />
-        </div>
-
-        {/* Bouton clear avec fade-in/out */}
-        <button
-          onClick={handleClear}
-          type="button"
-          className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-all duration-200 ${
-            value && !isLoading ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-        >
-          <X className="w-4 h-4 text-gray-400" />
-        </button>
-      </div>
-
-      {/* Suggestions avec animation */}
-      <ul
-        className={`absolute z-50 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-100 max-h-60 overflow-auto transform transition-all duration-300 ${
-          status === "OK" && !isLoading ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-        }`}
-      >
-        {data.map(({ place_id, description }) => (
-          <li
-            key={place_id}
-            role="button"
-            tabIndex={0}
-            onClick={() => handleSelect(place_id, description)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleSelect(place_id, description);
-              }
-            }}
-            className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 text-gray-700 text-sm"
+      {isLoading ? (
+        <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
+      ) : (
+        value && (
+          <button
+            onClick={handleClear}
+            type="button"
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full"
           >
-            {description}
-          </li>
-        ))}
-      </ul>
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        )
+      )}
+
+      {suggestions.length > 0 && (
+        <ul className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+          {suggestions.map((s) => (
+            <li
+              key={s.placeId}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleSelect(s.placeId, s.description)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  handleSelect(s.placeId, s.description);
+                }
+              }}
+              className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm text-gray-700"
+            >
+              {s.description}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
