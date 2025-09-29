@@ -83,7 +83,7 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
     expand: ["payment_intent", "subscription"],
   });
 
-  // 2) Récupérer les line_items
+  // 2) Récupérer les line_items (sécurisé)
   let lineItems: Stripe.ApiList<Stripe.LineItem> | null = null;
   try {
     lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
@@ -93,7 +93,9 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
     console.warn("⚠️ Impossible de charger les line_items:", err);
   }
 
-  console.log("📦 Line items reçus:", lineItems?.data?.length ?? 0);
+  // ✅ Sécurité supplémentaire : fallback []
+  const safeLineItems = Array.isArray(lineItems?.data) ? lineItems.data : [];
+  console.log("📦 Line items reçus:", safeLineItems.length);
 
   const mode = session.mode;
   const meta = session.metadata ?? {};
@@ -122,9 +124,8 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
         stripe_checkout_session_id: session.id,
         stripe_payment_intent_id: paymentIntentId,
         stripe_customer_id: customerId,
-        status: "requires_payment",
-        // sécuriser line_items_snapshot
-        line_items_snapshot: lineItems?.data ?? [],
+        status: "requires_payment", // confirmation définitive au payment_intent.succeeded
+        line_items_snapshot: safeLineItems,
         updated_at: new Date().toISOString(),
       })
       .eq("id", bookingId);
