@@ -36,19 +36,21 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
       return;
     }
 
-    const service = new window.google.maps.places.AutocompleteService();
-    service.getPlacePredictions(
+    // ⚡ Utilisation de la nouvelle API
+    const service = new (window.google.maps.places as any).AutocompleteSuggestion();
+
+    service.getSuggestions(
       {
         input: value,
         sessionToken: sessionTokenRef.current,
         componentRestrictions: { country: "fr" },
         language: "fr",
       },
-      (res, status) => {
+      (res: any[], status: string) => {
         if (status === "OK" && res) {
           setSuggestions(
             res.map((r) => ({
-              placeId: r.place_id!,
+              placeId: r.placeId, // ⚠️ nouvelle propriété
               description: r.description,
             }))
           );
