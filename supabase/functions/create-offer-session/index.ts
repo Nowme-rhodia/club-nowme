@@ -31,10 +31,10 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Paramètres manquants");
     }
 
-    // 1) Charger l'offre depuis Supabase
+    // 1) Charger l'offre + prix depuis Supabase
     const { data: offer, error: offerError } = await supabase
       .from("offers")
-      .select("id, partner_id, title, promo_price, custom_commission_rate")
+      .select("id, partner_id, title, custom_commission_rate")
       .eq("id", offerId)
       .single();
 
@@ -42,9 +42,26 @@ serve(async (req: Request): Promise<Response> => {
       throw new Error("Offre introuvable");
     }
 
-    // Prix en centimes
-    const unitAmount = offer.promo_price ? Math.round(Number(offer.promo_price) * 100) : 0;
-    if (unitAmount <= 0) throw new Error("Montant de l'offre invalide");
+    // Récupérer le premier prix associé à l’offre
+    const { data: priceRow, error: priceError } = await supabase
+      .from("offer_prices")
+      .select("id, price, promo_price, duration")
+      .eq("offer_id", offerId)
+      .limit(1)
+      .single();
+
+    if (priceError || !priceRow) {
+      throw new Error("Aucun prix trouvé pour cette offre");
+    }
+
+    // Prix en centimes (on priorise promo_price si défini)
+    const unitAmount = priceRow.promo_price
+      ? Math.round(Number(priceRow.promo_price))
+      : Math.round(Number(priceRow.price));
+
+    if (!unitAmount || unitAmount <= 0) {
+      throw new Error("Montant de l'offre invalide");
+    }
 
     const totalAmount = unitAmount * quantity;
     const commissionRate = offer.custom_commission_rate ?? 0.2; // défaut 20%
@@ -67,6 +84,7 @@ serve(async (req: Request): Promise<Response> => {
         platform_fee_cents: platformFee,
         partner_earnings_cents: partnerEarnings,
         pricing_snapshot: {
+          price_id: priceRow.id,
           unit_amount: unitAmount,
           total_amount: totalAmount,
           commission_rate: commissionRate,
