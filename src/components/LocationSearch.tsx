@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MapPin, X, Loader2 } from "lucide-react";
+import { useGoogleMapsScript } from "../hooks/useGoogleMapsScript";
 
 interface LocationSearchProps {
   onSelect: (location: { lat: number; lng: number; address: string }) => void;
@@ -12,14 +13,17 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
   const [suggestions, setSuggestions] = useState<{ placeId: string; description: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // ✅ utilise le hook pour charger l’API Google Maps
+  const { isLoaded, loadError } = useGoogleMapsScript();
+
   // 🔑 Token pour améliorer la précision des suggestions
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken>();
 
   useEffect(() => {
-    if (window.google?.maps?.places) {
+    if (isLoaded && window.google?.maps?.places) {
       sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
     }
-  }, []);
+  }, [isLoaded]);
 
   // Charger suggestions quand l'utilisateur tape
   useEffect(() => {
@@ -28,8 +32,7 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
       return;
     }
 
-    if (!window.google?.maps?.places) {
-      console.warn("Google Maps API non chargée");
+    if (!isLoaded || !window.google?.maps?.places) {
       return;
     }
 
@@ -54,7 +57,7 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
         }
       }
     );
-  }, [value]);
+  }, [value, isLoaded]);
 
   const handleSelect = (placeId: string, description: string) => {
     if (!window.google?.maps) return;
@@ -82,6 +85,14 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
     setSuggestions([]);
     onSelect({ lat: 0, lng: 0, address: "" });
   };
+
+  if (loadError) {
+    return <p className="text-red-500">Erreur de chargement Google Maps</p>;
+  }
+
+  if (!isLoaded) {
+    return <p className="text-gray-500">Chargement de Google Maps...</p>;
+  }
 
   return (
     <div className="relative">
