@@ -257,14 +257,19 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
   const invoice = evt.data.object as Stripe.Invoice;
   if (!invoice.subscription) return;
 
+  const subId =
+    typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : (invoice.subscription as Stripe.Subscription).id;
+
   const sub =
     typeof invoice.subscription === "string"
-      ? await stripe.subscriptions.retrieve(invoice.subscription)
+      ? await stripe.subscriptions.retrieve(subId)
       : (invoice.subscription as Stripe.Subscription);
 
-  const { error } = await supabase.from("subscriptions").upsert(
-    {
-      stripe_subscription_id: sub.id,
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
       latest_invoice_id: invoice.id,
       latest_payment_intent_id:
         typeof invoice.payment_intent === "string"
@@ -276,16 +281,15 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
       current_period_start: toIsoOrNull(sub.current_period_start),
       current_period_end: toIsoOrNull(sub.current_period_end),
       updated_at: new Date().toISOString(),
-    },
-    { onConflict: "stripe_subscription_id" }
-  );
+    })
+    .eq("stripe_subscription_id", subId);
 
-  if (error)
+  if (error) {
     throw new Error(
-      "subscriptions upsert on invoice succeeded failed: " + error.message
+      "subscriptions update on invoice succeeded failed: " + error.message
     );
+  }
 }
-
 // --- Facture échouée (abonnement past_due) ---
 async function handleInvoicePaymentFailed(evt: Stripe.Event) {
   const invoice = evt.data.object as Stripe.Invoice;
@@ -309,21 +313,23 @@ async function handleInvoicePaymentFailed(evt: Stripe.Event) {
 async function handleCustomerSubscriptionLifecycle(evt: Stripe.Event) {
   const sub = evt.data.object as Stripe.Subscription;
 
-  const { error } = await supabase.from("subscriptions").upsert(
-    {
-      stripe_subscription_id: sub.id,
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({
       status: sub.status,
       current_period_start: toIsoOrNull(sub.current_period_start),
       current_period_end: toIsoOrNull(sub.current_period_end),
       cancel_at: toIsoOrNull(sub.cancel_at ?? null),
       canceled_at: toIsoOrNull(sub.canceled_at ?? null),
       updated_at: new Date().toISOString(),
-    },
-    { onConflict: "stripe_subscription_id" }
-  );
+    })
+    .eq("stripe_subscription_id", sub.id);
 
-  if (error)
-    throw new Error("subscriptions upsert lifecycle failed: " + error.message);
+  if (error) {
+    throw new Error(
+      "subscriptions update lifecycle failed: " + error.message
+    );
+  }
 }
 
 // --- DISPATCH -----------------------------------------------------------------------
