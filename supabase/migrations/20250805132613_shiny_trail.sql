@@ -1,6 +1,6 @@
 -- 2. CONTRAINTES DE CLÉ ÉTRANGÈRE
 SELECT 
-  tc.constraint_name,
+  tc.constraint_name, 
   tc.table_name,
   kcu.column_name,
   ccu.table_name AS foreign_table_name,
