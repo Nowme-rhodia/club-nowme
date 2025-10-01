@@ -192,7 +192,7 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
 
   const customerId = typeof pi.customer === "string" ? pi.customer : null;
 
-  // --- Étape 1 : essayer d’update par payment_intent_id
+  // --- Étape 1 : update via payment_intent_id
   let { error, count } = await supabase
     .from("bookings")
     .update({
@@ -210,7 +210,7 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
     throw new Error("bookings update on succeeded failed: " + error.message);
   }
 
-  // --- Étape 2 : si rien n’a été mis à jour, fallback via metadata.booking_id
+  // --- Étape 2 : fallback si aucun booking trouvé, via metadata.booking_id
   if ((count ?? 0) === 0 && bookingId) {
     const { error: fallbackError } = await supabase
       .from("bookings")
