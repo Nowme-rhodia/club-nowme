@@ -173,6 +173,9 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
 async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
 
+  // 🔎 Récupérer booking_id si présent dans metadata
+  const bookingId = (pi.metadata?.booking_id as string) ?? null;
+
   // ✅ Récupérer le dernier charge de façon sûre
   let chargeId: string | null = null;
   if (pi.latest_charge && typeof pi.latest_charge === "string") {
@@ -187,23 +190,46 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
   const paymentMethod =
     typeof pi.payment_method === "string" ? pi.payment_method : null;
 
-  const customerId =
-    typeof pi.customer === "string" ? pi.customer : null;
+  const customerId = typeof pi.customer === "string" ? pi.customer : null;
 
-  const { error } = await supabase
+  // --- Étape 1 : essayer d’update par payment_intent_id
+  let { error, count } = await supabase
     .from("bookings")
     .update({
       status: "paid",
-      stripe_charge_id: chargeId, // toujours safe maintenant
+      stripe_charge_id: chargeId,
       stripe_payment_method: paymentMethod,
       stripe_customer_id: customerId,
       paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("stripe_payment_intent_id", pi.id);
+    .eq("stripe_payment_intent_id", pi.id)
+    .select("id", { count: "exact" });
 
   if (error) {
     throw new Error("bookings update on succeeded failed: " + error.message);
+  }
+
+  // --- Étape 2 : si rien n’a été mis à jour, fallback via metadata.booking_id
+  if ((count ?? 0) === 0 && bookingId) {
+    const { error: fallbackError } = await supabase
+      .from("bookings")
+      .update({
+        status: "paid",
+        stripe_payment_intent_id: pi.id,
+        stripe_charge_id: chargeId,
+        stripe_payment_method: paymentMethod,
+        stripe_customer_id: customerId,
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
+
+    if (fallbackError) {
+      throw new Error(
+        "bookings fallback update failed: " + fallbackError.message
+      );
+    }
   }
 }
 
