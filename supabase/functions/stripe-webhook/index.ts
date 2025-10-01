@@ -173,10 +173,10 @@ async function handleCheckoutSessionCompleted(evt: Stripe.Event) {
 async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
   const pi = evt.data.object as Stripe.PaymentIntent;
 
-  // 🔎 Récupérer booking_id si présent dans metadata
+  // 🔎 booking_id depuis metadata (si propagé avec payment_intent_data.metadata)
   const bookingId = (pi.metadata?.booking_id as string) ?? null;
 
-  // ✅ Récupérer le dernier charge de façon sûre
+  // ✅ récupérer le dernier charge de façon sûre
   let chargeId: string | null = null;
   if (pi.latest_charge && typeof pi.latest_charge === "string") {
     try {
@@ -192,8 +192,8 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
 
   const customerId = typeof pi.customer === "string" ? pi.customer : null;
 
-  // --- Étape 1 : update via payment_intent_id
-  let { error, count } = await supabase
+  // --- Étape 1 : tenter update par payment_intent_id
+  const { data: updatedByPi, error: updErr } = await supabase
     .from("bookings")
     .update({
       status: "paid",
@@ -204,15 +204,15 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
       updated_at: new Date().toISOString(),
     })
     .eq("stripe_payment_intent_id", pi.id)
-    .select("id", { count: "exact" });
+    .select("id");
 
-  if (error) {
-    throw new Error("bookings update on succeeded failed: " + error.message);
+  if (updErr) {
+    throw new Error("bookings update by PI failed: " + updErr.message);
   }
 
   // --- Étape 2 : fallback si aucun booking trouvé, via metadata.booking_id
-  if ((count ?? 0) === 0 && bookingId) {
-    const { error: fallbackError } = await supabase
+  if ((!updatedByPi || updatedByPi.length === 0) && bookingId) {
+    const { data: updatedByBooking, error: fbErr } = await supabase
       .from("bookings")
       .update({
         status: "paid",
@@ -223,11 +223,16 @@ async function handlePaymentIntentSucceeded(evt: Stripe.Event) {
         paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq("id", bookingId);
+      .eq("id", bookingId)
+      .select("id");
 
-    if (fallbackError) {
-      throw new Error(
-        "bookings fallback update failed: " + fallbackError.message
+    if (fbErr) {
+      throw new Error("bookings fallback update failed: " + fbErr.message);
+    }
+
+    if (!updatedByBooking || updatedByBooking.length === 0) {
+      console.warn(
+        `⚠️ Aucun booking trouvé pour payment_intent ${pi.id} (booking_id=${bookingId})`
       );
     }
   }
