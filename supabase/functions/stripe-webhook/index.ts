@@ -23,11 +23,7 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
 console.info("🚀 stripe-webhook boot");
 
 // --- HELPERS ------------------------------------------------------------------------
-async function markEventStatus(
-  eventId: string,
-  status: "processing" | "completed" | "failed",
-  errorMessage?: string
-) {
+async function markEventStatus(eventId: string, status: "processing" | "completed" | "failed", errorMessage?: string) {
   const { error } = await supabase
     .from("stripe_webhook_events")
     .update({
@@ -54,9 +50,7 @@ async function ensureEventLogged(evt: Stripe.Event) {
       { onConflict: "stripe_event_id" }
     );
 
-  if (upsertErr) {
-    console.error("❌ ensureEventLogged upsertErr:", upsertErr.message);
-  }
+  if (upsertErr) console.error("❌ ensureEventLogged upsertErr:", upsertErr.message);
 
   const { data: existing, error } = await supabase
     .from("stripe_webhook_events")
@@ -71,7 +65,6 @@ async function ensureEventLogged(evt: Stripe.Event) {
 function toIsoOrNull(ts?: number | null) {
   return ts ? new Date(ts * 1000).toISOString() : null;
 }
-
 
 // --- HANDLERS -----------------------------------------------------------------------
 // --- Checkout Session Completed ---
@@ -340,14 +333,48 @@ async function handleInvoicePaymentFailed(evt: Stripe.Event) {
     );
 }
 
+// --- Refund ---
+async function handleChargeRefunded(evt: Stripe.Event) {
+  const charge = evt.data.object as Stripe.Charge;
+
+  if (!charge.payment_intent) {
+    console.warn("⚠️ Refund event sans payment_intent lié");
+    return;
+  }
+
+  const piId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent.id;
+  const isFullRefund = charge.amount_refunded >= charge.amount;
+
+  if (isFullRefund) {
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        status: "refunded",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_payment_intent_id", piId);
+
+    if (error) throw new Error("bookings update refund failed: " + error.message);
+  } else {
+    console.log(`ℹ️ Refund partiel détecté pour PI=${piId}, on garde status=paid`);
+    // TODO : créer un ajustement dans partner_payout_items si tu veux compenser
+  }
+}
+
 // --- Lifecycle subscription ---
 async function handleCustomerSubscriptionLifecycle(evt: Stripe.Event) {
   const sub = evt.data.object as Stripe.Subscription;
+  let status = sub.status;
+
+  // Forcer canceled si l’event est customer.subscription.deleted
+  if (evt.type === "customer.subscription.deleted") {
+    status = "canceled";
+  }
 
   const { error } = await supabase
     .from("subscriptions")
     .update({
-      status: sub.status,
+      status,
       current_period_start: toIsoOrNull(sub.current_period_start),
       current_period_end: toIsoOrNull(sub.current_period_end),
       cancel_at: toIsoOrNull(sub.cancel_at ?? null),
@@ -356,11 +383,7 @@ async function handleCustomerSubscriptionLifecycle(evt: Stripe.Event) {
     })
     .eq("stripe_subscription_id", sub.id);
 
-  if (error) {
-    throw new Error(
-      "subscriptions update lifecycle failed: " + error.message
-    );
-  }
+  if (error) throw new Error("subscriptions update lifecycle failed: " + error.message);
 }
 
 // --- DISPATCH -----------------------------------------------------------------------
@@ -380,6 +403,8 @@ async function dispatch(evt: Stripe.Event) {
       return handleInvoicePaymentSucceeded(evt);
     case "invoice.payment_failed":
       return handleInvoicePaymentFailed(evt);
+    case "charge.refunded":
+      return handleChargeRefunded(evt);
     case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted":
@@ -393,50 +418,30 @@ async function dispatch(evt: Stripe.Event) {
 // --- ENTRYPOINT ---------------------------------------------------------------------
 Deno.serve(async (req: Request) => {
   try {
-    if (req.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
-    }
+    if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
     const sig = req.headers.get("stripe-signature");
-    if (!sig) {
-      console.warn("⚠️ Missing stripe-signature header");
-      return new Response("Bad Request", { status: 400 });
-    }
-
-    console.info("stripe-signature present, length:", sig.length);
+    if (!sig) return new Response("Bad Request", { status: 400 });
 
     const rawBody = await req.text();
     let event: Stripe.Event | null = null;
-    let lastErr: any = null;
 
-    // 🔑 Essayer chaque secret
     for (const secret of STRIPE_WEBHOOK_SECRETS) {
       try {
-        event = await stripe.webhooks.constructEventAsync(
-          rawBody,
-          sig,
-          secret
-        );
-        break; // si succès, on arrête
-      } catch (err) {
-        lastErr = err;
+        event = await stripe.webhooks.constructEventAsync(rawBody, sig, secret);
+        break;
+      } catch {
+        // continue with next secret
       }
     }
-
-    if (!event) {
-      console.error("❌ Invalid signature with all secrets:", lastErr?.message);
-      return new Response("Invalid signature", { status: 400 });
-    }
+    if (!event) return new Response("Invalid signature", { status: 400 });
 
     const status = await ensureEventLogged(event);
     if (status === "completed") {
-      return new Response(
-        JSON.stringify({ received: true, duplicate: true }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     try {
