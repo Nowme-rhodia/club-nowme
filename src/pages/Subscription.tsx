@@ -96,7 +96,7 @@ export default function Subscription() {
     },
     { 
       question: "Qu'est-ce que j'ai concrètement chaque mois ?", 
-      answer: "Dès le 1er mois : 2-3 événements premium + masterclass + consultation bien-être + box trimestrielle + communauté + réductions jusqu'à -70% + service conciergerie + accès séjours. Plus de 185€ de valeur pour 12,99€ le premier mois !" 
+      answer: "Dès le 1er mois : 2-3 événements premium + masterclass + Concours box trimestrielle + communauté + réductions jusqu'à -70% + accès séjours. Plus de 185€ de valeur pour 12,99€ le premier mois !" 
     },
     { 
       question: "Pourquoi choisir l'abonnement annuel ?", 
@@ -104,7 +104,7 @@ export default function Subscription() {
     },
     { 
       question: "Je peux annuler quand ?", 
-      answer: "Quand tu veux ! Résiliation en 1 clic depuis ton compte, sans justification. Tu gardes l'accès jusqu'à la fin de ton mois/année payé. Aucun engagement, aucune contrainte." 
+      answer: "Quand tu veux sur l'abonnement mensuel ! Résiliation en 1 clic depuis ton compte, sans justification. Tu gardes l'accès jusqu'à la fin de ton mois/année payé. Aucun engagement, aucune contrainte." 
     },
     { 
       question: "C'est où exactement ?", 
@@ -138,7 +138,7 @@ export default function Subscription() {
             <motion.div {...fadeInUp}>
               <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-semibold mb-6">
                 <Users className="w-4 h-4 mr-2" />
-                <span>Plus de 500 femmes kiffent déjà avec nous</span>
+                <span>Plus de 100 femmes kiffent déjà avec nous</span>
               </div>
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
@@ -248,39 +248,27 @@ export default function Subscription() {
               },
               {
                 icon: Gift,
-                title: "Box surprise trimestrielle",
+                title: "ConcoursBox surprise trimestrielle",
                 description: "Produits lifestyle et bien-être livrés chez toi",
-                value: "30€/trimestre"
-              },
-              {
-                icon: Heart,
-                title: "Consultation bien-être",
-                description: "1 consultation gratuite par trimestre avec nos expertes",
-                value: "45€/trimestre"
+                value: "30€-100€/trimestre"
               },
               {
                 icon: Star,
                 title: "Réductions exclusives",
                 description: "Jusqu'à -70% chez nos partenaires sélectionnés",
-                value: "50€+ d'économies"
-              },
-              {
-                icon: Coffee,
-                title: "Service conciergerie",
-                description: "On s'occupe de tes réservations et conseils perso",
-                value: "20€/mois"
+                value: "50€+ d'économies par mois"
               },
               {
                 icon: Users,
                 title: "Communauté active",
-                description: "Groupe privé, carte interactive, partage de bons plans",
-                value: "10€/mois"
+                description: "Groupe privé, partage de bons plans, créer son crew",
+                value: "50€/mois"
               },
               {
                 icon: Send,
-                title: "Newsletter quotidienne",
+                title: "Newsletter hebdomadaire",
                 description: "\"Kiff du jour\" avec les meilleurs bons plans",
-                value: "5€/mois"
+                value: "25€/mois"
               },
               {
                 icon: Plane,
@@ -409,7 +397,7 @@ export default function Subscription() {
           </motion.h2>
           
           <motion.p className="text-xl mb-8 opacity-90">
-            Rejoins les 500+ femmes qui ont déjà dit STOP à la routine et OUI au kiff !
+            Rejoins les 100+ femmes qui ont déjà dit STOP à la routine et OUI au kiff !
           </motion.p>
 
           <motion.div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -435,7 +423,7 @@ export default function Subscription() {
           <div className="flex items-center justify-center space-x-6 text-sm opacity-90 mt-6">
             <div className="flex items-center">
               <Shield className="w-4 h-4 mr-2" />
-              <span>Sans engagement</span>
+              <span>Sans engagement pour l'abonnement mensuel</span>
             </div>
             <div className="flex items-center">
               <CheckCircle className="w-4 h-4 mr-2" />
@@ -443,7 +431,7 @@ export default function Subscription() {
             </div>
             <div className="flex items-center">
               <Users className="w-4 h-4 mr-2" />
-              <span>500+ membres actives</span>
+              <span>100+ membres actives</span>
             </div>
           </div>
         </div>

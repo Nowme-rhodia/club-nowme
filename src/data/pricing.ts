@@ -37,17 +37,14 @@ export const PRICING_TIERS: PricingTier[] = [
     promoCode: 'KIFFE',
     features: [
       'Accès complet à tous les services dès le 1er mois',
-      '2-3 événements premium par mois',
-      'Box surprise trimestrielle (valeur 30€)',
+      '2-3 événements premium et sorties organisées par mois',
+      'Concours Box surprise trimestrielle (valeur 30€ à 100€)',
       'Apéros mensuels en ligne',
       'Masterclass exclusives avec expertes',
-      'Consultation bien-être gratuite/trimestre',
-      'Carte interactive pour rencontrer des membres',
       'Réductions jusqu\'à -70% chez nos partenaires',
-      'Service conciergerie pour réservations',
       'Accès aux séjours entre filles',
       'Communauté premium modérée',
-      'Newsletter quotidienne "Kiff du jour"',
+      'Newsletter hebdomadaire "Kiff de la semaine"',
       'Résiliation en 1 clic'
     ]
   },
@@ -64,8 +61,7 @@ export const PRICING_TIERS: PricingTier[] = [
       'Tout du plan mensuel inclus',
       '100€ de réduction sur tous les séjours',
       'Accès prioritaire aux événements exclusifs',
-      'Box premium avec produits haut de gamme',
-      'Consultation bien-être supplémentaire',
+      'Concours Box premium avec produits haut de gamme',
       'Invitation aux événements VIP',
       'Cadeaux d\'anniversaire personnalisés',
       'Support prioritaire',
@@ -116,7 +112,7 @@ export const SERVICE_OFFERINGS: ServiceOffering[] = [
       },
       {
         name: 'Communauté active',
-        description: 'Groupe privé, carte interactive, parrainage',
+        description: 'Groupe privé, parrainage',
         value: 10,
         frequency: 'Accès permanent'
       }
@@ -126,22 +122,10 @@ export const SERVICE_OFFERINGS: ServiceOffering[] = [
     category: 'Services Premium',
     items: [
       {
-        name: 'Box surprise trimestrielle',
+        name: 'Concours Box surprise trimestrielle',
         description: 'Produits lifestyle et bons plans découverte',
         value: 30,
         frequency: '1 par trimestre'
-      },
-      {
-        name: 'Consultation bien-être',
-        description: 'Séance gratuite avec nos expertes',
-        value: 45,
-        frequency: '1 par trimestre'
-      },
-      {
-        name: 'Service conciergerie',
-        description: 'Aide pour réservations et conseils perso',
-        value: 20,
-        frequency: 'Illimité'
       }
     ]
   }
