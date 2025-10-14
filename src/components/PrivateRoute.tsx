@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { LoadingSpinner } from './LoadingSpinner';
@@ -11,13 +11,21 @@ interface PrivateRouteProps {
 export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   const { user, loading, isAdmin, isPartner, isSubscriber } = useAuth();
   const location = useLocation();
+  const [timeoutPassed, setTimeoutPassed] = useState(false);
+
+  // Sécurité : on stoppe le "chargement infini" après 8 secondes
+  useEffect(() => {
+    const timer = setTimeout(() => setTimeoutPassed(true), 8000);
+    return () => clearTimeout(timer);
+  }, []);
 
   console.log('PrivateRoute - User:', !!user);
   console.log('PrivateRoute - Loading:', loading);
   console.log('PrivateRoute - IsAdmin:', isAdmin);
   console.log('PrivateRoute - AllowedRoles:', allowedRoles);
 
-  if (loading) {
+  // 1️⃣ Pendant le chargement initial
+  if (loading && !timeoutPassed) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -25,12 +33,15 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     );
   }
 
-  if (!user) {
+  // 2️⃣ Si pas de session après le délai → on considère qu'il n'est pas connecté
+  if (!user && (timeoutPassed || !loading)) {
+    console.warn('PrivateRoute - Aucun utilisateur connecté, redirection...');
     return <Navigate to="/auth/signin" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles) {
-    const hasAllowedRole = allowedRoles.some(role => {
+  // 3️⃣ Vérification des rôles si demandés
+  if (allowedRoles && user) {
+    const hasAllowedRole = allowedRoles.some((role) => {
       switch (role) {
         case 'admin':
           return isAdmin;
@@ -46,7 +57,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     console.log('PrivateRoute - HasAllowedRole:', hasAllowedRole);
 
     if (!hasAllowedRole) {
-      console.log('PrivateRoute - Access denied, redirecting...');
+      console.warn('PrivateRoute - Accès refusé, redirection...');
       if (isPartner) {
         return <Navigate to="/partner/dashboard" replace />;
       }
@@ -54,5 +65,6 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     }
   }
 
+  // 4️⃣ Si tout est OK
   return <>{children}</>;
 }
