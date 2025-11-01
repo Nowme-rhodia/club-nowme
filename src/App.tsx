@@ -16,6 +16,7 @@ const Categories = React.lazy(() => import('./pages/Categories'));
 const TousLesKiffs = React.lazy(() => import('./pages/TousLesKiffs'));
 const OfferPage = React.lazy(() => import('./pages/OfferPage'));
 const Subscription = React.lazy(() => import('./pages/Subscription'));
+const Checkout = React.lazy(() => import('./pages/Checkout'));
 const Communaute = React.lazy(() => import('./pages/Community'));
 const SubscriptionSuccess = React.lazy(() => import('./pages/SubscriptionSuccess'));
 const Account = React.lazy(() => import('./pages/Account'));
@@ -79,6 +80,7 @@ function App() {
                   <Route path="/tous-les-kiffs" element={<TousLesKiffs />} />
                   <Route path="/offres/:id" element={<OfferPage />} />
                   <Route path="/subscription" element={<Subscription />} />
+                  <Route path="/checkout" element={<Checkout />} />
                   <Route path="/subscription-success" element={<SubscriptionSuccess />} />
                   <Route path="/soumettre-offre" element={<SubmitOffer />} />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />

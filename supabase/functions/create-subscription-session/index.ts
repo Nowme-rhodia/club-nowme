@@ -25,24 +25,38 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { priceId, userId, email, success_url, cancel_url, subscription_type } = await req.json();
+    const { priceId, email, success_url, cancel_url, subscription_type } = await req.json();
 
-    if (!priceId || !userId || !email || !success_url || !cancel_url) {
+    if (!priceId || !email || !success_url || !cancel_url) {
       throw new Error("Paramètres manquants");
     }
 
-    // Vérifier si l'utilisateur a déjà un stripe_customer_id
-    const { data: profile, error: profileError } = await supabase
+    // Check if user profile exists, create if not
+    let userId: string;
+    let customerId: string | null = null;
+
+    const { data: existingProfile } = await supabase
       .from("user_profiles")
       .select("id, stripe_customer_id")
-      .eq("id", userId)
+      .eq("email", email)
       .single();
 
-    if (profileError || !profile) {
-      throw new Error("Profil utilisateur introuvable");
-    }
+    if (existingProfile) {
+      userId = existingProfile.id;
+      customerId = existingProfile.stripe_customer_id;
+    } else {
+      // Create new profile
+      const { data: newProfile, error: createError } = await supabase
+        .from("user_profiles")
+        .insert({ email, first_name: "", last_name: "" })
+        .select("id")
+        .single();
 
-    let customerId = profile.stripe_customer_id;
+      if (createError || !newProfile) {
+        throw new Error("Impossible de créer le profil: " + createError?.message);
+      }
+      userId = newProfile.id;
+    }
 
     // Si pas encore de customer Stripe → en créer un
     if (!customerId) {

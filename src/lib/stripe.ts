@@ -19,29 +19,40 @@ export const createCheckoutSession = async (planType: 'monthly' | 'yearly', user
     const origin = window.location.origin;
     const apiUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    const response = await fetch(`${apiUrl}/functions/v1/create-checkout-session`, {
+
+    // Prompt for email if not provided
+    let email = userEmail;
+    if (!email) {
+      email = prompt('Entrez votre email pour continuer:');
+      if (!email) {
+        throw new Error('Email requis pour continuer');
+      }
+    }
+
+    // Call a simplified edge function that handles user creation
+    const response = await fetch(`${apiUrl}/functions/v1/create-subscription-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${anonKey}`,
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         priceId,
-        planType,
-        email: userEmail,
+        email,
         success_url: `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/subscription`
+        cancel_url: `${origin}/subscription`,
+        subscription_type: planType
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to create checkout session');
+      throw new Error(errorData.error || 'Erreur lors de la création de la session');
     }
 
     const { sessionId } = await response.json();
-    
+
+    // Redirect to Stripe Checkout
     const stripe = await stripePromise;
     if (!stripe) {
       throw new Error('Stripe failed to initialize');
@@ -52,7 +63,7 @@ export const createCheckoutSession = async (planType: 'monthly' | 'yearly', user
       throw error;
     }
 
-  } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'Failed to create checkout session');
+  } catch (err) {
+    throw new Error(err instanceof Error ? err.message : 'Failed to create checkout session');
   }
 };
