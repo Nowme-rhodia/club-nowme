@@ -291,15 +291,6 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
       ? await stripe.subscriptions.retrieve(subId)
       : (invoice.subscription as Stripe.Subscription);
 
-  // Get existing subscription to check if this is the first payment
-  const { data: existingSub } = await supabase
-    .from("subscriptions")
-    .select("status, user_id")
-    .eq("stripe_subscription_id", subId)
-    .single();
-
-  const isFirstPayment = existingSub?.status !== "active";
-
   const { error } = await supabase
     .from("subscriptions")
     .update({
@@ -321,40 +312,6 @@ async function handleInvoicePaymentSucceeded(evt: Stripe.Event) {
     throw new Error(
       "subscriptions update on invoice succeeded failed: " + error.message
     );
-  }
-
-  // 🎯 Send welcome email on first payment
-  if (isFirstPayment && existingSub?.user_id) {
-    try {
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("email, first_name")
-        .eq("id", existingSub.user_id)
-        .single();
-
-      if (profile?.email) {
-        console.log(`📧 Sending welcome email to ${profile.email}`);
-        
-        const { error: emailError } = await supabase.functions.invoke(
-          "stripe-user-welcome",
-          {
-            body: {
-              email: profile.email,
-              firstName: profile.first_name || "",
-              redirectTo: "https://club.nowme.fr/update-password"
-            }
-          }
-        );
-
-        if (emailError) {
-          console.error("❌ Failed to send welcome email:", emailError);
-        } else {
-          console.log("✅ Welcome email queued successfully");
-        }
-      }
-    } catch (emailErr) {
-      console.error("⚠️ Welcome email error:", emailErr);
-    }
   }
 }
 // --- Facture échouée (abonnement past_due) ---
