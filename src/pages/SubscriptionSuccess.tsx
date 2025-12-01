@@ -1,9 +1,11 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
+import { logger } from '../lib/logger';
 import toast from 'react-hot-toast';
 
 interface VerificationResult {
@@ -17,37 +19,65 @@ interface VerificationResult {
 export default function SubscriptionSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
   const [isVerifying, setIsVerifying] = useState(true);
   const [hasSessionId, setHasSessionId] = useState(true);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const hasVerified = useRef(false); // 🔒 Flag pour éviter les appels multiples
 
-  const verifySubscription = async (sessionId: string) => {
+  const verifySubscription = async (sessionId: string, currentRetry: number = 0) => {
     try {
-      console.log('🔍 Verifying subscription for session:', sessionId);
+      logger.payment.verification('start', { sessionId, attempt: currentRetry + 1 });
       
-      const { data, error } = await supabase.functions.invoke('verify-subscription', {
-        body: { session_id: sessionId }
-      });
+      console.log('🚀 Calling Edge Function verify-subscription with:', { session_id: sessionId });
+      console.log('🌐 Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+      
+      const startTime = Date.now();
+      
+      // Appel direct via fetch au lieu de supabase.functions.invoke
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-subscription`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ session_id: sessionId })
+        }
+      );
 
-      if (error) {
-        console.error('❌ Verification error:', error);
-        throw error;
+      const duration = Date.now() - startTime;
+      console.log(`⏱️ Edge Function call took ${duration}ms`);
+      console.log('📦 Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ HTTP error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      console.log('✅ Verification result:', data);
+      const data = await response.json();
+      console.log('✅ Edge Function data:', data);
+      logger.payment.verification('result', data);
       setVerificationResult(data);
       
       if (data.success && data.status === 'active') {
         setIsVerifying(false);
         toast.success('Abonnement activé avec succès !');
+        
+        // Recharger le profil pour mettre à jour le rôle
+        console.log('🔄 Refreshing user profile...');
+        await refreshProfile();
+        console.log('✅ Profile refreshed');
       } else if (data.status === 'pending') {
         // Retry after a delay if payment is still processing
-        if (retryCount < 5) {
-          console.log(`⏳ Payment pending, retrying in 3s (attempt ${retryCount + 1}/5)`);
+        if (currentRetry < 5) {
+          logger.payment.verification('retry', { attempt: currentRetry + 1, maxAttempts: 5 });
+          setRetryCount(currentRetry + 1);
           setTimeout(() => {
-            setRetryCount(retryCount + 1);
-            verifySubscription(sessionId);
+            verifySubscription(sessionId, currentRetry + 1);
           }, 3000);
         } else {
           setIsVerifying(false);
@@ -57,7 +87,7 @@ export default function SubscriptionSuccess() {
         setIsVerifying(false);
       }
     } catch (err: any) {
-      console.error('🔥 Verification failed:', err);
+      logger.error('SubscriptionSuccess', 'Verification failed', err);
       setVerificationResult({
         success: false,
         error: err.message || 'Erreur de vérification'
@@ -69,14 +99,25 @@ export default function SubscriptionSuccess() {
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
+    logger.navigation.pageLoad('/subscription-success', { sessionId });
+
     if (!sessionId) {
       setHasSessionId(false);
+      setIsVerifying(false);
       return;
     }
 
-    // Start verification immediately
+    // 🔒 Empêcher les appels multiples (React StrictMode)
+    if (hasVerified.current) {
+      logger.info('SubscriptionSuccess', 'Already verified, skipping');
+      return;
+    }
+    hasVerified.current = true;
+
+    // Start verification immediately (only once on mount)
     verifySubscription(sessionId);
-  }, [searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array to run only once on mount
 
   if (!hasSessionId) {
     return (

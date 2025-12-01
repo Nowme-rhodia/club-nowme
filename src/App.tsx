@@ -28,6 +28,7 @@ const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 // Auth pages
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
+const SignUp = React.lazy(() => import('./pages/auth/SignUp'));
 const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword'));
 const UpdatePassword = React.lazy(() => import('./pages/auth/UpdatePassword'));
 const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback'));
@@ -92,6 +93,7 @@ function App() {
 
                   {/* Auth routes */}
                   <Route path="/auth/signin" element={<SignIn />} />
+                  <Route path="/auth/signup" element={<SignUp />} />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
                   <Route path="/auth/update-password" element={<UpdatePassword />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />

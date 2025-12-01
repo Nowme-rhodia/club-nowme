@@ -1,3 +1,67 @@
+# 🚀 Déploiement manuel Edge Function via Dashboard
+
+**Date:** 1er décembre 2025  
+**Problème:** CLI Supabase non installée  
+**Solution:** Déployer via le Dashboard Supabase
+
+---
+
+## 📋 Prérequis
+
+- Accès au Dashboard Supabase: https://supabase.com/dashboard
+- Fichier `supabase/functions/verify-subscription/index.ts` modifié
+
+---
+
+## 🔧 Méthode 1: Via le Dashboard (Recommandé)
+
+### Étape 1: Accéder aux Edge Functions
+
+1. Ouvre https://supabase.com/dashboard
+2. Sélectionne ton projet **club-nowme**
+3. Dans le menu de gauche, clique sur **Edge Functions**
+4. Tu devrais voir la liste des fonctions existantes
+
+### Étape 2: Éditer la fonction
+
+1. Clique sur **verify-subscription** dans la liste
+2. Clique sur **Edit function** ou **Code**
+3. Copie-colle le contenu complet de `supabase/functions/verify-subscription/index.ts`
+4. Clique sur **Save** ou **Deploy**
+
+### Étape 3: Vérifier le déploiement
+
+1. Va dans **Logs** (onglet à côté de Code)
+2. Clique sur **Refresh** pour voir les logs en temps réel
+3. Teste en faisant un paiement
+
+---
+
+## 🔧 Méthode 2: Via l'API Supabase Management
+
+Si le Dashboard ne permet pas l'édition directe, utilise l'API :
+
+```bash
+# Installer Supabase CLI (une seule fois)
+npm install -g supabase
+
+# Se connecter
+supabase login
+
+# Lier le projet
+supabase link --project-ref dqfyuhwrjozoxadkccdj
+
+# Déployer la fonction
+supabase functions deploy verify-subscription
+```
+
+---
+
+## 🔧 Méthode 3: Copier-coller le code complet
+
+Si rien d'autre ne fonctionne, voici le code complet à copier-coller dans le Dashboard :
+
+```typescript
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.11.0?target=deno";
@@ -135,7 +199,7 @@ serve(async (req) => {
     if (stripeSubscription.status === "active" || stripeSubscription.status === "trialing") {
       console.log("🔄 Upserting subscription in database");
       
-      const subscriptionData: any = {
+      const subscriptionData = {
         user_id: userProfile.user_id,
         stripe_subscription_id: subscriptionId,
         product_id: productId,
@@ -149,11 +213,6 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       };
 
-      // Si l'abonnement existe déjà, ajouter son ID pour l'update
-      if (existingSubscription?.id) {
-        subscriptionData.id = existingSubscription.id;
-      }
-
       const { error: upsertError } = await supabase
         .from("subscriptions")
         .upsert(subscriptionData, {
@@ -162,11 +221,10 @@ serve(async (req) => {
 
       if (upsertError) {
         console.error("❌ Failed to upsert subscription:", upsertError);
-        console.error("❌ Subscription data:", subscriptionData);
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: `Échec de mise à jour de l'abonnement: ${upsertError.message}` 
+            error: "Échec de mise à jour de l'abonnement" 
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -218,7 +276,7 @@ serve(async (req) => {
       }
     }
 
-    // 7. Return verification result
+    // 11. Return verification result
     return new Response(
       JSON.stringify({
         success: true,
@@ -245,3 +303,90 @@ serve(async (req) => {
     );
   }
 });
+```
+
+---
+
+## 🔍 Vérifier que la fonction est déployée
+
+### Via le Dashboard
+
+1. Va dans **Edge Functions**
+2. Vérifie que **verify-subscription** est dans la liste
+3. Vérifie la date de **Last deployed**
+4. Elle doit être récente (aujourd'hui)
+
+### Via un test direct
+
+Ouvre la console du navigateur et teste :
+
+```javascript
+const response = await fetch('https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/verify-subscription', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + import.meta.env.VITE_SUPABASE_ANON_KEY
+  },
+  body: JSON.stringify({ session_id: 'test' })
+});
+
+const data = await response.json();
+console.log('Response:', data);
+```
+
+**Résultat attendu:**
+```json
+{
+  "success": false,
+  "error": "Session non trouvée"
+}
+```
+
+Si tu obtiens une erreur 404, la fonction n'est pas déployée.
+
+---
+
+## 🐛 Problèmes courants
+
+### 1. Fonction pas dans la liste
+
+**Solution:** Créer la fonction manuellement
+1. Dashboard → Edge Functions → **New function**
+2. Nom: `verify-subscription`
+3. Coller le code ci-dessus
+4. Deploy
+
+### 2. Erreur "Function not found"
+
+**Solution:** Vérifier l'URL
+```
+https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/verify-subscription
+```
+
+### 3. Erreur CORS
+
+**Solution:** Vérifier les headers CORS dans le code
+
+### 4. Secrets manquants
+
+**Solution:** Ajouter les secrets
+1. Dashboard → Settings → Edge Functions → Secrets
+2. Ajouter:
+   - `STRIPE_SECRET_KEY`: `sk_test_xxx`
+   - `SUPABASE_URL`: Auto
+   - `SUPABASE_SERVICE_ROLE_KEY`: Auto
+
+---
+
+## ✅ Checklist finale
+
+- [ ] Fonction visible dans Dashboard → Edge Functions
+- [ ] Date de déploiement récente
+- [ ] Test avec `session_id: 'test'` retourne une erreur (normal)
+- [ ] Secrets configurés
+- [ ] Logs visibles dans Dashboard → Edge Functions → Logs
+
+---
+
+**Dernière mise à jour:** 1er décembre 2025  
+**Statut:** Guide de déploiement manuel

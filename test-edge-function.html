@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Edge Function</title>
+</head>
+<body>
+    <h1>Test Edge Function verify-subscription</h1>
+    <button onclick="testFunction()">Test avec session_id: "test"</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testFunction() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Appel en cours...';
+            
+            try {
+                const startTime = Date.now();
+                
+                const response = await fetch('https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/verify-subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZnl1aHdyam96b3hhZGtjY2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1OTE1ODEsImV4cCI6MjA1NDE2NzU4MX0.AyNhHFCQmznBICOShFYL0dkCuGkN9FpKD4MNvQ0cHZA'
+                    },
+                    body: JSON.stringify({ session_id: 'test' })
+                });
+                
+                const duration = Date.now() - startTime;
+                const data = await response.json();
+                
+                resultEl.textContent = `✅ Réponse reçue en ${duration}ms\n\n` +
+                    `Status: ${response.status}\n` +
+                    `Data: ${JSON.stringify(data, null, 2)}`;
+                    
+            } catch (error) {
+                resultEl.textContent = `❌ Erreur: ${error.message}\n\n${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>

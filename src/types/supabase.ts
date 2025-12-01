@@ -19,6 +19,9 @@ export interface Database {
           photo_url?: string;
           created_at: string;
           updated_at: string;
+          subscription_status?: 'pending' | 'active' | 'cancelled';
+          is_admin?: boolean;
+          email?: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
           subscription_type?: 'monthly' | 'yearly';
@@ -45,6 +48,9 @@ export interface Database {
           photo_url?: string;
           created_at?: string;
           updated_at?: string;
+          subscription_status?: 'pending' | 'active' | 'cancelled';
+          is_admin?: boolean;
+          email?: string;
           stripe_customer_id?: string;
           stripe_subscription_id?: string;
           subscription_type?: 'monthly' | 'yearly';

@@ -3,6 +3,7 @@ import { Check, Sparkles, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { PricingTier } from '../data/pricing';
 import { YEARLY_SAVINGS } from '../data/pricing';
+import { useAuth } from '../lib/auth';
 
 interface PricingCardProps {
   tier: PricingTier;
@@ -10,8 +11,12 @@ interface PricingCardProps {
 }
 
 export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
+  const { user } = useAuth();
   const totalValue = 185;
   const savings = tier.id === 'yearly' ? YEARLY_SAVINGS.savings : 0;
+  
+  // Si l'utilisateur est connecté, aller directement au checkout, sinon inscription
+  const ctaLink = user ? `/checkout?plan=${tier.id}` : `/auth/signup?plan=${tier.id}`;
 
   return (
     <div
@@ -92,7 +97,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
           </div>
         ) : (
           <Link
-            to={`/checkout?plan=${tier.id}`}
+            to={ctaLink}
             className={`
               block w-full px-6 py-3 rounded-full font-semibold text-center transition-all
               ${tier.highlighted

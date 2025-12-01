@@ -43,3 +43,9 @@ verify_jwt = false
 
 [functions.reset-password]
 verify_jwt = false
+
+[functions.create-subscription-session]
+verify_jwt = false
+
+[functions.link-auth-to-profile]
+verify_jwt = false

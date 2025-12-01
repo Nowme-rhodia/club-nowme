@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 import { useAuth } from '../lib/auth';
+import { logger } from '../lib/logger';
 import { 
   User, 
   Settings, 
@@ -16,7 +17,12 @@ export default function Account() {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
 
+  useEffect(() => {
+    logger.navigation.pageLoad('/account', { profile });
+  }, [profile]);
+
   const handleLogout = async () => {
+    logger.navigation.userAction('logout', { userId: profile?.user_id });
     await signOut();
     navigate('/');
   };

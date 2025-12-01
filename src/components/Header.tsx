@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, isAdmin, isPartner, signOut } = useAuth();
+  const { user, profile, isAdmin, isPartner, signOut } = useAuth();
   const navigate = useNavigate();
 
   const navigationItems = [
@@ -77,7 +77,7 @@ export function Header() {
                 className="text-primary hover:text-primary-dark font-semibold transition-colors duration-200 flex items-center"
               >
                 <User className="w-5 h-5 mr-2" />
-                Mon compte
+                {profile?.first_name || 'Mon compte'}
               </Link>
             ) : (
               <Link
@@ -141,7 +141,7 @@ export function Header() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <User className="w-5 h-5 mr-2" />
-                  Mon compte
+                  {profile?.first_name || 'Mon compte'}
                 </Link>
               ) : (
                 <Link

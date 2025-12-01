@@ -5,30 +5,54 @@ import { Loader2, CreditCard, Shield, CheckCircle } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import toast from 'react-hot-toast';
 import { useAuth } from '../lib/auth';
+import { logger } from '../lib/logger';
 import { PRICING_TIERS } from '../data/pricing';
 
 export default function Checkout() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('discovery');
 
   useEffect(() => {
-    const plan = searchParams.get('plan');
+    const plan = searchParams.get('plan') || 'monthly';
+    logger.navigation.pageLoad('/checkout', { plan, hasUser: !!user, authLoading });
+
+    // Attendre que l'auth soit chargée avant de rediriger
+    if (authLoading) {
+      logger.info('Checkout', 'Waiting for auth to load...');
+      return;
+    }
+
+    // Rediriger vers l'inscription si l'utilisateur n'est pas connecté
+    if (!user) {
+      logger.navigation.redirect('/checkout', `/auth/signup?plan=${plan}`, 'User not authenticated');
+      navigate(`/auth/signup?plan=${plan}`);
+      return;
+    }
+
     if (plan && ['monthly', 'yearly'].includes(plan)) {
       setSelectedPlan(plan);
     }
-  }, [searchParams]);
+  }, [user, authLoading, searchParams, navigate]);
 
   const currentTier = PRICING_TIERS.find(tier => tier.id === selectedPlan);
 
   const handleCheckout = async () => {
+    if (!user || !profile?.email) {
+      logger.error('Checkout', 'User or email missing', { user: !!user, email: profile?.email });
+      toast.error('Vous devez être connecté pour continuer');
+      navigate('/auth/signin');
+      return;
+    }
+
+    logger.payment.checkoutStart(selectedPlan, profile.email);
     setLoading(true);
     try {
-      // Utiliser la fonction createCheckoutSession
+      // Utiliser l'email de l'utilisateur connecté
       const { createCheckoutSession } = await import('../lib/stripe');
-      await createCheckoutSession(selectedPlan as 'monthly' | 'yearly', profile?.email);
+      await createCheckoutSession(selectedPlan as 'monthly' | 'yearly', profile.email);
     } catch (error) {
       console.error('Erreur checkout:', error);
       toast.error('Erreur lors de la redirection vers le paiement');
@@ -36,6 +60,18 @@ export default function Checkout() {
       setLoading(false);
     }
   };
+
+  // Afficher un loader pendant que l'auth se charge
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentTier) {
     return (

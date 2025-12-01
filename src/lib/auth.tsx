@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { logger } from './logger';
 
 type Role = 'admin' | 'partner' | 'subscriber' | 'guest';
 
@@ -15,6 +16,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   isAdmin: boolean;
   isPartner: boolean;
   isSubscriber: boolean;
@@ -47,21 +49,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
+      logger.data.fetch('partners', { userId });
       // partners (maybeSingle = pas d’erreur si 0 ligne)
       const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
-        .select('id,is_active,user_id')
+        .select('id,user_id,status')
         .eq('user_id', userId)
         .maybeSingle();
-      if (partnerError) console.warn('Partners warning:', partnerError.message);
+      if (partnerError) logger.warn('loadUserProfile', 'Partners query warning', partnerError.message);
 
+      logger.data.fetch('user_profiles', { userId });
       // user_profiles
       const { data: userData, error: userError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      if (userError) console.warn('User profile warning:', userError.message);
+      if (userError) logger.warn('loadUserProfile', 'User profile query warning', userError.message);
 
       const role = deriveRole(userData, partnerData);
       const merged = {
@@ -70,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role,
       };
       setProfile(merged);
-      console.log('Profile loaded with role:', role, merged);
+      logger.auth.profileLoad(merged);
     } catch (e) {
       console.error('loadUserProfile error:', e);
       setProfile(null);
@@ -87,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
 
+        logger.auth.sessionCheck(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
@@ -109,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
+          logger.auth.stateChange(event, session);
           setLoading(true); // ⬅️ on relance un chargement contrôlé
           setUser(session?.user ?? null);
 
@@ -183,9 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      logger.auth.signOut();
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      logger.navigation.redirect('current', '/', 'User signed out');
       navigate('/');
     } catch {
       toast.error('Erreur lors de la déconnexion');
@@ -238,22 +246,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = role === 'admin';
   const isPartner = role === 'partner';
   const isSubscriber = role === 'subscriber' || profile?.subscription_status === 'active';
+  
+  console.log('🔍 Auth Context - Profile:', { 
+    role, 
+    subscription_status: profile?.subscription_status,
+    isSubscriber,
+    profile: profile ? 'exists' : 'null'
+  });
+
+  const refreshProfile = async () => {
+    if (user) {
+      await loadUserProfile(user.id);
+    }
+  };
+
+  const value = {
+    user,
+    profile,
+    loading,
+    signIn,
+    signOut,
+    resetPassword,
+    updatePassword,
+    refreshProfile,
+    isAdmin,
+    isPartner,
+    isSubscriber,
+  };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        loading,
-        signIn,
-        signOut,
-        resetPassword,
-        updatePassword,
-        isAdmin,
-        isPartner,
-        isSubscriber,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

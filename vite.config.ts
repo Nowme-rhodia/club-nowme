@@ -14,6 +14,10 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),  // ✅ match avec tsconfig paths
       },
     },
+    server: {
+      // Allow all hosts (useful for ngrok and similar tunnels)
+      allowedHosts: true,
+    },
     build: {
       outDir: 'dist',
     },

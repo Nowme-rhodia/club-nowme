@@ -176,14 +176,14 @@ export default function Subscription() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  to="/checkout?plan=monthly"
+                  to="/auth/signup?plan=monthly"
                   className="inline-flex items-center px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-semibold text-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
                   Je commence à 12,99€
                 </Link>
                 <Link
-                  to="/checkout?plan=yearly"
+                  to="/auth/signup?plan=yearly"
                   className="inline-flex items-center px-8 py-4 rounded-full bg-white text-primary border-2 border-primary font-semibold text-lg hover:bg-primary/5 transform hover:scale-105 transition-all duration-300"
                 >
                   <Star className="w-5 h-5 mr-2" />
@@ -402,7 +402,7 @@ export default function Subscription() {
 
           <motion.div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/checkout?plan=monthly"
+              to="/auth/signup?plan=monthly"
               className="inline-flex items-center px-8 py-4 bg-white text-primary rounded-full font-bold text-lg hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-lg"
             >
               <Heart className="w-5 h-5 mr-2" />
@@ -411,7 +411,7 @@ export default function Subscription() {
             </Link>
             
             <Link
-              to="/checkout?plan=yearly"
+              to="/auth/signup?plan=yearly"
               className="inline-flex items-center px-8 py-4 bg-primary-dark text-white rounded-full font-bold text-lg hover:bg-primary transform hover:scale-105 transition-all duration-300 shadow-lg"
             >
               <Star className="w-5 h-5 mr-2" />

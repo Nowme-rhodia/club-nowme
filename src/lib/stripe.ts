@@ -20,16 +20,22 @@ export const createCheckoutSession = async (planType: 'monthly' | 'yearly', user
     const apiUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    // Prompt for email if not provided
-    let email = userEmail;
+    // Get current user (optionnel)
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(apiUrl, anonKey);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Utiliser l'email fourni ou celui de l'utilisateur connecté
+    const email = userEmail || user?.email;
     if (!email) {
-      email = prompt('Entrez votre email pour continuer:');
-      if (!email) {
-        throw new Error('Email requis pour continuer');
-      }
+      throw new Error('Email introuvable. Veuillez vous inscrire d\'abord.');
     }
 
-    // Call a simplified edge function that handles user creation
+    // Nettoyer le sessionStorage
+    sessionStorage.removeItem('signup_email');
+    sessionStorage.removeItem('signup_user_id');
+
+    // Call edge function to create Stripe session
     const response = await fetch(`${apiUrl}/functions/v1/create-subscription-session`, {
       method: 'POST',
       headers: {
