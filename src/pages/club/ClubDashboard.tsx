@@ -1,54 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Video, Heart, Gift, Users, Star, ArrowRight } from 'lucide-react';
+import { Calendar, Users, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { SEO } from '../../components/SEO';
 
 export default function ClubDashboard() {
   const { profile } = useAuth();
-  const isDiscovery = profile?.subscription_type === 'discovery';
-  const isPremium = profile?.subscription_type === 'premium';
 
   const clubFeatures = [
     {
       title: 'Événements',
-      description: isDiscovery 
-        ? 'Événements découverte + accès aux événements premium'
-        : 'Tous les événements du club',
+      description: 'Tous les événements du club',
       icon: Calendar,
       path: '/club/events',
       available: true,
       highlight: 'Apéros, ateliers, sorties'
-    },
-    {
-      title: 'Masterclasses',
-      description: isPremium 
-        ? 'Sessions exclusives avec des expertes'
-        : 'Réservé aux membres premium',
-      icon: Video,
-      path: '/club/masterclasses',
-      available: isPremium,
-      highlight: 'Développement personnel, business'
-    },
-    {
-      title: 'Consultations bien-être',
-      description: isPremium 
-        ? '1 consultation gratuite par trimestre'
-        : 'Réservé aux membres premium',
-      icon: Heart,
-      path: '/club/wellness',
-      available: isPremium,
-      highlight: 'Psychologie, nutrition, coaching'
-    },
-    {
-      title: 'Box trimestrielle',
-      description: isPremium 
-        ? 'Produits bien-être livrés chez toi'
-        : 'Réservé aux membres premium',
-      icon: Gift,
-      path: '/club/boxes',
-      available: isPremium,
-      highlight: 'Valeur 30€, 4 fois par an'
     }
   ];
 
@@ -60,32 +26,14 @@ export default function ClubDashboard() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header avec statut */}
+        {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Bienvenue dans ton Club Nowme ! 
           </h1>
-          <div className="inline-flex items-center px-6 py-3 rounded-full bg-primary/10 text-primary font-semibold">
-            <Star className="w-5 h-5 mr-2" />
-            {isDiscovery && 'Membre Découverte'}
-            {isPremium && 'Membre Premium'}
-            {!isDiscovery && !isPremium && 'Membre'}
-          </div>
-          
-          {isDiscovery && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-xl max-w-2xl mx-auto">
-              <p className="text-gray-700 mb-3">
-                🎉 Tu découvres le club ! Passe au premium pour débloquer toutes les fonctionnalités
-              </p>
-              <Link
-                to="/subscription"
-                className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-full font-medium hover:bg-primary-dark transition-colors"
-              >
-                Passer au premium
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </div>
-          )}
+          <p className="text-gray-600 text-lg">
+            Découvre tous les événements et rejoins la communauté
+          </p>
         </div>
 
         {/* Grille des fonctionnalités */}

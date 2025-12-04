@@ -32,6 +32,7 @@ import { SEO } from '../components/SEO';
 import { submitRegionRequest } from '../lib/regions';
 import { PricingCard } from '../components/PricingCard';
 import { PRICING_TIERS, YEARLY_SAVINGS, calculateTotalValue } from '../data/pricing';
+import { useAuth } from '../lib/auth';
 import toast from 'react-hot-toast';
 
 const fadeInUp = {
@@ -42,6 +43,7 @@ const fadeInUp = {
 };
 
 export default function Subscription() {
+  const { isAuthenticated, isSubscriber } = useAuth();
   const [regionForm, setRegionForm] = useState({ email: '', region: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -114,6 +116,30 @@ export default function Subscription() {
 
   const totalValue = calculateTotalValue();
 
+  // Fonction pour obtenir le lien d'action en fonction du statut
+  const getActionLink = (plan: 'monthly' | 'yearly') => {
+    if (isSubscriber) {
+      // Déjà abonné → vers le compte
+      return '/account';
+    }
+    if (isAuthenticated) {
+      // Connecté mais pas abonné → vers checkout directement
+      return `/checkout?plan=${plan}`;
+    }
+    // Pas connecté → vers signup
+    return `/auth/signup?plan=${plan}`;
+  };
+
+  const getActionText = () => {
+    if (isSubscriber) {
+      return 'Voir mon compte';
+    }
+    if (isAuthenticated) {
+      return 'Continuer vers le paiement';
+    }
+    return 'Je commence';
+  };
+
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       <SEO 
@@ -176,19 +202,21 @@ export default function Subscription() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
-                  to="/auth/signup?plan=monthly"
+                  to={getActionLink('monthly')}
                   className="inline-flex items-center px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-semibold text-lg hover:shadow-lg transform hover:scale-105 transition-all duration-300"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Je commence à 12,99€
+                  {isSubscriber ? 'Voir mon compte' : isAuthenticated ? 'Continuer (12,99€)' : 'Je commence à 12,99€'}
                 </Link>
-                <Link
-                  to="/auth/signup?plan=yearly"
-                  className="inline-flex items-center px-8 py-4 rounded-full bg-white text-primary border-2 border-primary font-semibold text-lg hover:bg-primary/5 transform hover:scale-105 transition-all duration-300"
-                >
-                  <Star className="w-5 h-5 mr-2" />
-                  Je choisis l'annuel
-                </Link>
+                {!isSubscriber && (
+                  <Link
+                    to={getActionLink('yearly')}
+                    className="inline-flex items-center px-8 py-4 rounded-full bg-white text-primary border-2 border-primary font-semibold text-lg hover:bg-primary/5 transform hover:scale-105 transition-all duration-300"
+                  >
+                    <Star className="w-5 h-5 mr-2" />
+                    {isAuthenticated ? 'Continuer (annuel)' : 'Je choisis l\'annuel'}
+                  </Link>
+                )}
               </div>
               
               <p className="text-sm text-gray-600 mt-4">
@@ -402,22 +430,24 @@ export default function Subscription() {
 
           <motion.div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/auth/signup?plan=monthly"
+              to={getActionLink('monthly')}
               className="inline-flex items-center px-8 py-4 bg-white text-primary rounded-full font-bold text-lg hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-lg"
             >
               <Heart className="w-5 h-5 mr-2" />
-              Je commence à 12,99€
+              {isSubscriber ? 'Voir mon compte' : isAuthenticated ? 'Continuer vers le paiement' : 'Je commence à 12,99€'}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
             
-            <Link
-              to="/auth/signup?plan=yearly"
-              className="inline-flex items-center px-8 py-4 bg-primary-dark text-white rounded-full font-bold text-lg hover:bg-primary transform hover:scale-105 transition-all duration-300 shadow-lg"
-            >
-              <Star className="w-5 h-5 mr-2" />
-              Je choisis l'annuel
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Link>
+            {!isSubscriber && (
+              <Link
+                to={getActionLink('yearly')}
+                className="inline-flex items-center px-8 py-4 bg-primary-dark text-white rounded-full font-bold text-lg hover:bg-primary transform hover:scale-105 transition-all duration-300 shadow-lg"
+              >
+                <Star className="w-5 h-5 mr-2" />
+                {isAuthenticated ? 'Continuer (annuel)' : 'Je choisis l\'annuel'}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+            )}
           </motion.div>
           
           <div className="flex items-center justify-center space-x-6 text-sm opacity-90 mt-6">

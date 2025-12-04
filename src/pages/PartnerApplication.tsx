@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Building2,
-  AlertCircle,
-  CheckCircle,
-} from 'lucide-react';
+import { Building2, CheckCircle, AlertCircle } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
 
@@ -14,12 +10,9 @@ interface FormData {
   email: string;
   phone: string;
   message: string;
-  website: string;
-  instagram: string;
-  facebook: string;
 }
 
-export default function SubmitOffer() {
+export default function PartnerApplication() {
   // Données de test en mode développement
   const isDev = import.meta.env.DEV;
   
@@ -29,9 +22,6 @@ export default function SubmitOffer() {
     email: isDev ? 'marie.dupont@spa-zen.fr' : '',
     phone: isDev ? '0612345678' : '',
     message: isDev ? 'Nous sommes un spa spécialisé dans les massages bien-être, la relaxation et les soins du corps. Nous proposons une gamme complète de services incluant massages, soins du visage, hammam et sauna. Notre équipe de professionnels qualifiés offre une expérience unique de détente et de bien-être.' : '',
-    website: isDev ? 'https://spa-zen.fr' : '',
-    instagram: isDev ? '@spa_zen_bienetre' : '',
-    facebook: isDev ? 'SpaZenBienEtre' : '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,38 +74,20 @@ export default function SubmitOffer() {
             email: formData.email,
             phone: formData.phone,
             message: formData.message,
-            website: formData.website || undefined,
-            instagram: formData.instagram || undefined,
-            facebook: formData.facebook || undefined,
           },
         },
       });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-      
-      console.log('✅ Full response:', { data, error });
-      console.log('✅ data type:', typeof data);
-      console.log('✅ data.success:', data?.success);
-      console.log('✅ !data?.success:', !data?.success);
-      
-      if (!data || data.success === false) {
-        const errorMsg = data?.error || data?.debug?.message || "Erreur lors de l'envoi";
-        console.error('❌ Function returned error:', data);
-        throw new Error(errorMsg);
-      }
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Erreur lors de l'envoi");
 
-      console.log('✅ Demande envoyée avec succès!');
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error('Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue. Veuillez réessayer.';
       setErrors((prev) => ({
         ...prev,
-        message: errorMessage,
+        message: 'Une erreur est survenue. Veuillez réessayer.',
       }));
     } finally {
       setIsSubmitting(false);
@@ -296,65 +268,6 @@ export default function SubmitOffer() {
                   {errors.message}
                 </p>
               )}
-            </div>
-
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Présence en ligne (optionnel)</span>
-              </div>
-            </div>
-
-            {/* Site web */}
-            <div>
-              <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
-                Site web
-              </label>
-              <input
-                type="url"
-                id="website"
-                name="website"
-                value={formData.website}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                placeholder="https://votre-site.fr"
-              />
-            </div>
-
-            {/* Réseaux sociaux */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
-                  Instagram
-                </label>
-                <input
-                  type="text"
-                  id="instagram"
-                  name="instagram"
-                  value={formData.instagram}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="@votre_compte"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="facebook" className="block text-sm font-medium text-gray-700 mb-1">
-                  Facebook
-                </label>
-                <input
-                  type="text"
-                  id="facebook"
-                  name="facebook"
-                  value={formData.facebook}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="VotrePage"
-                />
-              </div>
             </div>
 
             {/* Submit button */}

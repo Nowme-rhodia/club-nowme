@@ -5,11 +5,12 @@ import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_share
 // ✅ Types
 type BusinessPayload = {
   name: string;
-  contactName?: string;
+  contactName: string;
   email: string;
-  phone?: string;
+  phone: string;
+  message: string;
+  // Champs optionnels pour compatibilité avec l'ancien formulaire
   website?: string;
-  message?: string;
   siret?: string;
   address?: string;
 };
@@ -36,25 +37,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const business: BusinessPayload = body.business ?? body;
     const offer: OfferPayload | undefined = body.offer;
 
-    if (!business.email || !business.name) {
+    // Validation des champs requis pour la demande initiale
+    if (!business.name || !business.contactName || !business.email || !business.phone || !business.message) {
       return new Response(
-        JSON.stringify({ success: false, error: "Champs obligatoires manquants (nom + email)" }),
+        JSON.stringify({ 
+          success: false, 
+          error: "Champs obligatoires manquants (nom entreprise, contact, email, téléphone, message)" 
+        }),
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // 1️⃣ Insert dans partners
+    // 1️⃣ Insert dans partners (demande initiale simplifiée)
     const { data: partner, error: insertError } = await supabase
       .from("partners")
       .insert({
         business_name: business.name,
-        contact_name: business.contactName ?? null,
+        contact_name: business.contactName,
         contact_email: business.email,
-        phone: business.phone ?? null,
+        phone: business.phone,
+        description: business.message, // Utilise 'description' au lieu de 'message'
+        // Champs optionnels pour compatibilité
         website: business.website ?? null,
         siret: business.siret ?? null,
         address: business.address ?? null,
-        message: business.message ?? null,
         status: "pending",
       })
       .select("id, business_name, contact_name, contact_email")
@@ -62,8 +68,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (insertError || !partner) {
       logger.error("❌ Erreur insertion partenaire:", insertError);
+      
+      // Détails de l'erreur pour le debug
+      const errorDetails = insertError ? {
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code
+      } : "No partner data returned";
+      
+      logger.error("Détails de l'erreur:", errorDetails);
+      
       return new Response(
-        JSON.stringify({ success: false, error: "Erreur lors de l’enregistrement du partenaire" }),
+        JSON.stringify({ 
+          success: false, 
+          error: "Erreur lors de l'enregistrement du partenaire",
+          debug: import.meta.env?.DEV ? errorDetails : undefined
+        }),
         { status: 500, headers: corsHeaders }
       );
     }

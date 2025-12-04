@@ -1,22 +1,51 @@
-// src/lib/auth.tsx — version robuste (stoppe les loadings infinis)
-import { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { supabase } from './supabase';
 import { logger } from './logger';
+import toast from 'react-hot-toast';
 
 type Role = 'admin' | 'partner' | 'subscriber' | 'guest';
 
+interface UserProfile {
+  id?: string;
+  user_id?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  photo_url?: string;
+  subscription_status?: string;
+  subscription_type?: string;
+  stripe_customer_id?: string;
+  is_admin?: boolean;
+  role?: Role;
+  created_at?: string;
+  updated_at?: string;
+  partner?: {
+    id: string;
+    user_id: string;
+    status: string;
+  };
+  subscription?: {
+    id: string;
+    user_id: string;
+    status: string;
+    stripe_subscription_id: string;
+    current_period_end: string;
+  };
+}
+
 interface AuthContextType {
   user: User | null;
-  profile: any | null;
+  profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  isAuthenticated: boolean;
   isAdmin: boolean;
   isPartner: boolean;
   isSubscriber: boolean;
@@ -24,59 +53,235 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileCache, setProfileCache] = useState<{ userId: string; profile: UserProfile; timestamp: number } | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState<string | null>(null); // Pour éviter les appels simultanés
   const navigate = useNavigate();
 
-  // ---- helpers ----
-  const deriveRole = (profileRow: any, partnerRow: any): Role => {
-    // Priorité admin > partner > subscriber > guest
+  // Durée du cache : 20 minutes
+  const CACHE_DURATION = 20 * 60 * 1000;
+
+  const deriveRole = (profileRow: any, partnerRow: any, subscriptionRow: any): Role => {
     const adminish = [
       'admin',
       'super_admin',
-      'subscriber_admin',
       'partner_admin',
     ];
     if (profileRow?.is_admin || adminish.includes(profileRow?.subscription_type)) {
       return 'admin';
     }
     if (partnerRow?.id) return 'partner';
-    if (profileRow?.subscription_status === 'active') return 'subscriber';
+    // Vérifier si l'utilisateur a un abonnement actif dans la table subscriptions
+    if (subscriptionRow?.status === 'active' || subscriptionRow?.status === 'trialing') {
+      return 'subscriber';
+    }
     return 'guest';
   };
 
-  const loadUserProfile = async (userId: string) => {
+  const loadUserProfile = async (userId: string, forceRefresh: boolean = false) => {
     try {
-      logger.data.fetch('partners', { userId });
-      // partners (maybeSingle = pas d’erreur si 0 ligne)
-      const { data: partnerData, error: partnerError } = await supabase
-        .from('partners')
-        .select('id,user_id,status')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (partnerError) logger.warn('loadUserProfile', 'Partners query warning', partnerError.message);
+      const timestamp = Date.now();
+      
+      // Vérifier si un chargement est déjà en cours pour cet utilisateur
+      if (loadingProfile === userId && !forceRefresh) {
+        console.log('⏸️ loadUserProfile - Already loading profile for userId:', userId);
+        return;
+      }
+      
+      // Vérifier le cache mémoire si pas de forceRefresh
+      if (!forceRefresh && profileCache && profileCache.userId === userId) {
+        const cacheAge = timestamp - profileCache.timestamp;
+        if (cacheAge < CACHE_DURATION) {
+          console.log('✅ loadUserProfile - Using memory cached profile (age:', Math.round(cacheAge / 1000), 'seconds)');
+          setProfile(profileCache.profile);
+          return;
+        } else {
+          console.log('⏰ loadUserProfile - Memory cache expired (age:', Math.round(cacheAge / 1000), 'seconds)');
+        }
+      }
+      
+      // Vérifier le cache localStorage en priorité
+      if (!forceRefresh) {
+        try {
+          const localCache = localStorage.getItem('nowme_profile_cache');
+          if (localCache) {
+            const { userId: cachedUserId, profile: cachedProfile, timestamp: cachedTimestamp } = JSON.parse(localCache);
+            const cacheAge = timestamp - cachedTimestamp;
+            if (cachedUserId === userId && cacheAge < CACHE_DURATION) {
+              console.log('✅ loadUserProfile - Using localStorage cached profile (age:', Math.round(cacheAge / 1000), 'seconds)');
+              setProfile(cachedProfile);
+              setProfileCache({ userId, profile: cachedProfile, timestamp: cachedTimestamp });
+              // Charger en arrière-plan pour rafraîchir le cache
+              setTimeout(() => loadUserProfile(userId, true), 1000);
+              return;
+            } else {
+              console.log('⏰ loadUserProfile - localStorage cache expired or different user');
+            }
+          }
+        } catch (e) {
+          console.warn('⚠️ loadUserProfile - localStorage cache error:', e);
+        }
+      }
+      
+      // Marquer comme en cours de chargement
+      setLoadingProfile(userId);
+      
+      console.log('🔍 loadUserProfile - Starting for userId:', userId, 'forceRefresh:', forceRefresh, 'timestamp:', timestamp);
+      
+      // Lancer les 2 requêtes essentielles en PARALLÈLE
+      console.log('🔍 loadUserProfile - Launching queries in parallel...');
+      
+      const timeoutDuration = 10000; // Réduit à 10s
+      
+      const [
+        { data: userData, error: userError },
+        { data: subscriptionData, error: subscriptionError }
+      ] = await Promise.all([
+        // User profiles
+        Promise.race([
+          supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('User profile query timeout')), timeoutDuration)
+          )
+        ]).catch(err => ({ data: null, error: err })),
+        
+        // Subscriptions
+        Promise.race([
+          supabase
+            .from('subscriptions')
+            .select('id,user_id,status,stripe_subscription_id,current_period_end')
+            .eq('user_id', userId)
+            .maybeSingle(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Subscription query timeout')), timeoutDuration)
+          )
+        ]).catch(err => ({ data: null, error: err }))
+      ]) as any;
+      
+      console.log('🔍 loadUserProfile - All queries completed');
+      console.log('  - User data:', userData, 'error:', userError);
+      console.log('  - Subscription data:', subscriptionData, 'error:', subscriptionError);
+      
+      if (userError) {
+        console.warn('⚠️ User profile query warning:', userError);
+      }
+      if (subscriptionError) {
+        console.warn('⚠️ Subscription query warning:', subscriptionError);
+      }
 
-      logger.data.fetch('user_profiles', { userId });
-      // user_profiles
-      const { data: userData, error: userError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (userError) logger.warn('loadUserProfile', 'User profile query warning', userError.message);
+      // Si aucune donnée n'est trouvée, on définit un profil guest minimal
+      if (!userData) {
+        console.warn('⚠️ loadUserProfile - No profile data found for user:', userId);
+        const guestProfile = {
+          user_id: userId,
+          role: 'guest' as Role,
+          subscription_status: subscriptionData?.status,
+        };
+        setProfile(guestProfile);
+        logger.auth.profileLoad(guestProfile);
+        return;
+      }
 
-      const role = deriveRole(userData, partnerData);
+      console.log('🔍 loadUserProfile - Deriving role from data...');
+      const role = deriveRole(userData, null, subscriptionData);
+      console.log('🔍 loadUserProfile - Role derived:', role, 'subscription status:', subscriptionData?.status);
+      
       const merged = {
         ...(userData ?? {}),
-        ...(partnerData ? { partner: partnerData } : {}),
+        ...(subscriptionData ? { 
+          subscription: subscriptionData, 
+          subscription_status: subscriptionData.status
+        } : {}),
         role,
       };
+      
+      console.log('✅ loadUserProfile - Final merged profile:', merged);
       setProfile(merged);
+      
+      const cacheTimestamp = Date.now();
+      
+      // Mettre en cache le profil (mémoire)
+      setProfileCache({
+        userId,
+        profile: merged,
+        timestamp: cacheTimestamp
+      });
+      
+      // Mettre en cache le profil (localStorage)
+      try {
+        localStorage.setItem('nowme_profile_cache', JSON.stringify({
+          userId,
+          profile: merged,
+          timestamp: cacheTimestamp
+        }));
+        console.log('💾 loadUserProfile - Profile saved to localStorage');
+      } catch (e) {
+        console.warn('⚠️ loadUserProfile - Failed to save to localStorage:', e);
+      }
+      
       logger.auth.profileLoad(merged);
-    } catch (e) {
-      console.error('loadUserProfile error:', e);
+      
+      // Déverrouiller
+      setLoadingProfile(null);
+    } catch (e: any) {
+      console.error('❌ loadUserProfile error:', e);
+      
+      // Déverrouiller en cas d'erreur
+      setLoadingProfile(null);
+      
+      // Si timeout ou erreur, essayer avec la fonction Edge comme fallback
+      if (e.message?.includes('timeout') || e.message?.includes('Query timeout')) {
+        console.warn('⚠️ loadUserProfile - Timeout detected, trying Edge Function fallback...');
+        try {
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-user-profile`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+              },
+              body: JSON.stringify({ userId })
+            }
+          );
+          
+          if (response.ok) {
+            const { userData, partnerData } = await response.json();
+            console.log('✅ loadUserProfile - Data from Edge Function:', { userData, partnerData });
+            
+            if (!userData && !partnerData) {
+              const guestProfile = {
+                user_id: userId,
+                role: 'guest' as Role,
+                subscription_status: undefined,
+              };
+              setProfile(guestProfile);
+              return;
+            }
+            
+            const role = deriveRole(userData, partnerData, null);
+            const merged = {
+              ...(userData ?? {}),
+              ...(partnerData ? { partner: partnerData } : {}),
+              role,
+            };
+            
+            setProfile(merged);
+            logger.auth.profileLoad(merged);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('❌ loadUserProfile - Edge Function fallback failed:', fallbackError);
+        }
+      }
+      
       setProfile(null);
     }
   };
@@ -105,7 +310,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setProfile(null);
       } finally {
-        if (mounted) setLoading(false); // ⬅️ clé pour stopper le spinner
+        if (mounted) setLoading(false);
       }
     };
 
@@ -115,7 +320,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         try {
           logger.auth.stateChange(event, session);
-          setLoading(true); // ⬅️ on relance un chargement contrôlé
+          setLoading(true);
           setUser(session?.user ?? null);
 
           if (event === 'PASSWORD_RECOVERY') {
@@ -133,7 +338,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('onAuthStateChange error:', e);
           setProfile(null);
         } finally {
-          setLoading(false); // ⬅️ on libère TOUJOURS
+          setLoading(false);
         }
       }
     );
@@ -159,7 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('partners')
         .select('id')
         .eq('user_id', currentUser.id)
-        .maybeSingle();
+        .maybeSingle() as { data: { id: string } | null };
 
       if (partnerData?.id) {
         navigate('/partner/dashboard');
@@ -170,7 +375,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('user_profiles')
         .select('is_admin,subscription_status')
         .eq('user_id', currentUser.id)
-        .maybeSingle();
+        .maybeSingle() as { data: { is_admin?: boolean; subscription_status?: string } | null };
 
       if (userData?.is_admin) {
         navigate('/admin');
@@ -243,20 +448,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ---- flags ----
   const role: Role = profile?.role ?? 'guest';
+  const isAuthenticated = !!user; // Connecté = a une session Supabase
   const isAdmin = role === 'admin';
   const isPartner = role === 'partner';
   const isSubscriber = role === 'subscriber' || profile?.subscription_status === 'active';
   
-  console.log('🔍 Auth Context - Profile:', { 
-    role, 
-    subscription_status: profile?.subscription_status,
-    isSubscriber,
-    profile: profile ? 'exists' : 'null'
-  });
+  // Log uniquement si le rôle change ou en cas de problème
+  // console.log('🔍 Auth Context - Profile:', { role, subscription_status: profile?.subscription_status, isSubscriber });
 
   const refreshProfile = async () => {
-    if (user) {
-      await loadUserProfile(user.id);
+    console.log('🔄 refreshProfile - Starting...');
+    try {
+      // Recharger la session pour s'assurer qu'on a les dernières données
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('❌ refreshProfile - Session error:', sessionError);
+        throw sessionError;
+      }
+      
+      if (session?.user) {
+        console.log('🔄 refreshProfile - Reloading profile for user:', session.user.id);
+        await loadUserProfile(session.user.id, true); // Force refresh pour éviter le cache
+        console.log('✅ refreshProfile - Profile reloaded successfully');
+      } else {
+        console.warn('⚠️ refreshProfile - No session found');
+        setProfile(null);
+      }
+    } catch (error) {
+      console.error('❌ refreshProfile - Error:', error);
+      throw error;
     }
   };
 
@@ -269,6 +490,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword,
     updatePassword,
     refreshProfile,
+    isAuthenticated,
     isAdmin,
     isPartner,
     isSubscriber,

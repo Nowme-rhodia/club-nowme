@@ -67,10 +67,32 @@ export default function SubscriptionSuccess() {
         setIsVerifying(false);
         toast.success('Abonnement activé avec succès !');
         
-        // Recharger le profil pour mettre à jour le rôle
+        // Recharger le profil pour mettre à jour le rôle avec retry
         console.log('🔄 Refreshing user profile...');
-        await refreshProfile();
-        console.log('✅ Profile refreshed');
+        
+        // Attendre un peu pour que la DB soit à jour
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Essayer de recharger le profil jusqu'à 3 fois
+        let retries = 0;
+        const maxRetries = 3;
+        
+        while (retries < maxRetries) {
+          await refreshProfile();
+          
+          // Attendre un peu pour que le state soit mis à jour
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Vérifier si le profil a été chargé (on pourrait améliorer cette vérification)
+          console.log(`✅ Profile refresh attempt ${retries + 1}/${maxRetries} completed`);
+          retries++;
+          
+          if (retries < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        
+        console.log('✅ Profile refresh completed after', retries, 'attempts');
       } else if (data.status === 'pending') {
         // Retry after a delay if payment is still processing
         if (currentRetry < 5) {

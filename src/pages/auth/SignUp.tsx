@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 export default function SignUp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, isSubscriber } = useAuth();
   
   // Générer des données aléatoires pour DEV/LOCAL
   const generateRandomData = () => {
@@ -33,13 +33,19 @@ export default function SignUp() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const plan = searchParams.get('plan') || 'monthly';
 
-  // Rediriger les utilisateurs déjà connectés vers la page d'abonnement
+  // Rediriger les utilisateurs déjà connectés
+  // - Si abonné → vers account
+  // - Si connecté mais pas abonné → vers checkout
   // SAUF s'ils sont en train de s'inscrire
   useEffect(() => {
     if (user && !isSigningUp && !loading) {
-      navigate('/subscription');
+      if (isSubscriber) {
+        navigate('/account');
+      } else {
+        navigate(`/checkout?plan=${plan}`);
+      }
     }
-  }, [user, isSigningUp, loading, navigate]);
+  }, [user, isSubscriber, isSigningUp, loading, navigate, plan]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({

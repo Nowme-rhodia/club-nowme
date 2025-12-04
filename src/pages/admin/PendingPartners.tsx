@@ -251,6 +251,50 @@ export default function PendingPartners() {
                             <span>{partner.phone}</span>
                           </div>
 
+                          {/* Description/Message */}
+                          {partner.description && (
+                            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                              <p className="text-sm font-medium text-gray-700 mb-1">Message:</p>
+                              <p className="text-sm text-gray-600">{partner.description}</p>
+                            </div>
+                          )}
+
+                          {/* Présence en ligne */}
+                          {(partner.website || (partner as any).instagram || (partner as any).facebook) && (
+                            <div className="mt-2 flex items-center gap-3 text-sm">
+                              {partner.website && (
+                                <a
+                                  href={partner.website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800"
+                                >
+                                  🌐 Site web
+                                </a>
+                              )}
+                              {(partner as any).instagram && (
+                                <a
+                                  href={`https://instagram.com/${(partner as any).instagram.replace('@', '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-pink-600 hover:text-pink-800"
+                                >
+                                  📷 {(partner as any).instagram}
+                                </a>
+                              )}
+                              {(partner as any).facebook && (
+                                <a
+                                  href={`https://facebook.com/${(partner as any).facebook}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-700 hover:text-blue-900"
+                                >
+                                  👥 {(partner as any).facebook}
+                                </a>
+                              )}
+                            </div>
+                          )}
+
                           {/* Champ raison du refus */}
                           {partner.status === 'pending' && (
                             <div className="mt-3">

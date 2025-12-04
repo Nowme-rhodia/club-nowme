@@ -37,7 +37,7 @@ export const PRICING_TIERS: PricingTier[] = [
     promoCode: 'KIFFE',
     features: [
       'Accès complet à tous les services dès le 1er mois',
-      '2-3 événements premium et sorties organisées par mois',
+      '2-3 événements premium et `sorties organisées par mois',
       'Concours Box surprise trimestrielle (valeur 30€ à 100€)',
       'Apéros mensuels en ligne',
       'Masterclass exclusives avec expertes',

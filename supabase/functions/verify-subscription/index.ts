@@ -174,22 +174,31 @@ serve(async (req) => {
 
       console.log("✅ Subscription upserted successfully");
 
-      // 9. Update user_profiles with subscription info
-      const { error: profileUpdateError } = await supabase
+      // 9. Update user_profiles with Stripe customer info (subscription_status n'existe plus)
+      console.log("🔄 Updating user profile with Stripe customer info for user_id:", userProfile.user_id);
+      
+      const updateData = {
+        stripe_customer_id: session.customer as string,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log("📝 Update data:", updateData);
+      
+      const { data: updatedProfile, error: profileUpdateError } = await supabase
         .from("user_profiles")
-        .update({
-          subscription_status: "active",
-          stripe_customer_id: session.customer as string,
-          stripe_subscription_id: subscriptionId,
-          updated_at: new Date().toISOString()
-        })
-        .eq("user_id", userProfile.user_id);
+        .update(updateData)
+        .eq("user_id", userProfile.user_id)
+        .select();
 
       if (profileUpdateError) {
         console.error("❌ Failed to update user profile:", profileUpdateError);
+        console.error("❌ Update was for user_id:", userProfile.user_id);
       } else {
         console.log("✅ User profile updated successfully");
+        console.log("✅ Updated profile data:", updatedProfile);
       }
+      
+      console.log("ℹ️ Note: Le statut de l'abonnement est maintenant dans la table 'subscriptions', pas dans 'user_profiles'");
 
       // 10. Send welcome email if this is a new subscription
       if (!existingSubscription || existingSubscription.status !== "active") {

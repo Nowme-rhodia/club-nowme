@@ -20,7 +20,7 @@ const Checkout = React.lazy(() => import('./pages/Checkout'));
 const Communaute = React.lazy(() => import('./pages/Community'));
 const SubscriptionSuccess = React.lazy(() => import('./pages/SubscriptionSuccess'));
 const Account = React.lazy(() => import('./pages/Account'));
-const QRCode = React.lazy(() => import('./pages/account/QRCode'));
+const Profile = React.lazy(() => import('./pages/account/Profile'));
 const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
 const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
@@ -57,8 +57,6 @@ const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPaymen
 // Club pages
 const ClubDashboard = React.lazy(() => import('./pages/club/ClubDashboard'));
 const Events = React.lazy(() => import('./pages/club/Events'));
-const Masterclasses = React.lazy(() => import('./pages/club/Masterclasses'));
-const Wellness = React.lazy(() => import('./pages/club/Wellness'));
 
 // Booking publique (Calendly intégré)
 const Booking = React.lazy(() => import('./pages/Booking'));
@@ -123,9 +121,9 @@ function App() {
                       <Account />
                     </PrivateRoute>
                   } />
-                  <Route path="/account/qr-code" element={
+                  <Route path="/account/profile" element={
                     <PrivateRoute allowedRoles={['subscriber']}>
-                      <QRCode />
+                      <Profile />
                     </PrivateRoute>
                   } />
 
@@ -138,16 +136,6 @@ function App() {
                   <Route path="/club/events" element={
                     <PrivateRoute allowedRoles={['subscriber']}>
                       <Events />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/club/masterclasses" element={
-                    <PrivateRoute allowedRoles={['subscriber']}>
-                      <Masterclasses />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/club/wellness" element={
-                    <PrivateRoute allowedRoles={['subscriber']}>
-                      <Wellness />
                     </PrivateRoute>
                   } />
 

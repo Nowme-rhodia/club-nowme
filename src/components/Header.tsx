@@ -5,15 +5,15 @@ import { useAuth } from '../lib/auth';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, profile, isAdmin, isPartner, signOut } = useAuth();
+  const { user, profile, isAdmin, isPartner, isSubscriber, signOut } = useAuth();
   const navigate = useNavigate();
 
   const navigationItems = [
     { name: 'Accueil', path: '/' },
     { name: 'Catégories', path: '/categories' },
     { name: 'Tous les kiffs', path: '/tous-les-kiffs' },
-    { name: 'Communauté', path: '/community-space', requiresAuth: true },
-    { name: 'Club', path: '/club', requiresAuth: true },
+    { name: 'Communauté', path: '/community-space', requiresSubscription: true },
+    { name: 'Club', path: '/club', requiresSubscription: true },
     { name: 'Abonnement', path: '/subscription' }
   ];
 
@@ -42,7 +42,7 @@ export function Header() {
           <nav className="hidden md:flex items-center space-x-8">
             {Array.isArray(navigationItems) &&
               navigationItems.map((item) =>
-                item.requiresAuth && !user ? null : (
+                item.requiresSubscription && !isSubscriber ? null : (
                   <Link
                     key={item.name}
                     to={item.path}
@@ -57,12 +57,14 @@ export function Header() {
 
           {/* CTA Button */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link
-              to="/subscription"
-              className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
-            >
-              Tester à 12,99€
-            </Link>
+            {!isSubscriber && (
+              <Link
+                to="/subscription"
+                className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
+              >
+                Tester à 12,99€
+              </Link>
+            )}
 
             <Link
               to="/soumettre-offre"
@@ -109,7 +111,7 @@ export function Header() {
             <nav className="flex flex-col space-y-4">
               {Array.isArray(navigationItems) &&
                 navigationItems.map((item) =>
-                  item.requiresAuth && !user ? null : (
+                  item.requiresSubscription && !isSubscriber ? null : (
                     <Link
                       key={item.name}
                       to={item.path}
@@ -120,13 +122,15 @@ export function Header() {
                     </Link>
                   )
                 )}
-              <Link
-                to="/subscription"
-                className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 transform hover:scale-105 w-full text-center active:scale-95"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Tester à 12,99€
-              </Link>
+              {!isSubscriber && (
+                <Link
+                  to="/subscription"
+                  className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 transform hover:scale-105 w-full text-center active:scale-95"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Tester à 12,99€
+                </Link>
+              )}
               <Link
                 to="/soumettre-offre"
                 className="text-primary hover:text-primary-dark font-medium px-2 py-1"

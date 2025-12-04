@@ -24,8 +24,8 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   console.log('PrivateRoute - IsAdmin:', isAdmin);
   console.log('PrivateRoute - AllowedRoles:', allowedRoles);
 
-  // 1️⃣ Pendant le chargement initial
-  if (loading && !timeoutPassed) {
+  // 1️⃣ Pendant le chargement initial - TOUJOURS attendre si loading est true
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -33,8 +33,8 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     );
   }
 
-  // 2️⃣ Si pas de session après le délai → on considère qu'il n'est pas connecté
-  if (!user && (timeoutPassed || !loading)) {
+  // 2️⃣ Si pas de session après le chargement → redirection
+  if (!user) {
     console.warn('PrivateRoute - Aucun utilisateur connecté, redirection...');
     return <Navigate to="/auth/signin" state={{ from: location }} replace />;
   }
