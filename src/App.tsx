@@ -35,6 +35,7 @@ const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback'));
 
 // Admin pages
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
 const Partners = React.lazy(() => import('./pages/admin/Partners'));
 const PendingOffers = React.lazy(() => import('./pages/admin/PendingOffers'));
 const AdminOffers = React.lazy(() => import('./pages/admin/Offers'));
@@ -81,7 +82,7 @@ function App() {
                   <Route path="/subscription" element={<Subscription />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-                  <Route path="/soumettre-offre" element={<SubmitOffer />} />
+                  <Route path="/devenir-partenaire" element={<SubmitOffer />} />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
                   <Route path="/community-space" element={<CommunitySpace />} />
                   <Route path="/communaute" element={<Communaute />} />
@@ -145,7 +146,7 @@ function App() {
                       <AdminLayout />
                     </PrivateRoute>
                   }>
-                    <Route index element={<Partners />} />
+                    <Route index element={<AdminDashboard />} />
                     <Route path="partners" element={<Partners />} />
                     <Route path="pending-offers" element={<PendingOffers />} />
                     <Route path="offers" element={<AdminOffers />} />

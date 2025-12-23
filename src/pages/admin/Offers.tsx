@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { 
+import {
   Search,
   Filter,
   ChevronDown,
@@ -26,7 +26,7 @@ interface Offer {
   subcategory_slug: string;
   location: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
-  is_active?: boolean;
+  is_approved?: boolean;
   created_at: string;
   updated_at: string;
   partner: {
@@ -35,7 +35,7 @@ interface Offer {
     contact_name: string;
     phone: string;
   };
-  prices: Array<{
+  variants: Array<{
     id: string;
     name: string;
     price: number;
@@ -70,14 +70,25 @@ export default function Offers() {
         .from('offers')
         .select(`
           *,
+          category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
           partner:partners(*),
-          prices:offer_prices(*),
+          variants:offer_variants(*),
           media:offer_media(*)
-        `)
-        .order('created_at', { ascending: false });
+        `) as any;
 
       if (error) throw error;
-      setOffers(data || []);
+
+      console.log('Admin Offers: Loaded offers:', data?.length);
+
+      const formattedData = data?.map((offer: any) => ({
+        ...offer,
+        // Aligner avec les interfaces attendues si besoin
+        category_slug: offer.category?.parent_slug || offer.category?.slug || 'autre',
+        subcategory_slug: offer.category?.parent_slug ? offer.category.slug : undefined,
+        location: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'
+      }));
+
+      setOffers(formattedData || []);
     } catch (error) {
       console.error('Error loading offers:', error);
       toast.error('Erreur lors du chargement des offres');
@@ -86,12 +97,33 @@ export default function Offers() {
     }
   };
 
+  const handleApproveOffer = async (offerId: string) => {
+    try {
+      const { error } = await (supabase
+        .from('offers') as any)
+        .update({
+          status: 'approved',
+          is_approved: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', offerId);
+
+      if (error) throw error;
+
+      toast.success('Offre approuvée');
+      await loadOffers();
+    } catch (error) {
+      console.error('Error approving offer:', error);
+      toast.error('Erreur lors de l\'approbation');
+    }
+  };
+
   const handleToggleActive = async (offerId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('offers')
-        .update({ 
-          is_active: !currentStatus,
+      const { error } = await (supabase
+        .from('offers') as any)
+        .update({
+          is_approved: !currentStatus,
           updated_at: new Date().toISOString()
         })
         .eq('id', offerId);
@@ -108,18 +140,20 @@ export default function Offers() {
 
   const filteredOffers = offers
     .filter(offer => {
-      const matchesSearch = 
+      const matchesSearch =
         offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         offer.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         offer.partner.business_name.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || 
-        (statusFilter === 'active' && offer.is_active !== false) ||
-        (statusFilter === 'inactive' && offer.is_active === false) ||
+
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'active' && offer.is_approved !== false) ||
+        (statusFilter === 'inactive' && offer.is_approved === false) ||
+        (statusFilter === 'draft' && offer.status === 'draft') ||
+        (statusFilter === 'approved' && offer.status === 'approved') ||
         offer.status === statusFilter;
-      
+
       const matchesCategory = categoryFilter === 'all' || offer.category_slug === categoryFilter;
-      
+
       return matchesSearch && matchesStatus && matchesCategory;
     })
     .sort((a, b) => {
@@ -174,31 +208,31 @@ export default function Offers() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <div className="flex items-center">
             <ToggleRight className="w-8 h-8 text-green-600 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Actives</p>
               <p className="text-2xl font-bold text-gray-900">
-                {offers.filter(o => o.is_active !== false).length}
+                {offers.filter(o => o.is_approved !== false).length}
               </p>
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <div className="flex items-center">
             <ToggleLeft className="w-8 h-8 text-gray-600 mr-3" />
             <div>
               <p className="text-sm text-gray-500">Désactivées</p>
               <p className="text-2xl font-bold text-gray-900">
-                {offers.filter(o => o.is_active === false).length}
+                {offers.filter(o => o.is_approved === false).length}
               </p>
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <div className="flex items-center">
             <Calendar className="w-8 h-8 text-blue-600 mr-3" />
@@ -208,8 +242,8 @@ export default function Offers() {
                 {offers.filter(o => {
                   const offerDate = new Date(o.created_at);
                   const now = new Date();
-                  return offerDate.getMonth() === now.getMonth() && 
-                         offerDate.getFullYear() === now.getFullYear();
+                  return offerDate.getMonth() === now.getMonth() &&
+                    offerDate.getFullYear() === now.getFullYear();
                 }).length}
               </p>
             </div>
@@ -238,12 +272,13 @@ export default function Offers() {
               className="appearance-none pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary bg-white"
             >
               <option value="all">Tous les statuts</option>
+              <option value="draft">Brouillon</option>
+              <option value="approved">Approuvées</option>
               <option value="active">Actives</option>
               <option value="inactive">Désactivées</option>
             </select>
             <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
-
           <div className="relative">
             <select
               value={categoryFilter}
@@ -288,9 +323,9 @@ export default function Offers() {
           {filteredOffers.map((offer) => {
             const category = categories.find(c => c.slug === offer.category_slug);
             const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
-            const mainPrice = offer.prices?.[0];
-            const isActive = offer.is_active !== false;
-            
+            const mainVariant = offer.variants?.[0];
+            const isActive = offer.is_approved !== false;
+
             return (
               <li key={offer.id}>
                 <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
@@ -317,17 +352,16 @@ export default function Offers() {
                             {offer.title}
                           </h3>
                           <div className="mt-1 flex items-center gap-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                            }`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                              }`}>
                               {isActive ? 'Active' : 'Désactivée'}
                             </span>
                             <span className="text-sm text-gray-500">
                               {format(new Date(offer.created_at), 'dd MMMM yyyy', { locale: fr })}
                             </span>
-                            {mainPrice && (
+                            {mainVariant && (
                               <span className="text-sm text-primary font-medium">
-                                À partir de {mainPrice.price}€
+                                À partir de {mainVariant.price}€
                               </span>
                             )}
                           </div>
@@ -346,6 +380,15 @@ export default function Offers() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 ml-4">
+                      {offer.status === 'draft' && (
+                        <button
+                          onClick={() => handleApproveOffer(offer.id)}
+                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                          title="Approuver l'offre"
+                        >
+                          Approuver
+                        </button>
+                      )}
                       <button
                         onClick={() => setSelectedOffer(offer)}
                         className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -354,9 +397,8 @@ export default function Offers() {
                       </button>
                       <button
                         onClick={() => handleToggleActive(offer.id, isActive)}
-                        className={`p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 ${
-                          isActive ? 'text-green-600 hover:text-green-700' : 'text-gray-400 hover:text-green-600'
-                        }`}
+                        className={`p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 ${isActive ? 'text-green-600 hover:text-green-700' : 'text-gray-400 hover:text-green-600'
+                          }`}
                       >
                         {isActive ? (
                           <ToggleRight className="w-5 h-5" />
@@ -381,7 +423,7 @@ export default function Offers() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Détails de l'offre
               </h2>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Images */}
                 {selectedOffer.media.length > 0 && (
@@ -407,10 +449,9 @@ export default function Offers() {
                       {selectedOffer.title}
                     </h3>
                     <div className="flex items-center gap-4 mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        selectedOffer.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {selectedOffer.is_active !== false ? 'Active' : 'Désactivée'}
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${selectedOffer.is_approved !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                        {selectedOffer.is_approved !== false ? 'Active' : 'Désactivée'}
                       </span>
                     </div>
                   </div>
@@ -445,25 +486,25 @@ export default function Offers() {
                     </div>
                   </div>
 
-                  {/* Prix */}
-                  {selectedOffer.prices.length > 0 && (
+                  {/* Variants */}
+                  {selectedOffer.variants.length > 0 && (
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Tarifs</h4>
                       <div className="space-y-2">
-                        {selectedOffer.prices.map((price) => (
-                          <div key={price.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                        {selectedOffer.variants.map((variant) => (
+                          <div key={variant.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                             <div>
-                              <p className="font-medium">{price.name}</p>
-                              <p className="text-sm text-gray-600">{price.duration}</p>
+                              <p className="font-medium">{variant.name}</p>
+                              <p className="text-sm text-gray-600">{variant.duration}</p>
                             </div>
                             <div className="text-right">
-                              {price.promo_price ? (
+                              {variant.promo_price ? (
                                 <div>
-                                  <span className="text-lg font-bold text-primary">{price.promo_price}€</span>
-                                  <span className="text-sm text-gray-400 line-through ml-2">{price.price}€</span>
+                                  <span className="text-lg font-bold text-primary">{variant.promo_price}€</span>
+                                  <span className="text-sm text-gray-400 line-through ml-2">{variant.price}€</span>
                                 </div>
                               ) : (
-                                <span className="text-lg font-bold text-gray-900">{price.price}€</span>
+                                <span className="text-lg font-bold text-gray-900">{variant.price}€</span>
                               )}
                             </div>
                           </div>
@@ -476,16 +517,15 @@ export default function Offers() {
 
               <div className="mt-6 flex justify-between">
                 <button
-                  onClick={() => handleToggleActive(selectedOffer.id, selectedOffer.is_active !== false)}
-                  className={`px-4 py-2 rounded-md font-medium ${
-                    selectedOffer.is_active !== false
-                      ? 'border border-red-300 text-red-700 hover:bg-red-50'
-                      : 'border border-green-300 text-green-700 hover:bg-green-50'
-                  }`}
+                  onClick={() => handleToggleActive(selectedOffer.id, selectedOffer.is_approved !== false)}
+                  className={`flex-1 flex items-center justify-center px-4 py-2 rounded-lg transition-all transform active:scale-95 ${selectedOffer.is_approved !== false
+                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                    : 'bg-green-50 text-green-600 hover:bg-green-100'
+                    }`}
                 >
-                  {selectedOffer.is_active !== false ? 'Désactiver' : 'Activer'}
+                  {selectedOffer.is_approved !== false ? 'Désactiver' : 'Activer'}
                 </button>
-                
+
                 <button
                   onClick={() => setSelectedOffer(null)}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"

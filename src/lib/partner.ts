@@ -82,7 +82,7 @@ export async function submitPartnerApplication(submission: PartnerSubmission) {
 
   const { data, error } = await supabase
     .from('partners')
-    .insert(payload)
+    .insert(payload as any)
     .select('*')
     .single();
 
@@ -112,7 +112,7 @@ export async function createPartnerOffer(form: PartnerOfferForm) {
 
   const { data, error } = await supabase
     .from('offers')
-    .insert(payload)
+    .insert(payload as any)
     .select('*')
     .single();
 
@@ -139,7 +139,7 @@ export async function queueEmail(to: string, subject: string, htmlContent: strin
 
   const { data, error } = await supabase
     .from('emails')
-    .insert(emailPayload)
+    .insert(emailPayload as any)
     .select('*')
     .single();
 
@@ -163,7 +163,7 @@ async function updatePartnerStatus(partnerId: string, status: Row<'partners'>['s
 
   const { data, error } = await supabase
     .from('partners')
-    .update(payload)
+    .update(payload as any)
     .eq('id', partnerId)
     .select('*')
     .single();
@@ -176,8 +176,31 @@ async function updatePartnerStatus(partnerId: string, status: Row<'partners'>['s
   return data as Row<'partners'>;
 }
 
-export function approvePartner(partnerId: string, adminNotes?: string) {
-  return updatePartnerStatus(partnerId, 'approved', adminNotes);
+export async function approvePartner(partnerId: string, adminNotes?: string) {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error('No active session');
+  }
+
+  const { data, error } = await supabase.functions.invoke('approve-partner', {
+    body: { partnerId, adminNotes }
+  });
+
+  if (error) {
+    console.error('❌ Error approving partner:', error);
+    throw error;
+  }
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to approve partner');
+  }
+
+  // Retourner les données complètes incluant le mot de passe temporaire
+  return {
+    partner: data.partner,
+    tempPassword: data.tempPassword
+  };
 }
 
 export function rejectPartner(partnerId: string, adminNotes?: string) {

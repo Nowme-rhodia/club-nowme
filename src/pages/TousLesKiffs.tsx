@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Sparkles, ChevronLeft, ChevronRight, Search, X, Filter, SlidersHorizontal, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { categories } from '../data/categories';
-import { offers } from '../data/offers';
+import { supabase } from '../lib/supabase';
 import { OfferCard } from '../components/OfferCard';
 import { LocationSearch } from '../components/LocationSearch';
 import { SEO } from '../components/SEO';
@@ -13,11 +13,11 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
@@ -29,6 +29,14 @@ interface OfferDetails {
   price: number;
   promoPrice?: number;
   rating: number;
+  location: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
+  category: string;
+  categorySlug?: string;
+  subcategorySlug?: string;
   reviews: Array<{
     author: string;
     rating: number;
@@ -58,20 +66,76 @@ export default function TousLesKiffs() {
   const observer = useRef<IntersectionObserver | null>(null);
   const lastElementRef = useRef<HTMLDivElement | null>(null);
 
-  // Simulons des emplacements pour les offres
-  const offersWithLocations = useMemo(() => {
-    return offers.map(offer => ({
-      ...offer,
-      location: {
-        lat: 48.8566 + (Math.random() - 0.5) * 0.1,
-        lng: 2.3522 + (Math.random() - 0.5) * 0.1
-      },
-      reviews: Array(Math.floor(Math.random() * 10) + 1).fill(null).map(() => ({
-        author: ['Sophie', 'Marie', 'Julie', 'Emma', 'Léa'][Math.floor(Math.random() * 5)],
-        rating: Math.floor(Math.random() * 2) + 4,
-        comment: "Une super expérience, je recommande !"
-      }))
-    }));
+  const [offersWithLocations, setOffersWithLocations] = useState<OfferDetails[]>([]);
+
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('offers')
+          .select(`
+            *,
+            category:offer_categories!offers_category_id_fkey(*),
+            offer_variants(price, discounted_price),
+            offer_media(url)
+          `)
+          .eq('status', 'approved')
+          .eq('is_approved', true);
+
+        if (error) {
+          console.error('Error fetching offers:', error);
+          return;
+        }
+
+        if (data) {
+          const formattedOffers: OfferDetails[] = data.map((offer: any) => {
+            const prices = offer.offer_variants?.map((v: any) => v.price) || [];
+            const promoPrices = offer.offer_variants?.map((v: any) => v.discounted_price).filter(Boolean) || [];
+            const minPrice = prices.length ? Math.min(...prices) : 0;
+            const minPromo = promoPrices.length ? Math.min(...promoPrices) : undefined;
+
+            // Parser coordinates "(lat,lng)"
+            let lat = 0, lng = 0;
+            if (typeof offer.coordinates === 'string') {
+              const matches = offer.coordinates.match(/\((.*),(.*)\)/);
+              if (matches) {
+                lat = parseFloat(matches[1]);
+                lng = parseFloat(matches[2]);
+              }
+            } else if (Array.isArray(offer.coordinates)) {
+              lat = offer.coordinates[0];
+              lng = offer.coordinates[1];
+            }
+
+            return {
+              id: offer.id,
+              title: offer.title,
+              description: offer.description,
+              imageUrl: offer.offer_media?.[0]?.url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
+              price: minPrice,
+              promoPrice: minPromo,
+              rating: 4.5,
+              location: {
+                lat,
+                lng,
+                address: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'
+              },
+              category: offer.category?.name || 'Autre',
+              categorySlug: offer.category?.parent_slug || offer.category?.slug || 'autre',
+              subcategorySlug: offer.category?.parent_slug ? offer.category.slug : undefined,
+              reviews: []
+            };
+          });
+          setOffersWithLocations(formattedOffers);
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOffers();
   }, []);
 
   const filteredOffers = useMemo(() => {
@@ -104,8 +168,8 @@ export default function TousLesKiffs() {
       });
     }
 
-    filtered = filtered.filter(offer => 
-      offer.price >= priceRange[0] && 
+    filtered = filtered.filter(offer =>
+      offer.price >= priceRange[0] &&
       offer.price <= priceRange[1] &&
       offer.rating >= ratingFilter
     );
@@ -118,11 +182,7 @@ export default function TousLesKiffs() {
   }, [filteredOffers, page]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    // Observer setup uses isLoading which is now managed by fetch
   }, []);
 
   useEffect(() => {
@@ -158,13 +218,13 @@ export default function TousLesKiffs() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4]">
-      <SEO 
+      <SEO
         title="Tous les kiffs"
         description="Découvrez toutes nos expériences uniques en Île-de-France : bien-être, loisirs, culture et plus encore."
       />
 
       {/* Header animé */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -174,7 +234,7 @@ export default function TousLesKiffs() {
           Tous les kiffs
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Découvre des expériences uniques, sélectionnées avec soin pour toi. 
+          Découvre des expériences uniques, sélectionnées avec soin pour toi.
           Des moments de bien-être, de découverte et de partage t'attendent.
         </p>
       </motion.div>
@@ -263,11 +323,10 @@ export default function TousLesKiffs() {
                         <button
                           key={rating}
                           onClick={() => setRatingFilter(rating)}
-                          className={`flex items-center gap-1 px-3 py-1 rounded-full ${
-                            ratingFilter === rating
-                              ? 'bg-primary text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          } transition-colors`}
+                          className={`flex items-center gap-1 px-3 py-1 rounded-full ${ratingFilter === rating
+                            ? 'bg-primary text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            } transition-colors`}
                         >
                           <Star className="w-4 h-4" />
                           <span>{rating}+</span>
@@ -301,7 +360,7 @@ export default function TousLesKiffs() {
             ))}
           </div>
         ) : filteredOffers.length > 0 ? (
-          <motion.div 
+          <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8"
             initial="hidden"
             animate="visible"
@@ -385,11 +444,10 @@ export default function TousLesKiffs() {
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-5 h-5 ${
-                          i < selectedOffer.rating
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-300'
-                        }`}
+                        className={`w-5 h-5 ${i < selectedOffer.rating
+                          ? 'text-yellow-400 fill-current'
+                          : 'text-gray-300'
+                          }`}
                       />
                     ))}
                   </div>
@@ -406,11 +464,10 @@ export default function TousLesKiffs() {
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`w-4 h-4 ${
-                                i < review.rating
-                                  ? 'text-yellow-400 fill-current'
-                                  : 'text-gray-300'
-                              }`}
+                              className={`w-4 h-4 ${i < review.rating
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
+                                }`}
                             />
                           ))}
                         </div>

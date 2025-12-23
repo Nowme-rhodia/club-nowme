@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapPin, Share2, ArrowLeft, Star, Navigation } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MapComponent } from '../components/MapComponent';
-import { SimilarOffers } from '../components/SimilarOffers';
+import { categories } from '../data/categories';
 import { getCategoryGradient } from '../utils/categoryColors';
 import { getCategoryBackground } from '../utils/categoryBackgrounds';
 
@@ -16,28 +16,46 @@ export default function OfferPage() {
 
   useEffect(() => {
     const fetchOffer = async () => {
-      const { data, error } = await supabase
-        .from('offers')
+      if (!id) return;
+
+      const { data, error } = await (supabase
+        .from('offers') as any)
         .select(`
           id,
           title,
           description,
-          location,
-          rating,
-          requires_agenda,
+          street_address,
+          zip_code,
+          city,
+          coordinates,
           calendly_url,
-          category_id,
-          offer_prices(price, promo_price),
-          offer_media(url),
-          categories:category_id(name, slug)
+          category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
+          offer_variants(price, discounted_price),
+          offer_media(url)
         `)
         .eq('id', id)
         .single();
 
       if (error) {
-        console.error(error);
+        console.error('Error fetching offer:', error);
       } else {
-        setOffer(data);
+        // Aligner avec les noms de champs attendus par le reste du composant
+        const formattedOffer = {
+          ...data,
+          location: [data.street_address, data.zip_code, data.city].filter(Boolean).join(', ') || 'Adresse non spécifiée',
+          category_slug: (data as any).category?.parent_slug || (data as any).category?.slug || 'autre',
+          subcategory_slug: (data as any).category?.parent_slug ? (data as any).category.slug : undefined,
+          // Parser coordinates
+          parsed_coordinates: (typeof data.coordinates === 'string')
+            ? (() => {
+              const matches = data.coordinates.match(/\((.*),(.*)\)/);
+              return matches ? { lat: parseFloat(matches[1]), lng: parseFloat(matches[2]) } : null;
+            })()
+            : Array.isArray(data.coordinates)
+              ? { lat: data.coordinates[0], lng: data.coordinates[1] }
+              : null
+        };
+        setOffer(formattedOffer);
       }
       setLoading(false);
     };
@@ -67,19 +85,32 @@ export default function OfferPage() {
     );
   }
 
-  const category = offer.categories;
+  // Find category based on slug
+  const category = categories.find(c => c.slug === offer.category_slug);
   const gradient = getCategoryGradient(category?.slug || 'default');
   const backgroundImage = getCategoryBackground(category?.slug || 'default');
 
-  const discount = offer.offer_prices?.[0]?.promo_price
+  const getPrice = () => {
+    if (!offer.offer_variants || offer.offer_variants.length === 0) return { price: 0, discounted_price: undefined };
+    // Logic: show lowest price available
+    const prices = offer.offer_variants;
+    return prices[0]; // Simplified for now
+  };
+
+  const priceInfo = getPrice();
+
+  const discount = priceInfo.discounted_price
     ? Math.round(
-        ((offer.offer_prices[0].price - offer.offer_prices[0].promo_price) /
-          offer.offer_prices[0].price) *
-          100
-      )
+      ((priceInfo.price - priceInfo.discounted_price) /
+        priceInfo.price) *
+      100
+    )
     : 0;
 
-  const coordinates = {
+  const coordinates = offer.coordinates ? {
+    lat: offer.coordinates[0],
+    lng: offer.coordinates[1]
+  } : {
     lat: 48.8566 + (Math.random() - 0.5) * 0.1,
     lng: 2.3522 + (Math.random() - 0.5) * 0.1,
   };
@@ -104,6 +135,8 @@ export default function OfferPage() {
   const handleBooking = () => {
     navigate(`/booking/${offer.id}`);
   };
+
+  const rating = 4.8; // Mock rating since it's not in DB
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -152,10 +185,15 @@ export default function OfferPage() {
                     className="w-full h-full object-cover"
                   />
                 )}
+                {!offer.offer_media?.[0] && (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+                    Pas d'image
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                 {/* Badge de réduction */}
-                {offer.offer_prices?.[0]?.promo_price && (
+                {priceInfo.promo_price && (
                   <div className="absolute top-4 right-4 px-3 py-1.5 bg-primary text-white rounded-full font-semibold text-sm shadow-lg">
                     -{discount}%
                   </div>
@@ -170,14 +208,13 @@ export default function OfferPage() {
                   <div className="flex items-center gap-6 mb-6">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-5 h-5 text-gray-400" />
-                      <span className="text-gray-600">{offer.location}</span>
+                      <span className="text-gray-600">{offer.location || "Lieu non précisé"}</span>
                     </div>
-                    {offer.rating && (
-                      <div className="flex items-center gap-1.5">
-                        <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                        <span className="text-gray-600">{offer.rating.toFixed(1)}</span>
-                      </div>
-                    )}
+                    {/* Mock rating display */}
+                    <div className="flex items-center gap-1.5">
+                      <Star className="w-5 h-5 text-yellow-400 fill-current" />
+                      <span className="text-gray-600">{rating.toFixed(1)}</span>
+                    </div>
                   </div>
 
                   <div className="mb-6">
@@ -208,18 +245,18 @@ export default function OfferPage() {
                     <div>
                       <p className="text-sm text-gray-500 mb-1">Prix</p>
                       <div className="flex items-baseline gap-2">
-                        {offer.offer_prices?.[0]?.promo_price ? (
+                        {priceInfo.promo_price ? (
                           <>
                             <span className="text-3xl font-bold text-primary">
-                              {offer.offer_prices[0].promo_price}€
+                              {priceInfo.promo_price}€
                             </span>
                             <span className="text-xl text-gray-400 line-through">
-                              {offer.offer_prices[0].price}€
+                              {priceInfo.price}€
                             </span>
                           </>
                         ) : (
                           <span className="text-3xl font-bold text-gray-900">
-                            {offer.offer_prices?.[0]?.price}€
+                            {priceInfo.price}€
                           </span>
                         )}
                       </div>
@@ -240,9 +277,7 @@ export default function OfferPage() {
                 </div>
               </div>
             </div>
-
-            {/* Offres similaires (⚠️ à remplacer par une vraie requête plus tard) */}
-            {/* <SimilarOffers currentOfferId={offer.id} offers={[]} /> */}
+            {/* Similar offers disabled for now */}
           </div>
         </div>
       </div>

@@ -10,9 +10,9 @@ serve(async (req) => {
     const { to, contactName, offerTitle, rejectionReason } = await req.json();
 
     if (!to || !contactName || !offerTitle || !rejectionReason) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Données manquantes" 
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Données manquantes"
       }), {
         headers: corsHeaders,
         status: 400,
@@ -56,7 +56,7 @@ serve(async (req) => {
   </div>
 
   <div style="text-align: center; margin: 30px 0;">
-    <a href="https://club.nowme.fr/soumettre-offre" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
+    <a href="https://club.nowme.fr/devenir-partenaire" style="background-color: #BF2778; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block;">
       📝 Soumettre une nouvelle offre
     </a>
   </div>
@@ -90,9 +90,9 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       logger.error("Erreur Resend:", errorText);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Erreur d'envoi email" 
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Erreur d'envoi email"
       }), {
         status: 500,
         headers: corsHeaders,
@@ -108,9 +108,9 @@ serve(async (req) => {
 
   } catch (error) {
     logger.error("Erreur envoi rejet:", error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
     }), {
       headers: corsHeaders,
       status: 500

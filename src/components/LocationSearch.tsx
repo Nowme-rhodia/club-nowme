@@ -3,7 +3,15 @@ import { MapPin, X, Loader2 } from "lucide-react";
 import { useGoogleMapsScript } from "../hooks/useGoogleMapsScript";
 
 interface LocationSearchProps {
-  onSelect: (location: { lat: number; lng: number; address: string }) => void;
+  onSelect: (location: {
+    lat: number;
+    lng: number;
+    address: string;
+    street_address?: string;
+    zip_code?: string;
+    city?: string;
+    department?: string;
+  }) => void;
   initialValue?: string;
   error?: string;
 }
@@ -100,11 +108,32 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
     geocoder.geocode({ placeId }, (results, status) => {
       setIsLoading(false);
       if (status === "OK" && results?.[0]) {
-        const { lat, lng } = results[0].geometry.location;
+        const result = results[0];
+        const { lat, lng } = result.geometry.location;
+
+        let streetNumber = "";
+        let route = "";
+        let zipCode = "";
+        let city = "";
+        let department = "";
+
+        result.address_components.forEach((component) => {
+          const types = component.types;
+          if (types.includes("street_number")) streetNumber = component.long_name;
+          if (types.includes("route")) route = component.long_name;
+          if (types.includes("postal_code")) zipCode = component.long_name;
+          if (types.includes("locality")) city = component.long_name;
+          if (types.includes("administrative_area_level_2")) department = component.long_name;
+        });
+
         onSelect({
           lat: lat(),
           lng: lng(),
-          address: results[0].formatted_address,
+          address: result.formatted_address,
+          street_address: `${streetNumber} ${route}`.trim(),
+          zip_code: zipCode,
+          city: city,
+          department: department,
         });
       }
     });
@@ -127,9 +156,8 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Entrez votre adresse..."
-        className={`w-full px-6 py-4 pl-12 pr-12 rounded-lg border-2 ${
-          error ? "border-red-300" : "border-gray-200"
-        } focus:border-primary focus:ring focus:ring-primary/20 outline-none bg-white text-gray-800`}
+        className={`w-full px-6 py-4 pl-12 pr-12 rounded-lg border-2 ${error ? "border-red-300" : "border-gray-200"
+          } focus:border-primary focus:ring focus:ring-primary/20 outline-none bg-white text-gray-800`}
       />
       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
 

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Filter,
   Edit3,
   Trash2,
@@ -24,7 +24,7 @@ import { supabase } from '../../lib/supabase';
 import type { Database } from '../../types/supabase';
 
 type Offer = Database['public']['Tables']['offers']['Row'] & {
-  prices: Database['public']['Tables']['offer_prices']['Row'][];
+  variants: Database['public']['Tables']['offer_variants']['Row'][];
   media: Database['public']['Tables']['offer_media']['Row'][];
 };
 
@@ -86,7 +86,7 @@ export default function Dashboard() {
     commission: number;
     net_total: number;
   } | null>(null);
-  
+
   // 👉 Nouveaux dérivés
   const lowStockOffers = offers.filter(o => o.has_stock && (o.stock ?? 0) <= 5);
   const upcomingBookings = bookings
@@ -95,6 +95,7 @@ export default function Dashboard() {
 
   const [hasAgenda, setHasAgenda] = useState(false);
   const [globalCalendly, setGlobalCalendly] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState<string>('Chargement...');
 
   useEffect(() => {
     if (!user) return;
@@ -102,15 +103,16 @@ export default function Dashboard() {
     const loadData = async () => {
       setLoading(true);
       try {
-        // 👉 Récupérer le partenaire
-        const { data: partnerData, error: partnerError } = await supabase
-          .from('partners')
-          .select('id, calendly_url')
+        // Récupérer le partner_id depuis user_profiles
+        const { data: profileData, error: profileError } = await (supabase
+          .from('user_profiles') as any)
+          .select('partner_id')
           .eq('user_id', user.id)
           .single();
-    
-        if (partnerError || !partnerData) {
-          console.error('Partner lookup error:', partnerError);
+
+        if (profileError || !profileData?.partner_id) {
+          console.error('Partner ID not found:', profileError);
+          setBusinessName('Partenaire non trouvé');
           setOffers([]);
           setRevenueStats({
             totalBookings: 0,
@@ -119,31 +121,61 @@ export default function Dashboard() {
             netAmount: 0,
             thisMonth: 0
           });
+          setLoading(false);
           return;
         }
-    
+
+        console.log('Partner ID from profile:', profileData.partner_id);
+
+        // 👉 Récupérer le partenaire
+        const { data: partnerData, error: partnerError } = await (supabase
+          .from('partners') as any)
+          .select('id, calendly_url, business_name')
+          .eq('id', profileData.partner_id)
+          .single();
+
+        if (partnerError || !partnerData) {
+          console.error('Partner lookup error:', partnerError);
+          setBusinessName('Erreur de chargement');
+          setOffers([]);
+          setRevenueStats({
+            totalBookings: 0,
+            totalRevenue: 0,
+            nowmeCommission: 0,
+            netAmount: 0,
+            thisMonth: 0
+          });
+          setLoading(false);
+          return;
+        }
+
         const partnerId = partnerData.id;
+        const businessNameValue = partnerData.business_name || 'Mon entreprise';
+
+        console.log('Partner data loaded:', { partnerId, businessName: businessNameValue });
+
         setGlobalCalendly(partnerData.calendly_url || null);
-    
+        setBusinessName(businessNameValue);
+
         // 👉 Offres
-        const { data: offersData } = await supabase
-          .from('offers')
+        const { data: offersData } = await (supabase
+          .from('offers') as any)
           .select(`
             *,
-            prices:offer_prices(*),
+            variants:offer_variants(*),
             media:offer_media(*)
           `)
           .eq('partner_id', partnerId)
           .order('created_at', { ascending: false });
         setOffers((offersData || []) as Offer[]);
-    
-        if (offersData?.some(o => o.requires_agenda)) {
+
+        if (offersData?.some((o: any) => o.requires_agenda)) {
           setHasAgenda(true);
         }
-    
+
         // 👉 Réservations enrichies
-        const { data: bookingsData } = await supabase
-          .from('bookings')
+        const { data: bookingsData } = await (supabase
+          .from('bookings') as any)
           .select(`
             *,
             offer:offers(title),
@@ -152,33 +184,33 @@ export default function Dashboard() {
           .eq('partner_id', partnerId)
           .order('created_at', { ascending: false });
         setBookings((bookingsData || []) as Booking[]);
-    
+
         // 👉 Payouts
         let grossTotal = 0;
         let netTotal = 0;
         let commissionTotal = 0;
         let netThisMonth = 0;
-    
-        const { data: payouts } = await supabase
-          .from('partner_payouts')
+
+        const { data: payouts } = await (supabase
+          .from('partner_payouts') as any)
           .select('gross_amount, net_amount, commission_amount, created_at')
           .eq('partner_id', partnerId);
-    
+
         if (payouts) {
-          grossTotal = payouts.reduce((sum, p) => sum + (Number(p.gross_amount) || 0), 0);
-          netTotal = payouts.reduce((sum, p) => sum + (Number(p.net_amount) || 0), 0);
-          commissionTotal = payouts.reduce((sum, p) => sum + (Number(p.commission_amount) || 0), 0);
-    
+          grossTotal = (payouts as any).reduce((sum: number, p: any) => sum + (Number(p.gross_amount) || 0), 0);
+          netTotal = (payouts as any).reduce((sum: number, p: any) => sum + (Number(p.net_amount) || 0), 0);
+          commissionTotal = (payouts as any).reduce((sum: number, p: any) => sum + (Number(p.commission_amount) || 0), 0);
+
           const monthStart = startOfMonth(new Date());
           const monthEnd = endOfMonth(new Date());
-          netThisMonth = payouts
-            .filter(p => {
+          netThisMonth = (payouts as any)
+            .filter((p: any) => {
               const d = new Date(p.created_at);
               return d >= monthStart && d <= monthEnd;
             })
-            .reduce((sum, p) => sum + (Number(p.net_amount) || 0), 0);
+            .reduce((sum: number, p: any) => sum + (Number(p.net_amount) || 0), 0);
         }
-    
+
         setRevenueStats({
           totalBookings: bookingsData?.length || 0,
           totalRevenue: Math.round(grossTotal * 100) / 100,
@@ -186,13 +218,13 @@ export default function Dashboard() {
           netAmount: Math.round(netTotal * 100) / 100,
           thisMonth: Math.round(netThisMonth * 100) / 100
         });
-    
+
         // 🔹 Rapport partenaire (via RPC)
-        const { data: reportData, error: reportError } = await supabase.rpc(
+        const { data: reportData, error: reportError } = await (supabase as any).rpc(
           "partner_payouts_report_by_partner",
           { partner_uuid: partnerId }
         );
-    
+
         if (!reportError && reportData && reportData.length > 0) {
           setPartnerReport({
             total_bookings: reportData[0].total_bookings || 0,
@@ -201,7 +233,7 @@ export default function Dashboard() {
             net_total: reportData[0].net_total || 0,
           });
         }
-    
+
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {
@@ -215,7 +247,7 @@ export default function Dashboard() {
   const filteredOffers = offers
     .filter(offer => {
       const matchesSearch = offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          offer.description.toLowerCase().includes(searchTerm.toLowerCase());
+        offer.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
@@ -248,7 +280,10 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold mb-6">Tableau de bord</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">{businessName}</h1>
+          <p className="text-gray-600">Tableau de bord</p>
+        </div>
 
         {/* 👉 Section stats revenus */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
@@ -271,85 +306,85 @@ export default function Dashboard() {
           </div>
         </div>
         {/* 👉 Rapport détaillé du partenaire */}
-{partnerReport && (
-  <>
-    <h2 className="text-xl font-bold mb-4">Rapport détaillé</h2>
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
-      <div className="bg-white shadow rounded-lg p-4">
-        <p className="text-sm text-gray-500">Réservations confirmées</p>
-        <p className="text-xl font-bold">{partnerReport.total_bookings}</p>
-      </div>
-      <div className="bg-white shadow rounded-lg p-4">
-        <p className="text-sm text-gray-500">Revenu brut</p>
-        <p className="text-xl font-bold">
-          {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
-            .format(partnerReport.gross_total)}
-        </p>
-      </div>
-      <div className="bg-white shadow rounded-lg p-4">
-        <p className="text-sm text-gray-500">Commission Nowme</p>
-        <p className="text-xl font-bold text-red-600">
-          -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
-            .format(partnerReport.commission)}
-        </p>
-      </div>
-      <div className="bg-white shadow rounded-lg p-4">
-        <p className="text-sm text-gray-500">Revenu net</p>
-        <p className="text-xl font-bold text-green-600">
-          {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
-            .format(partnerReport.net_total)}
-        </p>
-      </div>
-    </div>
-  </>
-)}
+        {partnerReport && (
+          <>
+            <h2 className="text-xl font-bold mb-4">Rapport détaillé</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+              <div className="bg-white shadow rounded-lg p-4">
+                <p className="text-sm text-gray-500">Réservations confirmées</p>
+                <p className="text-xl font-bold">{partnerReport.total_bookings}</p>
+              </div>
+              <div className="bg-white shadow rounded-lg p-4">
+                <p className="text-sm text-gray-500">Revenu brut</p>
+                <p className="text-xl font-bold">
+                  {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+                    .format(partnerReport.gross_total)}
+                </p>
+              </div>
+              <div className="bg-white shadow rounded-lg p-4">
+                <p className="text-sm text-gray-500">Commission Nowme</p>
+                <p className="text-xl font-bold text-red-600">
+                  -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+                    .format(partnerReport.commission)}
+                </p>
+              </div>
+              <div className="bg-white shadow rounded-lg p-4">
+                <p className="text-sm text-gray-500">Revenu net</p>
+                <p className="text-xl font-bold text-green-600">
+                  {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+                    .format(partnerReport.net_total)}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* 👉 Widget Stock bas + Prochaines réservations */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-  {/* Stock bas */}
-  <div className="bg-white shadow rounded-lg p-6">
-    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-      <AlertCircle className="w-5 h-5 text-red-600" /> Stock bas
-    </h2>
-    {lowStockOffers.length === 0 ? (
-      <p className="text-gray-500 text-sm">Aucune offre en rupture imminente.</p>
-    ) : (
-      <ul className="space-y-2">
-        {lowStockOffers.map(o => (
-          <li key={o.id} className="flex justify-between text-sm">
-            <span>{o.title}</span>
-            <span className="font-semibold text-red-600">
-              {o.stock} restant{o.stock && o.stock > 1 ? 's' : ''}
-            </span>
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          {/* Stock bas */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" /> Stock bas
+            </h2>
+            {lowStockOffers.length === 0 ? (
+              <p className="text-gray-500 text-sm">Aucune offre en rupture imminente.</p>
+            ) : (
+              <ul className="space-y-2">
+                {lowStockOffers.map(o => (
+                  <li key={o.id} className="flex justify-between text-sm">
+                    <span>{o.title}</span>
+                    <span className="font-semibold text-red-600">
+                      {o.stock} restant{o.stock && o.stock > 1 ? 's' : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-  {/* Prochaines réservations */}
-  <div className="bg-white shadow rounded-lg p-6">
-    <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-      <Users className="w-5 h-5 text-primary" /> Prochaines réservations
-    </h2>
-    {upcomingBookings.length === 0 ? (
-      <p className="text-gray-500 text-sm">Aucune réservation confirmée.</p>
-    ) : (
-      <ul className="space-y-2">
-        {upcomingBookings.map(b => (
-          <li key={b.id} className="flex justify-between text-sm">
-            <span>
-              {b.user ? `${b.user.first_name} ${b.user.last_name}` : 'Client'} — {b.offer?.title}
-            </span>
-            <span className="text-gray-600">
-              {new Date(b.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-            </span>
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-</div>
+          {/* Prochaines réservations */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" /> Prochaines réservations
+            </h2>
+            {upcomingBookings.length === 0 ? (
+              <p className="text-gray-500 text-sm">Aucune réservation confirmée.</p>
+            ) : (
+              <ul className="space-y-2">
+                {upcomingBookings.map(b => (
+                  <li key={b.id} className="flex justify-between text-sm">
+                    <span>
+                      {b.user ? `${b.user.first_name} ${b.user.last_name}` : 'Client'} — {b.offer?.title}
+                    </span>
+                    <span className="text-gray-600">
+                      {new Date(b.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
         {/* 👉 Section Agenda Calendly */}
         {hasAgenda && (
           <div className="mt-10 bg-white shadow rounded-lg p-6">

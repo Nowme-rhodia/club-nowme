@@ -77,13 +77,13 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation latérale */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200">
+      <div className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-40 shadow-lg pt-[120px]">
         <div className="h-16 flex items-center px-6 border-b border-gray-200">
           <Link to="/admin" className="text-xl font-bold text-primary">
             Administration
           </Link>
         </div>
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-4rem)]">
           {navigation.map((item) => (
             <Link
               key={item.name}
@@ -91,12 +91,12 @@ export default function AdminLayout() {
               className={`
                 flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors
                 ${item.current
-                  ? 'bg-primary text-white'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                 }
               `}
             >
-              <item.icon className="w-5 h-5 mr-3" />
+              <item.icon className="w-5 h-5 mr-3 flex-shrink-0" />
               {item.name}
             </Link>
           ))}

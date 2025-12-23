@@ -32,7 +32,7 @@ type Offer = {
   has_stock: boolean | null;
   stock: number | null;
   category_id: string | null;
-  offer_prices: Price[] | null;
+  offer_variants: Price[] | null;
   offer_media: Media[] | null;
   categories: Category | null;
 };
@@ -63,7 +63,7 @@ export default function OfferPage() {
           has_stock,
           stock,
           category_id,
-          offer_prices(price, promo_price),
+          offer_variants(price, promo_price),
           offer_media(url),
           categories:category_id(name, slug)
         `)
@@ -97,7 +97,7 @@ export default function OfferPage() {
     return getCategoryBackground(slug);
   }, [offer]);
 
-  const mainPrice = offer?.offer_prices?.[0];
+  const mainPrice = offer?.offer_variants?.[0];
   const discount =
     mainPrice?.promo_price && mainPrice?.price
       ? Math.round(((mainPrice.price - mainPrice.promo_price) / mainPrice.price) * 100)

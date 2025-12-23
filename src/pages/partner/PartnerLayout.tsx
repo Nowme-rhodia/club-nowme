@@ -5,25 +5,71 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
 
 export default function PartnerLayout() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile } = useAuth();
   const navigate = useNavigate();
-  const [businessName, setBusinessName] = useState<string>("");
+  const [businessName, setBusinessName] = useState<string>("Chargement...");
 
   useEffect(() => {
     if (!user) return;
     const loadPartner = async () => {
-      const { data, error } = await supabase
-        .from("partners")
-        .select("business_name")
-        .eq("user_id", user.id)
-        .single();
+      console.log('PartnerLayout: Loading partner for user', user.id);
+      console.log('PartnerLayout: Full profile:', profile);
+      
+      // Utiliser partner_id depuis le profil si disponible
+      const partnerId = profile?.partner_id;
+      console.log('PartnerLayout: partner_id from profile:', partnerId);
+      
+      if (!partnerId) {
+        // Fallback: récupérer depuis user_profiles
+        const { data: profileData, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("partner_id")
+          .eq("user_id", user.id)
+          .single();
 
-      if (!error && data) {
-        setBusinessName(data.business_name || "Mon entreprise");
+        console.log('PartnerLayout: profileData:', profileData, 'error:', profileError);
+
+        if (!profileData?.partner_id) {
+          console.log('PartnerLayout: No partner_id found, using default');
+          setBusinessName("Mon entreprise");
+          return;
+        }
+        
+        // Récupérer les infos du partenaire
+        const { data, error } = await supabase
+          .from("partners")
+          .select("business_name")
+          .eq("id", profileData.partner_id)
+          .single();
+
+        console.log('PartnerLayout: Partner data:', data, 'error:', error);
+
+        if (!error && data) {
+          console.log('PartnerLayout: Setting business name to:', data.business_name);
+          setBusinessName(data.business_name || "Mon entreprise");
+        } else {
+          setBusinessName("Mon entreprise");
+        }
+      } else {
+        // Récupérer directement avec le partner_id du profil
+        const { data, error } = await supabase
+          .from("partners")
+          .select("business_name")
+          .eq("id", partnerId)
+          .single();
+
+        console.log('PartnerLayout: Partner data (from profile):', data, 'error:', error);
+
+        if (!error && data) {
+          console.log('PartnerLayout: Setting business name to:', data.business_name);
+          setBusinessName(data.business_name || "Mon entreprise");
+        } else {
+          setBusinessName("Mon entreprise");
+        }
       }
     };
     loadPartner();
-  }, [user]);
+  }, [user, profile]);
 
   const handleLogout = async () => {
     await signOut();

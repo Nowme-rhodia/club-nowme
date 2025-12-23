@@ -36,7 +36,7 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <SEO 
+      <SEO
         title="Connexion partenaire"
         description="Connectez-vous à votre espace partenaire Nowme"
       />
@@ -48,7 +48,7 @@ export default function SignIn() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Pas encore partenaire ?{' '}
           <Link
-            to="/soumettre-offre"
+            to="/devenir-partenaire"
             className="font-medium text-primary hover:text-primary-dark"
           >
             Devenir partenaire

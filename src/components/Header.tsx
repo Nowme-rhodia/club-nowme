@@ -67,11 +67,29 @@ export function Header() {
             )}
 
             <Link
-              to="/soumettre-offre"
+              to="/devenir-partenaire"
               className="text-primary hover:text-primary-dark font-semibold transition-colors duration-200"
             >
               Devenir partenaire
             </Link>
+
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="inline-flex items-center bg-black text-white px-5 py-2.5 rounded-full font-semibold transition hover:bg-gray-900"
+              >
+                Admin
+              </Link>
+            )}
+
+            {isPartner && !isAdmin && (
+              <Link
+                to="/partner/dashboard"
+                className="inline-flex items-center bg-primary text-white px-5 py-2.5 rounded-full font-semibold transition hover:bg-primary-dark"
+              >
+                Espace Partenaire
+              </Link>
+            )}
 
             {user ? (
               <Link
@@ -132,12 +150,30 @@ export function Header() {
                 </Link>
               )}
               <Link
-                to="/soumettre-offre"
+                to="/devenir-partenaire"
                 className="text-primary hover:text-primary-dark font-medium px-2 py-1"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Devenir partenaire
               </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="w-full text-center bg-black text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-900 transition"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Accéder à l'admin
+                </Link>
+              )}
+              {isPartner && !isAdmin && (
+                <Link
+                  to="/partner/dashboard"
+                  className="w-full text-center bg-primary text-white px-4 py-2 rounded-full font-semibold hover:bg-primary-dark transition"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Espace Partenaire
+                </Link>
+              )}
               {user ? (
                 <Link
                   to={getAccountPath()}

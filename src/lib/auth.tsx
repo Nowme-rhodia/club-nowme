@@ -19,6 +19,7 @@ interface UserProfile {
   subscription_type?: string;
   stripe_customer_id?: string;
   is_admin?: boolean;
+  partner_id?: string;
   role?: Role;
   created_at?: string;
   updated_at?: string;
@@ -73,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (profileRow?.is_admin || adminish.includes(profileRow?.subscription_type)) {
       return 'admin';
     }
+    // Vérifier si l'utilisateur a un partner_id dans user_profiles
+    if (profileRow?.partner_id) return 'partner';
     if (partnerRow?.id) return 'partner';
     // Vérifier si l'utilisateur a un abonnement actif dans la table subscriptions
     if (subscriptionRow?.status === 'active' || subscriptionRow?.status === 'trialing') {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Filter,
   Edit3,
   Trash2,
@@ -22,100 +22,103 @@ import { categories } from '../../data/categories';
 import { LocationSearch } from '../../components/LocationSearch';
 import toast from 'react-hot-toast';
 
-interface PendingOffer {
+interface Offer {
   id: string;
   title: string;
   description: string;
   category_slug: string;
   subcategory_slug: string;
-  price?: number;
-  image_url?: string;
-  location?: string;
-  status?: 'pending' | 'approved' | 'rejected';
-  rejection_reason?: string;
+  street_address: string | null;
+  zip_code: string | null;
+  city: string | null;
+  department: string | null;
+  coordinates: [number, number] | null;
+  status: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+  is_approved: boolean;
   created_at: string;
-  requires_agenda?: boolean;
   calendly_url?: string | null;
-  has_stock?: boolean;   // 👈 à rajouter
-  stock?: number | null; // 👈 à rajouter
-}
-
-interface ApprovedOffer {
-  id: string;
-  title: string;
-  description: string;
-  category_slug: string;
-  subcategory_slug: string;
-  location: string;
-  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
-  is_active?: boolean;
-  created_at: string;
-  requires_agenda?: boolean;
-  calendly_url?: string | null;
-  prices: Array<{
+  event_start_date?: string | null;
+  event_end_date?: string | null;
+  variants?: Array<{
     id: string;
     name: string;
     price: number;
-    promo_price?: number;
-    duration: string;
+    discounted_price?: number | null;
   }>;
-  media: Array<{
+  media?: Array<{
     id: string;
     url: string;
     type: 'image' | 'video';
-    order: number;
   }>;
+  rejection_reason?: string;
 }
 
 const statusConfig = {
-  pending: {
-    label: 'En attente',
-    icon: Clock,
-    className: 'bg-yellow-100 text-yellow-700'
-  },
-  approved: {
-    label: 'Approuvée',
+  active: {
+    label: 'En ligne',
     icon: CheckCircle2,
     className: 'bg-green-100 text-green-700'
+  },
+  ready: {
+    label: 'En cours de validation',
+    icon: Clock,
+    className: 'bg-blue-100 text-blue-700'
+  },
+  draft: {
+    label: 'Brouillon',
+    icon: Clock,
+    className: 'bg-gray-100 text-gray-700'
   },
   rejected: {
     label: 'Refusée',
     icon: XCircle,
     className: 'bg-red-100 text-red-700'
   },
-  active: {
-    label: 'Active',
+  approved: {
+    label: 'Approuvée',
     icon: CheckCircle2,
     className: 'bg-green-100 text-green-700'
-  },
-  draft: {
-    label: 'Brouillon',
-    icon: Clock,
-    className: 'bg-gray-100 text-gray-700'
   }
 };
 export default function Offers() {
   const { user } = useAuth();
-  const [pendingOffers, setPendingOffers] = useState<PendingOffer[]>([]);
-  const [approvedOffers, setApprovedOffers] = useState<ApprovedOffer[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedOffer, setSelectedOffer] = useState<PendingOffer | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [newOffer, setNewOffer] = useState({
-  title: '',
-  description: '',
-  category_slug: '',
-  subcategory_slug: '',
-  price: '',
-  image_url: '',
-  location: '',
-  requires_agenda: false,
-  calendly_url: '',
-  has_stock: false,   // 👈 AJOUT
-  stock: ''           // 👈 AJOUT
-});
+    title: '',
+    description: '',
+    category_slug: '',
+    subcategory_slug: '',
+    price: '',
+    discounted_price: '',
+    image_url: '',
+    street_address: '',
+    zip_code: '',
+    department: '',
+    city: '',
+    coordinates: null as [number, number] | null,
+    calendly_url: '',
+    event_start_date: '',
+    event_end_date: '',
+  });
+
+  const [dbCategories, setDbCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    const { data } = await supabase.from('offer_categories').select('*');
+    if (data) setDbCategories(data);
+  };
+
+  const parentCategories = dbCategories.filter(c => !c.parent_slug);
+  const subCategories = dbCategories.filter(c => c.parent_slug === newOffer.category_slug);
 
   useEffect(() => {
     if (user) {
@@ -125,39 +128,56 @@ export default function Offers() {
 
   const loadOffers = async () => {
     try {
-      // Récupérer le partner_id
-      const { data: partnerData, error: partnerError } = await supabase
-        .from('partners')
-        .select('id')
-        .eq('user_id', user?.id)
+      if (!user?.id) {
+        console.error('No user ID');
+        setLoading(false);
+        return;
+      }
+
+      // Récupérer le partner_id depuis user_profiles
+      const { data: profileData, error: profileError } = await (supabase
+        .from('user_profiles') as any)
+        .select('partner_id')
+        .eq('user_id', user.id)
         .single();
 
-      if (partnerError) throw partnerError;
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        toast.error('Erreur lors de la récupération du profil');
+        setLoading(false);
+        return;
+      }
 
-      // Récupérer les offres en attente
-      const { data: pendingData, error: pendingError } = await supabase
-        .from('pending_offers')
-        .select('*')
-        .eq('pending_partner_id', partnerData.id)
-        .order('created_at', { ascending: false });
+      if (!profileData?.partner_id) {
+        console.error('Partner ID not found for user');
+        toast.error('Partner ID non trouvé');
+        setLoading(false);
+        return;
+      }
 
-      if (pendingError) throw pendingError;
+      const partnerId = profileData.partner_id;
 
-      // Récupérer les offres approuvées
-      const { data: approvedData, error: approvedError } = await supabase
-        .from('offers')
+      // Récupérer toutes les offres du partenaire
+      const { data, error } = await (supabase
+        .from('offers') as any)
         .select(`
           *,
-          prices:offer_prices(*),
+          category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
+          variants:offer_variants(*),
           media:offer_media(*)
         `)
-        .eq('partner_id', partnerData.id)
+        .eq('partner_id', partnerId)
         .order('created_at', { ascending: false });
 
-      if (approvedError) throw approvedError;
+      if (error) throw error;
 
-      setPendingOffers(pendingData || []);
-      setApprovedOffers(approvedData || []);
+      const formattedOffers = (data || []).map((offer: any) => ({
+        ...offer,
+        category_slug: offer.category?.parent_slug || offer.category?.slug,
+        subcategory_slug: offer.category?.parent_slug ? offer.category.slug : null
+      }));
+
+      setOffers(formattedOffers);
     } catch (error) {
       console.error('Error loading offers:', error);
       toast.error('Erreur lors du chargement des offres');
@@ -168,68 +188,106 @@ export default function Offers() {
 
   const handleCreateOffer = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newOffer.title || !newOffer.description || !newOffer.category_slug) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
 
     try {
-      // Récupérer le partner_id
-      const { data: partnerData, error: partnerError } = await supabase
-        .from('partners')
-        .select('id, business_name')
+      // Récupérer le partner_id depuis user_profiles
+      const { data: profileData, error: profileError } = await (supabase
+        .from('user_profiles') as any)
+        .select('partner_id')
         .eq('user_id', user?.id)
+        .single();
+
+      if (profileError || !profileData?.partner_id) {
+        toast.error('Partner ID not found');
+        return;
+      }
+
+      // Récupérer les infos du partenaire
+      const { data: partnerData, error: partnerError } = await (supabase
+        .from('partners') as any)
+        .select('id, business_name')
+        .eq('id', profileData.partner_id)
         .single();
 
       if (partnerError) throw partnerError;
 
-      // Créer l'offre en attente
-const { error: createError } = await supabase
-  .from('pending_offers')
-  .insert({
-    pending_partner_id: partnerData.id,
-    title: newOffer.title,
-    description: newOffer.description,
-    category_slug: newOffer.category_slug,
-    subcategory_slug: newOffer.subcategory_slug,
-    price: newOffer.price ? parseFloat(newOffer.price) : null,
-    location: newOffer.location,
-    image_url: newOffer.image_url || null,
-    requires_agenda: newOffer.requires_agenda,
-    calendly_url: newOffer.requires_agenda ? newOffer.calendly_url : null,
-    has_stock: newOffer.has_stock,                                 // 👈 ajout
-    stock: newOffer.has_stock ? parseInt(newOffer.stock, 10) : null, // 👈 ajout
-    status: 'pending'
-  });
+      // Trouver l'ID de la catégorie
+      const catId = dbCategories.find(c => c.slug === newOffer.subcategory_slug || c.slug === newOffer.category_slug)?.id;
 
+      // Créer l'offre en brouillon directement dans la table offers
+      const { data: createdOffer, error: createError } = await (supabase
+        .from('offers') as any)
+        .insert({
+          partner_id: partnerData.id,
+          title: newOffer.title,
+          description: newOffer.description,
+          category_id: catId,
+          calendly_url: newOffer.calendly_url || null,
+          event_start_date: newOffer.event_start_date || null,
+          event_end_date: newOffer.event_end_date || null,
+          street_address: newOffer.street_address,
+          zip_code: newOffer.zip_code,
+          department: newOffer.department,
+          city: newOffer.city,
+          coordinates: newOffer.coordinates ? `(${newOffer.coordinates[0]},${newOffer.coordinates[1]})` : null,
+          status: 'draft',
+          is_approved: false
+        })
+        .select()
+        .single();
 
       if (createError) throw createError;
 
-      // Envoyer notification à l'admin
-      await supabase.functions.invoke('send-offer-notification', {
-        body: {
-          partnerName: partnerData.business_name,
-          offerTitle: newOffer.title,
-          offerDescription: newOffer.description
-        }
-      });
+      // Ajouter le prix initial si spécifié
+      if (newOffer.price && createdOffer) {
+        const { error: variantError } = await (supabase
+          .from('offer_variants') as any)
+          .insert({
+            offer_id: (createdOffer as any).id,
+            name: 'Prix standard',
+            price: parseFloat(newOffer.price),
+            discounted_price: newOffer.discounted_price ? parseFloat(newOffer.discounted_price) : null
+          });
+        if (variantError) throw variantError;
+      }
 
-      toast.success('Offre soumise avec succès !');
+      // Ajouter l'image si spécifiée
+      if (newOffer.image_url && createdOffer) {
+        const { error: mediaError } = await (supabase
+          .from('offer_media') as any)
+          .insert({
+            offer_id: (createdOffer as any).id,
+            url: newOffer.image_url,
+            type: 'image',
+            order: 1
+          });
+        if (mediaError) throw mediaError;
+      }
+
+      toast.success('Offre créée en brouillon !');
       setShowCreateForm(false);
       setNewOffer({
-  title: '',
-  description: '',
-  category_slug: '',
-  subcategory_slug: '',
-  price: '',
-  image_url: '',
-  location: '',
-  requires_agenda: false,
-  calendly_url: '',
-  has_stock: false,
-  stock: ''
-});
+        title: '',
+        description: '',
+        category_slug: '',
+        subcategory_slug: '',
+        price: '',
+        discounted_price: '',
+        image_url: '',
+        street_address: '',
+        zip_code: '',
+        department: '',
+        city: '',
+        coordinates: null,
+        calendly_url: '',
+        event_start_date: '',
+        event_end_date: '',
+      });
 
       await loadOffers();
     } catch (error) {
@@ -238,12 +296,12 @@ const { error: createError } = await supabase
     }
   };
 
-  const handleDeletePendingOffer = async (offerId: string) => {
+  const handleDeleteOffer = async (offerId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette offre ?')) return;
 
     try {
-      const { error } = await supabase
-        .from('pending_offers')
+      const { error } = await (supabase
+        .from('offers') as any)
         .delete()
         .eq('id', offerId);
 
@@ -257,17 +315,40 @@ const { error: createError } = await supabase
     }
   };
 
-  const filteredPendingOffers = pendingOffers.filter(offer => {
-    const matchesSearch = offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         offer.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const handleSubmitForApproval = async (offer: Offer) => {
+    try {
+      const { error } = await (supabase
+        .from('offers') as any)
+        .update({ status: 'ready' })
+        .eq('id', offer.id);
 
-  const filteredApprovedOffers = approvedOffers.filter(offer => {
+      if (error) throw error;
+
+      // Notifier l'admin
+      await supabase.functions.invoke('send-offer-notification', {
+        body: {
+          offerId: offer.id,
+          offerTitle: offer.title
+        }
+      });
+
+      toast.success('Offre soumise pour validation !');
+      await loadOffers();
+    } catch (error) {
+      console.error('Error submitting offer:', error);
+      toast.error('Erreur lors de la soumission');
+    }
+  };
+
+  const filteredOffers = offers.filter(offer => {
     const matchesSearch = offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         offer.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
+      offer.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    let matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
+    if (statusFilter === 'active') {
+      matchesStatus = offer.is_approved;
+    }
+
     return matchesSearch && matchesStatus;
   });
   if (loading) {
@@ -343,11 +424,11 @@ const { error: createError } = await supabase
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 shadow-soft">
             <div className="flex items-center">
-              <Clock className="w-8 h-8 text-yellow-600 mr-3" />
+              <Clock className="w-8 h-8 text-blue-600 mr-3" />
               <div>
-                <p className="text-sm text-gray-500">En attente</p>
+                <p className="text-sm text-gray-500">En cours de validation</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {pendingOffers.filter(o => o.status === 'pending').length}
+                  {offers.filter(o => o.status === 'ready').length}
                 </p>
               </div>
             </div>
@@ -358,7 +439,9 @@ const { error: createError } = await supabase
               <CheckCircle2 className="w-8 h-8 text-green-600 mr-3" />
               <div>
                 <p className="text-sm text-gray-500">Approuvées</p>
-                <p className="text-2xl font-bold text-gray-900">{approvedOffers.length}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {offers.filter(o => o.status === 'approved' || o.status === 'active').length}
+                </p>
               </div>
             </div>
           </div>
@@ -369,7 +452,7 @@ const { error: createError } = await supabase
               <div>
                 <p className="text-sm text-gray-500">Refusées</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {pendingOffers.filter(o => o.status === 'rejected').length}
+                  {offers.filter(o => o.status === 'rejected').length}
                 </p>
               </div>
             </div>
@@ -379,251 +462,122 @@ const { error: createError } = await supabase
             <div className="flex items-center">
               <CheckCircle2 className="w-8 h-8 text-primary mr-3" />
               <div>
-                <p className="text-sm text-gray-500">Actives</p>
+                <p className="text-sm text-gray-500">Actives (en ligne)</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {approvedOffers.filter(o => o.is_active !== false).length}
+                  {offers.filter(o => o.is_approved).length}
                 </p>
               </div>
             </div>
           </div>
         </div>
-        {/* Offres en attente */}
-        {filteredPendingOffers.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Offres en attente de validation</h2>
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {filteredPendingOffers.map((offer) => {
-                  const StatusIcon = statusConfig[offer.status || 'pending'].icon;
-                  const category = categories.find(c => c.slug === offer.category_slug);
-                  const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
 
-                  return (
-                    <li key={offer.id}>
-                      <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-4">
-                              {/* Image */}
-                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                                {offer.image_url ? (
-                                  <img
-                                    src={offer.image_url}
-                                    alt={offer.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                    <ImageIcon className="w-6 h-6 text-gray-400" />
-                                  </div>
-                                )}
+        {/* Liste des offres */}
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <ul className="divide-y divide-gray-200">
+            {filteredOffers.map((offer) => {
+              const status = offer.is_approved ? 'active' : offer.status;
+              const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+              const StatusIcon = config.icon;
+              const category = categories.find(c => c.slug === offer.category_slug);
+              const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
+              const mainVariant = offer.variants?.[0];
+
+              return (
+                <li key={offer.id}>
+                  <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-4">
+                          {/* Image */}
+                          <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                            {offer.media?.[0] ? (
+                              <img
+                                src={offer.media[0].url}
+                                alt={offer.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <ImageIcon className="w-6 h-6 text-gray-400" />
                               </div>
-
-                              <div className="flex-1">
-                                <h3 className="text-lg font-medium text-gray-900 truncate">
-                                  {offer.title}
-                                </h3>
-                                <div className="mt-1 flex items-center gap-4">
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[offer.status || 'pending'].className}`}
-                                  >
-                                    <StatusIcon className="w-4 h-4 mr-1" />
-                                    {statusConfig[offer.status || 'pending'].label}
-                                  </span>
-                                  <span className="text-sm text-gray-500">
-                                    {new Date(offer.created_at).toLocaleDateString('fr-FR')}
-                                  </span>
-                                  {offer.price && (
-                                    <span className="text-sm text-primary font-medium">
-                                      {offer.price}€
-                                    </span>
-                                  )}
-                                  {offer.has_stock && offer.stock !== null && (
-  <span className="text-sm text-blue-700 font-medium">
-    Stock : {offer.stock}
-  </span>
-)}
-
-                                </div>
-                                <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
-                                  <span>{category?.name}</span>
-                                  {subcategory && <span>• {subcategory.name}</span>}
-                                  {offer.location && (
-                                    <span className="flex items-center">
-                                      <MapPin className="w-3 h-3 mr-1" />
-                                      {offer.location}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Affichage du lien Calendly si requis */}
-                                {offer.requires_agenda && offer.calendly_url && (
-                                  <div className="mt-2 text-sm">
-                                    <a
-                                      href={offer.calendly_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary underline"
-                                    >
-                                      Voir les créneaux disponibles
-                                    </a>
-                                  </div>
-                                )}
-
-                                {/* Raison du rejet */}
-                                {offer.status === 'rejected' && offer.rejection_reason && (
-                                  <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
-                                    <p className="text-sm text-red-700">
-                                      <strong>Raison du rejet :</strong> {offer.rejection_reason}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-2 ml-4">
-                            <button
-                              onClick={() => setSelectedOffer(offer)}
-                              className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
-                            >
-                              <Eye className="w-5 h-5" />
-                            </button>
-                            {offer.status === 'pending' && (
-                              <button
-                                onClick={() => handleDeletePendingOffer(offer.id)}
-                                className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        )}
-        {/* Offres approuvées */}
-        {filteredApprovedOffers.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Mes offres validées</h2>
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {filteredApprovedOffers.map((offer) => {
-                  const StatusIcon = statusConfig[offer.status].icon;
-                  const category = categories.find(c => c.slug === offer.category_slug);
-                  const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
-                  const mainPrice = offer.prices?.[0];
 
-                  return (
-                    <li key={offer.id}>
-                      <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-4">
-                              {/* Image */}
-                              <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                                {offer.media?.[0] ? (
-                                  <img
-                                    src={offer.media[0].url}
-                                    alt={offer.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                    <ImageIcon className="w-6 h-6 text-gray-400" />
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex-1">
-                                <h3 className="text-lg font-medium text-gray-900 truncate">
-                                  {offer.title}
-                                </h3>
-                                <div className="mt-1 flex items-center gap-4">
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[offer.status].className}`}
-                                  >
-                                    <StatusIcon className="w-4 h-4 mr-1" />
-                                    {statusConfig[offer.status].label}
-                                  </span>
-                                  <span className="text-sm text-gray-500">
-                                    {new Date(offer.created_at).toLocaleDateString('fr-FR')}
-                                  </span>
-                                  {mainPrice && (
-                                    <span className="text-sm text-primary font-medium">
-                                      À partir de {mainPrice.price}€
-                                    </span>
-                                  )}
-                                  {offer.has_stock && offer.stock !== null && (
-  <span className="text-sm text-blue-700 font-medium">
-    Stock : {offer.stock}
-  </span>
-)}
-
-                                  {offer.is_active === false && (
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                                      Désactivée
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
-                                  <span>{category?.name}</span>
-                                  {subcategory && <span>• {subcategory.name}</span>}
-                                  <span className="flex items-center">
-                                    <MapPin className="w-3 h-3 mr-1" />
-                                    {offer.location}
-                                  </span>
-                                </div>
-
-                                {/* Affichage du lien Calendly si requis */}
-                                {offer.requires_agenda && offer.calendly_url && (
-                                  <div className="mt-2 text-sm">
-                                    <a
-                                      href={offer.calendly_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary underline"
-                                    >
-                                      Réserver un créneau
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-medium text-gray-900 truncate">
+                              {offer.title}
+                            </h3>
+                            <div className="mt-1 flex items-center gap-4">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.className}`}
+                              >
+                                <StatusIcon className="w-4 h-4 mr-1" />
+                                {config.label}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {new Date(offer.created_at).toLocaleDateString('fr-FR')}
+                              </span>
+                              {mainVariant && (
+                                <span className="text-sm text-primary font-medium">
+                                  À partir de {mainVariant.price}€
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <MapPin className="w-4 h-4" />
+                              <span>{[offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'}</span>
+                            </div>
+                            <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
+                              <span>{category?.name}</span>
+                              {subcategory && <span>• {subcategory.name}</span>}
                             </div>
                           </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-2 ml-4">
-                            <Link
-                              to={`/offres/${offer.id}`}
-                              className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
-                            >
-                              <Eye className="w-5 h-5" />
-                            </Link>
-                            <Link
-                              to={`/partner/offers/${offer.id}/edit`}
-                              className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
-                            >
-                              <Edit3 className="w-5 h-5" />
-                            </Link>
-                          </div>
                         </div>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        )}
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() => setSelectedOffer(offer)}
+                          className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        {offer.status === 'draft' && (
+                          <button
+                            onClick={() => handleSubmitForApproval(offer)}
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+                          >
+                            Soumettre
+                          </button>
+                        )}
+                        {(offer.status === 'draft' || offer.status === 'rejected') && (
+                          <Link
+                            to={`/partner/offers/${offer.id}/edit`}
+                            className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
+                          >
+                            <Edit3 className="w-5 h-5" />
+                          </Link>
+                        )}
+                        {offer.status === 'draft' && (
+                          <button
+                            onClick={() => handleDeleteOffer(offer.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
         {/* Message si aucune offre */}
-        {filteredPendingOffers.length === 0 && filteredApprovedOffers.length === 0 && (
+        {filteredOffers.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <div className="mb-4">
               <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
@@ -663,7 +617,7 @@ const { error: createError } = await supabase
                     <input
                       type="text"
                       value={newOffer.title}
-                      onChange={(e) => setNewOffer({...newOffer, title: e.target.value})}
+                      onChange={(e) => setNewOffer({ ...newOffer, title: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                       placeholder="Ex: Massage relaxant 60 minutes"
                       required
@@ -677,7 +631,7 @@ const { error: createError } = await supabase
                     </label>
                     <textarea
                       value={newOffer.description}
-                      onChange={(e) => setNewOffer({...newOffer, description: e.target.value})}
+                      onChange={(e) => setNewOffer({ ...newOffer, description: e.target.value })}
                       rows={4}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                       placeholder="Décrivez votre offre en détail..."
@@ -693,13 +647,13 @@ const { error: createError } = await supabase
                       </label>
                       <select
                         value={newOffer.category_slug}
-                        onChange={(e) => setNewOffer({...newOffer, category_slug: e.target.value, subcategory_slug: ''})}
+                        onChange={(e) => setNewOffer({ ...newOffer, category_slug: e.target.value, subcategory_slug: '' })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                         required
                       >
                         <option value="">Sélectionnez une catégorie</option>
-                        {categories.map(category => (
-                          <option key={category.slug} value={category.slug}>
+                        {parentCategories.map(category => (
+                          <option key={category.id} value={category.slug}>
                             {category.name}
                           </option>
                         ))}
@@ -712,28 +666,26 @@ const { error: createError } = await supabase
                       </label>
                       <select
                         value={newOffer.subcategory_slug}
-                        onChange={(e) => setNewOffer({...newOffer, subcategory_slug: e.target.value})}
+                        onChange={(e) => setNewOffer({ ...newOffer, subcategory_slug: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                         disabled={!newOffer.category_slug}
                         required
                       >
                         <option value="">Sélectionnez une sous-catégorie</option>
-                        {newOffer.category_slug && categories
-                          .find(cat => cat.slug === newOffer.category_slug)
-                          ?.subcategories.map(subcategory => (
-                            <option key={subcategory.slug} value={subcategory.slug}>
-                              {subcategory.name}
-                            </option>
-                          ))}
+                        {subCategories.map(subcategory => (
+                          <option key={subcategory.id} value={subcategory.slug}>
+                            {subcategory.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
                   {/* --- Prix & image --- */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Prix (€)
+                        Prix (€) *
                       </label>
                       <div className="relative">
                         <input
@@ -741,7 +693,28 @@ const { error: createError } = await supabase
                           min="0"
                           step="0.01"
                           value={newOffer.price}
-                          onChange={(e) => setNewOffer({...newOffer, price: e.target.value})}
+                          onChange={(e) => setNewOffer({ ...newOffer, price: e.target.value })}
+                          className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                          placeholder="0.00"
+                          required
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                          <Euro className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prix réduit (€)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newOffer.discounted_price}
+                          onChange={(e) => setNewOffer({ ...newOffer, discounted_price: e.target.value })}
                           className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                           placeholder="0.00"
                         />
@@ -758,7 +731,7 @@ const { error: createError } = await supabase
                       <input
                         type="url"
                         value={newOffer.image_url}
-                        onChange={(e) => setNewOffer({...newOffer, image_url: e.target.value})}
+                        onChange={(e) => setNewOffer({ ...newOffer, image_url: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                         placeholder="https://..."
                       />
@@ -768,88 +741,40 @@ const { error: createError } = await supabase
                   {/* --- Localisation --- */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Localisation
+                      Localisation *
                     </label>
-                    <LocationSearch 
-                      onLocationSelect={(location) => {
-                        setNewOffer({...newOffer, location: location.address});
+                    <LocationSearch
+                      onSelect={(location) => {
+                        setNewOffer({
+                          ...newOffer,
+                          street_address: location.street_address || '',
+                          zip_code: location.zip_code || '',
+                          city: location.city || '',
+                          department: location.department || '',
+                          coordinates: [location.lat, location.lng]
+                        });
                       }}
                     />
                   </div>
 
                   {/* --- Agenda --- */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={newOffer.requires_agenda}
-                      onChange={(e) =>
-                        setNewOffer({
-                          ...newOffer,
-                          requires_agenda: e.target.checked,
-                          calendly_url: e.target.checked ? newOffer.calendly_url : "",
-                        })
-                      }
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                    />
-                    <label className="text-sm text-gray-700">
-                      Cette offre nécessite une réservation via agenda (Calendly)
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Lien Calendly (optionnel)
                     </label>
+                    <input
+                      type="url"
+                      value={newOffer.calendly_url}
+                      onChange={(e) =>
+                        setNewOffer({ ...newOffer, calendly_url: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                      placeholder="https://calendly.com/votre-lien"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Laissez vide si l'offre ne nécessite pas de réservation par agenda.
+                    </p>
                   </div>
-
-                  {newOffer.requires_agenda && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Lien Calendly
-                      </label>
-                      <input
-                        type="url"
-                        value={newOffer.calendly_url}
-                        onChange={(e) =>
-                          setNewOffer({...newOffer, calendly_url: e.target.value})
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        placeholder="https://calendly.com/votre-lien"
-                        required={newOffer.requires_agenda}
-                      />
-                    </div>
-                  )}
-{/* --- Stock --- */}
-<div className="flex items-center gap-2">
-  <input
-    type="checkbox"
-    checked={newOffer.has_stock}
-    onChange={(e) =>
-      setNewOffer({
-        ...newOffer,
-        has_stock: e.target.checked,
-        stock: e.target.checked ? newOffer.stock : ''
-      })
-    }
-    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-  />
-  <label className="text-sm text-gray-700">
-    Cette offre a-t-elle un stock limité ?
-  </label>
-</div>
-
-{newOffer.has_stock && (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      Stock disponible
-    </label>
-    <input
-      type="number"
-      min="1"
-      value={newOffer.stock}
-      onChange={(e) =>
-        setNewOffer({ ...newOffer, stock: e.target.value })
-      }
-      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-      placeholder="Ex: 20"
-      required={newOffer.has_stock}
-    />
-  </div>
-)}
 
                   {/* --- Actions --- */}
                   <div className="flex justify-end gap-4">
@@ -864,7 +789,7 @@ const { error: createError } = await supabase
                       type="submit"
                       className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark"
                     >
-                      Soumettre l'offre
+                      Enregistrer en brouillon
                     </button>
                   </div>
                 </form>
@@ -880,12 +805,12 @@ const { error: createError } = await supabase
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Détails de l'offre
                 </h2>
-                
+
                 <div className="space-y-6">
-                  {selectedOffer.image_url && (
+                  {selectedOffer.media?.[0] && (
                     <div>
                       <img
-                        src={selectedOffer.image_url}
+                        src={selectedOffer.media[0].url}
                         alt={selectedOffer.title}
                         className="w-full h-48 object-cover rounded-lg"
                       />
@@ -897,12 +822,20 @@ const { error: createError } = await supabase
                       {selectedOffer.title}
                     </h3>
                     <div className="flex items-center gap-4 mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusConfig[selectedOffer.status || 'pending'].className}`}>
-                        {statusConfig[selectedOffer.status || 'pending'].label}
-                      </span>
-                      {selectedOffer.price && (
+                      {(() => {
+                        const status = selectedOffer.is_approved ? 'active' : selectedOffer.status;
+                        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+                        const StatusIcon = config.icon;
+                        return (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.className}`}>
+                            <StatusIcon className="w-4 h-4 mr-1" />
+                            {config.label}
+                          </span>
+                        );
+                      })()}
+                      {selectedOffer.variants?.[0] && (
                         <span className="text-lg font-bold text-primary">
-                          {selectedOffer.price}€
+                          {selectedOffer.variants[0].price}€
                         </span>
                       )}
                     </div>
@@ -929,27 +862,16 @@ const { error: createError } = await supabase
                     </div>
                   </div>
 
-                  {selectedOffer.location && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
-                      <p className="text-gray-600 flex items-center">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {selectedOffer.location}
-                      </p>
-                    </div>
-                  )}
-{selectedOffer.has_stock && selectedOffer.stock !== null && (
-  <div>
-    <h4 className="font-semibold text-gray-900 mb-1">Stock disponible</h4>
-    <p className="text-gray-600">
-      {selectedOffer.stock} restant{selectedOffer.stock > 1 ? 's' : ''}
-    </p>
-  </div>
-)}
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
+                    <p className="text-gray-600 flex items-center">
+                      <MapPin className="w-4 h-4 mr-1" />
+                      {[selectedOffer.street_address, selectedOffer.zip_code, selectedOffer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'}
+                    </p>
+                  </div>
 
-
-                  {/* --- Affichage agenda si activé --- */}
-                  {selectedOffer.requires_agenda && selectedOffer.calendly_url && (
+                  {/* --- Affichage agenda si dispo --- */}
+                  {selectedOffer.calendly_url && (
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-1">Réservations</h4>
                       <a

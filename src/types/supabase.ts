@@ -6,85 +6,103 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       user_profiles: {
         Row: {
           id: string;
           user_id: string;
-          first_name: string;
-          last_name: string;
-          phone: string;
-          photo_url?: string;
+          first_name: string | null;
+          last_name: string | null;
+          phone: string | null;
+          photo_url: string | null;
           created_at: string;
           updated_at: string;
-          subscription_status?: 'pending' | 'active' | 'cancelled';
-          is_admin?: boolean;
-          email?: string;
-          stripe_customer_id?: string;
-          stripe_subscription_id?: string;
-          subscription_type?: 'monthly' | 'yearly';
+          email: string | null;
+          stripe_customer_id: string | null;
+          is_admin: boolean | null;
+          partner_id: string | null;
         };
         Insert: {
           id?: string;
           user_id: string;
-          first_name: string;
-          last_name: string;
-          phone: string;
-          photo_url?: string;
-          subscription_status?: 'pending' | 'active' | 'cancelled';
+          first_name?: string | null;
+          last_name?: string | null;
+          phone?: string | null;
+          photo_url?: string | null;
+          created_at?: string;
           updated_at?: string;
-          stripe_customer_id?: string;
-          stripe_subscription_id?: string;
-          subscription_type?: 'monthly' | 'yearly';
+          email?: string | null;
+          stripe_customer_id?: string | null;
+          is_admin?: boolean | null;
+          partner_id?: string | null;
         };
         Update: {
           id?: string;
           user_id?: string;
-          first_name?: string;
-          last_name?: string;
-          phone?: string;
-          photo_url?: string;
+          first_name?: string | null;
+          last_name?: string | null;
+          phone?: string | null;
+          photo_url?: string | null;
           created_at?: string;
           updated_at?: string;
-          subscription_status?: 'pending' | 'active' | 'cancelled';
-          is_admin?: boolean;
-          email?: string;
-          stripe_customer_id?: string;
-          stripe_subscription_id?: string;
-          subscription_type?: 'monthly' | 'yearly';
+          email?: string | null;
+          stripe_customer_id?: string | null;
+          is_admin?: boolean | null;
+          partner_id?: string | null;
         };
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_partner_id_fkey";
+            columns: ["partner_id"];
+            referencedRelation: "partners";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "user_profiles_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
 
       partners: {
         Row: {
           id: string;
-          user_id?: string | null;
-          business_name: string;
-          contact_name: string;
-          contact_email: string;
-          phone: string;
-          website?: string | null;
-          description?: string | null;
-          logo_url?: string | null;
-          address?: string | null;
-          coordinates?: [number, number] | null;
-          social_media?: Json;
-          opening_hours?: Json;
+          business_name: string | null;
+          contact_name: string | null;
+          contact_email: string | null;
+          phone: string | null;
+          website: string | null;
+          description: string | null;
+          logo_url: string | null;
+          address: string | null;
+          coordinates: [number, number] | null;
+          social_media: Json;
+          opening_hours: Json;
+          calendly_url: string | null;
+          stripe_account_id: string | null;
+          payout_iban: string | null;
           status: 'pending' | 'approved' | 'rejected';
-          admin_notes?: string | null;
-          siret?: string | null;        // ✅ ajouté ici
+          admin_notes: string | null;
+          instagram: string | null;
+          facebook: string | null;
+          siret: string | null;
+          commission_rate: number;
+          payout_method: 'manual' | 'stripe';
+          settlement_day: number;
+          message: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          user_id?: string | null;
-          business_name: string;
-          contact_name: string;
-          contact_email: string;
-          phone: string;
+          business_name?: string | null;
+          contact_name?: string | null;
+          contact_email?: string | null;
+          phone?: string | null;
           website?: string | null;
           description?: string | null;
           logo_url?: string | null;
@@ -92,19 +110,27 @@ export interface Database {
           coordinates?: [number, number] | null;
           social_media?: Json;
           opening_hours?: Json;
+          calendly_url?: string | null;
+          stripe_account_id?: string | null;
+          payout_iban?: string | null;
           status?: 'pending' | 'approved' | 'rejected';
           admin_notes?: string | null;
-          siret?: string | null;        // ✅ ajouté ici
+          instagram?: string | null;
+          facebook?: string | null;
+          siret?: string | null;
+          commission_rate?: number;
+          payout_method?: 'manual' | 'stripe';
+          settlement_day?: number;
+          message?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          user_id?: string | null;
-          business_name?: string;
-          contact_name?: string;
-          contact_email?: string;
-          phone?: string;
+          business_name?: string | null;
+          contact_name?: string | null;
+          contact_email?: string | null;
+          phone?: string | null;
           website?: string | null;
           description?: string | null;
           logo_url?: string | null;
@@ -112,14 +138,24 @@ export interface Database {
           coordinates?: [number, number] | null;
           social_media?: Json;
           opening_hours?: Json;
+          calendly_url?: string | null;
+          stripe_account_id?: string | null;
+          payout_iban?: string | null;
           status?: 'pending' | 'approved' | 'rejected';
           admin_notes?: string | null;
-          siret?: string | null;        // ✅ ajouté ici
+          instagram?: string | null;
+          facebook?: string | null;
+          siret?: string | null;
+          commission_rate?: number;
+          payout_method?: 'manual' | 'stripe';
+          settlement_day?: number;
+          message?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
-      
+
 
       offers: {
         Row: {
@@ -127,11 +163,18 @@ export interface Database {
           partner_id: string;
           title: string;
           description: string;
-          category_slug: string;
-          subcategory_slug: string;
-          location: string;
-          coordinates?: [number, number];
-          status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
+          coordinates: [number, number] | null;
+          status: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+          is_approved: boolean | null;
+          calendly_url: string | null;
+          category_id: string | null;
+          commission_rate: number | null;
+          event_start_date: string | null;
+          event_end_date: string | null;
+          street_address: string | null;
+          zip_code: string | null;
+          department: string | null;
+          city: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -140,11 +183,18 @@ export interface Database {
           partner_id: string;
           title: string;
           description: string;
-          category_slug: string;
-          subcategory_slug: string;
-          location: string;
-          coordinates?: [number, number];
-          status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
+          coordinates?: [number, number] | null;
+          status?: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+          is_approved?: boolean | null;
+          calendly_url?: string | null;
+          category_id?: string | null;
+          commission_rate?: number | null;
+          event_start_date?: string | null;
+          event_end_date?: string | null;
+          street_address?: string | null;
+          zip_code?: string | null;
+          department?: string | null;
+          city?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -153,44 +203,73 @@ export interface Database {
           partner_id?: string;
           title?: string;
           description?: string;
-          category_slug?: string;
-          subcategory_slug?: string;
-          location?: string;
-          coordinates?: [number, number];
-          status?: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
+          coordinates?: [number, number] | null;
+          status?: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+          is_approved?: boolean | null;
+          calendly_url?: string | null;
+          category_id?: string | null;
+          commission_rate?: number | null;
+          event_start_date?: string | null;
+          event_end_date?: string | null;
+          street_address?: string | null;
+          zip_code?: string | null;
+          department?: string | null;
+          city?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "offers_category_id_fkey";
+            columns: ["category_id"];
+            referencedRelation: "offer_categories";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "offers_partner_id_fkey";
+            columns: ["partner_id"];
+            referencedRelation: "partners";
+            referencedColumns: ["id"];
+          }
+        ];
       };
 
-      offer_prices: {
+      offer_variants: {
         Row: {
           id: string;
           offer_id: string;
           name: string;
           price: number;
-          promo_price?: number;
-          duration: string;
+          discounted_price: number | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
           offer_id: string;
           name: string;
           price: number;
-          promo_price?: number;
-          duration: string;
+          discounted_price?: number | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
           offer_id?: string;
           name?: string;
           price?: number;
-          promo_price?: number;
-          duration?: string;
+          discounted_price?: number | null;
           created_at?: string;
+          updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "offer_prices_offer_id_fkey";
+            columns: ["offer_id"];
+            referencedRelation: "offers";
+            referencedColumns: ["id"];
+          }
+        ];
       };
 
       offer_media: {
@@ -218,6 +297,7 @@ export interface Database {
           order?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
 
       pending_partners: {
@@ -441,6 +521,140 @@ export interface Database {
           created_at?: string;
         };
       };
+
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          stripe_subscription_id: string | null;
+          product_id: string | null;
+          price_id: string | null;
+          status: string | null;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          cancel_at: string | null;
+          canceled_at: string | null;
+          latest_invoice_id: string | null;
+          latest_payment_intent_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          stripe_subscription_id?: string | null;
+          product_id?: string | null;
+          price_id?: string | null;
+          status?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at?: string | null;
+          canceled_at?: string | null;
+          latest_invoice_id?: string | null;
+          latest_payment_intent_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          stripe_subscription_id?: string | null;
+          product_id?: string | null;
+          price_id?: string | null;
+          status?: string | null;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at?: string | null;
+          canceled_at?: string | null;
+          latest_invoice_id?: string | null;
+          latest_payment_intent_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "user_profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+
+      customer_orders: {
+        Row: {
+          id: string;
+          customer_email: string;
+          partner_id: string;
+          stripe_payment_id: string | null;
+          user_id: string | null;
+          amount_cents: number | null;
+          status: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_email: string;
+          partner_id?: string;
+          stripe_payment_id?: string | null;
+          user_id?: string | null;
+          amount_cents?: number | null;
+          status?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_email?: string;
+          partner_id?: string;
+          stripe_payment_id?: string | null;
+          user_id?: string | null;
+          amount_cents?: number | null;
+          status?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "customer_orders_partner_id_fkey";
+            columns: ["partner_id"];
+            referencedRelation: "partners";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customer_orders_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "user_profiles";
+            referencedColumns: ["user_id"];
+          }
+        ];
+      };
+
+      offer_categories: {
+        Row: {
+          id: string;
+          name: string;
+          parent_name: string | null;
+          parent_slug: string | null;
+          slug: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          parent_name?: string | null;
+          parent_slug?: string | null;
+          slug?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          parent_name?: string | null;
+          parent_slug?: string | null;
+          slug?: string | null;
+        };
+        Relationships: [];
+      };
     };
 
     Functions: {
@@ -475,7 +689,7 @@ export interface Database {
     };
 
     Enums: {
-      offer_status: 'draft' | 'pending' | 'approved' | 'rejected' | 'active';
+      offer_status: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
       media_type: 'image' | 'video';
       pending_partner_status: 'pending' | 'approved' | 'rejected';
       email_status: 'pending' | 'sent' | 'failed';

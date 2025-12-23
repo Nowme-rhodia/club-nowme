@@ -12,6 +12,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { approvePartner, rejectPartner } from '../../lib/partner';
 import type { Database } from '../../types/supabase';
 
 type Partner = Database['public']['Tables']['partners']['Row'];
@@ -42,10 +43,11 @@ export default function Partners() {
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('approved'); // 👉 par défaut on liste les validés
+  const [statusFilter, setStatusFilter] = useState('pending'); // 👉 par défaut on liste les demandes en attente
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadPartners();
@@ -54,6 +56,8 @@ export default function Partners() {
 
   const loadPartners = async () => {
     try {
+      console.log('🔍 [Partners] Loading partners with filter:', statusFilter);
+      
       let query = supabase
         .from('partners')
         .select('*')
@@ -64,12 +68,61 @@ export default function Partners() {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      console.log('📊 [Partners] Query result:', { data, error, count: data?.length });
+      
+      if (error) {
+        console.error('❌ [Partners] Error from Supabase:', error);
+        throw error;
+      }
+      
+      console.log('✅ [Partners] Partners loaded:', data);
       setPartners((data || []) as Partner[]);
     } catch (error) {
-      console.error('Error loading partners:', error);
+      console.error('❌ [Partners] Error loading partners:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApprove = async (partnerId: string) => {
+    setActionLoading(partnerId);
+    try {
+      console.log('🔄 Approbation du partenaire:', partnerId);
+      const result = await approvePartner(partnerId);
+      console.log('📦 Résultat de l\'approbation:', result);
+      
+      // Afficher le mot de passe temporaire à l'admin
+      if (result && (result as any).tempPassword) {
+        const tempPassword = (result as any).tempPassword;
+        console.log('🔑 Temporary password for partner:', tempPassword);
+        alert(`✅ Partenaire approuvé !\n\n🔑 Mot de passe temporaire : ${tempPassword}\n\nCe mot de passe a été envoyé par email au partenaire.`);
+      } else {
+        console.log('⚠️ Pas de mot de passe dans la réponse:', result);
+        alert('✅ Partenaire approuvé ! Un email avec les identifiants a été envoyé.');
+      }
+      
+      await loadPartners();
+    } catch (error: any) {
+      console.error('❌ Error approving partner:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      alert(`Erreur lors de l'approbation du partenaire: ${error.message || 'Erreur inconnue'}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (partnerId: string) => {
+    const reason = prompt('Raison du refus (optionnelle):');
+    setActionLoading(partnerId);
+    try {
+      await rejectPartner(partnerId, reason || undefined);
+      await loadPartners();
+    } catch (error) {
+      console.error('Error rejecting partner:', error);
+      alert('Erreur lors du refus du partenaire');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -79,7 +132,7 @@ export default function Partners() {
       return (
         (p.business_name ?? '').toLowerCase().includes(s) ||
         (p.contact_name ?? '').toLowerCase().includes(s) ||
-        (p.email ?? '').toLowerCase().includes(s)
+        (p.contact_email ?? '').toLowerCase().includes(s)
       );
     })
     .sort((a, b) => {
@@ -113,9 +166,9 @@ export default function Partners() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Partenaires</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Vérification des partenaires</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Liste des partenaires validés (et filtrage par statut si besoin)
+          Gérez les demandes de partenariat : approuvez ou refusez les candidatures
         </p>
       </div>
 
@@ -209,21 +262,42 @@ export default function Partners() {
                       <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
                         <span>{partner.contact_name}</span>
                         <a
-                          href={`mailto:${partner.email}`}
+                          href={`mailto:${partner.contact_email}`}
                           className="inline-flex items-center text-primary hover:text-primary-dark"
                         >
                           <Mail className="w-4 h-4 mr-1" />
-                          {partner.email}
+                          {partner.contact_email}
                         </a>
                         <span>{partner.phone}</span>
                       </div>
                     </div>
 
-                    {/* Voir détails */}
+                    {/* Actions */}
                     <div className="flex items-center gap-2 ml-4">
+                      {partner.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(partner.id)}
+                            disabled={actionLoading === partner.id}
+                            className="p-2 text-gray-400 hover:text-green-600 rounded-full hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50"
+                            title="Approuver"
+                          >
+                            <CheckCircle2 className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleReject(partner.id)}
+                            disabled={actionLoading === partner.id}
+                            className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50"
+                            title="Refuser"
+                          >
+                            <XCircle className="w-5 h-5" />
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => setSelectedPartner(partner)}
                         className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
+                        title="Voir détails"
                       >
                         <Eye className="w-5 h-5" />
                       </button>
@@ -260,7 +334,7 @@ export default function Partners() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Email</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    {selectedPartner.email}
+                    {selectedPartner.contact_email}
                   </dd>
                 </div>
                 <div>

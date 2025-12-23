@@ -6,7 +6,7 @@ interface OfferCardProps {
   id: string;
   title: string;
   description: string;
-  location: string | { lat: number; lng: number };
+  location: string | { lat: number; lng: number; address?: string };
   price: number;
   promoPrice?: number;
   imageUrl: string;
@@ -26,12 +26,13 @@ export function OfferCard({
   category,
 }: OfferCardProps) {
   const discount = promoPrice ? Math.round(((price - promoPrice) / price) * 100) : 0;
-  
-  // Si location est un objet avec lat/lng, on affiche juste "Paris"
-  const displayLocation = typeof location === 'string' ? location : 'Paris';
+
+  const displayLocation = typeof location === 'string'
+    ? location
+    : (location.address || 'Paris');
 
   return (
-    <Link 
+    <Link
       to={`/offres/${id}`}
       className="group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl block"
     >

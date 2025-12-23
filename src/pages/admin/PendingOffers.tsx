@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { 
-  CheckCircle2, 
-  XCircle, 
+import {
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   Eye,
   Search,
@@ -18,34 +18,46 @@ import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
 import toast from 'react-hot-toast';
 
-interface PendingOffer {
+interface Offer {
   id: string;
   title: string;
   description: string;
   category_slug: string;
   subcategory_slug: string;
-  price?: number;
-  location?: string;
-  image_url?: string;
+  location: string;
+  status: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+  is_approved: boolean;
+  created_at: string;
   requires_agenda?: boolean;
   calendly_url?: string | null;
-  status?: 'pending' | 'approved' | 'rejected';
   rejection_reason?: string;
-  created_at: string;
-  pending_partner: {
+  partner: {
     id: string;
     business_name: string;
     contact_name: string;
-    email: string;
+    contact_email: string;
     phone: string;
   };
+  variants?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    promo_price?: number;
+    duration: string;
+  }>;
+  media?: Array<{
+    id: string;
+    url: string;
+    type: 'image' | 'video';
+    order: number;
+  }>;
 }
 
 const statusConfig = {
-  pending: {
-    label: 'En attente',
-    icon: AlertCircle,
-    className: 'bg-yellow-100 text-yellow-700'
+  ready: {
+    label: 'À valider',
+    icon: Clock,
+    className: 'bg-blue-100 text-blue-700'
   },
   approved: {
     label: 'Approuvée',
@@ -60,16 +72,16 @@ const statusConfig = {
 };
 
 export default function PendingOffers() {
-  const [offers, setOffers] = useState<PendingOffer[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState('ready');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [selectedOffer, setSelectedOffer] = useState<PendingOffer | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionModal, setShowRejectionModal] = useState(false);
-  const [offerToReject, setOfferToReject] = useState<PendingOffer | null>(null);
+  const [offerToReject, setOfferToReject] = useState<Offer | null>(null);
 
   useEffect(() => {
     loadOffers();
@@ -78,11 +90,14 @@ export default function PendingOffers() {
   const loadOffers = async () => {
     try {
       const { data, error } = await supabase
-        .from('pending_offers')
+        .from('offers')
         .select(`
           *,
-          pending_partner:pending_partners(*)
+          partner:partners(*),
+          variants:offer_variants(*),
+          media:offer_media(*)
         `)
+        .neq('status', 'draft')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -95,98 +110,23 @@ export default function PendingOffers() {
     }
   };
 
-  const handleApprove = async (offer: PendingOffer) => {
+  const handleApprove = async (offer: Offer) => {
     try {
-      let partnerId = null;
-
-      // Vérifier si le partenaire existe déjà
-      const { data: existingPartner, error: partnerCheckError } = await supabase
-        .from('partners')
-        .select('id')
-        .eq('business_name', offer.pending_partner.business_name)
-        .eq('contact_name', offer.pending_partner.contact_name)
-        .single();
-
-      if (partnerCheckError && partnerCheckError.code !== 'PGRST116') {
-        throw partnerCheckError;
-      }
-
-      if (existingPartner) {
-        partnerId = existingPartner.id;
-      } else {
-        const { data: newPartner, error: partnerError } = await supabase
-          .from('partners')
-          .insert({
-            business_name: offer.pending_partner.business_name,
-            contact_name: offer.pending_partner.contact_name,
-            phone: offer.pending_partner.phone,
-            description: `Partenaire validé via l'offre: ${offer.title}`
-          })
-          .select('id')
-          .single();
-
-        if (partnerError) throw partnerError;
-        partnerId = newPartner.id;
-      }
-
-      // Créer l'offre validée
-      const { data: newOffer, error: offerError } = await supabase
+      const { error } = await supabase
         .from('offers')
-        .insert({
-          partner_id: partnerId,
-          title: offer.title,
-          description: offer.description,
-          category_slug: offer.category_slug,
-          subcategory_slug: offer.subcategory_slug,
-          location: offer.location || 'Paris',
-          requires_agenda: offer.requires_agenda || false,
-          calendly_url: offer.requires_agenda ? offer.calendly_url : null,
-          status: 'active',
-          is_active: true
+        .update({
+          status: 'approved',
+          is_approved: true
         })
-        .select('id')
-        .single();
-
-      if (offerError) throw offerError;
-
-      // Ajouter un prix
-      if (offer.price) {
-        const { error: priceError } = await supabase
-          .from('offer_prices')
-          .insert({
-            offer_id: newOffer.id,
-            name: 'Prix standard',
-            price: offer.price,
-            duration: 'Séance'
-          });
-        if (priceError) throw priceError;
-      }
-
-      // Ajouter une image
-      if (offer.image_url) {
-        const { error: mediaError } = await supabase
-          .from('offer_media')
-          .insert({
-            offer_id: newOffer.id,
-            url: offer.image_url,
-            type: 'image',
-            order: 1
-          });
-        if (mediaError) throw mediaError;
-      }
-
-      // Supprimer de pending_offers
-      const { error: deleteError } = await supabase
-        .from('pending_offers')
-        .delete()
         .eq('id', offer.id);
-      if (deleteError) throw deleteError;
+
+      if (error) throw error;
 
       // Envoyer notif
       await supabase.functions.invoke('send-offer-approval', {
         body: {
-          to: offer.pending_partner.email,
-          contactName: offer.pending_partner.contact_name,
+          to: offer.partner.contact_email,
+          contactName: offer.partner.contact_name,
           offerTitle: offer.title
         }
       });
@@ -207,10 +147,11 @@ export default function PendingOffers() {
 
     try {
       const { error: updateError } = await supabase
-        .from('pending_offers')
-        .update({ 
+        .from('offers')
+        .update({
           status: 'rejected',
-          rejection_reason: rejectionReason
+          rejection_reason: rejectionReason,
+          is_approved: false
         })
         .eq('id', offerToReject.id);
 
@@ -218,8 +159,8 @@ export default function PendingOffers() {
 
       await supabase.functions.invoke('send-offer-rejection', {
         body: {
-          to: offerToReject.pending_partner.email,
-          contactName: offerToReject.pending_partner.contact_name,
+          to: offerToReject.partner.contact_email,
+          contactName: offerToReject.partner.contact_name,
           offerTitle: offerToReject.title,
           rejectionReason: rejectionReason
         }
@@ -238,10 +179,10 @@ export default function PendingOffers() {
 
   const filteredOffers = offers
     .filter(offer => {
-      const matchesSearch = 
+      const matchesSearch =
         offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         offer.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        offer.pending_partner.business_name.toLowerCase().includes(searchTerm.toLowerCase());
+        offer.partner.business_name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
       return matchesSearch && matchesStatus;
     })
@@ -290,12 +231,12 @@ export default function PendingOffers() {
             <div>
               <p className="text-sm text-gray-500">En attente</p>
               <p className="text-2xl font-bold text-gray-900">
-                {offers.filter(o => o.status === 'pending').length}
+                {offers.filter(o => o.status === 'ready').length}
               </p>
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <div className="flex items-center">
             <CheckCircle2 className="w-8 h-8 text-green-600 mr-3" />
@@ -307,7 +248,7 @@ export default function PendingOffers() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <div className="flex items-center">
             <XCircle className="w-8 h-8 text-red-600 mr-3" />
@@ -373,10 +314,13 @@ export default function PendingOffers() {
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
           {filteredOffers.map((offer) => {
-            const StatusIcon = statusConfig[offer.status || 'pending'].icon;
+            const config = statusConfig[offer.status as keyof typeof statusConfig] || statusConfig.ready;
+            const StatusIcon = config.icon;
             const category = categories.find(c => c.slug === offer.category_slug);
             const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
-            
+            const mainVariant = offer.variants?.[0];
+            const mainMedia = offer.media?.[0];
+
             return (
               <li key={offer.id}>
                 <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
@@ -385,9 +329,9 @@ export default function PendingOffers() {
                       <div className="flex items-center gap-4">
                         {/* Image */}
                         <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                          {offer.image_url ? (
+                          {mainMedia ? (
                             <img
-                              src={offer.image_url}
+                              src={mainMedia.url}
                               alt={offer.title}
                               className="w-full h-full object-cover"
                             />
@@ -403,27 +347,27 @@ export default function PendingOffers() {
                             {offer.title}
                           </h3>
                           <div className="mt-1 flex items-center gap-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[offer.status || 'pending'].className}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.className}`}>
                               <StatusIcon className="w-4 h-4 mr-1" />
-                              {statusConfig[offer.status || 'pending'].label}
+                              {config.label}
                             </span>
                             <span className="text-sm text-gray-500">
                               {format(new Date(offer.created_at), 'dd MMMM yyyy', { locale: fr })}
                             </span>
-                            {offer.price && (
+                            {mainVariant && (
                               <span className="text-sm text-primary font-medium">
-                                {offer.price}€
+                                {mainVariant.price}€
                               </span>
                             )}
                           </div>
                           <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                            <span className="font-medium">{offer.pending_partner.business_name}</span>
-                            <a 
-                              href={`mailto:${offer.pending_partner.email}`}
+                            <span className="font-medium">{offer.partner.business_name}</span>
+                            <a
+                              href={`mailto:${offer.partner.contact_email}`}
                               className="inline-flex items-center text-primary hover:text-primary-dark"
                             >
                               <Mail className="w-4 h-4 mr-1" />
-                              {offer.pending_partner.email}
+                              {offer.partner.contact_email}
                             </a>
                             <span>{category?.name}</span>
                             {offer.location && (
@@ -445,7 +389,7 @@ export default function PendingOffers() {
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      {offer.status === 'pending' && (
+                      {offer.status === 'ready' && (
                         <>
                           <button
                             onClick={() => handleApprove(offer)}
@@ -474,167 +418,177 @@ export default function PendingOffers() {
       </div>
 
       {/* Modal de détails */}
-      {selectedOffer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Détails de l'offre
-              </h2>
-              
-              <div className="space-y-6">
-                {selectedOffer.image_url && (
-                  <div>
-                    <img
-                      src={selectedOffer.image_url}
-                      alt={selectedOffer.title}
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                  </div>
-                )}
+      {
+        selectedOffer && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Détails de l'offre
+                </h2>
+                {(() => {
+                  const config = statusConfig[selectedOffer.status as keyof typeof statusConfig] || statusConfig.ready;
+                  const category = categories.find(c => c.slug === selectedOffer.category_slug);
+                  const subcategory = category?.subcategories.find(s => s.slug === selectedOffer.subcategory_slug);
+                  return (
+                    <div className="space-y-6">
+                      {selectedOffer.media?.[0] && (
+                        <div>
+                          <img
+                            src={selectedOffer.media[0].url}
+                            alt={selectedOffer.title}
+                            className="w-full h-48 object-cover rounded-lg"
+                          />
+                        </div>
+                      )}
 
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    {selectedOffer.title}
-                  </h3>
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusConfig[selectedOffer.status || 'pending'].className}`}>
-                      {statusConfig[selectedOffer.status || 'pending'].label}
-                    </span>
-                    {selectedOffer.price && (
-                      <span className="text-lg font-bold text-primary">
-                        {selectedOffer.price}€
-                      </span>
-                    )}
-                  </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                          {selectedOffer.title}
+                        </h3>
+                        <div className="flex items-center gap-4 mb-4">
+                          <span className={`${config.className} inline-flex items-center px-3 py-1 rounded-full text-sm font-medium`}>
+                            {config.label}
+                          </span>
+                          {selectedOffer.variants?.[0] && (
+                            <span className="text-lg font-bold text-primary">
+                              {selectedOffer.variants[0].price}€
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Partenaire</h4>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <p className="font-medium">{selectedOffer.partner.business_name}</p>
+                          <p className="text-sm text-gray-600">{selectedOffer.partner.contact_name}</p>
+                          <p className="text-sm text-gray-600">{selectedOffer.partner.contact_email}</p>
+                          <p className="text-sm text-gray-600">{selectedOffer.partner.phone}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+                        <p className="text-gray-600">{selectedOffer.description}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
+                          <p className="text-gray-600">{category?.name}</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">Sous-catégorie</h4>
+                          <p className="text-gray-600">{subcategory?.name}</p>
+                        </div>
+                      </div>
+
+                      {selectedOffer.location && (
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
+                          <p className="text-gray-600 flex items-center">
+                            <MapPin className="w-4 h-4 mr-1" />
+                            {selectedOffer.location}
+                          </p>
+                        </div>
+                      )}
+
+                      {selectedOffer.status === 'rejected' && selectedOffer.rejection_reason && (
+                        <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                          <h4 className="font-semibold text-red-900 mb-2">Raison du rejet</h4>
+                          <p className="text-red-700">{selectedOffer.rejection_reason}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    onClick={() => setSelectedOffer(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Fermer
+                  </button>
+                  {selectedOffer.status === 'ready' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setOfferToReject(selectedOffer);
+                          setShowRejectionModal(true);
+                          setSelectedOffer(null);
+                        }}
+                        className="px-4 py-2 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
+                      >
+                        Rejeter
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleApprove(selectedOffer);
+                          setSelectedOffer(null);
+                        }}
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+                      >
+                        Approuver
+                      </button>
+                    </>
+                  )}
                 </div>
-
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Partenaire</h4>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="font-medium">{selectedOffer.pending_partner.business_name}</p>
-                    <p className="text-sm text-gray-600">{selectedOffer.pending_partner.contact_name}</p>
-                    <p className="text-sm text-gray-600">{selectedOffer.pending_partner.email}</p>
-                    <p className="text-sm text-gray-600">{selectedOffer.pending_partner.phone}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
-                  <p className="text-gray-600">{selectedOffer.description}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
-                    <p className="text-gray-600">{category?.name}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Sous-catégorie</h4>
-                    <p className="text-gray-600">{subcategory?.name}</p>
-                  </div>
-                </div>
-
-                {selectedOffer.location && (
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
-                    <p className="text-gray-600 flex items-center">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {selectedOffer.location}
-                    </p>
-                  </div>
-                )}
-
-                {selectedOffer.status === 'rejected' && selectedOffer.rejection_reason && (
-                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                    <h4 className="font-semibold text-red-900 mb-2">Raison du rejet</h4>
-                    <p className="text-red-700">{selectedOffer.rejection_reason}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={() => setSelectedOffer(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Fermer
-                </button>
-                {selectedOffer.status === 'pending' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setOfferToReject(selectedOffer);
-                        setShowRejectionModal(true);
-                        setSelectedOffer(null);
-                      }}
-                      className="px-4 py-2 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
-                    >
-                      Rejeter
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleApprove(selectedOffer);
-                        setSelectedOffer(null);
-                      }}
-                      className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
-                    >
-                      Approuver
-                    </button>
-                  </>
-                )}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal de rejet */}
-      {showRejectionModal && offerToReject && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
-                Rejeter l'offre
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Offre : <strong>{offerToReject.title}</strong>
-              </p>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Raison du rejet *
-                </label>
-                <textarea
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-                  placeholder="Expliquez pourquoi cette offre ne peut pas être acceptée..."
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowRejectionModal(false);
-                    setOfferToReject(null);
-                    setRejectionReason('');
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleReject}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                >
+      {
+        showRejectionModal && offerToReject && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">
                   Rejeter l'offre
-                </button>
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Offre : <strong>{offerToReject.title}</strong>
+                </p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Raison du rejet *
+                  </label>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Expliquez pourquoi cette offre ne peut pas être acceptée..."
+                    required
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowRejectionModal(false);
+                      setOfferToReject(null);
+                      setRejectionReason('');
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleReject}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Rejeter l'offre
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
