@@ -25,7 +25,7 @@ interface Offer {
   category_slug: string;
   subcategory_slug: string;
   location: string;
-  status: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+  status: 'draft' | 'ready' | 'pending' | 'approved' | 'rejected';
   is_approved: boolean;
   created_at: string;
   requires_agenda?: boolean;
@@ -54,10 +54,20 @@ interface Offer {
 }
 
 const statusConfig = {
-  ready: {
-    label: 'À valider',
+  draft: {
+    label: 'Brouillon',
     icon: Clock,
+    className: 'bg-gray-100 text-gray-700'
+  },
+  ready: {
+    label: 'Prête',
+    icon: CheckCircle2,
     className: 'bg-blue-100 text-blue-700'
+  },
+  pending: {
+    label: 'En validation',
+    icon: Clock,
+    className: 'bg-yellow-100 text-yellow-700'
   },
   approved: {
     label: 'Approuvée',
@@ -75,7 +85,7 @@ export default function PendingOffers() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ready');
+  const [statusFilter, setStatusFilter] = useState('pending');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
@@ -94,10 +104,9 @@ export default function PendingOffers() {
         .select(`
           *,
           partner:partners(*),
-          variants:offer_variants(*),
-          media:offer_media(*)
+          variants:offer_variants(*)
         `)
-        .neq('status', 'draft')
+        .in('status', ['pending', 'approved', 'rejected'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -112,8 +121,8 @@ export default function PendingOffers() {
 
   const handleApprove = async (offer: Offer) => {
     try {
-      const { error } = await supabase
-        .from('offers')
+      const { error } = await (supabase
+        .from('offers') as any)
         .update({
           status: 'approved',
           is_approved: true
@@ -146,8 +155,8 @@ export default function PendingOffers() {
     }
 
     try {
-      const { error: updateError } = await supabase
-        .from('offers')
+      const { error: updateError } = await (supabase
+        .from('offers') as any)
         .update({
           status: 'rejected',
           rejection_reason: rejectionReason,
@@ -231,7 +240,7 @@ export default function PendingOffers() {
             <div>
               <p className="text-sm text-gray-500">En attente</p>
               <p className="text-2xl font-bold text-gray-900">
-                {offers.filter(o => o.status === 'ready').length}
+                {offers.filter(o => o.status === 'pending').length}
               </p>
             </div>
           </div>

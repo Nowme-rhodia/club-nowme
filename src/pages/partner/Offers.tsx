@@ -14,7 +14,8 @@ import {
   Image as ImageIcon,
   Euro,
   MapPin,
-  Calendar
+  Calendar,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -33,7 +34,7 @@ interface Offer {
   city: string | null;
   department: string | null;
   coordinates: [number, number] | null;
-  status: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+  status: 'draft' | 'ready' | 'pending' | 'approved' | 'rejected';
   is_approved: boolean;
   created_at: string;
   calendly_url?: string | null;
@@ -54,30 +55,30 @@ interface Offer {
 }
 
 const statusConfig = {
-  active: {
-    label: 'En ligne',
-    icon: CheckCircle2,
-    className: 'bg-green-100 text-green-700'
-  },
-  ready: {
-    label: 'En cours de validation',
-    icon: Clock,
-    className: 'bg-blue-100 text-blue-700'
-  },
   draft: {
     label: 'Brouillon',
     icon: Clock,
     className: 'bg-gray-100 text-gray-700'
   },
-  rejected: {
-    label: 'Refusée',
-    icon: XCircle,
-    className: 'bg-red-100 text-red-700'
+  ready: {
+    label: 'Prête',
+    icon: CheckCircle2,
+    className: 'bg-blue-100 text-blue-700'
+  },
+  pending: {
+    label: 'En validation',
+    icon: Clock,
+    className: 'bg-yellow-100 text-yellow-700'
   },
   approved: {
     label: 'Approuvée',
     icon: CheckCircle2,
     className: 'bg-green-100 text-green-700'
+  },
+  rejected: {
+    label: 'Refusée',
+    icon: XCircle,
+    className: 'bg-red-100 text-red-700'
   }
 };
 export default function Offers() {
@@ -93,9 +94,6 @@ export default function Offers() {
     description: '',
     category_slug: '',
     subcategory_slug: '',
-    price: '',
-    discounted_price: '',
-    image_url: '',
     street_address: '',
     zip_code: '',
     department: '',
@@ -105,6 +103,32 @@ export default function Offers() {
     event_start_date: '',
     event_end_date: '',
   });
+
+  // État pour les variants
+  interface VariantForm {
+    name: string;
+    price: string;
+    discounted_price: string;
+  }
+  const [variants, setVariants] = useState<VariantForm[]>([
+    { name: '', price: '', discounted_price: '' }
+  ]);
+
+  const addVariant = () => {
+    setVariants([...variants, { name: '', price: '', discounted_price: '' }]);
+  };
+
+  const removeVariant = (index: number) => {
+    if (variants.length > 1) {
+      setVariants(variants.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateVariant = (index: number, field: keyof VariantForm, value: string) => {
+    const updated = [...variants];
+    updated[index][field] = value;
+    setVariants(updated);
+  };
 
   const [dbCategories, setDbCategories] = useState<any[]>([]);
 
@@ -163,8 +187,7 @@ export default function Offers() {
         .select(`
           *,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
-          variants:offer_variants(*),
-          media:offer_media(*)
+          variants:offer_variants(*)
         `)
         .eq('partner_id', partnerId)
         .order('created_at', { ascending: false });
@@ -207,14 +230,7 @@ export default function Offers() {
         return;
       }
 
-      // Récupérer les infos du partenaire
-      const { data: partnerData, error: partnerError } = await (supabase
-        .from('partners') as any)
-        .select('id, business_name')
-        .eq('id', profileData.partner_id)
-        .single();
-
-      if (partnerError) throw partnerError;
+      const partnerId = profileData.partner_id;
 
       // Trouver l'ID de la catégorie
       const catId = dbCategories.find(c => c.slug === newOffer.subcategory_slug || c.slug === newOffer.category_slug)?.id;
@@ -223,7 +239,7 @@ export default function Offers() {
       const { data: createdOffer, error: createError } = await (supabase
         .from('offers') as any)
         .insert({
-          partner_id: partnerData.id,
+          partner_id: partnerId,
           title: newOffer.title,
           description: newOffer.description,
           category_id: catId,
@@ -243,30 +259,22 @@ export default function Offers() {
 
       if (createError) throw createError;
 
-      // Ajouter le prix initial si spécifié
-      if (newOffer.price && createdOffer) {
-        const { error: variantError } = await (supabase
-          .from('offer_variants') as any)
-          .insert({
+      // Ajouter les variants
+      if (createdOffer) {
+        const validVariants = variants.filter(v => v.name && v.price);
+        if (validVariants.length > 0) {
+          const variantsToInsert = validVariants.map(v => ({
             offer_id: (createdOffer as any).id,
-            name: 'Prix standard',
-            price: parseFloat(newOffer.price),
-            discounted_price: newOffer.discounted_price ? parseFloat(newOffer.discounted_price) : null
-          });
-        if (variantError) throw variantError;
-      }
-
-      // Ajouter l'image si spécifiée
-      if (newOffer.image_url && createdOffer) {
-        const { error: mediaError } = await (supabase
-          .from('offer_media') as any)
-          .insert({
-            offer_id: (createdOffer as any).id,
-            url: newOffer.image_url,
-            type: 'image',
-            order: 1
-          });
-        if (mediaError) throw mediaError;
+            name: v.name,
+            price: parseFloat(v.price),
+            discounted_price: v.discounted_price ? parseFloat(v.discounted_price) : null
+          }));
+          
+          const { error: variantError } = await (supabase
+            .from('offer_variants') as any)
+            .insert(variantsToInsert);
+          if (variantError) throw variantError;
+        }
       }
 
       toast.success('Offre créée en brouillon !');
@@ -276,9 +284,6 @@ export default function Offers() {
         description: '',
         category_slug: '',
         subcategory_slug: '',
-        price: '',
-        discounted_price: '',
-        image_url: '',
         street_address: '',
         zip_code: '',
         department: '',
@@ -288,6 +293,7 @@ export default function Offers() {
         event_start_date: '',
         event_end_date: '',
       });
+      setVariants([{ name: '', price: '', discounted_price: '' }]);
 
       await loadOffers();
     } catch (error) {
@@ -315,11 +321,30 @@ export default function Offers() {
     }
   };
 
-  const handleSubmitForApproval = async (offer: Offer) => {
+  // Marquer une offre comme prête (draft -> ready)
+  const handleMarkAsReady = async (offer: Offer) => {
     try {
       const { error } = await (supabase
         .from('offers') as any)
         .update({ status: 'ready' })
+        .eq('id', offer.id);
+
+      if (error) throw error;
+
+      toast.success('Offre marquée comme prête !');
+      await loadOffers();
+    } catch (error) {
+      console.error('Error marking offer as ready:', error);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  // Soumettre une offre pour validation (ready -> pending)
+  const handleSubmitForApproval = async (offer: Offer) => {
+    try {
+      const { error } = await (supabase
+        .from('offers') as any)
+        .update({ status: 'pending' })
         .eq('id', offer.id);
 
       if (error) throw error;
@@ -340,14 +365,29 @@ export default function Offers() {
     }
   };
 
+  // Mettre une offre hors ligne (approved -> draft)
+  const handleTakeOffline = async (offer: Offer) => {
+    try {
+      const { error } = await (supabase
+        .from('offers') as any)
+        .update({ status: 'draft', is_approved: false })
+        .eq('id', offer.id);
+
+      if (error) throw error;
+
+      toast.success('Offre mise hors ligne');
+      await loadOffers();
+    } catch (error) {
+      console.error('Error taking offer offline:', error);
+      toast.error('Erreur lors de la mise hors ligne');
+    }
+  };
+
   const filteredOffers = offers.filter(offer => {
     const matchesSearch = offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       offer.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    let matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
-    if (statusFilter === 'active') {
-      matchesStatus = offer.is_approved;
-    }
+    const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -410,10 +450,11 @@ export default function Offers() {
                 className="appearance-none pl-4 pr-10 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary bg-white"
               >
                 <option value="all">Tous les statuts</option>
-                <option value="pending">En attente</option>
+                <option value="draft">Brouillons</option>
+                <option value="ready">Prêtes</option>
+                <option value="pending">En validation</option>
                 <option value="approved">Approuvées</option>
                 <option value="rejected">Refusées</option>
-                <option value="active">Actives</option>
               </select>
               <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
@@ -421,50 +462,62 @@ export default function Offers() {
         </div>
 
         {/* Statistiques rapides */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 shadow-soft">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <div className="bg-white rounded-xl p-4 shadow-soft">
             <div className="flex items-center">
-              <Clock className="w-8 h-8 text-blue-600 mr-3" />
+              <Clock className="w-6 h-6 text-gray-500 mr-2" />
               <div>
-                <p className="text-sm text-gray-500">En cours de validation</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-xs text-gray-500">Brouillons</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {offers.filter(o => o.status === 'draft').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 shadow-soft">
+            <div className="flex items-center">
+              <CheckCircle2 className="w-6 h-6 text-blue-600 mr-2" />
+              <div>
+                <p className="text-xs text-gray-500">Prêtes</p>
+                <p className="text-xl font-bold text-gray-900">
                   {offers.filter(o => o.status === 'ready').length}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-soft">
+          <div className="bg-white rounded-xl p-4 shadow-soft">
             <div className="flex items-center">
-              <CheckCircle2 className="w-8 h-8 text-green-600 mr-3" />
+              <Clock className="w-6 h-6 text-yellow-600 mr-2" />
               <div>
-                <p className="text-sm text-gray-500">Approuvées</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {offers.filter(o => o.status === 'approved' || o.status === 'active').length}
+                <p className="text-xs text-gray-500">En validation</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {offers.filter(o => o.status === 'pending').length}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-soft">
+          <div className="bg-white rounded-xl p-4 shadow-soft">
             <div className="flex items-center">
-              <XCircle className="w-8 h-8 text-red-600 mr-3" />
+              <CheckCircle2 className="w-6 h-6 text-green-600 mr-2" />
               <div>
-                <p className="text-sm text-gray-500">Refusées</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-xs text-gray-500">Approuvées</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {offers.filter(o => o.status === 'approved').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-4 shadow-soft">
+            <div className="flex items-center">
+              <XCircle className="w-6 h-6 text-red-600 mr-2" />
+              <div>
+                <p className="text-xs text-gray-500">Refusées</p>
+                <p className="text-xl font-bold text-gray-900">
                   {offers.filter(o => o.status === 'rejected').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-soft">
-            <div className="flex items-center">
-              <CheckCircle2 className="w-8 h-8 text-primary mr-3" />
-              <div>
-                <p className="text-sm text-gray-500">Actives (en ligne)</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {offers.filter(o => o.is_approved).length}
                 </p>
               </div>
             </div>
@@ -475,8 +528,7 @@ export default function Offers() {
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
             {filteredOffers.map((offer) => {
-              const status = offer.is_approved ? 'active' : offer.status;
-              const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+              const config = statusConfig[offer.status as keyof typeof statusConfig] || statusConfig.draft;
               const StatusIcon = config.icon;
               const category = categories.find(c => c.slug === offer.category_slug);
               const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
@@ -543,15 +595,44 @@ export default function Offers() {
                         >
                           <Eye className="w-5 h-5" />
                         </button>
+                        {/* Bouton Marquer comme prête (draft -> ready) */}
                         {offer.status === 'draft' && (
                           <button
-                            onClick={() => handleSubmitForApproval(offer)}
+                            onClick={() => handleMarkAsReady(offer)}
                             className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+                          >
+                            Marquer prête
+                          </button>
+                        )}
+                        {/* Bouton Soumettre (ready -> pending) */}
+                        {offer.status === 'ready' && (
+                          <button
+                            onClick={() => handleSubmitForApproval(offer)}
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none"
                           >
                             Soumettre
                           </button>
                         )}
-                        {(offer.status === 'draft' || offer.status === 'rejected') && (
+                        {/* Bouton Re-soumettre (rejected -> pending) */}
+                        {offer.status === 'rejected' && (
+                          <button
+                            onClick={() => handleSubmitForApproval(offer)}
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none"
+                          >
+                            Re-soumettre
+                          </button>
+                        )}
+                        {/* Bouton Mettre hors ligne (approved -> draft) */}
+                        {offer.status === 'approved' && (
+                          <button
+                            onClick={() => handleTakeOffline(offer)}
+                            className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-full shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                          >
+                            Hors ligne
+                          </button>
+                        )}
+                        {/* Bouton Éditer (draft, ready, rejected) */}
+                        {(offer.status === 'draft' || offer.status === 'ready' || offer.status === 'rejected') && (
                           <Link
                             to={`/partner/offers/${offer.id}/edit`}
                             className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -559,7 +640,8 @@ export default function Offers() {
                             <Edit3 className="w-5 h-5" />
                           </Link>
                         )}
-                        {offer.status === 'draft' && (
+                        {/* Bouton Supprimer (draft, ready) */}
+                        {(offer.status === 'draft' || offer.status === 'ready') && (
                           <button
                             onClick={() => handleDeleteOffer(offer.id)}
                             className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -681,61 +763,94 @@ export default function Offers() {
                     </div>
                   </div>
 
-                  {/* --- Prix & image --- */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Prix (€) *
+                  {/* --- Variants (Tarifs) --- */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Tarifs *
                       </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={newOffer.price}
-                          onChange={(e) => setNewOffer({ ...newOffer, price: e.target.value })}
-                          className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                          placeholder="0.00"
-                          required
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                          <Euro className="w-4 h-4 text-gray-400" />
+                      <button
+                        type="button"
+                        onClick={addVariant}
+                        className="inline-flex items-center px-3 py-1 text-sm font-medium text-primary hover:text-primary-dark"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Ajouter un tarif
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {variants.map((variant, index) => (
+                        <div key={index} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">
+                                Nom du tarif *
+                              </label>
+                              <input
+                                type="text"
+                                value={variant.name}
+                                onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm"
+                                placeholder="Ex: Séance 1h, Pack 5 séances..."
+                                required={index === 0}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">
+                                Prix (€) *
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={variant.price}
+                                  onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                                  className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm"
+                                  placeholder="0.00"
+                                  required={index === 0}
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                  <Euro className="w-3 h-3 text-gray-400" />
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500 mb-1">
+                                Prix réduit (€)
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={variant.discounted_price}
+                                  onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
+                                  className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm"
+                                  placeholder="0.00"
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                  <Euro className="w-3 h-3 text-gray-400" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {variants.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeVariant(index)}
+                              className="mt-6 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          )}
                         </div>
-                      </div>
+                      ))}
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Prix réduit (€)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={newOffer.discounted_price}
-                          onChange={(e) => setNewOffer({ ...newOffer, discounted_price: e.target.value })}
-                          className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                          placeholder="0.00"
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                          <Euro className="w-4 h-4 text-gray-400" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Image (URL)
-                      </label>
-                      <input
-                        type="url"
-                        value={newOffer.image_url}
-                        onChange={(e) => setNewOffer({ ...newOffer, image_url: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        placeholder="https://..."
-                      />
-                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      Ajoutez différents tarifs pour votre offre (ex: durées différentes, packs, etc.)
+                    </p>
                   </div>
 
                   {/* --- Localisation --- */}
@@ -823,8 +938,7 @@ export default function Offers() {
                     </h3>
                     <div className="flex items-center gap-4 mb-4">
                       {(() => {
-                        const status = selectedOffer.is_approved ? 'active' : selectedOffer.status;
-                        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+                        const config = statusConfig[selectedOffer.status as keyof typeof statusConfig] || statusConfig.draft;
                         const StatusIcon = config.icon;
                         return (
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.className}`}>

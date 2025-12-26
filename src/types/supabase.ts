@@ -689,7 +689,7 @@ export type Database = {
     };
 
     Enums: {
-      offer_status: 'draft' | 'ready' | 'approved' | 'rejected' | 'active';
+      offer_status: 'draft' | 'ready' | 'pending' | 'approved' | 'rejected';
       media_type: 'image' | 'video';
       pending_partner_status: 'pending' | 'approved' | 'rejected';
       email_status: 'pending' | 'sent' | 'failed';

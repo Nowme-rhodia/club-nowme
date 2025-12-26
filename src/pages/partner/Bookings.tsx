@@ -13,33 +13,7 @@ import {
 
 // Données simulées pour la démo
 const mockBookings = [
-  {
-    id: 1,
-    customerName: "Sophie Martin",
-    offerTitle: "Massage relaxant",
-    date: "2024-01-22T14:00:00",
-    status: "confirmed",
-    price: 75,
-    location: "Paris 8e"
-  },
-  {
-    id: 2,
-    customerName: "Emma Bernard",
-    offerTitle: "Séance de yoga",
-    date: "2024-01-23T10:30:00",
-    status: "pending",
-    price: 45,
-    location: "Paris 11e"
-  },
-  {
-    id: 3,
-    customerName: "Julie Dubois",
-    offerTitle: "Coaching bien-être",
-    date: "2024-01-24T16:00:00",
-    status: "cancelled",
-    price: 90,
-    location: "Paris 16e"
-  }
+  
 ];
 
 const statusConfig = {

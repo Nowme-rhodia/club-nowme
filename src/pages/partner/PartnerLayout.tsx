@@ -36,11 +36,11 @@ export default function PartnerLayout() {
         }
         
         // Récupérer les infos du partenaire
-        const { data, error } = await supabase
-          .from("partners")
+        const { data, error } = await (supabase
+          .from("partners") as any)
           .select("business_name")
           .eq("id", profileData.partner_id)
-          .single();
+          .maybeSingle();
 
         console.log('PartnerLayout: Partner data:', data, 'error:', error);
 
@@ -56,7 +56,7 @@ export default function PartnerLayout() {
           .from("partners")
           .select("business_name")
           .eq("id", partnerId)
-          .single();
+          .maybeSingle();
 
         console.log('PartnerLayout: Partner data (from profile):', data, 'error:', error);
 
@@ -64,7 +64,8 @@ export default function PartnerLayout() {
           console.log('PartnerLayout: Setting business name to:', data.business_name);
           setBusinessName(data.business_name || "Mon entreprise");
         } else {
-          setBusinessName("Mon entreprise");
+          // Utiliser le nom du profil si disponible
+          setBusinessName(profile?.first_name || "Mon entreprise");
         }
       }
     };

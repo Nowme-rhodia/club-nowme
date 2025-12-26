@@ -30,8 +30,7 @@ export default function OfferPage() {
           coordinates,
           calendly_url,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
-          offer_variants(price, discounted_price),
-          offer_media(url)
+          offer_variants(price, discounted_price)
         `)
         .eq('id', id)
         .single();

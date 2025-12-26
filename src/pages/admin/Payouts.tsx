@@ -231,7 +231,7 @@ export default function Payouts() {
           </div>
           <div className="bg-white shadow rounded-lg p-4">
             <p className="text-sm text-gray-500">Commission Nowme</p>
-            <p className="text-xl font-bold text-red-600">
+            <p className={`text-xl font-bold ${globalReport.commission > 0 ? 'text-red-600' : ''}`}>
               -{formatAmount(globalReport.commission)}
             </p>
           </div>

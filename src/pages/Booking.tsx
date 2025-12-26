@@ -64,7 +64,6 @@ export default function OfferPage() {
           stock,
           category_id,
           offer_variants(price, promo_price),
-          offer_media(url),
           categories:category_id(name, slug)
         `)
         .eq('id', id)

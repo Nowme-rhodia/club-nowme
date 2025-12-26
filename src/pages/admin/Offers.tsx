@@ -72,8 +72,7 @@ export default function Offers() {
           *,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
           partner:partners(*),
-          variants:offer_variants(*),
-          media:offer_media(*)
+          variants:offer_variants(*)
         `) as any;
 
       if (error) throw error;

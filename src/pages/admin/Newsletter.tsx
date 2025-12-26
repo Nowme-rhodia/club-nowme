@@ -58,47 +58,11 @@ export default function Newsletter() {
     try {
       // Simuler des données pour la démo
       const mockNewsletters: Newsletter[] = [
-        {
-          id: '1',
-          title: 'Kiff du jour - 20 janvier 2024',
-          content: 'Découvre les meilleurs bons plans partagés par la communauté...',
-          scheduled_date: '2024-01-20T08:00:00Z',
-          status: 'sent',
-          recipients_count: 1247,
-          open_rate: 68.5,
-          click_rate: 12.3,
-          created_at: '2024-01-19T15:30:00Z'
-        },
-        {
-          id: '2',
-          title: 'Kiff du jour - 21 janvier 2024',
-          content: 'Massage zen, brunch de folie et cours de poterie...',
-          scheduled_date: '2024-01-21T08:00:00Z',
-          status: 'scheduled',
-          recipients_count: 1251,
-          created_at: '2024-01-20T16:45:00Z'
-        }
+        
       ];
 
       const mockBonPlans: BonPlan[] = [
-        {
-          id: '1',
-          title: 'Massage à -50% chez Zen Spa',
-          description: 'Spa incroyable avec code NOWME50',
-          category: 'Bien-être',
-          author_name: 'Sophie M.',
-          likes_count: 24,
-          created_at: '2024-01-20T10:30:00Z'
-        },
-        {
-          id: '2',
-          title: 'Brunch de folie chez Café Bloom',
-          description: 'Brunch photogénique et délicieux',
-          category: 'Restaurant',
-          author_name: 'Emma L.',
-          likes_count: 31,
-          created_at: '2024-01-19T14:15:00Z'
-        }
+        
       ];
 
       setNewsletters(mockNewsletters);

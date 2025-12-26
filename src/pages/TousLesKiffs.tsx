@@ -76,8 +76,7 @@ export default function TousLesKiffs() {
           .select(`
             *,
             category:offer_categories!offers_category_id_fkey(*),
-            offer_variants(price, discounted_price),
-            offer_media(url)
+            offer_variants(price, discounted_price)
           `)
           .eq('status', 'approved')
           .eq('is_approved', true);

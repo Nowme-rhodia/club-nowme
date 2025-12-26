@@ -162,8 +162,7 @@ export default function Dashboard() {
           .from('offers') as any)
           .select(`
             *,
-            variants:offer_variants(*),
-            media:offer_media(*)
+            variants:offer_variants(*)
           `)
           .eq('partner_id', partnerId)
           .order('created_at', { ascending: false });
@@ -297,7 +296,7 @@ export default function Dashboard() {
           </div>
           <div className="bg-white shadow rounded-lg p-4">
             <p className="text-sm text-gray-500">Commission Nowme</p>
-            <p className="text-xl font-bold text-red-600">-{revenueStats.nowmeCommission} €</p>
+            <p className={`text-xl font-bold ${revenueStats.nowmeCommission !== 0 ? 'text-red-600' : ''}`}>-{revenueStats.nowmeCommission} €</p>
           </div>
           <div className="bg-white shadow rounded-lg p-4">
             <p className="text-sm text-gray-500">Revenu net</p>
@@ -323,7 +322,7 @@ export default function Dashboard() {
               </div>
               <div className="bg-white shadow rounded-lg p-4">
                 <p className="text-sm text-gray-500">Commission Nowme</p>
-                <p className="text-xl font-bold text-red-600">
+                <p className={`text-xl font-bold ${partnerReport.commission !== 0 ? 'text-red-600' : ''}`}>
                   -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
                     .format(partnerReport.commission)}
                 </p>
