@@ -13,8 +13,11 @@ interface UserProfile {
   email?: string;
   first_name?: string;
   last_name?: string;
-  phone?: string;
   photo_url?: string;
+  phone?: string;
+  birth_date?: string;
+  acquisition_source?: string;
+  signup_goal?: string;
   subscription_status?: string;
   subscription_type?: string;
   stripe_customer_id?: string;
@@ -66,34 +69,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const CACHE_DURATION = 20 * 60 * 1000;
 
   const deriveRole = (profileRow: any, partnerRow: any, subscriptionRow: any): Role => {
+    // Log pour débugger la détection
+    // console.log('🔍 deriveRole - Checking:', { 
+    //   partner_id: profileRow?.partner_id, 
+    //   is_admin: profileRow?.is_admin,
+    //   sub_status: subscriptionRow?.status 
+    // });
+
     const adminish = [
       'admin',
       'super_admin',
       'partner_admin',
     ];
-    if (profileRow?.is_admin || adminish.includes(profileRow?.subscription_type)) {
+
+    // Priority 1: Admin
+    if (profileRow?.is_admin === true || adminish.includes(profileRow?.subscription_type)) {
       return 'admin';
     }
-    // Vérifier si l'utilisateur a un partner_id dans user_profiles
-    if (profileRow?.partner_id) return 'partner';
-    if (partnerRow?.id) return 'partner';
-    // Vérifier si l'utilisateur a un abonnement actif dans la table subscriptions
+
+    // Priority 2: Partner (Check partner_id explicitly)
+    if (profileRow?.partner_id) {
+      return 'partner';
+    }
+
+    // Fallback: Check standard partner table if available (legacy compatibility)
+    if (partnerRow?.id) {
+      return 'partner';
+    }
+
+    // Priority 3: Subscriber
     if (subscriptionRow?.status === 'active' || subscriptionRow?.status === 'trialing') {
       return 'subscriber';
     }
+
     return 'guest';
   };
 
   const loadUserProfile = async (userId: string, forceRefresh: boolean = false) => {
     try {
       const timestamp = Date.now();
-      
+
       // Vérifier si un chargement est déjà en cours pour cet utilisateur
       if (loadingProfile === userId && !forceRefresh) {
         console.log('⏸️ loadUserProfile - Already loading profile for userId:', userId);
         return;
       }
-      
+
       // Vérifier le cache mémoire si pas de forceRefresh
       if (!forceRefresh && profileCache && profileCache.userId === userId) {
         const cacheAge = timestamp - profileCache.timestamp;
@@ -105,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('⏰ loadUserProfile - Memory cache expired (age:', Math.round(cacheAge / 1000), 'seconds)');
         }
       }
-      
+
       // Vérifier le cache localStorage en priorité
       if (!forceRefresh) {
         try {
@@ -128,33 +149,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.warn('⚠️ loadUserProfile - localStorage cache error:', e);
         }
       }
-      
+
       // Marquer comme en cours de chargement
       setLoadingProfile(userId);
-      
+
       console.log('🔍 loadUserProfile - Starting for userId:', userId, 'forceRefresh:', forceRefresh, 'timestamp:', timestamp);
-      
+
       // Lancer les 2 requêtes essentielles en PARALLÈLE
       console.log('🔍 loadUserProfile - Launching queries in parallel...');
-      
-      const timeoutDuration = 10000; // Réduit à 10s
-      
+
+      const timeoutDuration = 20000; // Augmenté à 20s pour éviter les timeouts (User Request)
+
       const [
         { data: userData, error: userError },
         { data: subscriptionData, error: subscriptionError }
       ] = await Promise.all([
-        // User profiles
+        // User profiles - Explicitly selecting needed fields for role detection
         Promise.race([
           supabase
             .from('user_profiles')
-            .select('*')
+            .select('*, partner_id, is_admin')
             .eq('user_id', userId)
             .maybeSingle(),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('User profile query timeout')), timeoutDuration)
           )
         ]).catch(err => ({ data: null, error: err })),
-        
+
         // Subscriptions
         Promise.race([
           supabase
@@ -162,18 +183,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .select('id,user_id,status,stripe_subscription_id,current_period_end')
             .eq('user_id', userId)
             .maybeSingle(),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Subscription query timeout')), timeoutDuration)
           )
         ]).catch(err => ({ data: null, error: err }))
       ]) as any;
-      
+
       console.log('🔍 loadUserProfile - All queries completed');
       console.log('  - User data:', userData, 'error:', userError);
       console.log('  - Subscription data:', subscriptionData, 'error:', subscriptionError);
-      
+
       if (userError) {
         console.warn('⚠️ User profile query warning:', userError);
+        // CRITICAL FIX: Stop if recursion is detected to prevent login loop
+        if (typeof userError === 'object' && userError !== null && 'message' in userError) {
+          const msg = (userError as any).message || '';
+          if (msg.includes('recursion')) {
+            console.error('🛑 Recursion error detected. Halting profile load.');
+            toast.error('Erreur critique (RLS). Contactez le support.');
+            return;
+          }
+        }
       }
       if (subscriptionError) {
         console.warn('⚠️ Subscription query warning:', subscriptionError);
@@ -195,28 +225,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔍 loadUserProfile - Deriving role from data...');
       const role = deriveRole(userData, null, subscriptionData);
       console.log('🔍 loadUserProfile - Role derived:', role, 'subscription status:', subscriptionData?.status);
-      
+
       const merged = {
         ...(userData ?? {}),
-        ...(subscriptionData ? { 
-          subscription: subscriptionData, 
+        ...(subscriptionData ? {
+          subscription: subscriptionData,
           subscription_status: subscriptionData.status
         } : {}),
         role,
       };
-      
+
       console.log('✅ loadUserProfile - Final merged profile:', merged);
       setProfile(merged);
-      
+
       const cacheTimestamp = Date.now();
-      
+
       // Mettre en cache le profil (mémoire)
       setProfileCache({
         userId,
         profile: merged,
         timestamp: cacheTimestamp
       });
-      
+
       // Mettre en cache le profil (localStorage)
       try {
         localStorage.setItem('nowme_profile_cache', JSON.stringify({
@@ -228,17 +258,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.warn('⚠️ loadUserProfile - Failed to save to localStorage:', e);
       }
-      
+
       logger.auth.profileLoad(merged);
-      
+
       // Déverrouiller
       setLoadingProfile(null);
     } catch (e: any) {
       console.error('❌ loadUserProfile error:', e);
-      
+
       // Déverrouiller en cas d'erreur
       setLoadingProfile(null);
-      
+
       // Si timeout ou erreur, essayer avec la fonction Edge comme fallback
       if (e.message?.includes('timeout') || e.message?.includes('Query timeout')) {
         console.warn('⚠️ loadUserProfile - Timeout detected, trying Edge Function fallback...');
@@ -254,11 +284,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               body: JSON.stringify({ userId })
             }
           );
-          
+
           if (response.ok) {
             const { userData, partnerData } = await response.json();
             console.log('✅ loadUserProfile - Data from Edge Function:', { userData, partnerData });
-            
+
             if (!userData && !partnerData) {
               const guestProfile = {
                 user_id: userId,
@@ -268,14 +298,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setProfile(guestProfile);
               return;
             }
-            
+
             const role = deriveRole(userData, partnerData, null);
             const merged = {
               ...(userData ?? {}),
               ...(partnerData ? { partner: partnerData } : {}),
               role,
             };
-            
+
             setProfile(merged);
             logger.auth.profileLoad(merged);
             return;
@@ -284,7 +314,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('❌ loadUserProfile - Edge Function fallback failed:', fallbackError);
         }
       }
-      
+
       setProfile(null);
     }
   };
@@ -455,7 +485,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = role === 'admin';
   const isPartner = role === 'partner';
   const isSubscriber = role === 'subscriber' || profile?.subscription_status === 'active';
-  
+
   // Log uniquement si le rôle change ou en cas de problème
   // console.log('🔍 Auth Context - Profile:', { role, subscription_status: profile?.subscription_status, isSubscriber });
 
@@ -464,12 +494,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Recharger la session pour s'assurer qu'on a les dernières données
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+
       if (sessionError) {
         console.error('❌ refreshProfile - Session error:', sessionError);
         throw sessionError;
       }
-      
+
       if (session?.user) {
         console.log('🔄 refreshProfile - Reloading profile for user:', session.user.id);
         await loadUserProfile(session.user.id, true); // Force refresh pour éviter le cache

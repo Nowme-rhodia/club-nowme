@@ -71,6 +71,13 @@ export default function SignIn() {
       }
 
       // Étape 4: Rediriger en fonction du profil
+      // Priorité à la redirection demandée (ex: retour de booking)
+      if (location.state?.from) {
+        console.log('Redirection demandée vers:', location.state.from);
+        navigate(location.state.from);
+        return;
+      }
+
       if (userData?.partner_id) {
         console.log('Partenaire trouvé (via profil), redirection vers le dashboard partenaire');
         navigate('/partner/dashboard');

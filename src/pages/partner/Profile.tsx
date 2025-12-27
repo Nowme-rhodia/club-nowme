@@ -11,7 +11,9 @@ interface PartnerProfile {
   website?: string;
 }
 
-export default function Profile() {
+import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
+
+export default function PartnerProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PartnerProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);

@@ -25,6 +25,7 @@ const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
 const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
+const MyBookings = React.lazy(() => import('./pages/MyBookings'));
 
 // Auth pages
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
@@ -60,7 +61,9 @@ const ClubDashboard = React.lazy(() => import('./pages/club/ClubDashboard'));
 const Events = React.lazy(() => import('./pages/club/Events'));
 
 // Booking publique (Calendly intégré)
+// Booking publique (Calendly intégré)
 const Booking = React.lazy(() => import('./pages/Booking'));
+const BookingSuccess = React.lazy(() => import('./pages/BookingSuccess'));
 
 function App() {
   return (
@@ -89,6 +92,7 @@ function App() {
 
                   {/* Booking publique */}
                   <Route path="/booking/:id" element={<Booking />} />
+                  <Route path="/booking-success" element={<BookingSuccess />} />
 
                   {/* Auth routes */}
                   <Route path="/auth/signin" element={<SignIn />} />
@@ -117,11 +121,18 @@ function App() {
                   </Route>
 
                   {/* Protected user routes */}
-                  <Route path="/account" element={
-                    <PrivateRoute allowedRoles={['subscriber']}>
+                  <Route path="/account/*" element={
+                    <PrivateRoute>
                       <Account />
                     </PrivateRoute>
                   } />
+                  <Route path="/mes-reservations" element={
+                    <PrivateRoute>
+                      <MyBookings />
+                    </PrivateRoute>
+                  } />
+                  {/* Handle legacy/incorrect url */}
+                  <Route path="/my-bookings" element={<Navigate to="/mes-reservations" replace />} />
                   <Route path="/account/profile" element={
                     <PrivateRoute allowedRoles={['subscriber']}>
                       <Profile />

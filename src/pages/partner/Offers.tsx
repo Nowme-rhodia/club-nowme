@@ -21,37 +21,46 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
 import { LocationSearch } from '../../components/LocationSearch';
+import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
 import toast from 'react-hot-toast';
 
 interface Offer {
   id: string;
+  created_at: string;
   title: string;
   description: string;
+  image_url: string;
   category_slug: string;
   subcategory_slug: string;
-  street_address: string | null;
-  zip_code: string | null;
-  city: string | null;
-  department: string | null;
-  coordinates: [number, number] | null;
-  status: 'draft' | 'ready' | 'pending' | 'approved' | 'rejected';
-  is_approved: boolean;
-  created_at: string;
-  calendly_url?: string | null;
-  image_url?: string | null;
-  event_start_date?: string | null;
-  event_end_date?: string | null;
-  variants?: Array<{
-    id: string;
+  price: number;
+  discounted_price: number | null;
+  location: string; // Keep for legacy display if needed, but we use street/city etc
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'ready';
+  street_address?: string;
+  zip_code?: string;
+  department?: string;
+  city?: string;
+  coordinates?: any;
+  // Booking Types
+  booking_type?: 'calendly' | 'event' | 'promo' | 'purchase';
+  external_link?: string;
+  promo_code?: string;
+  calendly_url?: string;
+  event_start_date?: string;
+  event_end_date?: string;
+
+  category?: {
+    slug: string;
+    parent_slug: string | null;
+    name: string;
+  };
+  offer_media?: { url: string }[];
+  media?: { url: string }[]; // Handle potential alias
+  variants?: {
     name: string;
     price: number;
-    discounted_price?: number | null;
-  }>;
-  media?: Array<{
-    id: string;
-    url: string;
-    type: 'image' | 'video';
-  }>;
+    discounted_price: number | null;
+  }[];
   rejection_reason?: string;
 }
 
@@ -90,6 +99,24 @@ export default function Offers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      loadOffers();
+      fetchPartnerId();
+    }
+  }, [user]);
+
+  const fetchPartnerId = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('partner_id')
+      .eq('user_id', user.id)
+      .single();
+    if (data) setPartnerId(data.partner_id);
+  };
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
@@ -106,6 +133,9 @@ export default function Offers() {
     calendly_url: '',
     event_start_date: '',
     event_end_date: '',
+    booking_type: 'calendly',
+    external_link: '',
+    promo_code: ''
   });
 
   // État pour les variants
@@ -200,6 +230,9 @@ export default function Offers() {
       calendly_url: offer.calendly_url || '',
       event_start_date: offer.event_start_date || '',
       event_end_date: offer.event_end_date || '',
+      booking_type: offer.booking_type || 'calendly',
+      external_link: offer.external_link || '',
+      promo_code: offer.promo_code || ''
     });
 
     setVariants(currentVariants);
@@ -223,6 +256,9 @@ export default function Offers() {
       calendly_url: '',
       event_start_date: '',
       event_end_date: '',
+      booking_type: 'calendly',
+      external_link: '',
+      promo_code: ''
     });
     setCoverImage(null);
     setCoverImagePreview(null);
@@ -245,12 +281,6 @@ export default function Offers() {
 
   const parentCategories = dbCategories.filter(c => !c.parent_slug);
   const subCategories = dbCategories.filter(c => c.parent_slug === newOffer.category_slug);
-
-  useEffect(() => {
-    if (user) {
-      loadOffers();
-    }
-  }, [user]);
 
   const loadOffers = async () => {
     try {
@@ -408,9 +438,12 @@ export default function Offers() {
             title: newOffer.title,
             description: newOffer.description,
             category_id: catId,
-            calendly_url: newOffer.calendly_url || null,
-            event_start_date: newOffer.event_start_date || null,
-            event_end_date: newOffer.event_end_date || null,
+            calendly_url: newOffer.booking_type === 'calendly' ? newOffer.calendly_url : null,
+            event_start_date: newOffer.booking_type === 'event' ? newOffer.event_start_date : null,
+            event_end_date: newOffer.booking_type === 'event' ? newOffer.event_end_date : null,
+            booking_type: newOffer.booking_type,
+            external_link: newOffer.booking_type === 'promo' ? newOffer.external_link : null,
+            promo_code: newOffer.booking_type === 'promo' ? newOffer.promo_code : null,
             street_address: newOffer.street_address,
             zip_code: newOffer.zip_code,
             department: newOffer.department,
@@ -1099,157 +1132,259 @@ export default function Offers() {
                     />
                   </div>
 
-                  {/* --- Agenda --- */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Lien Calendly (optionnel)
-                    </label>
-                    <input
-                      type="url"
-                      value={newOffer.calendly_url}
-                      onChange={(e) =>
-                        setNewOffer({ ...newOffer, calendly_url: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                      placeholder="https://calendly.com/votre-lien"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Laissez vide si l'offre ne nécessite pas de réservation par agenda.
-                    </p>
-                  </div>
 
-                  {/* --- Actions --- */}
-                  <div className="flex justify-end gap-4">
-                    <button
-                      onClick={handleCloseForm}
-                      className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isUploading}
-                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                      {isUploading && (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                      )}
-                      {editingOffer ? 'Mettre à jour' : 'Enregistrer en brouillon'}
-                    </button>
+                  {/* --- Type de réservation --- */}
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h3 className="text-sm font-medium text-gray-900 mb-4">Configuration de la réservation</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Type de réservation
+                        </label>
+                        <select
+                          value={newOffer.booking_type}
+                          onChange={(e) => setNewOffer({ ...newOffer, booking_type: e.target.value as any })}
+                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+                        >
+                          <option value="calendly">Calendly (Prise de RDV)</option>
+                          <option value="event">Événement (Date fixe)</option>
+                          <option value="promo">Code Promo (Lien externe)</option>
+                          <option value="purchase">Achat Simple (Sans RDV)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {newOffer.booking_type === 'calendly' && (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            URL Calendly
+                          </label>
+                          <input
+                            type="url"
+                            value={newOffer.calendly_url}
+                            onChange={(e) => setNewOffer({ ...newOffer, calendly_url: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary mt-1"
+                            placeholder="https://calendly.com/votre-lien"
+                            required={newOffer.booking_type === 'calendly'}
+                          />
+                        </div>
+
+                        {/* Intégration Token Calendly */}
+                        <div className="pt-4 border-t border-gray-200 mt-6">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-3">Connexion API Calendly</h4>
+                          <p className="text-xs text-gray-500 mb-3">
+                            Pour que les réservations remontent automatiquement dans Nowme, configurez votre jeton API ci-dessous.
+                            Ce réglage est lié à votre compte partenaire.
+                          </p>
+                          {partnerId ? (
+                            <PartnerCalendlySettings
+                              partnerId={partnerId}
+                              initialToken={null}
+                              onUpdate={() => toast.success("Configuration Calendly mise à jour !")}
+                            />
+                          ) : (
+                            <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg text-sm">
+                              Chargement des paramètres partenaire... (Si ce message persiste, contactez le support)
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {newOffer.booking_type === 'event' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Date de début *
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={newOffer.event_start_date || ''}
+                            onChange={(e) => setNewOffer({ ...newOffer, event_start_date: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            required={newOffer.booking_type === 'event'}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Date de fin (optionnel)
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={newOffer.event_end_date || ''}
+                            onChange={(e) => setNewOffer({ ...newOffer, event_end_date: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {newOffer.booking_type === 'promo' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Lien de l'offre (ex: votre site) *
+                          </label>
+                          <input
+                            type="url"
+                            value={newOffer.external_link || ''}
+                            onChange={(e) => setNewOffer({ ...newOffer, external_link: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            placeholder="https://votre-site.com/offre"
+                            required={newOffer.booking_type === 'promo'}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Code Promo (optionnel)
+                          </label>
+                          <input
+                            type="text"
+                            value={newOffer.promo_code || ''}
+                            onChange={(e) => setNewOffer({ ...newOffer, promo_code: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            placeholder="Ex: WELCOME20"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </form>
               </div>
-            </div>
-          </div>
-        )}
-        {/* Modal de détails */}
-        {selectedOffer && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Détails de l'offre
-                </h2>
 
-                <div className="space-y-6">
-                  {selectedOffer.media?.[0] && (
-                    <div>
-                      <img
-                        src={selectedOffer.media[0].url}
-                        alt={selectedOffer.title}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                    </div>
+              {/* --- Actions --- */}
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={handleCloseForm}
+                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploading}
+                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {isUploading && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                   )}
-
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {selectedOffer.title}
-                    </h3>
-                    <div className="flex items-center gap-4 mb-4">
-                      {(() => {
-                        const config = statusConfig[selectedOffer.status as keyof typeof statusConfig] || statusConfig.draft;
-                        const StatusIcon = config.icon;
-                        return (
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.className}`}>
-                            <StatusIcon className="w-4 h-4 mr-1" />
-                            {config.label}
-                          </span>
-                        );
-                      })()}
-                      {selectedOffer.variants?.[0] && (
-                        <span className="text-lg font-bold text-primary">
-                          {selectedOffer.variants[0].price}€
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
-                    <p className="text-gray-600">{selectedOffer.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
-                      <p className="text-gray-600">
-                        {categories.find(c => c.slug === selectedOffer.category_slug)?.name}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Sous-catégorie</h4>
-                      <p className="text-gray-600">
-                        {categories.find(c => c.slug === selectedOffer.category_slug)
-                          ?.subcategories.find(s => s.slug === selectedOffer.subcategory_slug)?.name}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
-                    <p className="text-gray-600 flex items-center">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      {[selectedOffer.street_address, selectedOffer.zip_code, selectedOffer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'}
-                    </p>
-                  </div>
-
-                  {/* --- Affichage agenda si dispo --- */}
-                  {selectedOffer.calendly_url && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Réservations</h4>
-                      <a
-                        href={selectedOffer.calendly_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline"
-                      >
-                        Voir les créneaux disponibles
-                      </a>
-                    </div>
-                  )}
-
-                  {selectedOffer.status === 'rejected' && selectedOffer.rejection_reason && (
-                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                      <h4 className="font-semibold text-red-900 mb-2">Raison du rejet</h4>
-                      <p className="text-red-700">{selectedOffer.rejection_reason}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => setSelectedOffer(null)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                  >
-                    Fermer
-                  </button>
-                </div>
+                  {editingOffer ? 'Mettre à jour' : 'Enregistrer en brouillon'}
+                </button>
               </div>
-            </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
     </div>
-  );
+  )
+}
+
+{/* Modal de détails */ }
+{
+  selectedOffer && (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-8">
+          <div className="flex justify-between items-start mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Détails de l'offre
+            </h2>
+            <button
+              onClick={() => setSelectedOffer(null)}
+              className="p-1 hover:bg-gray-100 rounded-full"
+            >
+              <X className="w-6 h-6 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {selectedOffer.media?.[0] && (
+              <div>
+                <img
+                  src={selectedOffer.media[0].url}
+                  alt={selectedOffer.title}
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+              </div>
+            )}
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {selectedOffer.title}
+              </h3>
+              <div className="flex items-center gap-4 mb-4">
+                {(() => {
+                  const config = statusConfig[selectedOffer.status as keyof typeof statusConfig] || statusConfig.draft;
+                  const StatusIcon = config.icon;
+                  return (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.className}`}>
+                      <StatusIcon className="w-4 h-4 mr-1" />
+                      {config.label}
+                    </span>
+                  );
+                })()}
+                {selectedOffer.variants?.[0] && (
+                  <span className="text-lg font-bold text-primary">
+                    {selectedOffer.variants[0].price}€
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+              <p className="text-gray-600">{selectedOffer.description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
+                <p className="text-gray-600">
+                  {categories.find(c => c.slug === selectedOffer.category_slug)?.name}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Sous-catégorie</h4>
+                <p className="text-gray-600">
+                  {categories.find(c => c.slug === selectedOffer.category_slug)
+                    ?.subcategories.find(s => s.slug === selectedOffer.subcategory_slug)?.name}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
+              <p className="text-gray-600 flex items-center">
+                <MapPin className="w-4 h-4 mr-1" />
+                {[selectedOffer.street_address, selectedOffer.zip_code, selectedOffer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'}
+              </p>
+            </div>
+
+            {/* --- Affichage agenda si dispo --- */}
+            {selectedOffer.calendly_url && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Réservations</h4>
+                <a
+                  href={selectedOffer.calendly_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  Voir les créneaux disponibles
+                </a>
+              </div>
+            )}
+
+            {selectedOffer.status === 'rejected' && selectedOffer.rejection_reason && (
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <h4 className="font-semibold text-red-900 mb-2">Raison du rejet</h4>
+                <p className="text-red-700">{selectedOffer.rejection_reason}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      </div>
+      );
 }

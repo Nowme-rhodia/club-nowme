@@ -15,13 +15,15 @@ export default function CreateOffer() {
     category_slug: '',
     subcategory_slug: '',
     location: '',
-    event_type: 'permanent' as 'permanent' | 'fixed_date' | 'calendly',
+    event_type: 'calendly' as 'calendly' | 'event' | 'promo',
     event_date: '',
     event_end_date: '',
     capacity: '',
     base_price: '',
     promo_price: '',
     calendly_url: '',
+    external_link: '',
+    promo_code: '',
     requires_agenda: false,
     has_stock: false,
     stock: ''
@@ -58,16 +60,15 @@ export default function CreateOffer() {
         description: formData.description,
         street_address: formData.location || 'Non spécifié',
         status: 'draft',
-        is_approved: false, // Starts as false usually if draft? existing code said true.
-        calendly_url: formData.requires_agenda ? formData.calendly_url : null,
-        commission_rate: 10 // Default? Schema requires numeric. Maybe nullable?
+        is_approved: false,
+        booking_type: formData.event_type,
+        calendly_url: formData.event_type === 'calendly' ? formData.calendly_url : null,
+        external_link: formData.event_type === 'promo' ? formData.external_link : null,
+        promo_code: formData.event_type === 'promo' ? formData.promo_code : null,
+        event_start_date: formData.event_type === 'event' ? (formData.event_date || null) : null,
+        event_end_date: formData.event_type === 'event' ? (formData.event_end_date || null) : null,
+        commission_rate: 10
       };
-
-      // Add timestamps
-      if (formData.event_type === 'fixed_date') {
-        offerData.event_start_date = formData.event_date || null;
-        offerData.event_end_date = formData.event_end_date || null;
-      }
 
       if (categoryData?.id) {
         offerData.category_id = categoryData.id;
@@ -236,56 +237,13 @@ export default function CreateOffer() {
             type="text"
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-            placeholder="Paris, France"
-          />
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"              >
+            <option value="calendly">Agenda (Calendly)</option>
+            <option value="event">Événement à date fixe</option>
+            <option value="promo">Code Promo / Lien Externe</option>
+          </select>
         </div>
 
-        {/* Champs spécifiques pour événement à date fixe */}
-        {formData.event_type === 'fixed_date' && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date de début
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.event_date}
-                  onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date de fin
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.event_end_date}
-                  onChange={(e) => setFormData({ ...formData, event_end_date: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Capacité (nombre de places)
-              </label>
-              <input
-                type="number"
-                value={formData.capacity}
-                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                placeholder="Ex: 50"
-              />
-            </div>
-          </>
-        )}
-
-        {/* Champs pour Calendly */}
         {formData.event_type === 'calendly' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -294,60 +252,145 @@ export default function CreateOffer() {
             <input
               type="url"
               value={formData.calendly_url}
-              onChange={(e) => setFormData({ ...formData, calendly_url: e.target.value, requires_agenda: true })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+              onChange={(e) => setFormData({ ...formData, calendly_url: e.target.value })}
               placeholder="https://calendly.com/votre-lien"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
               required
             />
           </div>
         )}
 
-        {/* Stock */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={formData.has_stock}
-            onChange={(e) => setFormData({ ...formData, has_stock: e.target.checked })}
-            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-          />
-          <label className="text-sm text-gray-700">
-            Cette offre a un stock limité
-          </label>
-        </div>
-
-        {formData.has_stock && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Stock disponible
-            </label>
-            <input
-              type="number"
-              value={formData.stock}
-              onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-              required={formData.has_stock}
-            />
+        {formData.event_type === 'event' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date de début *
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.event_date}
+                onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date de fin *
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.event_end_date}
+                onChange={(e) => setFormData({ ...formData, event_end_date: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                required
+              />
+            </div>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex justify-end gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/partner/offers')}
-            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50"
-          >
-            {loading ? 'Création...' : 'Créer l\'offre'}
-          </button>
-        </div>
-      </form>
+        {formData.event_type === 'promo' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Lien externe *
+              </label>
+              <input
+                type="url"
+                value={formData.external_link}
+                onChange={(e) => setFormData({ ...formData, external_link: e.target.value })}
+                placeholder="https://site-partenaire.com/promo"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Code Promo (Optionnel)
+              </label>
+              <input
+                type="text"
+                value={formData.promo_code}
+                onChange={(e) => setFormData({ ...formData, promo_code: e.target.value })}
+                placeholder="EX: NOWME20"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+              />
+            </div>
+          </div>
+        )}
+  />
     </div>
+          </>
+        )
+}
+
+{/* Champs pour Calendly */ }
+{
+  formData.event_type === 'calendly' && (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Lien Calendly *
+      </label>
+      <input
+        type="url"
+        value={formData.calendly_url}
+        onChange={(e) => setFormData({ ...formData, calendly_url: e.target.value, requires_agenda: true })}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+        placeholder="https://calendly.com/votre-lien"
+        required
+      />
+    </div>
+  )
+}
+
+{/* Stock */ }
+<div className="flex items-center gap-2">
+  <input
+    type="checkbox"
+    checked={formData.has_stock}
+    onChange={(e) => setFormData({ ...formData, has_stock: e.target.checked })}
+    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+  />
+  <label className="text-sm text-gray-700">
+    Cette offre a un stock limité
+  </label>
+</div>
+
+{
+  formData.has_stock && (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Stock disponible
+      </label>
+      <input
+        type="number"
+        value={formData.stock}
+        onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+        required={formData.has_stock}
+      />
+    </div>
+  )
+}
+
+{/* Actions */ }
+<div className="flex justify-end gap-4">
+  <button
+    type="button"
+    onClick={() => navigate('/partner/offers')}
+    className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+  >
+    Annuler
+  </button>
+  <button
+    type="submit"
+    disabled={loading}
+    className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50"
+  >
+    {loading ? 'Création...' : 'Créer l\'offre'}
+  </button>
+</div>
+      </form >
+    </div >
   );
 }

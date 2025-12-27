@@ -157,13 +157,22 @@ export function Header() {
                 Devenir partenaire
               </Link>
               {isAdmin && (
-                <Link
-                  to="/admin"
-                  className="w-full text-center bg-black text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-900 transition"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Accéder à l'admin
-                </Link>
+                <>
+                  <Link
+                    to="/mes-reservations"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Mes réservations
+                  </Link>
+                  <Link
+                    to="/admin"
+                    className="w-full text-center bg-black text-white px-4 py-2 rounded-full font-semibold hover:bg-gray-900 transition"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Accéder à l'admin
+                  </Link>
+                </>
               )}
               {isPartner && !isAdmin && (
                 <Link

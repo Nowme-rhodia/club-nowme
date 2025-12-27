@@ -131,7 +131,7 @@ export default function Dashboard() {
         // 👉 Récupérer le partenaire
         const { data: partnerData, error: partnerError } = await (supabase
           .from('partners') as any)
-          .select('id, calendly_url, business_name')
+          .select('id, calendly_url, business_name, commission_rate')
           .eq('id', profileData.partner_id)
           .single();
 
@@ -185,41 +185,46 @@ export default function Dashboard() {
           .order('created_at', { ascending: false });
         setBookings((bookingsData || []) as Booking[]);
 
-        // 👉 Payouts
+        // Calculate from bookings
+        const paidBookings = (bookingsData || []).filter((b: any) => b.status === 'paid' || b.status === 'confirmed');
+
         let grossTotal = 0;
-        let netTotal = 0;
         let commissionTotal = 0;
+        let netTotal = 0;
         let netThisMonth = 0;
+        const commissionRate = partnerData.commission_rate ? partnerData.commission_rate / 100 : 0.15;
 
-        const { data: payouts } = await (supabase
-          .from('partner_payouts') as any)
-          .select('gross_amount, net_amount, commission_amount, created_at')
-          .eq('partner_id', partnerId);
+        // Use 'amount' from bookings. If 0/null, use offer price fallback if needed, but prefer Amount column logic.
+        paidBookings.forEach((b: any) => {
+          const amount = b.amount ? parseFloat(b.amount) : 0;
+          if (amount > 0) {
+            const comm = amount * commissionRate;
+            const net = amount - comm;
 
-        if (payouts) {
-          grossTotal = (payouts as any).reduce((sum: number, p: any) => sum + (Number(p.gross_amount) || 0), 0);
-          netTotal = (payouts as any).reduce((sum: number, p: any) => sum + (Number(p.net_amount) || 0), 0);
-          commissionTotal = (payouts as any).reduce((sum: number, p: any) => sum + (Number(p.commission_amount) || 0), 0);
+            grossTotal += amount;
+            commissionTotal += comm;
+            netTotal += net;
 
-          const monthStart = startOfMonth(new Date());
-          const monthEnd = endOfMonth(new Date());
-          netThisMonth = (payouts as any)
-            .filter((p: any) => {
-              const d = new Date(p.created_at);
-              return d >= monthStart && d <= monthEnd;
-            })
-            .reduce((sum: number, p: any) => sum + (Number(p.net_amount) || 0), 0);
-        }
+            const d = new Date(b.created_at);
+            const monthStart = startOfMonth(new Date());
+            const monthEnd = endOfMonth(new Date());
+            if (d >= monthStart && d <= monthEnd) {
+              netThisMonth += net;
+            }
+          }
+        });
 
+        // Update stats state
         setRevenueStats({
-          totalBookings: bookingsData?.length || 0,
+          totalBookings: (bookingsData || []).length,
           totalRevenue: Math.round(grossTotal * 100) / 100,
           nowmeCommission: Math.round(commissionTotal * 100) / 100,
           netAmount: Math.round(netTotal * 100) / 100,
           thisMonth: Math.round(netThisMonth * 100) / 100
         });
 
-        // 🔹 Rapport partenaire (via RPC)
+        // 🔹 Rapport partenaire (via RPC) - Disable RPC call as it doesn't exist
+        /*
         const { data: reportData, error: reportError } = await (supabase as any).rpc(
           "partner_payouts_report_by_partner",
           { partner_uuid: partnerId }
@@ -233,6 +238,14 @@ export default function Dashboard() {
             net_total: reportData[0].net_total || 0,
           });
         }
+        */
+        // Use our calculated values
+        setPartnerReport({
+          total_bookings: paidBookings.length,
+          gross_total: grossTotal,
+          commission: commissionTotal,
+          net_total: netTotal,
+        });
 
       } catch (error) {
         console.error('Error loading dashboard:', error);

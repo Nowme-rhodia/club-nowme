@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { logger } from '../lib/logger';
 import toast from 'react-hot-toast';
+import { WelcomeForm } from '../components/WelcomeForm';
 
 interface VerificationResult {
   success: boolean;
@@ -19,22 +20,23 @@ interface VerificationResult {
 export default function SubscriptionSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { refreshProfile } = useAuth();
+  const { refreshProfile, profile } = useAuth();
   const [isVerifying, setIsVerifying] = useState(true);
   const [hasSessionId, setHasSessionId] = useState(true);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [showWelcomeForm, setShowWelcomeForm] = useState(false);
   const hasVerified = useRef(false); // 🔒 Flag pour éviter les appels multiples
 
   const verifySubscription = async (sessionId: string, currentRetry: number = 0) => {
     try {
       logger.payment.verification('start', { sessionId, attempt: currentRetry + 1 });
-      
+
       console.log('🚀 Calling Edge Function verify-subscription with:', { session_id: sessionId });
       console.log('🌐 Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-      
+
       const startTime = Date.now();
-      
+
       // Appel direct via fetch au lieu de supabase.functions.invoke
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-subscription`,
@@ -62,37 +64,48 @@ export default function SubscriptionSuccess() {
       console.log('✅ Edge Function data:', data);
       logger.payment.verification('result', data);
       setVerificationResult(data);
-      
+
       if (data.success && data.status === 'active') {
         setIsVerifying(false);
         toast.success('Abonnement activé avec succès !');
-        
+
+        // SHOW FORM IMMEDIATELY to avoid delay
+        setShowWelcomeForm(true);
+
         // Recharger le profil pour mettre à jour le rôle avec retry
         console.log('🔄 Refreshing user profile...');
-        
+
         // Attendre un peu pour que la DB soit à jour
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         // Essayer de recharger le profil jusqu'à 3 fois
         let retries = 0;
         const maxRetries = 3;
-        
+
         while (retries < maxRetries) {
           await refreshProfile();
-          
+
           // Attendre un peu pour que le state soit mis à jour
           await new Promise(resolve => setTimeout(resolve, 500));
-          
+
           // Vérifier si le profil a été chargé (on pourrait améliorer cette vérification)
           console.log(`✅ Profile refresh attempt ${retries + 1}/${maxRetries} completed`);
           retries++;
-          
+
           if (retries < maxRetries) {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
-        
+
         console.log('✅ Profile refresh completed after', retries, 'attempts');
+
+        // Après le scan, on check si le profil est complet
+        const updatedProfile = profile; // Note: profile might be stale here due to closure, but we rely on re-renders or direct check
+
+        // On force l'affichage du formulaire de bienvenue
+        // La logique sera gérée par le rendu : si profile incomplet -> WelcomeForm
+        setShowWelcomeForm(true);
+
       } else if (data.status === 'pending') {
         // Retry after a delay if payment is still processing
         if (currentRetry < 5) {
@@ -177,7 +190,7 @@ export default function SubscriptionSuccess() {
   if (verificationResult && !verificationResult.success) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <SEO 
+        <SEO
           title="Vérification en cours"
           description="Vérification de votre abonnement Nowme"
         />
@@ -232,10 +245,17 @@ export default function SubscriptionSuccess() {
     );
   }
 
-  // Success state
+  // Success state (Check profile completion)
+  // Check if profile has necessary fields
+  const isProfileComplete = profile?.phone && profile?.birth_date && profile?.acquisition_source;
+
+  if (showWelcomeForm && !isProfileComplete) {
+    return <WelcomeForm onComplete={() => setShowWelcomeForm(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <SEO 
+      <SEO
         title="Abonnement confirmé"
         description="Votre abonnement Nowme a été activé avec succès."
       />

@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 import { useAuth } from '../lib/auth';
 import { logger } from '../lib/logger';
-import { 
-  User, 
-  Settings, 
-  CreditCard, 
-  History, 
-  Heart, 
+import {
+  User,
+  Settings,
+  CreditCard,
+  History,
+  Heart,
   LogOut,
-  QrCode
+  QrCode,
+  Calendar
 } from 'lucide-react';
 
 export default function Account() {
@@ -30,13 +31,13 @@ export default function Account() {
   const handleManageSubscription = async () => {
     try {
       console.log('🔍 Redirection vers Stripe Customer Portal...');
-      
+
       // Vérifier si on a le stripe_customer_id
       let stripeCustomerId: string | undefined = profile?.stripe_customer_id;
-      
+
       if (!stripeCustomerId) {
         console.log('⚠️ stripe_customer_id non trouvé dans le profil, récupération depuis user_profiles...');
-        
+
         // Récupérer depuis user_profiles
         const { supabase } = await import('../lib/supabase');
         const { data: userData, error } = await supabase
@@ -44,23 +45,23 @@ export default function Account() {
           .select('stripe_customer_id')
           .eq('user_id', profile?.user_id || '')
           .single() as any;
-        
+
         if (error || !userData?.stripe_customer_id) {
           console.error('❌ Impossible de récupérer le stripe_customer_id:', error);
           alert('Erreur : Impossible de récupérer vos informations d\'abonnement. Veuillez réessayer.');
           return;
         }
-        
+
         stripeCustomerId = userData.stripe_customer_id;
         console.log('✅ stripe_customer_id récupéré:', stripeCustomerId);
       }
-      
+
       // Créer une session Stripe Customer Portal
       const apiUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
+
       console.log('📡 Appel de l\'Edge Function create-portal-session...');
-      
+
       const response = await fetch(`${apiUrl}/functions/v1/create-portal-session`, {
         method: 'POST',
         headers: {
@@ -74,7 +75,7 @@ export default function Account() {
       });
 
       const data = await response.json();
-      
+
       if (data.url) {
         console.log('✅ URL du portail reçue, redirection...');
         // Rediriger vers le portail Stripe
@@ -90,6 +91,13 @@ export default function Account() {
   };
 
   const menuItems = [
+    {
+      title: 'Mes réservations',
+      icon: Calendar,
+      href: '/my-bookings',
+      description: 'Voir mes kiffs réservés et passés',
+      onClick: null
+    },
     {
       title: 'Mes informations',
       icon: User,
@@ -108,7 +116,7 @@ export default function Account() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4] py-12">
-      <SEO 
+      <SEO
         title="Mon compte"
         description="Gérez votre compte Nowme, vos réservations et vos préférences."
       />
@@ -133,13 +141,13 @@ export default function Account() {
                 <span className="text-white text-xs font-bold">✓</span>
               </div>
             </div>
-            
+
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-1">
                 {profile?.first_name} {profile?.last_name}
               </h1>
               <p className="text-gray-500 mb-2">
-                Membre depuis {profile?.created_at 
+                Membre depuis {profile?.created_at
                   ? new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
                   : 'récemment'
                 }
