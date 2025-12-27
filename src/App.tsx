@@ -45,6 +45,7 @@ const Newsletter = React.lazy(() => import('./pages/admin/Newsletter'));
 const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers'));
 const AdminBookings = React.lazy(() => import('./pages/admin/Bookings'));
 const Payouts = React.lazy(() => import('./pages/admin/Payouts'));
+const AdminCommunity = React.lazy(() => import('./pages/admin/Community'));
 
 // Partner pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
@@ -159,13 +160,14 @@ function App() {
                   }>
                     <Route index element={<AdminDashboard />} />
                     <Route path="partners" element={<Partners />} />
-                    <Route path="pending-offers" element={<PendingOffers />} />
+
                     <Route path="offers" element={<AdminOffers />} />
                     <Route path="subscribers" element={<Subscribers />} />
                     <Route path="newsletter" element={<Newsletter />} />
                     <Route path="create-users" element={<CreateUsers />} />
                     <Route path="bookings" element={<AdminBookings />} />
                     <Route path="payouts" element={<Payouts />} />
+                    <Route path="community" element={<AdminCommunity />} />
                   </Route>
 
                   {/* 404 */}

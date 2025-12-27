@@ -11,6 +11,7 @@ import { fr } from 'date-fns/locale';
 interface Booking {
     id: string;
     booking_date: string;
+    created_at: string;
     status: string;
     customer_email: string;
     source?: string;
@@ -22,6 +23,12 @@ interface Booking {
         city: string;
         promo_code?: string;
         booking_type?: string;
+        event_start_date?: string;
+        event_end_date?: string;
+        partner?: {
+            contact_email?: string;
+            business_name?: string;
+        };
     };
 }
 
@@ -42,7 +49,9 @@ export default function MyBookings() {
                 .from('bookings')
                 .select(`
           id,
+          id,
           booking_date,
+          created_at,
           status,
           customer_email,
           source,
@@ -53,7 +62,13 @@ export default function MyBookings() {
             image_url,
             city,
             promo_code,
-            booking_type
+            booking_type,
+            event_start_date,
+            event_end_date,
+            partner:partners (
+                contact_email,
+                business_name
+            )
           )
         `)
                 .eq('user_id', user!.id)
@@ -168,16 +183,52 @@ export default function MyBookings() {
                                             </div>
 
                                             <div className="space-y-3">
+                                                {/* Purchase Date */}
+                                                <div className="flex items-center text-gray-700">
+                                                    <Calendar className="w-5 h-5 mr-3 text-gray-400" />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                                                            Réservé le
+                                                        </span>
+                                                        <span className="font-medium text-sm">
+                                                            {format(new Date(booking.created_at || booking.booking_date), "d MMMM yyyy 'à' HH'h'mm", { locale: fr })}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Event/Appt Date */}
                                                 <div className="flex items-center text-gray-700">
                                                     <Calendar className="w-5 h-5 mr-3 text-primary" />
-                                                    <span className="font-medium">
-                                                        {format(new Date(booking.booking_date), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })}
-                                                    </span>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                                                            {booking.offer?.booking_type === 'event' || booking.offer?.event_start_date
+                                                                ? "Date de l'événement"
+                                                                : "Rendez-vous le"
+                                                            }
+                                                        </span>
+                                                        <span className="font-medium capitalize text-lg">
+                                                            {booking.offer?.event_start_date
+                                                                ? format(new Date(booking.offer.event_start_date), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })
+                                                                : format(new Date(booking.booking_date), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })
+                                                            }
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center text-gray-600">
-                                                    <Mail className="w-5 h-5 mr-3 text-gray-400" />
-                                                    <span className="text-sm">Contact: {booking.customer_email}</span>
-                                                </div>
+
+                                                {/* Partner Contact Information */}
+                                                {booking.offer?.partner?.contact_email && (
+                                                    <div className="flex items-center text-gray-600">
+                                                        <Mail className="w-5 h-5 mr-3 text-gray-400" />
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Contact Partenaire</span>
+                                                            <a href={`mailto:${booking.offer.partner.contact_email}`} className="text-sm hover:text-primary transition-colors">
+                                                                {booking.offer.partner.contact_email}
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+
 
                                                 {/* Promo Code Display */}
                                                 {(booking.source === 'promo' && booking.offer?.promo_code) && (

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Users, Building2, Settings, Mail, Clock, CheckCircle, CreditCard, LogOut } from 'lucide-react';
+import { Users, Building2, Settings, Mail, Clock, CheckCircle, CreditCard, LogOut, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 
 export default function AdminLayout() {
@@ -42,13 +42,7 @@ export default function AdminLayout() {
       current: location.pathname === '/admin/partners'
     },
     {
-      name: 'Offres en attente',
-      href: '/admin/pending-offers',
-      icon: Clock,
-      current: location.pathname === '/admin/pending-offers'
-    },
-    {
-      name: 'Offres validées',
+      name: 'Offres',
       href: '/admin/offers',
       icon: CheckCircle,
       current: location.pathname === '/admin/offers'
@@ -77,6 +71,13 @@ export default function AdminLayout() {
       href: '/admin/payouts',
       icon: CreditCard,
       current: location.pathname === '/admin/payouts'
+    },
+    // ➕ NOUVEAU : Communauté
+    {
+      name: 'Communauté',
+      href: '/admin/community',
+      icon: MessageSquare,
+      current: location.pathname === '/admin/community'
     }
   ];
 

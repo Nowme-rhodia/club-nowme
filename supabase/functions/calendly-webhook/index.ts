@@ -165,7 +165,17 @@ serve(async (req) => {
             bookingDate = eventData.resource.start_time;
         }
 
-        // Re-attempt insert with correct date
+        // Fetch price from variants (default to first variant found)
+        const { data: variantData } = await supabaseAdmin
+            .from('offer_variants')
+            .select('price, discounted_price')
+            .eq('offer_id', offerId)
+            .limit(1)
+            .single();
+
+        const bookingAmount = variantData ? (variantData.discounted_price || variantData.price) : 0;
+
+        // Re-attempt insert with correct date and amount
         const { error: finalInsertError } = await supabaseAdmin
             .from('bookings')
             .insert({
@@ -176,7 +186,10 @@ serve(async (req) => {
                 calendly_event_id: externalId,
                 external_id: externalId,
                 source: 'calendly',
-                status: 'confirmed'
+                status: 'confirmed',
+                amount: bookingAmount,
+                currency: 'EUR',
+                partner_id: partnerId // Ensure partner_id is filled for payout attribution
             });
 
         if (finalInsertError) {

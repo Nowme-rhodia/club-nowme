@@ -1,522 +1,419 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth';
-import { 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Plus, 
-  MapPin, 
-  Star,
-  Filter,
-  Search,
-  Bookmark,
-  ThumbsUp,
-  Send,
-  Image,
-  Link as LinkIcon
-} from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import {
+  Sparkles,
+  MapPin,
+  MessageCircle,
+  Send,
+  ArrowRight,
+  Coffee,
+  Palette,
+  Utensils,
+  Heart,
+  BookOpen,
+  Plane,
+  Smile,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Megaphone
+} from 'lucide-react';
 
-interface BonPlan {
+// --- TYPES ---
+interface CommunityContent {
   id: string;
+  type: 'announcement' | 'kiff';
   title: string;
-  description: string;
-  category: string;
-  location: string;
-  price?: number;
-  discount?: string;
+  content: string;
   image_url?: string;
-  website_url?: string;
-  author: {
-    name: string;
-    photo_url?: string;
-  };
-  likes_count: number;
-  comments_count: number;
-  is_liked: boolean;
-  is_bookmarked: boolean;
   created_at: string;
 }
 
-export default function CommunitySpace() {
-  const { profile } = useAuth();
-  const [bonPlans, setBonPlans] = useState<BonPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [newBonPlan, setNewBonPlan] = useState({
-    title: '',
-    description: '',
-    category: '',
-    location: '',
-    price: '',
-    discount: '',
-    image_url: '',
-    website_url: ''
-  });
+// --- COMPONENTS ---
 
-  const categories = [
-    'Bien-être', 'Restaurant', 'Shopping', 'Culture', 'Sport', 
-    'Beauté', 'Voyage', 'Loisirs', 'Autre'
-  ];
+const CircleCard = ({ icon: Icon, title, description, color }: { icon: any, title: string, description: string, color: string }) => (
+  <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md transition-all border border-gray-100 group cursor-pointer h-full">
+    <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+      <Icon className="w-6 h-6 text-white" />
+    </div>
+    <h3 className="font-bold text-lg text-gray-900 mb-2">{title}</h3>
+    <p className="text-sm text-gray-500 mb-4">{description}</p>
+    <button className="w-full py-2 px-4 rounded-lg bg-gray-50 text-gray-900 font-medium text-sm group-hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 mt-auto">
+      <MessageCircle className="w-4 h-4" />
+      Rejoindre
+    </button>
+  </div>
+);
+
+const AnnouncementBanner = ({ text }: { text: string }) => (
+  <div className="bg-gradient-to-r from-purple-600 to-primary text-white py-3 px-4 shadow-md mb-8 rounded-xl flex items-center gap-3 animate-fade-in">
+    <div className="bg-white/20 p-2 rounded-full">
+      <Megaphone className="w-5 h-5 text-white" />
+    </div>
+    <p className="font-medium text-sm sm:text-base">{text}</p>
+  </div>
+);
+
+const KiffModal = ({ kiff, onClose }: { kiff: CommunityContent, onClose: () => void }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 p-2 bg-white/80 rounded-full hover:bg-gray-100 transition-colors z-10"
+      >
+        <X className="w-6 h-6 text-gray-900" />
+      </button>
+
+      {kiff.image_url && (
+        <div className="h-64 sm:h-80 w-full relative">
+          <img src={kiff.image_url} alt={kiff.title} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute bottom-6 left-6 text-white">
+            <span className="bg-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2 inline-block">
+              Coup de Cœur
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold">{kiff.title}</h2>
+          </div>
+        </div>
+      )}
+
+      <div className="p-8">
+        {!kiff.image_url && <h2 className="text-2xl font-bold mb-6">{kiff.title}</h2>}
+        <div className="prose prose-purple max-w-none text-gray-600 leading-relaxed whitespace-pre-wrap">
+          {kiff.content}
+        </div>
+        <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
+          <button onClick={onClose} className="text-gray-500 hover:text-primary font-medium">
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+export default function CommunitySpace() {
+  const { profile, loading: authLoading } = useAuth();
+
+  // Data State
+  const [announcements, setAnnouncements] = useState<CommunityContent[]>([]);
+  const [kiffs, setKiffs] = useState<CommunityContent[]>([]);
+  const [loadingContent, setLoadingContent] = useState(true);
+
+  // UI State
+  const [suggestion, setSuggestion] = useState('');
+  const [sending, setSending] = useState(false);
+  const [selectedKiff, setSelectedKiff] = useState<CommunityContent | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    loadBonPlans();
+    fetchContent();
   }, []);
 
-  const loadBonPlans = async () => {
+  const fetchContent = async () => {
     try {
-      // Simuler des données pour la démo
-      const mockData: BonPlan[] = [
-        {
-          id: '1',
-          title: 'Massage à -50% chez Zen Spa',
-          description: 'J\'ai testé ce spa incroyable ! Massage californien divin, ambiance zen, et avec le code NOWME50 tu as -50%. J\'y retourne la semaine prochaine !',
-          category: 'Bien-être',
-          location: 'Paris 11e',
-          price: 45,
-          discount: '-50%',
-          image_url: 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?auto=format&fit=crop&q=80&w=400',
-          website_url: 'https://zen-spa-paris.fr',
-          author: {
-            name: 'Sophie M.',
-            photo_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150'
-          },
-          likes_count: 24,
-          comments_count: 8,
-          is_liked: false,
-          is_bookmarked: true,
-          created_at: '2024-01-20T10:30:00Z'
-        },
-        {
-          id: '2',
-          title: 'Brunch de folie chez Café Bloom',
-          description: 'Les meufs, ce brunch est DINGUE ! Avocat toast, pancakes fluffy, et le café est parfait. En plus c\'est photogénique à souhait 📸',
-          category: 'Restaurant',
-          location: 'Paris 3e',
-          price: 28,
-          author: {
-            name: 'Emma L.',
-            photo_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150'
-          },
-          likes_count: 31,
-          comments_count: 12,
-          is_liked: true,
-          is_bookmarked: false,
-          created_at: '2024-01-19T14:15:00Z'
-        },
-        {
-          id: '3',
-          title: 'Cours de poterie chez Terre & Feu',
-          description: 'Atelier poterie génial ! La prof est super patiente, on repart avec sa création. Parfait pour déconnecter et créer quelque chose de ses mains ✨',
-          category: 'Loisirs',
-          location: 'Paris 18e',
-          price: 65,
-          author: {
-            name: 'Julie R.',
-            photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150'
-          },
-          likes_count: 18,
-          comments_count: 5,
-          is_liked: false,
-          is_bookmarked: false,
-          created_at: '2024-01-18T16:45:00Z'
-        }
-      ];
-      
-      setBonPlans(mockData);
-    } catch (error) {
-      console.error('Erreur chargement bons plans:', error);
-      toast.error('Erreur lors du chargement');
+      const { data, error } = await supabase
+        .from('community_content')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        setAnnouncements(data.filter(i => i.type === 'announcement'));
+        setKiffs(data.filter(i => i.type === 'kiff'));
+      }
+    } catch (err) {
+      console.error('Error fetching content:', err);
     } finally {
-      setLoading(false);
+      setLoadingContent(false);
     }
   };
 
-  const handleCreateBonPlan = async (e: React.FormEvent) => {
+  const handleSuggestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newBonPlan.title || !newBonPlan.description || !newBonPlan.category) {
-      toast.error('Remplis au moins le titre, la description et la catégorie !');
-      return;
-    }
+    if (!suggestion.trim()) return;
 
+    setSending(true);
     try {
-      // Ici tu intégreras avec Supabase
-      toast.success('Bon plan partagé ! Merci pour la communauté 💕');
-      setShowCreateForm(false);
-      setNewBonPlan({
-        title: '',
-        description: '',
-        category: '',
-        location: '',
-        price: '',
-        discount: '',
-        image_url: '',
-        website_url: ''
-      });
-      await loadBonPlans();
-    } catch (error) {
-      toast.error('Erreur lors du partage');
+      const { error } = await supabase
+        .from('community_suggestions')
+        .insert({
+          user_id: profile?.user_id,
+          suggestion_text: suggestion
+        });
+
+      if (error) throw error;
+      toast.success("Merci ! Ton idée a été envoyée à l'équipe 💕");
+      setSuggestion('');
+    } catch (err) {
+      console.error('Erreur suggestion:', err);
+      toast.error("Oups, une erreur est survenue.");
+    } finally {
+      setSending(false);
     }
   };
 
-  const handleLike = async (bonPlanId: string) => {
-    // Logique de like
-    toast.success('💕');
-  };
+  // Carousel Logic
+  const itemsPerSlide = 3;
+  const totalSlides = Math.ceil(kiffs.length / itemsPerSlide);
 
-  const handleBookmark = async (bonPlanId: string) => {
-    // Logique de bookmark
-    toast.success('Sauvegardé !');
-  };
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
 
-  const filteredBonPlans = bonPlans.filter(plan => {
-    const matchesSearch = plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plan.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || plan.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const visibleKiffs = kiffs.slice(
+    currentSlide * itemsPerSlide,
+    currentSlide * itemsPerSlide + itemsPerSlide
+  );
 
-  if (loading) {
+  // Loading State
+  if (authLoading || loadingContent) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#FDF8F4]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4] py-12">
-      <SEO 
-        title="Espace communautaire"
-        description="Partagez vos bons plans et découvrez ceux de la communauté Nowme"
-      />
+    <div className="min-h-screen bg-[#FDF8F4] pb-20">
+      <SEO title="Le Club Privé" description="Espace communautaire exclusif Nowme" />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Nos bons plans entre copines 💕
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Partage tes découvertes et profite de celles des autres membres !
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-colors"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Partager un bon plan
-          </button>
-
-          <div className="flex-1 flex gap-4">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Rechercher un bon plan..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 pl-10 rounded-full border border-gray-300 focus:ring-primary focus:border-primary"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+      {/* HEADER */}
+      <div className="bg-white border-b sticky top-0 z-40 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Hello {profile?.first_name || 'Sunshine'} ✨
+              </h1>
+              <p className="text-gray-500 text-xs sm:text-sm">
+                Bienvenue dans ton espace privé.
+              </p>
             </div>
-
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-3 rounded-full border border-gray-300 focus:ring-primary focus:border-primary"
-            >
-              <option value="all">Toutes les catégories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <div className="hidden sm:block">
+              <span className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-semibold border border-primary/20">
+                Membre Club
+              </span>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Liste des bons plans */}
-        <div className="space-y-6">
-          {filteredBonPlans.map((plan) => (
-            <div key={plan.id} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
-              <div className="flex items-start gap-4">
-                {/* Avatar */}
-                <div className="flex-shrink-0">
-                  {plan.author.photo_url ? (
-                    <img
-                      src={plan.author.photo_url}
-                      alt={plan.author.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary font-semibold">
-                        {plan.author.name[0]}
-                      </span>
-                    </div>
-                  )}
-                </div>
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
 
-                {/* Contenu */}
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">
-                        {plan.title}
-                      </h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>{plan.author.name}</span>
-                        <span>•</span>
-                        <span>{new Date(plan.created_at).toLocaleDateString('fr-FR')}</span>
-                        <span className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                          {plan.category}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {plan.discount && (
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                        {plan.discount}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-gray-700 mb-4 leading-relaxed">
-                    {plan.description}
-                  </p>
-
-                  {/* Image */}
-                  {plan.image_url && (
-                    <div className="mb-4">
-                      <img
-                        src={plan.image_url}
-                        alt={plan.title}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                    </div>
-                  )}
-
-                  {/* Infos pratiques */}
-                  <div className="flex items-center gap-6 mb-4 text-sm text-gray-600">
-                    {plan.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        <span>{plan.location}</span>
-                      </div>
-                    )}
-                    {plan.price && (
-                      <div className="flex items-center gap-1">
-                        <span className="font-semibold">{plan.price}€</span>
-                      </div>
-                    )}
-                    {plan.website_url && (
-                      <a
-                        href={plan.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary hover:text-primary-dark"
-                      >
-                        <LinkIcon className="w-4 h-4" />
-                        <span>Site web</span>
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => handleLike(plan.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-full transition-colors ${
-                          plan.is_liked 
-                            ? 'bg-red-100 text-red-600' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
-                        }`}
-                      >
-                        <Heart className={`w-4 h-4 ${plan.is_liked ? 'fill-current' : ''}`} />
-                        <span className="text-sm font-medium">{plan.likes_count}</span>
-                      </button>
-
-                      <button className="flex items-center gap-2 px-3 py-2 rounded-full bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                        <MessageCircle className="w-4 h-4" />
-                        <span className="text-sm font-medium">{plan.comments_count}</span>
-                      </button>
-
-                      <button className="flex items-center gap-2 px-3 py-2 rounded-full bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-600 transition-colors">
-                        <Share2 className="w-4 h-4" />
-                        <span className="text-sm font-medium">Partager</span>
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => handleBookmark(plan.id)}
-                      className={`p-2 rounded-full transition-colors ${
-                        plan.is_bookmarked 
-                          ? 'bg-yellow-100 text-yellow-600' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 hover:text-yellow-600'
-                      }`}
-                    >
-                      <Bookmark className={`w-4 h-4 ${plan.is_bookmarked ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Formulaire de création */}
-        {showCreateForm && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Partager un bon plan
-                </h2>
-
-                <form onSubmit={handleCreateBonPlan} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Titre du bon plan *
-                    </label>
-                    <input
-                      type="text"
-                      value={newBonPlan.title}
-                      onChange={(e) => setNewBonPlan({...newBonPlan, title: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                      placeholder="Ex: Massage à -50% chez Zen Spa"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description *
-                    </label>
-                    <textarea
-                      value={newBonPlan.description}
-                      onChange={(e) => setNewBonPlan({...newBonPlan, description: e.target.value})}
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                      placeholder="Raconte-nous ton expérience, pourquoi tu recommandes..."
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Catégorie *
-                      </label>
-                      <select
-                        value={newBonPlan.category}
-                        onChange={(e) => setNewBonPlan({...newBonPlan, category: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        required
-                      >
-                        <option value="">Choisir une catégorie</option>
-                        {categories.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Localisation
-                      </label>
-                      <input
-                        type="text"
-                        value={newBonPlan.location}
-                        onChange={(e) => setNewBonPlan({...newBonPlan, location: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        placeholder="Ex: Paris 11e"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Prix (€)
-                      </label>
-                      <input
-                        type="number"
-                        value={newBonPlan.price}
-                        onChange={(e) => setNewBonPlan({...newBonPlan, price: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        placeholder="Ex: 45"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Réduction
-                      </label>
-                      <input
-                        type="text"
-                        value={newBonPlan.discount}
-                        onChange={(e) => setNewBonPlan({...newBonPlan, discount: e.target.value})}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        placeholder="Ex: -50% ou Code NOWME50"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Photo (URL)
-                    </label>
-                    <input
-                      type="url"
-                      value={newBonPlan.image_url}
-                      onChange={(e) => setNewBonPlan({...newBonPlan, image_url: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                      placeholder="https://..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Site web
-                    </label>
-                    <input
-                      type="url"
-                      value={newBonPlan.website_url}
-                      onChange={(e) => setNewBonPlan({...newBonPlan, website_url: e.target.value})}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                      placeholder="https://..."
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateForm(false)}
-                      className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark"
-                    >
-                      Partager
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+        {/* SECTION 0: ANNONCES */}
+        {announcements.length > 0 && (
+          <div className="space-y-4">
+            {announcements.map(announcement => (
+              <AnnouncementBanner key={announcement.id} text={announcement.title} />
+            ))}
           </div>
         )}
+
+        {/* SECTION 1: LE MUR DES KIFFS (CAROUSEL) */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold text-gray-900">Le Mur des Kiffs</h2>
+            </div>
+            {kiffs.length > itemsPerSlide && (
+              <div className="flex gap-2">
+                <button onClick={prevSlide} className="p-2 rounded-full border border-gray-200 hover:bg-white transition-colors">
+                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <button onClick={nextSlide} className="p-2 rounded-full border border-gray-200 hover:bg-white transition-colors">
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {kiffs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {visibleKiffs.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedKiff(item)}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group cursor-pointer border border-gray-100 flex flex-col"
+                >
+                  <div className="h-48 overflow-hidden relative bg-gray-100">
+                    {item.image_url ? (
+                      <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-300">
+                        <ImageIcon className="w-12 h-12" />
+                      </div>
+                    )}
+                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm">
+                      Pépite du mois
+                    </div>
+                  </div>
+                  <div className="p-6 flex-1 flex flex-col">
+                    <h3 className="font-bold text-lg mb-2 text-gray-900 line-clamp-2">{item.title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-4 flex-1">
+                      {item.content}
+                    </p>
+                    <div className="text-primary font-medium text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                      Lire la suite <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300 text-gray-500">
+              Les pépites arrivent bientôt ! 💎
+            </div>
+          )}
+        </section>
+
+        {/* SECTION 2: LE HUB DES CERCLES */}
+        <section>
+          <div className="flex items-center gap-3 mb-8">
+            <MessageCircle className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold text-gray-900">Vos Cercles de Discussion</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            {/* Colonne GEO */}
+            <div>
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Par Quartier
+              </h3>
+              <div className="space-y-4">
+                <CircleCard
+                  icon={MapPin}
+                  title="Paris & Proche Banlieue"
+                  description="75, 92, 93, 94 - City Life 🍸"
+                  color="bg-purple-500"
+                />
+                <CircleCard
+                  icon={MapPin}
+                  title="Team Est Francilien"
+                  description="77, 91 - Nature & Détente 🌿"
+                  color="bg-teal-500"
+                />
+                <CircleCard
+                  icon={MapPin}
+                  title="Team Ouest & Nord"
+                  description="78, 95 - Chic & Chill 🏰"
+                  color="bg-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Colonne THEMES (Updated) */}
+            <div>
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Heart className="w-4 h-4" />
+                Par Passion
+              </h3>
+              <div className="space-y-4">
+                <CircleCard
+                  icon={Palette}
+                  title="Culture & Sorties"
+                  description="Expos, théâtres et concerts entre copines 🎭"
+                  color="bg-pink-500"
+                />
+                <CircleCard
+                  icon={Coffee}
+                  title="Équilibre & Carrière"
+                  description="Ambition, bien-être et entraide pro 💼"
+                  color="bg-orange-500"
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <CircleCard
+                    icon={BookOpen}
+                    title="Book Club"
+                    description="Lectures & Débats 📚"
+                    color="bg-indigo-500"
+                  />
+                  <CircleCard
+                    icon={Smile}
+                    title="Délires & Fun"
+                    description="Juste pour rire 😂"
+                    color="bg-yellow-500"
+                  />
+                </div>
+                <CircleCard
+                  icon={Plane}
+                  title="Voyages & Escapades"
+                  description="Bons plans week-end et aventures 🌍"
+                  color="bg-cyan-500"
+                />
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* SECTION 3: LA BOITE A IDÉES */}
+        <section className="max-w-2xl mx-auto text-center pt-8">
+          <div className="bg-gradient-to-br from-primary to-primary-dark rounded-3xl p-8 sm:p-12 text-white shadow-xl">
+            <h2 className="text-3xl font-bold mb-4">Une idée brillante ? 💡</h2>
+            <p className="text-primary-100 mb-8 max-w-lg mx-auto">
+              C'est votre club. Dites-nous ce qui vous ferait vibrer pour les prochains mois !
+            </p>
+
+            <form onSubmit={handleSuggestionSubmit} className="relative">
+              <textarea
+                value={suggestion}
+                onChange={(e) => setSuggestion(e.target.value)}
+                placeholder="J'aimerais trop voir..."
+                className="w-full h-32 rounded-xl p-4 text-gray-900 focus:outline-none focus:ring-4 focus:ring-white/30 placeholder:text-gray-400"
+              />
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={sending || !suggestion.trim()}
+                  className="bg-white text-primary px-8 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {sending ? 'Envoi...' : 'Envoyer'}
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
       </div>
+
+      {/* MODAL */}
+      {selectedKiff && (
+        <KiffModal kiff={selectedKiff} onClose={() => setSelectedKiff(null)} />
+      )}
+
     </div>
   );
+}
+
+// Icon helper since we are using dynamic lucide imports inside the map
+function ImageIcon(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </svg>
+  )
 }
