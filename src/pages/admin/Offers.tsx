@@ -48,6 +48,7 @@ interface Offer {
     type: 'image' | 'video';
     order: number;
   }>;
+  image_url?: string;
 }
 
 export default function Offers() {
@@ -333,9 +334,9 @@ export default function Offers() {
                       <div className="flex items-center gap-4">
                         {/* Image */}
                         <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                          {offer.media?.[0] ? (
+                          {(offer.image_url || offer.media?.[0]) ? (
                             <img
-                              src={offer.media[0].url}
+                              src={offer.image_url || offer.media?.[0]?.url}
                               alt={offer.title}
                               className="w-full h-full object-cover"
                             />
@@ -425,10 +426,17 @@ export default function Offers() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Images */}
-                {selectedOffer.media.length > 0 && (
+                {(selectedOffer.image_url || selectedOffer.media.length > 0) && (
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Images</h4>
                     <div className="grid grid-cols-2 gap-2">
+                      {selectedOffer.image_url && (
+                        <img
+                          src={selectedOffer.image_url}
+                          alt={selectedOffer.title}
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      )}
                       {selectedOffer.media.map((media) => (
                         <img
                           key={media.id}

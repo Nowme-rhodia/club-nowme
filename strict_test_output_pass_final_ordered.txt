@@ -1,0 +1,69 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved
+[1A[2K[chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved
+­ƒö╣ 1. Partner Login
+
+[1A[2KÔ£à Partner logged in
+
+[1A[2K­ƒö╣ 2. Create Offer (Draft)
+
+[1A[2K[Browser Console Error]: Partner ID not found: {message: TypeError: Failed to fetch, details: TypeError: Failed to fetch
+    at http://localhostÔÇªdeps/@supabase_supabase-js.js?v=918249bf:4266:24), hint: , code: }
+
+[1A[2K[Browser Console Error]: Partner lookup error: {message: TypeError: Failed to fetch, details: TypeError: Failed to fetch
+    at http://localhostÔÇªdeps/@supabase_supabase-js.js?v=918249bf:4266:24), hint: , code: }
+
+[1A[2K[Browser Console Error]: Partner ID not found: {message: TypeError: Failed to fetch, details: TypeError: Failed to fetch
+    at http://localhostÔÇªdeps/@supabase_supabase-js.js?v=918249bf:4266:24), hint: , code: }
+
+[1A[2K[Browser Console Error]: Partner ID not found: {message: TypeError: Failed to fetch, details: TypeError: Failed to fetch
+    at http://localhostÔÇªdeps/@supabase_supabase-js.js?v=918249bf:4266:24), hint: , code: }
+
+[1A[2K[Browser Console Error]: Partner ID not found: {message: TypeError: Failed to fetch, details: TypeError: Failed to fetch
+    at http://localhostÔÇªdeps/@supabase_supabase-js.js?v=918249bf:4266:24), hint: , code: }
+
+[1A[2K[Browser Console Error]: Google Maps JavaScript API error: RefererNotAllowedMapError
+https://developers.google.com/maps/documentation/javascript/error-messages#referer-not-allowed-map-error
+Your site URL to be authorized: http://localhost:5173/partner/offers
+
+[1A[2K­ƒö╣ 3. DB Verification (Draft)
+
+
+[1A[2K  1) [chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeNull[2m()[22m
+
+    Received: [31m{"code": "PGRST116", "details": "The result contains 0 rows", "hint": null, "message": "JSON object requested, multiple (or no) rows returned"}[39m
+
+      159 |
+      160 |         if (errDraft) console.error('DB Error:', errDraft);
+    > 161 |         expect(errDraft).toBeNull();
+          |                          ^
+      162 |         expect(offerDraft).toBeDefined();
+      163 |         expect(offerDraft.status).toBe('draft');
+      164 |         expect(offerDraft.is_approved).toBe(false);
+        at C:\Users\rhodi\club-nowme-1\tests\strict-e2e.spec.ts:161:26
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    attachment #2: video (video/webm) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\video.webm
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\trace.zip
+
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+
+[1A[2K  1 failed
+    [chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved 

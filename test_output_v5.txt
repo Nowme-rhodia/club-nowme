@@ -5,9 +5,21 @@ Running 1 test using 1 worker
 [1A[2K[chromium] ÔÇ║ tests\partner-offer-submission.spec.ts:8:3 ÔÇ║ Soumission d'offre partenaire avec variants ÔÇ║ devrait cr├®er une offre de massage avec deux variants et la soumettre
 ­ƒæñ ├ëTAPE 1: Connexion en tant que partenaire
 
-[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=*&user_id=eq.63b5c0d7-9d91-4704-b6ac-e31b1bc3f2c8
+[1A[2KÔØî Erreur r├®seau 406: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=id%2Ccalendly_url%2Cbusiness_name&id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
 
-[1A[2K   Body: {"code":"42703","details":null,"hint":null,"message":"column partners.user_id does not exist"}
+[1A[2K   Body: {"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"JSON object requested, multiple (or no) rows returned"}
+
+[1A[2KÔØî Erreur r├®seau 406: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=id%2Ccalendly_url%2Cbusiness_name&id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"JSON object requested, multiple (or no) rows returned"}
+
+[1A[2KÔØî Erreur r├®seau 406: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=id%2Ccalendly_url%2Cbusiness_name&id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"JSON object requested, multiple (or no) rows returned"}
+
+[1A[2KÔØî Erreur r├®seau 406: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=id%2Ccalendly_url%2Cbusiness_name&id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"JSON object requested, multiple (or no) rows returned"}
 
 [1A[2KÔ£à Connexion r├®ussie
 
@@ -39,27 +51,30 @@ Running 1 test using 1 worker
 
 [1A[2K­ƒÆ¥ ├ëTAPE 7: Sauvegarde de l'offre
 
-[1A[2KÔÜá´©Å Modal toujours ouvert - v├®rification des erreurs
-
-[1A[2KÔÜá´©Å Offre non visible dans la liste - v├®rification des offres existantes
-
-[1A[2KOffres visibles: [ [32m'Dededed'[39m, [32m'Massage Relaxant Test 1766743023687'[39m ]
+[1A[2KÔ£à Clic sur Enregistrer
 
 [1A[2K  1) [chromium] ÔÇ║ tests\partner-offer-submission.spec.ts:8:3 ÔÇ║ Soumission d'offre partenaire avec variants ÔÇ║ devrait cr├®er une offre de massage avec deux variants et la soumettre 
 
-    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
 
-    Expected: [32mtrue[39m
-    Received: [31mfalse[39m
+    Locator: locator('div[role="status"]').filter({ hasText: /Offre cr├®.e/ })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
 
-      191 |     }
-      192 |
-    > 193 |     expect(isVisible).toBe(true);
-          |                       ^
-      194 |
-      195 |     // ============================================
-      196 |     // ├ëTAPE 8: Soumettre l'offre pour validation
-        at C:\Users\rhodi\club-nowme-1\tests\partner-offer-submission.spec.ts:193:23
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for locator('div[role="status"]').filter({ hasText: /Offre cr├®.e/ })[22m
+
+
+      156 |     // V├®rifier le toast de succ├¿s
+      157 |     // Toast text might vary slightly, use partial match
+    > 158 |     await expect(page.locator('div[role="status"]').filter({ hasText: /Offre cr├®.e/ })).toBeVisible({ timeout: 10000 });
+          |                                                                                         ^
+      159 |     console.log('Ô£à Toast de succ├¿s affich├®');
+      160 |
+      161 |     // Attendre que le modal se ferme
+        at C:\Users\rhodi\club-nowme-1\tests\partner-offer-submission.spec.ts:158:89
 
     attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     test-results\partner-offer-submission-S-d1421-ux-variants-et-la-soumettre-chromium\test-failed-1.png

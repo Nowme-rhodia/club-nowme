@@ -42,48 +42,41 @@ export default function SignIn() {
 
       // Étape 2: Récupérer l'utilisateur immédiatement après la connexion
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
+
       if (userError) {
         console.error('Erreur lors de la récupération de l\'utilisateur:', userError);
         throw new Error("Impossible de récupérer l'utilisateur connecté");
       }
-      
+
       if (!user) {
         console.error('Utilisateur non trouvé après connexion');
         throw new Error("Utilisateur non trouvé après connexion");
       }
-      
+
       console.log('Utilisateur connecté avec succès:', user.id);
 
-      // Étape 3: Vérifier si c'est un partenaire
-      const { data: partnerData, error: partnerError } = await supabase
-        .from('partners')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      console.log('Utilisateur connecté avec succès:', user.id);
 
-      if (partnerError && partnerError.code !== 'PGRST116') {
-        console.error('Erreur lors de la vérification du partenaire:', partnerError);
-      }
-
-      if (partnerData) {
-        console.log('Partenaire trouvé, redirection vers le dashboard partenaire');
-        navigate('/partner/dashboard');
-        return;
-      }
-
-      // Étape 4: Si ce n'est pas un partenaire, vérifier le profil utilisateur
-      const { data: userData, error: userDataError } = await supabase
+      // Étape 3: Vérifier le profil utilisateur (pour admin, partenaire, ou abonné)
+      const { data: userDataObtained, error: userDataError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
+      const userData = userDataObtained as any;
+
       if (userDataError && userDataError.code !== 'PGRST116') {
         console.error('Erreur lors de la récupération du profil utilisateur:', userDataError);
       }
 
-      // Étape 5: Rediriger en fonction du profil
+      // Étape 4: Rediriger en fonction du profil
+      if (userData?.partner_id) {
+        console.log('Partenaire trouvé (via profil), redirection vers le dashboard partenaire');
+        navigate('/partner/dashboard');
+        return;
+      }
+
       if (userData?.is_admin) {
         console.log('Utilisateur admin, redirection vers /admin');
         navigate('/admin');

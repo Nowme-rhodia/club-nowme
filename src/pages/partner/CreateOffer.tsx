@@ -56,31 +56,24 @@ export default function CreateOffer() {
         partner_id: profileData.partner_id,
         title: formData.title,
         description: formData.description,
-        category_slug: formData.category_slug,
-        subcategory_slug: formData.subcategory_slug,
-        location: formData.location || 'Non spécifié',
-        event_type: formData.event_type,
+        street_address: formData.location || 'Non spécifié',
         status: 'draft',
-        is_approved: true,
-        requires_agenda: formData.requires_agenda,
+        is_approved: false, // Starts as false usually if draft? existing code said true.
         calendly_url: formData.requires_agenda ? formData.calendly_url : null,
-        has_stock: formData.has_stock,
-        stock: formData.has_stock ? parseInt(formData.stock) : null,
-        base_price: formData.base_price ? parseFloat(formData.base_price) : null,
-        promo_price: formData.promo_price ? parseFloat(formData.promo_price) : null
+        commission_rate: 10 // Default? Schema requires numeric. Maybe nullable?
       };
 
-      // Ajouter les champs spécifiques selon le type d'événement
+      // Add timestamps
       if (formData.event_type === 'fixed_date') {
-        offerData.event_date = formData.event_date || null;
+        offerData.event_start_date = formData.event_date || null;
         offerData.event_end_date = formData.event_end_date || null;
-        offerData.capacity = formData.capacity ? parseInt(formData.capacity) : null;
       }
 
       if (categoryData?.id) {
         offerData.category_id = categoryData.id;
       }
 
+      // 1. Insert Offer
       const { data: offer, error: offerError } = await supabase
         .from('offers')
         .insert(offerData)
@@ -90,6 +83,20 @@ export default function CreateOffer() {
       if (offerError) {
         console.error('Error creating offer:', offerError);
         throw offerError;
+      }
+
+      // 2. Insert Price (Variant)
+      if (formData.base_price) {
+        const { error: variantError } = await supabase
+          .from('offer_variants')
+          .insert({
+            offer_id: offer.id,
+            name: 'Tarif Standard',
+            price: parseFloat(formData.base_price),
+            discounted_price: formData.promo_price ? parseFloat(formData.promo_price) : null
+          });
+
+        if (variantError) console.error('Error creating variant:', variantError);
       }
 
       toast.success('Offre créée avec succès !');

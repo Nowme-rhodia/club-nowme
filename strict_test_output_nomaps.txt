@@ -1,0 +1,82 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved
+[1A[2K[chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved
+­ƒö╣ 1. Partner Login
+
+[1A[2K[Browser Console Error]: Failed to load resource: the server responded with a status of 400 ()
+
+[1A[2K[Browser Console Error]: Failed to load resource: the server responded with a status of 400 ()
+
+[1A[2K[Browser Console Error]: Failed to load resource: the server responded with a status of 400 ()
+
+[1A[2K[Browser Console Error]: Failed to load resource: the server responded with a status of 400 ()
+
+[1A[2K[Browser Console Error]: Failed to load resource: the server responded with a status of 400 ()
+
+[1A[2KÔ£à Partner logged in
+
+[1A[2K­ƒö╣ 2. Create Offer (Draft)
+
+[1A[2K[Browser Console Error]: Failed to load resource: the server responded with a status of 400 ()
+
+[1A[2K[Request Failed]: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b - net::ERR_ABORTED
+
+[1A[2K[Request Failed]: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b - net::ERR_ABORTED
+
+[1A[2K[Request Failed]: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/rpc/partner_payouts_report_by_partner - net::ERR_ABORTED
+
+[1A[2K[Request Failed]: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b - net::ERR_ABORTED
+
+[1A[2K[Request Failed]: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b - net::ERR_ABORTED
+
+[1A[2K[Request Failed]: https://maps.googleapis.com/maps/api/js?key=AIzaSyA7bPM6514rCCRM36Ly_-9ybcSbwFmI78I&v=weekly&language=fr&region=FR&libraries=places&loading=async&callback=initMap - net::ERR_FAILED
+
+[1A[2K[Browser Console Error]: Failed to load resource: net::ERR_FAILED
+
+[1A[2K[Browser Console Error]: injectScript error:  Event
+
+[1A[2K[Browser Console Error]: injectScript error:  Event
+
+[1A[2K[Browser Console Error]: Event
+
+[1A[2K[Browser Console Error]: Event
+
+[1A[2K  1) [chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved 
+
+    TimeoutError: page.fill: Timeout 15000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('input[placeholder*="adresse"]')[22m
+
+
+      102 |
+      103 |         // Add address
+    > 104 |         await page.fill('input[placeholder*="adresse"]', '10 Rue de Paris');
+          |                    ^
+      105 |
+      106 |         // Save Draft
+      107 |         await page.click('button:has-text("Enregistrer en brouillon")');
+        at C:\Users\rhodi\club-nowme-1\tests\strict-e2e.spec.ts:104:20
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    attachment #2: video (video/webm) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\video.webm
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\strict-e2e-Strict-E2E-Flow-ce291--approve-verify-DB-approved-chromium\trace.zip
+
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+
+[1A[2K  1 failed
+    [chromium] ÔÇ║ tests\strict-e2e.spec.ts:35:5 ÔÇ║ Strict E2E Flow: Offer Submission & Approval ÔÇ║ should create offer, verify DB draft, submit, verify DB pending, approve, verify DB approved 

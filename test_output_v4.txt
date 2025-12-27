@@ -1,0 +1,25 @@
+SyntaxError: C:\Users\rhodi\club-nowme-1\tests\partner-offer-submission.spec.ts: Identifier 'offerInList' has already been declared. (190:10)
+
+[0m [90m 188 |[39m
+ [90m 189 |[39m     [90m// V├®rifier que l'offre appara├«t dans la liste[39m
+[31m[1m>[22m[39m[90m 190 |[39m     [36mconst[39m offerInList [33m=[39m page[33m.[39mlocator([32m`text=${offerTitle}`[39m)[33m;[39m
+ [90m     |[39m           [31m[1m^[22m[39m
+ [90m 191 |[39m     [36mconst[39m isVisible [33m=[39m [36mawait[39m offerInList[33m.[39misVisible()[33m;[39m
+ [90m 192 |[39m
+ [90m 193 |[39m     [36mif[39m (isVisible) {[0m
+
+   at partner-offer-submission.spec.ts:190
+
+  188 |
+  189 |     // V├®rifier que l'offre appara├«t dans la liste
+> 190 |     const offerInList = page.locator(`text=${offerTitle}`);
+      |          ^
+  191 |     const isVisible = await offerInList.isVisible();
+  192 |
+  193 |     if (isVisible) {
+
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+[1A[2K

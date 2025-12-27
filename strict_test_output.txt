@@ -1,0 +1,18 @@
+ReferenceError: __dirname is not defined in ES module scope
+
+   at strict-e2e.spec.ts:7
+
+   5 |
+   6 | // Load env vars
+>  7 | dotenv.config({ path: path.resolve(__dirname, '../.env') });
+     |                                    ^
+   8 |
+   9 | const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  10 | const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    at C:\Users\rhodi\club-nowme-1\tests\strict-e2e.spec.ts:7:36
+
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+[1A[2K

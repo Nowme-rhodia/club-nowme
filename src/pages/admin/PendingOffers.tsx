@@ -92,6 +92,7 @@ export default function PendingOffers() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [offerToReject, setOfferToReject] = useState<Offer | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadOffers();
@@ -120,6 +121,9 @@ export default function PendingOffers() {
   };
 
   const handleApprove = async (offer: Offer) => {
+    if (processingId === offer.id) return;
+    setProcessingId(offer.id);
+
     try {
       const { error } = await (supabase
         .from('offers') as any)
@@ -145,6 +149,8 @@ export default function PendingOffers() {
     } catch (error) {
       console.error('Error approving offer:', error);
       toast.error("Erreur lors de l'approbation");
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -398,7 +404,7 @@ export default function PendingOffers() {
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      {offer.status === 'ready' && (
+                      {(offer.status === 'ready' || offer.status === 'pending') && (
                         <>
                           <button
                             onClick={() => handleApprove(offer)}
@@ -520,7 +526,7 @@ export default function PendingOffers() {
                   >
                     Fermer
                   </button>
-                  {selectedOffer.status === 'ready' && (
+                  {(selectedOffer.status === 'ready' || selectedOffer.status === 'pending') && (
                     <>
                       <button
                         onClick={() => {
@@ -533,13 +539,19 @@ export default function PendingOffers() {
                         Rejeter
                       </button>
                       <button
-                        onClick={() => {
-                          handleApprove(selectedOffer);
+                        disabled={processingId === selectedOffer.id}
+                        onClick={async () => {
+                          await handleApprove(selectedOffer);
                           setSelectedOffer(null);
                         }}
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                       >
-                        Approuver
+                        {processingId === selectedOffer.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                            Traitement...
+                          </>
+                        ) : 'Approuver'}
                       </button>
                     </>
                   )}

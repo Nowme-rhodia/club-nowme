@@ -5,9 +5,13 @@ Running 1 test using 1 worker
 [1A[2K[chromium] ÔÇ║ tests\partner-offer-submission.spec.ts:8:3 ÔÇ║ Soumission d'offre partenaire avec variants ÔÇ║ devrait cr├®er une offre de massage avec deux variants et la soumettre
 ­ƒæñ ├ëTAPE 1: Connexion en tant que partenaire
 
-[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=*&user_id=eq.63b5c0d7-9d91-4704-b6ac-e31b1bc3f2c8
+[1A[2KÔØî Erreur r├®seau 406: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=id%2Ccalendly_url%2Cbusiness_name&id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
 
-[1A[2K   Body: {"code":"42703","details":null,"hint":null,"message":"column partners.user_id does not exist"}
+[1A[2K   Body: {"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"JSON object requested, multiple (or no) rows returned"}
+
+[1A[2KÔØî Erreur r├®seau 406: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partners?select=id%2Ccalendly_url%2Cbusiness_name&id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"JSON object requested, multiple (or no) rows returned"}
 
 [1A[2KÔ£à Connexion r├®ussie
 

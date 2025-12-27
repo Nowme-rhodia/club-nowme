@@ -1,0 +1,143 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [chromium] ÔÇ║ tests\partner-offer-submission.spec.ts:8:3 ÔÇ║ Soumission d'offre partenaire avec variants ÔÇ║ devrait cr├®er une offre de massage avec deux variants et la soumettre
+[1A[2K[chromium] ÔÇ║ tests\partner-offer-submission.spec.ts:8:3 ÔÇ║ Soumission d'offre partenaire avec variants ÔÇ║ devrait cr├®er une offre de massage avec deux variants et la soumettre
+­ƒæñ ├ëTAPE 1: Connexion en tant que partenaire
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/bookings?select=*%2Coffer%3Aoffers%28title%29%2Cuser%3Auser_profiles%28first_name%2Clast_name%2Cemail%29&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b&order=created_at.desc
+
+[1A[2K   Body: {"code":"PGRST200","details":"Searched for a foreign key relationship between 'bookings' and 'offers' in the schema 'public', but no matches were found.","hint":null,"message":"Could not find a relationship between 'bookings' and 'offers' in the schema cache"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"42703","details":null,"hint":null,"message":"column partner_payouts.gross_amount does not exist"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/bookings?select=*%2Coffer%3Aoffers%28title%29%2Cuser%3Auser_profiles%28first_name%2Clast_name%2Cemail%29&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b&order=created_at.desc
+
+[1A[2K   Body: {"code":"PGRST200","details":"Searched for a foreign key relationship between 'bookings' and 'offers' in the schema 'public', but no matches were found.","hint":null,"message":"Could not find a relationship between 'bookings' and 'offers' in the schema cache"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/bookings?select=*%2Coffer%3Aoffers%28title%29%2Cuser%3Auser_profiles%28first_name%2Clast_name%2Cemail%29&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b&order=created_at.desc
+
+[1A[2K   Body: {"code":"PGRST200","details":"Searched for a foreign key relationship between 'bookings' and 'offers' in the schema 'public', but no matches were found.","hint":null,"message":"Could not find a relationship between 'bookings' and 'offers' in the schema cache"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"42703","details":null,"hint":null,"message":"column partner_payouts.gross_amount does not exist"}
+
+[1A[2KÔØî Erreur r├®seau 404: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/rpc/partner_payouts_report_by_partner
+
+[1A[2K   Body: {"code":"PGRST202","details":"Searched for the function public.partner_payouts_report_by_partner with parameter partner_uuid or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you meant to call the function public.admin_payouts_report_by_partner","message":"Could not find the function public.partner_payouts_report_by_partner(partner_uuid) in the schema cache"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/bookings?select=*%2Coffer%3Aoffers%28title%29%2Cuser%3Auser_profiles%28first_name%2Clast_name%2Cemail%29&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b&order=created_at.desc
+
+[1A[2K   Body: {"code":"PGRST200","details":"Searched for a foreign key relationship between 'bookings' and 'offers' in the schema 'public', but no matches were found.","hint":null,"message":"Could not find a relationship between 'bookings' and 'offers' in the schema cache"}
+
+[1A[2KÔØî Erreur r├®seau 404: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/rpc/partner_payouts_report_by_partner
+
+[1A[2K   Body: {"code":"PGRST202","details":"Searched for the function public.partner_payouts_report_by_partner with parameter partner_uuid or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you meant to call the function public.admin_payouts_report_by_partner","message":"Could not find the function public.partner_payouts_report_by_partner(partner_uuid) in the schema cache"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"42703","details":null,"hint":null,"message":"column partner_payouts.gross_amount does not exist"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/bookings?select=*%2Coffer%3Aoffers%28title%29%2Cuser%3Auser_profiles%28first_name%2Clast_name%2Cemail%29&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b&order=created_at.desc
+
+[1A[2K   Body: {"code":"PGRST200","details":"Searched for a foreign key relationship between 'bookings' and 'offers' in the schema 'public', but no matches were found.","hint":null,"message":"Could not find a relationship between 'bookings' and 'offers' in the schema cache"}
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"42703","details":null,"hint":null,"message":"column partner_payouts.gross_amount does not exist"}
+
+[1A[2KÔØî Erreur r├®seau 404: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/rpc/partner_payouts_report_by_partner
+
+[1A[2K   Body: {"code":"PGRST202","details":"Searched for the function public.partner_payouts_report_by_partner with parameter partner_uuid or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you meant to call the function public.admin_payouts_report_by_partner","message":"Could not find the function public.partner_payouts_report_by_partner(partner_uuid) in the schema cache"}
+
+[1A[2KÔ£à Connexion r├®ussie
+
+[1A[2K­ƒôï ├ëTAPE 2: Navigation vers la page des offres
+
+[1A[2KÔØî Erreur r├®seau 400: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/partner_payouts?select=gross_amount%2Cnet_amount%2Ccommission_amount%2Ccreated_at&partner_id=eq.c78f1403-22b5-43e9-ac0d-00577701731b
+
+[1A[2K   Body: {"code":"42703","details":null,"hint":null,"message":"column partner_payouts.gross_amount does not exist"}
+
+[1A[2KÔØî Erreur r├®seau 404: https://dqfyuhwrjozoxadkccdj.supabase.co/rest/v1/rpc/partner_payouts_report_by_partner
+
+[1A[2K   Body: {"code":"PGRST202","details":"Searched for the function public.partner_payouts_report_by_partner with parameter partner_uuid or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.","hint":"Perhaps you meant to call the function public.admin_payouts_report_by_partner","message":"Could not find the function public.partner_payouts_report_by_partner(partner_uuid) in the schema cache"}
+
+[1A[2KÔ×ò ├ëTAPE 3: Ouverture du formulaire de cr├®ation
+
+[1A[2KÔ£à Modal de cr├®ation ouvert
+
+[1A[2K­ƒôØ ├ëTAPE 4: Remplissage du formulaire
+
+[1A[2K  Ô£ô Titre rempli
+
+[1A[2K  Ô£ô Description remplie
+
+[1A[2K  Ô£ô Cat├®gorie s├®lectionn├®e
+
+[1A[2K  Ô£ô Sous-cat├®gorie s├®lectionn├®e
+
+[1A[2K­ƒÆ░ ├ëTAPE 5: Ajout des tarifs
+
+[1A[2K  Ô£ô Premier tarif: Massage 30 minutes - 45Ôé¼
+
+[1A[2K  Ô£ô Deuxi├¿me tarif: Massage 60 minutes - 75Ôé¼ (r├®duit: 65Ôé¼)
+
+[1A[2K­ƒôà ├ëTAPE 6: Ajout du lien Calendly
+
+[1A[2K  Ô£ô Lien Calendly ajout├®
+
+[1A[2K­ƒÆ¥ ├ëTAPE 7: Sauvegarde de l'offre
+
+[1A[2KÔ£à Clic sur Enregistrer
+
+[1A[2KÔÜá´©Å Modal toujours ouvert, tentative de fermeture manuelle...
+
+[1A[2K­ƒöÄ V├®rification de la pr├®sence de l'offre dans la liste...
+
+[1A[2K  1) [chromium] ÔÇ║ tests\partner-offer-submission.spec.ts:8:3 ÔÇ║ Soumission d'offre partenaire avec variants ÔÇ║ devrait cr├®er une offre de massage avec deux variants et la soumettre 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('h3').filter({ hasText: 'Massage Relaxant Test 1766767722133' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for locator('h3').filter({ hasText: 'Massage Relaxant Test 1766767722133' })[22m
+
+
+      178 |
+      179 |     // Retry logic via expect poll? Or just expect visible
+    > 180 |     await expect(offerInList).toBeVisible({ timeout: 10000 });
+          |                               ^
+      181 |     console.log('Ô£à Offre visible dans la liste');
+      182 |
+      183 |     // Attendre et recharger pour v├®rifier la persistance
+        at C:\Users\rhodi\club-nowme-1\tests\partner-offer-submission.spec.ts:180:31
+
+    attachment #1: screenshot (image/png) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\partner-offer-submission-S-d1421-ux-variants-et-la-soumettre-chromium\test-failed-1.png
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    attachment #2: video (video/webm) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\partner-offer-submission-S-d1421-ux-variants-et-la-soumettre-chromium\video.webm
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+    Error Context: test-results\partner-offer-submission-S-d1421-ux-variants-et-la-soumettre-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    test-results\partner-offer-submission-S-d1421-ux-variants-et-la-soumettre-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\partner-offer-submission-S-d1421-ux-variants-et-la-soumettre-chromium\trace.zip
+
+    ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+
+
+[1A[2K  1 failed
+    [chromium] ÔÇ║ tests\partner-offer-submission.spec.ts:8:3 ÔÇ║ Soumission d'offre partenaire avec variants ÔÇ║ devrait cr├®er une offre de massage avec deux variants et la soumettre 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogIn, User } from 'lucide-react';
+import { Menu, X, LogIn, User, LogOut } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 
 export function Header() {
@@ -193,10 +193,23 @@ export function Header() {
                   Se connecter
                 </Link>
               )}
+              {user && (
+                <button
+                  onClick={() => {
+                    signOut();
+                    setIsMenuOpen(false);
+                    navigate('/');
+                  }}
+                  className="w-full text-center text-red-600 hover:text-red-700 font-medium px-2 py-1 flex items-center justify-center mt-4 border-t border-gray-100 pt-4"
+                >
+                  <LogOut className="w-5 h-5 mr-2" />
+                  Se déconnecter
+                </button>
+              )}
             </nav>
           </div>
         )}
       </div>
-    </header>
+    </header >
   );
 }

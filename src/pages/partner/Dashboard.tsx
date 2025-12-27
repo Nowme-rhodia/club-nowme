@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -65,6 +65,7 @@ const statusConfig = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -439,6 +440,26 @@ export default function Dashboard() {
                   <h3 className="font-bold">{offer.title}</h3>
                   <p className="text-sm text-gray-500 mb-2">{offer.description}</p>
                   <div className="flex items-center gap-2 mb-2">
+                    {offer.variants?.[0] && (
+                      <div className="text-sm">
+                        {offer.variants[0].discounted_price ? (
+                          <>
+                            <span className="text-gray-400 line-through mr-2">
+                              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(offer.variants[0].price)}
+                            </span>
+                            <span className="font-bold text-primary">
+                              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(offer.variants[0].discounted_price)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-bold text-gray-900">
+                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(offer.variants[0].price)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
                     {statusConfig[offer.status as keyof typeof statusConfig] && (
                       <span className={`px-2 py-1 rounded text-xs ${statusConfig[offer.status as keyof typeof statusConfig].className}`}>
                         {statusConfig[offer.status as keyof typeof statusConfig].label}
@@ -446,9 +467,12 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div className="flex gap-2 mt-2">
-                    <Link to={`/partner/offers/${offer.id}/edit`} className="text-blue-600 flex items-center gap-1">
+                    <button
+                      onClick={() => navigate(`/partner/offers?edit_offer_id=${offer.id}`)}
+                      className="text-blue-600 flex items-center gap-1"
+                    >
                       <Edit3 className="w-4 h-4" /> Modifier
-                    </Link>
+                    </button>
                     <button onClick={() => handleDelete(offer.id)} className="text-red-600 flex items-center gap-1">
                       <Trash2 className="w-4 h-4" /> Supprimer
                     </button>

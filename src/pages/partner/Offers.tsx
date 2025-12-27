@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -38,6 +38,7 @@ interface Offer {
   is_approved: boolean;
   created_at: string;
   calendly_url?: string | null;
+  image_url?: string | null;
   event_start_date?: string | null;
   event_end_date?: string | null;
   variants?: Array<{
@@ -83,12 +84,15 @@ const statusConfig = {
 };
 export default function Offers() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
   const [newOffer, setNewOffer] = useState({
     title: '',
     description: '',
@@ -132,9 +136,107 @@ export default function Offers() {
 
   const [dbCategories, setDbCategories] = useState<any[]>([]);
 
+  // Image Upload State
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // Handle URL query param for editing
+  useEffect(() => {
+    const editId = searchParams.get('edit_offer_id');
+    if (editId && offers.length > 0 && !editingOffer && !showCreateForm) {
+      const offerToEdit = offers.find(o => o.id === editId);
+      if (offerToEdit) {
+        handleEditOffer(offerToEdit);
+        // Clear the URL param to prevent infinite reopen loop
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('edit_offer_id');
+        navigate({ search: newParams.toString() }, { replace: true });
+      }
+    }
+  }, [offers, searchParams, navigate]);
+
+  const handleEditOffer = (offer: Offer) => {
+    setEditingOffer(offer);
+
+    // Parse variants if string or use as is
+    const currentVariants = offer.variants?.map((v: any) => ({
+      name: v.name,
+      price: v.price.toString(),
+      discounted_price: v.discounted_price ? v.discounted_price.toString() : ''
+    })) || [{ name: '', price: '', discounted_price: '' }];
+
+    // Derive category slugs from joined category object
+    // @ts-ignore
+    const category = offer.category;
+    let catSlug = '';
+    let subSlug = '';
+
+    if (category) {
+      if (category.parent_slug) {
+        // If it has a parent, the offer is linked to the SUBcategory
+        catSlug = category.parent_slug;
+        subSlug = category.slug;
+      } else {
+        // It's a parent category
+        catSlug = category.slug;
+      }
+    }
+
+    setNewOffer({
+      title: offer.title,
+      description: offer.description,
+      category_slug: catSlug,
+      subcategory_slug: subSlug,
+      street_address: offer.street_address || '',
+      zip_code: offer.zip_code || '',
+      department: offer.department || '',
+      city: offer.city || '',
+      coordinates: offer.coordinates,
+      calendly_url: offer.calendly_url || '',
+      event_start_date: offer.event_start_date || '',
+      event_end_date: offer.event_end_date || '',
+    });
+
+    setVariants(currentVariants);
+    setCoverImagePreview(offer.image_url || offer.media?.[0]?.url || null);
+    setShowCreateForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowCreateForm(false);
+    setEditingOffer(null);
+    setNewOffer({
+      title: '',
+      description: '',
+      category_slug: '',
+      subcategory_slug: '',
+      street_address: '',
+      zip_code: '',
+      department: '',
+      city: '',
+      coordinates: null,
+      calendly_url: '',
+      event_start_date: '',
+      event_end_date: '',
+    });
+    setCoverImage(null);
+    setCoverImagePreview(null);
+    setVariants([{ name: '', price: '', discounted_price: '' }]);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setCoverImage(file);
+      const objectUrl = URL.createObjectURL(file);
+      setCoverImagePreview(objectUrl);
+    }
+  };
 
   const fetchCategories = async () => {
     const { data } = await supabase.from('offer_categories').select('*');
@@ -209,7 +311,7 @@ export default function Offers() {
     }
   };
 
-  const handleCreateOffer = async (e: React.FormEvent) => {
+  const handleSubmitOffer = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newOffer.title || !newOffer.description || !newOffer.category_slug) {
@@ -218,6 +320,32 @@ export default function Offers() {
     }
 
     try {
+      setIsUploading(true);
+      let uploadedImageUrl = null;
+
+      // 1. Upload Image First
+      if (coverImage) {
+        const fileExt = coverImage.name.split('.').pop();
+        const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('offer-images')
+          .upload(fileName, coverImage);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error("Erreur lors de l'upload de l'image");
+          setIsUploading(false);
+          return; // Stop creation
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('offer-images')
+          .getPublicUrl(fileName);
+
+        uploadedImageUrl = publicUrl;
+      }
+
       // Récupérer le partner_id depuis user_profiles
       const { data: profileData, error: profileError } = await (supabase
         .from('user_profiles') as any)
@@ -235,41 +363,83 @@ export default function Offers() {
       // Trouver l'ID de la catégorie
       const catId = dbCategories.find(c => c.slug === newOffer.subcategory_slug || c.slug === newOffer.category_slug)?.id;
 
-      // Créer l'offre en brouillon directement dans la table offers
-      const { data: createdOffer, error: createError } = await (supabase
-        .from('offers') as any)
-        .insert({
-          partner_id: partnerId,
-          title: newOffer.title,
-          description: newOffer.description,
-          category_id: catId,
-          calendly_url: newOffer.calendly_url || null,
-          event_start_date: newOffer.event_start_date || null,
-          event_end_date: newOffer.event_end_date || null,
-          street_address: newOffer.street_address,
-          zip_code: newOffer.zip_code,
-          department: newOffer.department,
-          city: newOffer.city,
-          coordinates: newOffer.coordinates ? `(${newOffer.coordinates[0]},${newOffer.coordinates[1]})` : null,
-          status: 'draft',
-          is_approved: false
-        })
-        .select()
-        .single();
+      let resultOffer;
 
-      if (createError) throw createError;
+      if (editingOffer) {
+        // UPDATE Existing Offer
+        const { data: updatedOffer, error: updateError } = await (supabase
+          .from('offers') as any)
+          .update({
+            title: newOffer.title,
+            description: newOffer.description,
+            category_id: catId,
+            calendly_url: newOffer.calendly_url || null,
+            event_start_date: newOffer.event_start_date || null,
+            event_end_date: newOffer.event_end_date || null,
+            street_address: newOffer.street_address,
+            zip_code: newOffer.zip_code,
+            department: newOffer.department,
+            city: newOffer.city,
+            coordinates: newOffer.coordinates ? `(${newOffer.coordinates[0]},${newOffer.coordinates[1]})` : null,
+            image_url: uploadedImageUrl || editingOffer.image_url // Keep old if no new upload
+          })
+          .eq('id', editingOffer.id)
+          .select()
+          .single();
 
-      // Ajouter les variants
-      if (createdOffer) {
+        if (updateError) throw updateError;
+        resultOffer = updatedOffer;
+
+        // Delete existing variants to replace them
+        const { error: deleteVariantsError } = await supabase
+          .from('offer_variants')
+          .delete()
+          .eq('offer_id', editingOffer.id);
+
+        if (deleteVariantsError) throw deleteVariantsError;
+
+        toast.success('Offre mise à jour !');
+      } else {
+        // CREATE New Offer
+        const { data: createdOffer, error: createError } = await (supabase
+          .from('offers') as any)
+          .insert({
+            partner_id: partnerId,
+            title: newOffer.title,
+            description: newOffer.description,
+            category_id: catId,
+            calendly_url: newOffer.calendly_url || null,
+            event_start_date: newOffer.event_start_date || null,
+            event_end_date: newOffer.event_end_date || null,
+            street_address: newOffer.street_address,
+            zip_code: newOffer.zip_code,
+            department: newOffer.department,
+            city: newOffer.city,
+            coordinates: newOffer.coordinates ? `(${newOffer.coordinates[0]},${newOffer.coordinates[1]})` : null,
+            status: 'draft',
+            is_approved: false,
+            commission_rate: 10,
+            image_url: uploadedImageUrl
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        resultOffer = createdOffer;
+        toast.success('Offre créée en brouillon !');
+      }
+
+      // Add Variants (Common logic)
+      if (resultOffer) {
         const validVariants = variants.filter(v => v.name && v.price);
         if (validVariants.length > 0) {
           const variantsToInsert = validVariants.map(v => ({
-            offer_id: (createdOffer as any).id,
+            offer_id: (resultOffer as any).id,
             name: v.name,
             price: parseFloat(v.price),
             discounted_price: v.discounted_price ? parseFloat(v.discounted_price) : null
           }));
-          
+
           const { error: variantError } = await (supabase
             .from('offer_variants') as any)
             .insert(variantsToInsert);
@@ -277,28 +447,13 @@ export default function Offers() {
         }
       }
 
-      toast.success('Offre créée en brouillon !');
-      setShowCreateForm(false);
-      setNewOffer({
-        title: '',
-        description: '',
-        category_slug: '',
-        subcategory_slug: '',
-        street_address: '',
-        zip_code: '',
-        department: '',
-        city: '',
-        coordinates: null,
-        calendly_url: '',
-        event_start_date: '',
-        event_end_date: '',
-      });
-      setVariants([{ name: '', price: '', discounted_price: '' }]);
-
+      handleCloseForm();
       await loadOffers();
     } catch (error) {
       console.error('Error creating offer:', error);
       toast.error("Erreur lors de la création de l'offre");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -542,9 +697,9 @@ export default function Offers() {
                         <div className="flex items-center gap-4">
                           {/* Image */}
                           <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                            {offer.media?.[0] ? (
+                            {offer.image_url || offer.media?.[0] ? (
                               <img
-                                src={offer.media[0].url}
+                                src={offer.image_url || offer.media?.[0]?.url}
                                 alt={offer.title}
                                 className="w-full h-full object-cover"
                               />
@@ -570,8 +725,21 @@ export default function Offers() {
                                 {new Date(offer.created_at).toLocaleDateString('fr-FR')}
                               </span>
                               {mainVariant && (
-                                <span className="text-sm text-primary font-medium">
-                                  À partir de {mainVariant.price}€
+                                <span className="text-sm font-medium">
+                                  {mainVariant.discounted_price ? (
+                                    <>
+                                      <span className="text-gray-400 line-through mr-2">
+                                        {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(isNaN(Number(mainVariant.price)) ? 0 : Number(mainVariant.price))}
+                                      </span>
+                                      <span className="font-bold text-primary">
+                                        {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(isNaN(Number(mainVariant.discounted_price)) ? 0 : Number(mainVariant.discounted_price))}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-primary">
+                                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(isNaN(Number(mainVariant.price)) ? 0 : Number(mainVariant.price))}
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </div>
@@ -633,12 +801,17 @@ export default function Offers() {
                         )}
                         {/* Bouton Éditer (draft, ready, rejected) */}
                         {(offer.status === 'draft' || offer.status === 'ready' || offer.status === 'rejected') && (
-                          <Link
-                            to={`/partner/offers/${offer.id}/edit`}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleEditOffer(offer);
+                            }}
                             className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
                           >
                             <Edit3 className="w-5 h-5" />
-                          </Link>
+                          </button>
                         )}
                         {/* Bouton Supprimer (draft, ready) */}
                         {(offer.status === 'draft' || offer.status === 'ready') && (
@@ -687,10 +860,64 @@ export default function Offers() {
             <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Créer une nouvelle offre
+                  {editingOffer ? 'Modifier l\'offre' : 'Créer une nouvelle offre'}
                 </h2>
 
-                <form onSubmit={handleCreateOffer} className="space-y-6">
+                <form onSubmit={handleSubmitOffer} className="space-y-6">
+                  {/* --- Image d'illustration --- */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image d'illustration
+                    </label>
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-primary transition-colors">
+                      <div className="space-y-1 text-center">
+                        {coverImagePreview ? (
+                          <div className="relative">
+                            <img
+                              src={coverImagePreview}
+                              alt="Aperçu"
+                              className="mx-auto h-48 object-cover rounded-md"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCoverImage(null);
+                                setCoverImagePreview(null);
+                              }}
+                              className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor="file-upload"
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
+                              >
+                                <span>Télécharger un fichier</span>
+                                <input
+                                  id="file-upload"
+                                  name="file-upload"
+                                  type="file"
+                                  className="sr-only"
+                                  accept="image/*"
+                                  onChange={handleImageSelect}
+                                />
+                              </label>
+                              <p className="pl-1">ou glisser-déposer</p>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              PNG, JPG, GIF jusqu'à 5MB
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* --- Titre --- */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -778,7 +1005,7 @@ export default function Offers() {
                         Ajouter un tarif
                       </button>
                     </div>
-                    
+
                     <div className="space-y-3">
                       {variants.map((variant, index) => (
                         <div key={index} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
@@ -894,17 +1121,20 @@ export default function Offers() {
                   {/* --- Actions --- */}
                   <div className="flex justify-end gap-4">
                     <button
-                      type="button"
-                      onClick={() => setShowCreateForm(false)}
+                      onClick={handleCloseForm}
                       className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                     >
                       Annuler
                     </button>
                     <button
                       type="submit"
-                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark"
+                      disabled={isUploading}
+                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                     >
-                      Enregistrer en brouillon
+                      {isUploading && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      )}
+                      {editingOffer ? 'Mettre à jour' : 'Enregistrer en brouillon'}
                     </button>
                   </div>
                 </form>

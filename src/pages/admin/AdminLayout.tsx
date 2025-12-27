@@ -1,11 +1,17 @@
 import React from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Users, Building2, Settings, Mail, Clock, CheckCircle, CreditCard } from 'lucide-react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Users, Building2, Settings, Mail, Clock, CheckCircle, CreditCard, LogOut } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 
 export default function AdminLayout() {
   const location = useLocation();
-  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/'); // Or redirect to home/login
+  };
 
   const isAdmin = profile?.role === 'admin';
 
@@ -100,6 +106,16 @@ export default function AdminLayout() {
               {item.name}
             </Link>
           ))}
+
+          <div className="pt-4 mt-4 border-t border-gray-200">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="w-5 h-5 mr-3 flex-shrink-0" />
+              Se déconnecter
+            </button>
+          </div>
         </nav>
       </div>
 

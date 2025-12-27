@@ -10,9 +10,9 @@ serve(async (req) => {
     const { to, contactName, offerTitle } = await req.json();
 
     if (!to || !contactName || !offerTitle) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Données manquantes" 
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Données manquantes"
       }), {
         headers: corsHeaders,
         status: 400,
@@ -88,10 +88,24 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
+
+      // Handle 429 Too Many Requests specifically
+      if (response.status === 429) {
+        logger.error("Quota Resend dépassé (429). Email ignoré mais offre approuvée.");
+        // Return 200 OK to frontend so it doesn't show error to user
+        return new Response(JSON.stringify({
+          success: true,
+          warning: "Offre approuvée en base, mais email mis en file d'attente ou ignoré (quota dépassé)."
+        }), {
+          status: 200,
+          headers: corsHeaders,
+        });
+      }
+
       logger.error("Erreur Resend:", errorText);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Erreur d'envoi email" 
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Erreur d'envoi email"
       }), {
         status: 500,
         headers: corsHeaders,
@@ -107,9 +121,9 @@ serve(async (req) => {
 
   } catch (error) {
     logger.error("Erreur envoi approbation:", error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
     }), {
       headers: corsHeaders,
       status: 500

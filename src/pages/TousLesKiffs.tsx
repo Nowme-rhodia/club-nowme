@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Sparkles, ChevronLeft, ChevronRight, Search, X, Filter, SlidersHorizontal, Star } from 'lucide-react';
+import { Search, MapPin, Filter, X, SlidersHorizontal, Star, Sparkles } from 'lucide-react';
+import { PriceRangeSlider } from '../components/PriceRangeSlider';
 import { Link } from 'react-router-dom';
 import { categories } from '../data/categories';
 import { supabase } from '../lib/supabase';
@@ -9,7 +10,7 @@ import { SEO } from '../components/SEO';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Cette fonction calcule la distance entre deux points en km
-function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -35,19 +36,17 @@ interface OfferDetails {
     address: string;
   };
   category: string;
-  categorySlug?: string;
+  categorySlug: string;
   subcategorySlug?: string;
-  reviews: Array<{
-    author: string;
-    rating: number;
-    comment: string;
-  }>;
+  reviews: any[];
+  partnerName?: string;
+  filterPrice?: number;
 }
 
 export default function TousLesKiffs() {
   const [selectedOffer, setSelectedOffer] = useState<OfferDetails | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
@@ -76,10 +75,10 @@ export default function TousLesKiffs() {
           .select(`
             *,
             category:offer_categories!offers_category_id_fkey(*),
-            offer_variants(price, discounted_price)
+            offer_variants(price, discounted_price),
+            partner:partners(business_name, address)
           `)
-          .eq('status', 'approved')
-          .eq('is_approved', true);
+          .eq('status', 'approved');
 
         if (error) {
           console.error('Error fetching offers:', error);
@@ -88,10 +87,14 @@ export default function TousLesKiffs() {
 
         if (data) {
           const formattedOffers: OfferDetails[] = data.map((offer: any) => {
-            const prices = offer.offer_variants?.map((v: any) => v.price) || [];
-            const promoPrices = offer.offer_variants?.map((v: any) => v.discounted_price).filter(Boolean) || [];
-            const minPrice = prices.length ? Math.min(...prices) : 0;
-            const minPromo = promoPrices.length ? Math.min(...promoPrices) : undefined;
+            const firstVariant = offer.offer_variants?.[0];
+            const allPrices = offer.offer_variants?.map((v: any) =>
+              v.discounted_price ? Number(v.discounted_price) : Number(v.price)
+            ) || [];
+            const minFilterPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
+
+            const displayPrice = firstVariant ? Number(firstVariant.price) : 0;
+            const displayPromo = firstVariant && firstVariant.discounted_price ? Number(firstVariant.discounted_price) : undefined;
 
             // Parser coordinates "(lat,lng)"
             let lat = 0, lng = 0;
@@ -110,14 +113,16 @@ export default function TousLesKiffs() {
               id: offer.id,
               title: offer.title,
               description: offer.description,
-              imageUrl: offer.offer_media?.[0]?.url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
-              price: minPrice,
-              promoPrice: minPromo,
+              imageUrl: offer.image_url || offer.offer_media?.[0]?.url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
+              price: displayPrice,
+              promoPrice: displayPromo,
+              filterPrice: minFilterPrice,
+              partnerName: offer.partner?.business_name,
               rating: 4.5,
               location: {
                 lat,
                 lng,
-                address: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'
+                address: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || offer.partner?.address || 'Adresse non spécifiée'
               },
               category: offer.category?.name || 'Autre',
               categorySlug: offer.category?.parent_slug || offer.category?.slug || 'autre',
@@ -144,7 +149,8 @@ export default function TousLesKiffs() {
       const normalizedSearch = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(offer =>
         offer.title.toLowerCase().includes(normalizedSearch) ||
-        offer.description.toLowerCase().includes(normalizedSearch)
+        offer.description.toLowerCase().includes(normalizedSearch) ||
+        offer.partnerName?.toLowerCase().includes(normalizedSearch)
       );
     }
 
@@ -167,11 +173,12 @@ export default function TousLesKiffs() {
       });
     }
 
-    filtered = filtered.filter(offer =>
-      offer.price >= priceRange[0] &&
-      offer.price <= priceRange[1] &&
-      offer.rating >= ratingFilter
-    );
+    filtered = filtered.filter(offer => {
+      const priceToCheck = offer.filterPrice !== undefined ? offer.filterPrice : offer.price;
+      return priceToCheck >= priceRange[0] &&
+        priceToCheck <= priceRange[1] &&
+        offer.rating >= ratingFilter;
+    });
 
     return filtered;
   }, [searchTerm, activeCategory, activeSubcategory, selectedLocation, priceRange, ratingFilter, offersWithLocations]);
@@ -262,7 +269,7 @@ export default function TousLesKiffs() {
                   </button>
                 )}
               </div>
-              <LocationSearch onLocationSelect={handleLocationSelect} />
+              <LocationSearch onSelect={handleLocationSelect} />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -286,30 +293,12 @@ export default function TousLesKiffs() {
                 <div className="pt-4 space-y-4">
                   {/* Filtres de prix */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Prix (€)
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="range"
-                        min="0"
-                        max="200"
-                        value={priceRange[0]}
-                        onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
-                        className="w-full"
-                      />
-                      <input
-                        type="range"
-                        min="0"
-                        max="200"
-                        value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                        className="w-full"
-                      />
-                      <span className="text-sm text-gray-600">
-                        {priceRange[0]}€ - {priceRange[1]}€
-                      </span>
-                    </div>
+                    <PriceRangeSlider
+                      min={0}
+                      max={1000}
+                      value={priceRange}
+                      onChange={setPriceRange}
+                    />
                   </div>
 
                   {/* Filtre par note */}
@@ -392,11 +381,27 @@ export default function TousLesKiffs() {
             )}
           </motion.div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              Aucune offre ne correspond à votre recherche
-              {selectedLocation && " dans un rayon de 15 km"}
+          <div className="text-center py-20">
+            <Sparkles className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-medium text-gray-900 mb-2">
+              Aucun kiffe trouvé
+            </h3>
+            <p className="text-gray-500 max-w-md mx-auto">
+              Aucun kiffe dans cette tranche de prix, élargissez votre recherche !
             </p>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setPriceRange([0, 1000]);
+                setRatingFilter(0);
+                setActiveCategory('all');
+                setActiveSubcategory(null);
+                setSelectedLocation(null);
+              }}
+              className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-primary/10 hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+            >
+              Réinitialiser les filtres
+            </button>
           </div>
         )}
       </div>

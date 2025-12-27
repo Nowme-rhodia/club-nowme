@@ -38,7 +38,7 @@ test.describe('Soumission d\'offre partenaire avec variants', () => {
     await page.fill('input[type="email"]', partnerEmail);
     await page.fill('input[type="password"]', partnerPassword);
     await page.click('button[type="submit"]');
-    
+
     // Attendre la redirection vers le dashboard partenaire
     await page.waitForTimeout(3000);
     console.log('✅ Connexion réussie');
@@ -78,7 +78,7 @@ test.describe('Soumission d\'offre partenaire avec variants', () => {
     console.log('  ✓ Titre rempli');
 
     // Description
-    await page.fill('textarea[placeholder="Décrivez votre offre en détail..."]', 
+    await page.fill('textarea[placeholder="Décrivez votre offre en détail..."]',
       'Offrez-vous un moment de détente absolue avec notre massage relaxant. ' +
       'Nos praticiens expérimentés utilisent des techniques douces pour soulager ' +
       'les tensions et vous procurer un bien-être profond.'
@@ -96,15 +96,15 @@ test.describe('Soumission d\'offre partenaire avec variants', () => {
     // Sous-catégorie - attendre qu'elle soit activée et qu'il y ait des options
     const subcategorySelect = page.locator('select').nth(1);
     await expect(subcategorySelect).toBeEnabled({ timeout: 10000 });
-    
+
     // Attendre qu'il y ait plus d'une option (la première est "Sélectionnez...")
     await page.waitForFunction(() => {
       const select = document.querySelectorAll('select')[1];
       return select && select.options.length > 1;
     }, { timeout: 10000 });
-    
+
     await page.waitForTimeout(500);
-    
+
     // Sélectionner la deuxième option (index 2, car 0 = placeholder, 1 = première vraie option)
     await subcategorySelect.selectOption({ index: 2 });
     await page.waitForTimeout(500);
@@ -145,52 +145,49 @@ test.describe('Soumission d\'offre partenaire avec variants', () => {
     console.log('  ✓ Lien Calendly ajouté');
 
     // ============================================
-    // ÉTAPE 7: Sauvegarder l'offre en brouillon
+    // ÉTAPE 7: Sauvegarde de l'offre
     // ============================================
     console.log('💾 ÉTAPE 7: Sauvegarde de l\'offre');
 
     const saveButton = page.locator('button:has-text("Enregistrer en brouillon")');
     await saveButton.click();
+    console.log('✅ Clic sur Enregistrer');
 
-    // Attendre le toast de succès ou d'erreur
-    await page.waitForTimeout(3000);
+    // Vérifier le toast de succès (commenté car parfois flaky en test auto)
+    // await expect(page.locator('div[role="status"]').filter({ hasText: /Offre cré.e/ })).toBeVisible({ timeout: 10000 });
+    // console.log('✅ Toast de succès affiché');
 
-    // Vérifier s'il y a un toast d'erreur
-    const errorToast = page.locator('[role="status"]:has-text("Erreur")');
-    if (await errorToast.isVisible()) {
-      const errorText = await errorToast.textContent();
-      console.log('❌ Erreur lors de la création:', errorText);
+    // Attendre que le modal se ferme
+    const modalTitle = page.locator('h2:has-text("Créer une nouvelle offre")');
+    try {
+      await expect(modalTitle).toBeHidden({ timeout: 5000 });
+      console.log('✅ Modal fermé automatiquement');
+    } catch (e) {
+      console.log('⚠️ Modal toujours ouvert, tentative de fermeture manuelle...');
+      // Try closing
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(1000);
     }
 
-    // Vérifier si le modal s'est fermé (signe de succès)
-    const modalClosed = await page.locator('text=Créer une nouvelle offre').isHidden();
-    if (modalClosed) {
-      console.log('✅ Modal fermé - offre probablement créée');
-    } else {
-      console.log('⚠️ Modal toujours ouvert - vérification des erreurs');
-      // Prendre une capture d'écran pour debug
-      await page.screenshot({ path: 'test-results/offer-creation-debug.png' });
-    }
+    await page.waitForTimeout(2000);
 
-    // Attendre et recharger
+    console.log('🔎 Vérification de la présence de l\'offre dans la liste...');
+
+    // Vérifier que l'offre apparaît dans la liste
+    const offerInList = page.locator('h3').filter({ hasText: offerTitle });
+
+    // Retry logic via expect poll? Or just expect visible
+    await expect(offerInList).toBeVisible({ timeout: 10000 });
+    console.log('✅ Offre visible dans la liste');
+
+    // Attendre et recharger pour vérifier la persistance
     await page.waitForTimeout(2000);
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
 
-    // Vérifier que l'offre apparaît dans la liste
-    const offerInList = page.locator(`text=${offerTitle}`);
-    const isVisible = await offerInList.isVisible();
-    
-    if (isVisible) {
-      console.log('✅ Offre créée et visible dans la liste');
-    } else {
-      console.log('⚠️ Offre non visible dans la liste - vérification des offres existantes');
-      // Lister les offres visibles pour debug
-      const offers = await page.locator('li h3').allTextContents();
-      console.log('Offres visibles:', offers);
-    }
-    
-    expect(isVisible).toBe(true);
+    // Vérifier à nouveau après reload
+    await expect(page.locator('h3').filter({ hasText: offerTitle })).toBeVisible({ timeout: 10000 });
+    console.log('✅ Offre visible après rechargement');
 
     // ============================================
     // ÉTAPE 8: Soumettre l'offre pour validation
@@ -199,21 +196,73 @@ test.describe('Soumission d\'offre partenaire avec variants', () => {
 
     // Trouver le bouton "Soumettre" pour cette offre
     const offerRow = page.locator('li').filter({ hasText: offerTitle });
-    const submitButton = offerRow.locator('button:has-text("Soumettre")');
-    
-    if (await submitButton.isVisible()) {
-      await submitButton.click();
-      await page.waitForTimeout(2000);
-      console.log('✅ Offre soumise pour validation');
 
-      // Vérifier que le statut a changé
-      const statusBadge = offerRow.locator('text=En cours de validation');
-      if (await statusBadge.isVisible()) {
-        console.log('✅ Statut mis à jour: En cours de validation');
-      }
-    } else {
-      console.log('⚠️ Bouton Soumettre non trouvé - l\'offre n\'est peut-être pas en brouillon');
+    // Vérifier si l'offre est en brouillon et doit être marquée comme prête
+    const markReadyButton = offerRow.locator('button:has-text("Marquer prête")');
+    if (await markReadyButton.isVisible()) {
+      console.log('⚠️ Offre en brouillon, passage en "Prête"...');
+      await markReadyButton.click();
+      await page.waitForTimeout(2000);
+      console.log('✅ Offre marquée comme prête');
     }
+
+    // Cliquer sur le bouton Soumettre
+    const submitButton = offerRow.locator('button:has-text("Soumettre")');
+    await expect(submitButton).toBeVisible({ timeout: 5000 });
+    await submitButton.click();
+    await page.waitForTimeout(2000);
+    console.log('✅ Offre soumise pour validation');
+
+    // Vérifier que le statut a changé ("En validation")
+    const statusBadge = offerRow.locator('text=En validation');
+    await expect(statusBadge).toBeVisible();
+    console.log('✅ Statut mis à jour: En validation');
+
+    // ============================================
+    // ÉTAPE 9: Connexion Admin et Approbation
+    // ============================================
+    console.log('👮 ÉTAPE 9: Connexion Admin pour approbation');
+
+    // Déconnexion et nettoyage storage pour forcer le login
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear());
+
+    // Connexion Admin
+    await page.goto('/auth/signin', { waitUntil: 'networkidle' });
+    await page.fill('input[type="email"]', 'adminx-test@nowme.fr');
+    await page.fill('input[type="password"]', 'Password123!');
+    await page.click('button[type="submit"]');
+
+    await page.waitForTimeout(2000);
+    console.log('✅ Connexion Admin réussie');
+
+    // Navigation dashboard admin
+    await page.goto('/admin/pending-offers', { waitUntil: 'networkidle' });
+    console.log('📋 Navigation vers /admin/pending-offers');
+
+    // Trouver l'offre
+    const adminOfferRow = page.locator('li').filter({ hasText: offerTitle });
+    await expect(adminOfferRow).toBeVisible({ timeout: 10000 });
+    console.log('✅ Offre trouvée dans le dashboard admin');
+
+    // Cliquer sur le bouton d'approbation (Bouton avec icône verte ou classe hover verte)
+    // On cible le bouton qui contient l'icône CheckCircle2 (lucide-react)
+    // Dans le code: className="p-2 text-gray-400 hover:text-green-600..."
+    const approveButton = adminOfferRow.locator('button.hover\\:text-green-600');
+    await approveButton.click();
+
+    console.log('✅ Action "Approuver" effectuee');
+    await page.waitForTimeout(2000);
+
+    // Vérification finale : changer le filtre pour voir les approuvées
+    // Le selecteur de status est le premier select a priori, ou on peut le cibler par valeur
+    // Dans PendingOffers.tsx: value={statusFilter} onChange...
+    await page.locator('select').first().selectOption('approved');
+    await page.waitForTimeout(1000);
+
+    const approvedRow = page.locator('li').filter({ hasText: offerTitle });
+    await expect(approvedRow).toBeVisible();
+    console.log('✅ Offre visible dans les offres approuvées');
 
     // ============================================
     // RÉSUMÉ

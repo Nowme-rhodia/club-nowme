@@ -29,6 +29,7 @@ export default function OfferPage() {
           city,
           coordinates,
           calendly_url,
+          image_url,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
           offer_variants(price, discounted_price)
         `)
@@ -177,14 +178,13 @@ export default function OfferPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
               {/* Image principale */}
               <div className="relative aspect-[4/3] lg:aspect-square overflow-hidden">
-                {offer.offer_media?.[0] && (
+                {(offer.image_url || offer.offer_media?.[0]) ? (
                   <img
-                    src={offer.offer_media[0].url}
+                    src={offer.image_url || offer.offer_media?.[0]?.url}
                     alt={offer.title}
                     className="w-full h-full object-cover"
                   />
-                )}
-                {!offer.offer_media?.[0] && (
+                ) : (
                   <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
                     Pas d'image
                   </div>
@@ -192,7 +192,7 @@ export default function OfferPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
                 {/* Badge de réduction */}
-                {priceInfo.promo_price && (
+                {priceInfo.discounted_price && (
                   <div className="absolute top-4 right-4 px-3 py-1.5 bg-primary text-white rounded-full font-semibold text-sm shadow-lg">
                     -{discount}%
                   </div>
@@ -244,10 +244,10 @@ export default function OfferPage() {
                     <div>
                       <p className="text-sm text-gray-500 mb-1">Prix</p>
                       <div className="flex items-baseline gap-2">
-                        {priceInfo.promo_price ? (
+                        {priceInfo.discounted_price ? (
                           <>
                             <span className="text-3xl font-bold text-primary">
-                              {priceInfo.promo_price}€
+                              {priceInfo.discounted_price}€
                             </span>
                             <span className="text-xl text-gray-400 line-through">
                               {priceInfo.price}€
