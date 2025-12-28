@@ -207,7 +207,6 @@ export function Header() {
                   onClick={() => {
                     signOut();
                     setIsMenuOpen(false);
-                    navigate('/');
                   }}
                   className="w-full text-center text-red-600 hover:text-red-700 font-medium px-2 py-1 flex items-center justify-center mt-4 border-t border-gray-100 pt-4"
                 >

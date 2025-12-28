@@ -1251,140 +1251,140 @@ export default function Offers() {
                       </div>
                     )}
                   </div>
-              </div>
 
-              {/* --- Actions --- */}
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={handleCloseForm}
-                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUploading}
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {isUploading && (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  {/* --- Actions --- */}
+                  <div className="flex justify-end gap-4">
+                    <button
+                      type="button"
+                      onClick={handleCloseForm}
+                      className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isUploading}
+                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      {isUploading && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      )}
+                      {editingOffer ? 'Mettre à jour' : 'Enregistrer en brouillon'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de détails */}
+        {selectedOffer && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-8">
+                <div className="flex justify-between items-start mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Détails de l'offre
+                  </h2>
+                  <button
+                    onClick={() => setSelectedOffer(null)}
+                    className="p-1 hover:bg-gray-100 rounded-full"
+                  >
+                    <X className="w-6 h-6 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {selectedOffer.media?.[0] && (
+                    <div>
+                      <img
+                        src={selectedOffer.media[0].url}
+                        alt={selectedOffer.title}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    </div>
                   )}
-                  {editingOffer ? 'Mettre à jour' : 'Enregistrer en brouillon'}
-                </button>
+
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      {selectedOffer.title}
+                    </h3>
+                    <div className="flex items-center gap-4 mb-4">
+                      {(() => {
+                        const config = statusConfig[selectedOffer.status as keyof typeof statusConfig] || statusConfig.draft;
+                        const StatusIcon = config.icon;
+                        return (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.className}`}>
+                            <StatusIcon className="w-4 h-4 mr-1" />
+                            {config.label}
+                          </span>
+                        );
+                      })()}
+                      {selectedOffer.variants?.[0] && (
+                        <span className="text-lg font-bold text-primary">
+                          {selectedOffer.variants[0].price}€
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+                    <p className="text-gray-600">{selectedOffer.description}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
+                      <p className="text-gray-600">
+                        {categories.find(c => c.slug === selectedOffer.category_slug)?.name}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Sous-catégorie</h4>
+                      <p className="text-gray-600">
+                        {categories.find(c => c.slug === selectedOffer.category_slug)
+                          ?.subcategories.find(s => s.slug === selectedOffer.subcategory_slug)?.name}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
+                    <p className="text-gray-600 flex items-center">
+                      <MapPin className="w-4 h-4 mr-1" />
+                      {[selectedOffer.street_address, selectedOffer.zip_code, selectedOffer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'}
+                    </p>
+                  </div>
+
+                  {/* --- Affichage agenda si dispo --- */}
+                  {selectedOffer.calendly_url && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-1">Réservations</h4>
+                      <a
+                        href={selectedOffer.calendly_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline"
+                      >
+                        Voir les créneaux disponibles
+                      </a>
+                    </div>
+                  )}
+
+                  {selectedOffer.status === 'rejected' && selectedOffer.rejection_reason && (
+                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                      <h4 className="font-semibold text-red-900 mb-2">Raison du rejet</h4>
+                      <p className="text-red-700">{selectedOffer.rejection_reason}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-    </div>
-  )
-}
-
-{/* Modal de détails */ }
-{
-  selectedOffer && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-8">
-          <div className="flex justify-between items-start mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Détails de l'offre
-            </h2>
-            <button
-              onClick={() => setSelectedOffer(null)}
-              className="p-1 hover:bg-gray-100 rounded-full"
-            >
-              <X className="w-6 h-6 text-gray-500" />
-            </button>
-          </div>
-
-          <div className="space-y-6">
-            {selectedOffer.media?.[0] && (
-              <div>
-                <img
-                  src={selectedOffer.media[0].url}
-                  alt={selectedOffer.title}
-                  className="w-full h-48 object-cover rounded-lg"
-                />
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {selectedOffer.title}
-              </h3>
-              <div className="flex items-center gap-4 mb-4">
-                {(() => {
-                  const config = statusConfig[selectedOffer.status as keyof typeof statusConfig] || statusConfig.draft;
-                  const StatusIcon = config.icon;
-                  return (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${config.className}`}>
-                      <StatusIcon className="w-4 h-4 mr-1" />
-                      {config.label}
-                    </span>
-                  );
-                })()}
-                {selectedOffer.variants?.[0] && (
-                  <span className="text-lg font-bold text-primary">
-                    {selectedOffer.variants[0].price}€
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
-              <p className="text-gray-600">{selectedOffer.description}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
-                <p className="text-gray-600">
-                  {categories.find(c => c.slug === selectedOffer.category_slug)?.name}
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-1">Sous-catégorie</h4>
-                <p className="text-gray-600">
-                  {categories.find(c => c.slug === selectedOffer.category_slug)
-                    ?.subcategories.find(s => s.slug === selectedOffer.subcategory_slug)?.name}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
-              <p className="text-gray-600 flex items-center">
-                <MapPin className="w-4 h-4 mr-1" />
-                {[selectedOffer.street_address, selectedOffer.zip_code, selectedOffer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'}
-              </p>
-            </div>
-
-            {/* --- Affichage agenda si dispo --- */}
-            {selectedOffer.calendly_url && (
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-1">Réservations</h4>
-                <a
-                  href={selectedOffer.calendly_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline"
-                >
-                  Voir les créneaux disponibles
-                </a>
-              </div>
-            )}
-
-            {selectedOffer.status === 'rejected' && selectedOffer.rejection_reason && (
-              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                <h4 className="font-semibold text-red-900 mb-2">Raison du rejet</h4>
-                <p className="text-red-700">{selectedOffer.rejection_reason}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        )}
       </div>
-      );
+    </div>
+  );
 }

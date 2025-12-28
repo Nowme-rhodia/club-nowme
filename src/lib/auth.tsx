@@ -427,14 +427,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      logger.auth.signOut();
+      // 1. Immediate state clear to prevent UI from thinking we are still logged in
+      setUser(null);
+      setProfile(null);
       setLoading(true);
+
+      // Clear caches
+      setProfileCache(null);
+      setLoadingProfile(null);
+      try {
+        localStorage.removeItem('nowme_profile_cache');
+      } catch (e) {
+        console.warn('Error clearing local storage:', e);
+      }
+
+      logger.auth.signOut();
+
+      // 2. Perform actual sign out
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+
       logger.navigation.redirect('current', '/', 'User signed out');
       navigate('/');
-    } catch {
-      toast.error('Erreur lors de la déconnexion');
+    } catch (e) {
+      console.error('Sign out error:', e);
+      // Force navigation even on error
+      navigate('/');
+      toast.error('Déconnecté locally (erreur serveur possible)');
     } finally {
       setLoading(false);
     }
