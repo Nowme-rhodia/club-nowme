@@ -18,41 +18,54 @@ export default function UpdatePassword() {
   const [isValidToken, setIsValidToken] = useState(false);
 
   useEffect(() => {
-    const query = new URLSearchParams(window.location.search);
-    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const checkSessionAndToken = async () => {
+      // 1. Check if we're already logged in (Implicit flow handling)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        console.log('✅ UpdatePassword - User already authenticated, allowing update');
+        setIsValidToken(true);
+        setChecking(false);
+        return;
+      }
 
-    const tokenFromQuery = query.get('token_hash') || query.get('token') || query.get('access_token');
-    const typeFromQuery = query.get('type');
+      // 2. Parse URL params for Token
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.slice(1));
 
-    const tokenFromHash = hash.get('token_hash') || hash.get('token') || hash.get('access_token');
-    const typeFromHash = hash.get('type');
+      const tokenFromQuery = query.get('token_hash') || query.get('token') || query.get('access_token');
+      const typeFromQuery = query.get('type');
 
-    const token = tokenFromQuery || tokenFromHash;
-    const tokenType = typeFromQuery || typeFromHash;
+      const tokenFromHash = hash.get('token_hash') || hash.get('token') || hash.get('access_token');
+      const typeFromHash = hash.get('type');
 
-    console.log('UpdatePassword - URL params:', {
-      search: window.location.search,
-      hash: window.location.hash,
-      token: !!token,
-      type: tokenType
-    });
+      const token = tokenFromQuery || tokenFromHash;
+      const tokenType = typeFromQuery || typeFromHash;
 
-    if (token && tokenType === 'recovery') {
-      setTokenHash(token);
-      setType(tokenType);
-      setIsValidToken(true);
-    } else if (token && !tokenType) {
-      // Fallback pour les liens sans type explicite
-      setTokenHash(token);
-      setType('recovery');
-      setIsValidToken(true);
-      console.log('UpdatePassword - Using fallback recovery type');
-    } else {
-      setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
-      console.error('UpdatePassword - Invalid token or type:', { token: !!token, type: tokenType });
-    }
+      console.log('UpdatePassword - URL params:', {
+        search: window.location.search,
+        hash: window.location.hash,
+        token: !!token,
+        type: tokenType
+      });
 
-    setChecking(false);
+      if (token && tokenType === 'recovery') {
+        setTokenHash(token);
+        setType(tokenType);
+        setIsValidToken(true);
+      } else if (token && !tokenType) {
+        // Fallback
+        setTokenHash(token);
+        setType('recovery');
+        setIsValidToken(true);
+      } else {
+        // Only show error if NOT authenticated
+        setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
+      }
+
+      setChecking(false);
+    };
+
+    checkSessionAndToken();
   }, []);
 
   const validatePassword = (pwd: string) => {
@@ -87,31 +100,31 @@ export default function UpdatePassword() {
     try {
       // Essayer d'abord avec verifyOtp
       let updateError = null;
-      
+
       try {
         const { error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: type as any,
         });
-        
+
         if (verifyError) throw verifyError;
-        
+
         // Puis mettre à jour le mot de passe
         const { error: passwordError } = await supabase.auth.updateUser({
           password: password
         });
-        
+
         if (passwordError) throw passwordError;
-        
+
       } catch (verifyErr) {
         console.log('verifyOtp failed, trying direct password update:', verifyErr.message);
-        
+
         // Fallback : essayer directement updateUser avec le token
         const { error: directError } = await supabase.auth.updateUser(
           { password: password },
           { accessToken: tokenHash }
         );
-        
+
         if (directError) {
           updateError = directError;
         }
@@ -239,11 +252,10 @@ export default function UpdatePassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full flex justify-center items-center px-4 py-3 rounded-full font-medium text-white shadow-sm ${
-                  loading
+                className={`w-full flex justify-center items-center px-4 py-3 rounded-full font-medium text-white shadow-sm ${loading
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary'
-                }`}
+                  }`}
               >
                 {loading ? 'Mise à jour en cours...' : 'Réinitialiser le mot de passe'}
               </button>

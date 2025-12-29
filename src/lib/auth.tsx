@@ -323,6 +323,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    // CRITICAL FIX: Handle 'type=recovery' manually if Supabase redirects to root
+    if (window.location.hash && window.location.hash.includes('type=recovery')) {
+      console.log('🔗 Recovery hash detected, forcing redirect to update-password');
+      navigate('/auth/update-password');
+    }
+
     const init = async () => {
       try {
         setLoading(true);

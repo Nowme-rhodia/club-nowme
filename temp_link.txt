@@ -1,0 +1,1 @@
+https://dqfyuhwrjozoxadkccdj.supabase.co/auth/v1/verify?token=58be72dc4084c95f2558e9610ff29fa4dc0e343507592f094ea28290&type=recovery&redirect_to=https://club.nowme.fr
