@@ -140,13 +140,34 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
-            <Link
-              to="/devenir-partenaire"
-              className="inline-flex items-center justify-center rounded-full px-6 py-3 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"
-            >
-              Voir le site public
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Link>
+            <div className="flex flex-col gap-2">
+              <Link
+                to="/devenir-partenaire"
+                className="inline-flex items-center justify-center rounded-full px-6 py-3 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"
+              >
+                Voir le site public
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+              <button
+                onClick={async () => {
+                  // 1. Check partner
+                  const { data: p, error: pe } = await supabase.from('partners').select('*').eq('contact_email', 'rhodia@nowme.fr');
+                  console.log('Partner check:', p, pe);
+                  alert('Partner check: ' + JSON.stringify(p) + ' Error: ' + JSON.stringify(pe));
+
+                  if (p && p.length > 0) {
+                    // 2. Check offers
+                    const { data: o, error: oe } = await supabase.from('offers').select('id, title, partner_id, status, is_approved').eq('partner_id', p[0].id);
+                    console.log('Offers check:', o, oe);
+                    alert('Offers check: ' + JSON.stringify(o));
+                  }
+                }}
+                className="inline-flex items-center justify-center rounded-full px-6 py-3 bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 transition"
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Debug Club Data
+              </button>
+            </div>
           </div>
         </div>
 
@@ -174,8 +195,8 @@ export default function AdminDashboard() {
                 key={action.label}
                 to={action.to}
                 className={`flex items-center justify-between rounded-2xl border px-4 py-4 transition ${action.highlight
-                    ? 'border-yellow-300 bg-yellow-50 hover:bg-yellow-100'
-                    : 'border-gray-100 hover:border-primary hover:bg-primary/5'
+                  ? 'border-yellow-300 bg-yellow-50 hover:bg-yellow-100'
+                  : 'border-gray-100 hover:border-primary hover:bg-primary/5'
                   }`}
               >
                 <div className="flex items-center">

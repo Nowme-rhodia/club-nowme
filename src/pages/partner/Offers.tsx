@@ -23,6 +23,7 @@ import { categories } from '../../data/categories';
 import { LocationSearch } from '../../components/LocationSearch';
 import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
 import toast from 'react-hot-toast';
+import CreateOffer from './CreateOffer';
 
 interface Offer {
   id: string;
@@ -60,6 +61,7 @@ interface Offer {
     name: string;
     price: number;
     discounted_price: number | null;
+    stock: number | null;
   }[];
   rejection_reason?: string;
 }
@@ -137,6 +139,9 @@ export default function Offers() {
     external_link: '',
     promo_code: ''
   });
+
+  // Stock tracking state
+  const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
 
   // État pour les variants
   interface VariantForm {
@@ -319,12 +324,27 @@ export default function Offers() {
         .select(`
           *,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
-          variants:offer_variants(*)
+          variants:offer_variants(
+            *,
+            bookings:bookings(id, status)
+          ),
+          media:offer_media(*)
         `)
         .eq('partner_id', partnerId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Calculate booking counts for variants using the nested data
+      const counts: Record<string, number> = {};
+      data?.forEach((offer: any) => {
+        offer.variants?.forEach((variant: any) => {
+          // Count only non-cancelled bookings
+          const validBookings = variant.bookings?.filter((b: any) => b.status !== 'cancelled') || [];
+          counts[variant.id] = validBookings.length;
+        });
+      });
+      setBookingCounts(counts);
 
       const formattedOffers = (data || []).map((offer: any) => ({
         ...offer,
@@ -757,26 +777,69 @@ export default function Offers() {
                               <span className="text-sm text-gray-500">
                                 {new Date(offer.created_at).toLocaleDateString('fr-FR')}
                               </span>
-                              {mainVariant && (
-                                <span className="text-sm font-medium">
-                                  {mainVariant.discounted_price ? (
-                                    <>
-                                      <span className="text-gray-400 line-through mr-2">
-                                        {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(isNaN(Number(mainVariant.price)) ? 0 : Number(mainVariant.price))}
-                                      </span>
-                                      <span className="font-bold text-primary">
-                                        {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(isNaN(Number(mainVariant.discounted_price)) ? 0 : Number(mainVariant.discounted_price))}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span className="text-primary">
-                                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(isNaN(Number(mainVariant.price)) ? 0 : Number(mainVariant.price))}
+                              <span className="text-sm font-medium">
+                                {(() => {
+                                  if (!offer.variants || offer.variants.length === 0) return null;
+
+                                  // Find lowest price
+                                  const prices = offer.variants.map(v => v.discounted_price || v.price).filter(p => !isNaN(Number(p)));
+                                  const minPrice = Math.min(...prices);
+                                  const isDiscounted = offer.variants.some(v => v.discounted_price === minPrice);
+                                  const hasMultiple = offer.variants.length > 1;
+
+                                  return (
+                                    <span className={`${isDiscounted ? 'text-primary font-bold' : 'text-gray-900'}`}>
+                                      {hasMultiple && <span className="text-gray-500 font-normal mr-1">À partir de</span>}
+                                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(minPrice)}
                                     </span>
-                                  )}
+                                  );
+                                })()}
+                              </span>
+                              {/* Stock Indicator */}
+                              {offer.variants && offer.variants.length > 0 && (
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-2 ${offer.variants.some(v => v.stock === 0)
+                                  ? 'bg-red-100 text-red-800'
+                                  : offer.variants.some(v => v.stock !== null && v.stock < 10)
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-green-100 text-green-800'
+                                  }`}>
+                                  {(() => {
+                                    const totalStock = offer.variants.reduce((acc, v) => acc + (v.stock || 0), 0);
+                                    const hasUnlimited = offer.variants.some(v => v.stock === null);
+                                    if (offer.variants.every(v => v.stock === 0)) return 'Épuisé';
+                                    if (hasUnlimited) return 'Stock illimité';
+                                    return `Stock: ${totalStock}`;
+                                  })()}
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-gray-500">
+                            <div className="flex flex-col gap-1 mt-2">
+                              {offer.variants && offer.variants.map((variant: any) => {
+                                const sold = bookingCounts[variant.id] || 0;
+                                const remaining = variant.stock;
+                                const hasStock = remaining !== null;
+                                const total = hasStock ? remaining + sold : null;
+                                const lowStock = hasStock && remaining < 5;
+                                const noStock = hasStock && remaining <= 0;
+
+                                let stockColor = 'text-gray-500 bg-gray-100';
+                                if (noStock) stockColor = 'text-red-700 bg-red-100';
+                                else if (lowStock) stockColor = 'text-orange-700 bg-orange-100';
+                                else if (hasStock) stockColor = 'text-green-700 bg-green-100';
+
+                                return (
+                                  <div key={variant.id} className="text-xs flex items-center gap-2">
+                                    <span className="font-medium text-gray-700">{variant.name}:</span>
+                                    <span className={`px-2 py-0.5 rounded-full ${stockColor} flex gap-1`}>
+                                      <span className="font-bold">{hasStock ? remaining : 'Illimité'}</span>
+                                      {hasStock && <span>restants</span>}
+                                      {hasStock && <span className="opacity-75 font-normal ml-1">({sold} vendus)</span>}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500 mt-2">
                               <MapPin className="w-4 h-4" />
                               <span>{[offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'}</span>
                             </div>
@@ -832,25 +895,47 @@ export default function Offers() {
                             Hors ligne
                           </button>
                         )}
-                        {/* Bouton Éditer (draft, ready, rejected) */}
-                        {(offer.status === 'draft' || offer.status === 'ready' || offer.status === 'rejected') && (
+                        {/* Modifier (Tous statuts) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleEditOffer(offer);
+                          }}
+                          className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
+                          title="Modifier l'offre"
+                        >
+                          <Edit3 className="w-5 h-5" />
+                        </button>
+
+                        {/* Voir en ligne (Seulement si active/approuvée) */}
+                        {(offer.status === 'approved' || offer.status === 'active') && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleEditOffer(offer);
+                              window.open(`/club?offer=${offer.id}`, '_blank');
                             }}
-                            className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
+                            className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                            title="Voir l'offre en ligne"
                           >
-                            <Edit3 className="w-5 h-5" />
+                            <Eye className="w-5 h-5" />
                           </button>
                         )}
-                        {/* Bouton Supprimer (draft, ready) */}
+
+                        {/* Supprimer (Seulement brouillon ou prête) */}
                         {(offer.status === 'draft' || offer.status === 'ready') && (
                           <button
-                            onClick={() => handleDeleteOffer(offer.id)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteOffer(offer.id);
+                            }}
                             className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                            title="Supprimer l'offre"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
@@ -890,391 +975,14 @@ export default function Offers() {
         {/* Formulaire de création */}
         {showCreateForm && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  {editingOffer ? 'Modifier l\'offre' : 'Créer une nouvelle offre'}
-                </h2>
-
-                <form onSubmit={handleSubmitOffer} className="space-y-6">
-                  {/* --- Image d'illustration --- */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Image d'illustration
-                    </label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-primary transition-colors">
-                      <div className="space-y-1 text-center">
-                        {coverImagePreview ? (
-                          <div className="relative">
-                            <img
-                              src={coverImagePreview}
-                              alt="Aperçu"
-                              className="mx-auto h-48 object-cover rounded-md"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCoverImage(null);
-                                setCoverImagePreview(null);
-                              }}
-                              className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                            <div className="flex text-sm text-gray-600">
-                              <label
-                                htmlFor="file-upload"
-                                className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
-                              >
-                                <span>Télécharger un fichier</span>
-                                <input
-                                  id="file-upload"
-                                  name="file-upload"
-                                  type="file"
-                                  className="sr-only"
-                                  accept="image/*"
-                                  onChange={handleImageSelect}
-                                />
-                              </label>
-                              <p className="pl-1">ou glisser-déposer</p>
-                            </div>
-                            <p className="text-xs text-gray-500">
-                              PNG, JPG, GIF jusqu'à 5MB
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* --- Titre --- */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Titre de l'offre *
-                    </label>
-                    <input
-                      type="text"
-                      value={newOffer.title}
-                      onChange={(e) => setNewOffer({ ...newOffer, title: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                      placeholder="Ex: Massage relaxant 60 minutes"
-                      required
-                    />
-                  </div>
-
-                  {/* --- Description --- */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description *
-                    </label>
-                    <textarea
-                      value={newOffer.description}
-                      onChange={(e) => setNewOffer({ ...newOffer, description: e.target.value })}
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                      placeholder="Décrivez votre offre en détail..."
-                      required
-                    />
-                  </div>
-
-                  {/* --- Catégorie & sous-catégorie --- */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Catégorie *
-                      </label>
-                      <select
-                        value={newOffer.category_slug}
-                        onChange={(e) => setNewOffer({ ...newOffer, category_slug: e.target.value, subcategory_slug: '' })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        required
-                      >
-                        <option value="">Sélectionnez une catégorie</option>
-                        {parentCategories.map(category => (
-                          <option key={category.id} value={category.slug}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Sous-catégorie *
-                      </label>
-                      <select
-                        value={newOffer.subcategory_slug}
-                        onChange={(e) => setNewOffer({ ...newOffer, subcategory_slug: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        disabled={!newOffer.category_slug}
-                        required
-                      >
-                        <option value="">Sélectionnez une sous-catégorie</option>
-                        {subCategories.map(subcategory => (
-                          <option key={subcategory.id} value={subcategory.slug}>
-                            {subcategory.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* --- Variants (Tarifs) --- */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Tarifs *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={addVariant}
-                        className="inline-flex items-center px-3 py-1 text-sm font-medium text-primary hover:text-primary-dark"
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Ajouter un tarif
-                      </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      {variants.map((variant, index) => (
-                        <div key={index} className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
-                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">
-                                Nom du tarif *
-                              </label>
-                              <input
-                                type="text"
-                                value={variant.name}
-                                onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm"
-                                placeholder="Ex: Séance 1h, Pack 5 séances..."
-                                required={index === 0}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">
-                                Prix (€) *
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={variant.price}
-                                  onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                                  className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm"
-                                  placeholder="0.00"
-                                  required={index === 0}
-                                />
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                  <Euro className="w-3 h-3 text-gray-400" />
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-500 mb-1">
-                                Prix réduit (€)
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={variant.discounted_price}
-                                  onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
-                                  className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm"
-                                  placeholder="0.00"
-                                />
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                  <Euro className="w-3 h-3 text-gray-400" />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          {variants.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeVariant(index)}
-                              className="mt-6 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                            >
-                              <X className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      Ajoutez différents tarifs pour votre offre (ex: durées différentes, packs, etc.)
-                    </p>
-                  </div>
-
-                  {/* --- Localisation --- */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Localisation *
-                    </label>
-                    <LocationSearch
-                      onSelect={(location) => {
-                        setNewOffer({
-                          ...newOffer,
-                          street_address: location.street_address || '',
-                          zip_code: location.zip_code || '',
-                          city: location.city || '',
-                          department: location.department || '',
-                          coordinates: [location.lat, location.lng]
-                        });
-                      }}
-                    />
-                  </div>
-
-
-                  {/* --- Type de réservation --- */}
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h3 className="text-sm font-medium text-gray-900 mb-4">Configuration de la réservation</h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Type de réservation
-                        </label>
-                        <select
-                          value={newOffer.booking_type}
-                          onChange={(e) => setNewOffer({ ...newOffer, booking_type: e.target.value as any })}
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
-                        >
-                          <option value="calendly">Calendly (Prise de RDV)</option>
-                          <option value="event">Événement (Date fixe)</option>
-                          <option value="promo">Code Promo (Lien externe)</option>
-                          <option value="purchase">Achat Simple (Sans RDV)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {newOffer.booking_type === 'calendly' && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            URL Calendly
-                          </label>
-                          <input
-                            type="url"
-                            value={newOffer.calendly_url}
-                            onChange={(e) => setNewOffer({ ...newOffer, calendly_url: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary mt-1"
-                            placeholder="https://calendly.com/votre-lien"
-                            required={newOffer.booking_type === 'calendly'}
-                          />
-                        </div>
-
-                        {/* Intégration Token Calendly */}
-                        <div className="pt-4 border-t border-gray-200 mt-6">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-3">Connexion API Calendly</h4>
-                          <p className="text-xs text-gray-500 mb-3">
-                            Pour que les réservations remontent automatiquement dans Nowme, configurez votre jeton API ci-dessous.
-                            Ce réglage est lié à votre compte partenaire.
-                          </p>
-                          {partnerId ? (
-                            <PartnerCalendlySettings
-                              partnerId={partnerId}
-                              initialToken={null}
-                              onUpdate={() => toast.success("Configuration Calendly mise à jour !")}
-                            />
-                          ) : (
-                            <div className="p-4 bg-yellow-50 text-yellow-800 rounded-lg text-sm">
-                              Chargement des paramètres partenaire... (Si ce message persiste, contactez le support)
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {newOffer.booking_type === 'event' && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Date de début *
-                          </label>
-                          <input
-                            type="datetime-local"
-                            value={newOffer.event_start_date || ''}
-                            onChange={(e) => setNewOffer({ ...newOffer, event_start_date: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                            required={newOffer.booking_type === 'event'}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Date de fin (optionnel)
-                          </label>
-                          <input
-                            type="datetime-local"
-                            value={newOffer.event_end_date || ''}
-                            onChange={(e) => setNewOffer({ ...newOffer, event_end_date: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {newOffer.booking_type === 'promo' && (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Lien de l'offre (ex: votre site) *
-                          </label>
-                          <input
-                            type="url"
-                            value={newOffer.external_link || ''}
-                            onChange={(e) => setNewOffer({ ...newOffer, external_link: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                            placeholder="https://votre-site.com/offre"
-                            required={newOffer.booking_type === 'promo'}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Code Promo (optionnel)
-                          </label>
-                          <input
-                            type="text"
-                            value={newOffer.promo_code || ''}
-                            onChange={(e) => setNewOffer({ ...newOffer, promo_code: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                            placeholder="Ex: WELCOME20"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* --- Actions --- */}
-                  <div className="flex justify-end gap-4">
-                    <button
-                      type="button"
-                      onClick={handleCloseForm}
-                      className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isUploading}
-                      className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                    >
-                      {isUploading && (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                      )}
-                      {editingOffer ? 'Mettre à jour' : 'Enregistrer en brouillon'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <CreateOffer
+              offer={editingOffer}
+              onClose={handleCloseForm}
+              onSuccess={() => {
+                handleCloseForm();
+                loadOffers();
+              }}
+            />
           </div>
         )}
 
@@ -1385,6 +1093,6 @@ export default function Offers() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

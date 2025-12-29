@@ -40,9 +40,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Validation des champs requis pour la demande initiale
     if (!business.name || !business.contactName || !business.email || !business.phone || !business.message) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Champs obligatoires manquants (nom entreprise, contact, email, téléphone, message)" 
+        JSON.stringify({
+          success: false,
+          error: "Champs obligatoires manquants (nom entreprise, contact, email, téléphone, message)"
         }),
         { status: 400, headers: corsHeaders }
       );
@@ -68,7 +68,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (insertError || !partner) {
       logger.error("❌ Erreur insertion partenaire:", insertError);
-      
+
       // Détails de l'erreur pour le debug
       const errorDetails = insertError ? {
         message: insertError.message,
@@ -76,12 +76,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
         hint: insertError.hint,
         code: insertError.code
       } : "No partner data returned";
-      
+
       logger.error("Détails de l'erreur:", errorDetails);
-      
+
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: "Erreur lors de l'enregistrement du partenaire",
           debug: import.meta.env?.DEV ? errorDetails : undefined
         }),
@@ -133,11 +133,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     `;
 
     const confirmHtml = `
-      <h2 style="color:#BF2778;">Merci pour votre demande de partenariat 🙌</h2>
+      <h2 style="color:#BF2778;">Bienvenue chez Nowme ! ✨</h2>
       <p>Bonjour ${business.contactName ?? business.name},</p>
-      <p>Nous avons bien reçu votre demande pour <strong>${business.name}</strong>.</p>
-      ${offer ? `<p>Votre offre <strong>${offer.title}</strong> est enregistrée et en attente de validation.</p>` : ""}
-      <p>Notre équipe va l’étudier et vous recontactera très vite.</p>
+      <p>Nous avons bien reçu votre demande de partenariat pour <strong>${business.name}</strong> et nous vous en remercions !</p>
+      
+      <p>Chez Nowme, nous sélectionnons nos partenaires avec beaucoup de soin pour garantir la meilleure qualité à notre communauté.</p>
+      
+      ${offer ? `<p>Votre offre <strong>${offer.title}</strong> a bien été enregistrée.</p>` : ""}
+      
+      <p>Notre équipe va étudier votre profil et reviendra vers vous sous <strong>48h ouvrées</strong>.</p>
+      
+      <p>À très vite !</p>
       <p style="margin-top:20px;">Cordialement,<br/>💜 L’équipe Nowme Club</p>
     `;
 
@@ -150,7 +156,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       },
       {
         to_address: business.email,
-        subject: "Votre demande de partenariat est en cours de validation",
+        subject: "Bienvenue chez Nowme ! Votre demande est en cours d'examen ✨",
         content: confirmHtml,
         status: "pending",
       },

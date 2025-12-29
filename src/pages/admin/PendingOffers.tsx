@@ -125,13 +125,10 @@ export default function PendingOffers() {
     setProcessingId(offer.id);
 
     try {
-      const { error } = await (supabase
-        .from('offers') as any)
-        .update({
-          status: 'approved',
-          is_approved: true
-        })
-        .eq('id', offer.id);
+      // Use RPC to approve securely bypassing RLS complexity
+      const { error } = await supabase.rpc('approve_offer', {
+        target_offer_id: offer.id
+      });
 
       if (error) throw error;
 

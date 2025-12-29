@@ -18,6 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
 import toast from 'react-hot-toast';
 
+
 interface Offer {
   id: string;
   title: string;
@@ -34,15 +35,16 @@ interface Offer {
     business_name: string;
     contact_name: string;
     phone: string;
-  };
+  } | null; // Partner can be null if deleted
   variants: Array<{
     id: string;
     name: string;
     price: number;
-    promo_price?: number;
-    duration: string;
+    discounted_price?: number;
+    description?: string;
+    stock?: number;
   }>;
-  media: Array<{
+  offer_media: Array<{
     id: string;
     url: string;
     type: 'image' | 'video';
@@ -73,8 +75,10 @@ export default function Offers() {
           *,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
           partner:partners(*),
-          variants:offer_variants(*)
-        `) as any;
+          variants:offer_variants(*),
+          offer_media(*)
+        `)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -85,7 +89,10 @@ export default function Offers() {
         // Aligner avec les interfaces attendues si besoin
         category_slug: offer.category?.parent_slug || offer.category?.slug || 'autre',
         subcategory_slug: offer.category?.parent_slug ? offer.category.slug : undefined,
-        location: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée'
+        location: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Adresse non spécifiée',
+        variants: offer.variants || [],
+        offer_media: offer.offer_media || [],
+        partner: offer.partner || { business_name: 'Partenaire inconnu', contact_name: '', phone: '' } // Fallback
       }));
 
       setOffers(formattedData || []);
@@ -99,14 +106,10 @@ export default function Offers() {
 
   const handleApproveOffer = async (offerId: string) => {
     try {
-      const { error } = await (supabase
-        .from('offers') as any)
-        .update({
-          status: 'approved',
-          is_approved: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', offerId);
+      // Use RPC for secure approval
+      const { error } = await supabase.rpc('approve_offer', {
+        target_offer_id: offerId
+      });
 
       if (error) throw error;
 
@@ -120,13 +123,23 @@ export default function Offers() {
 
   const handleToggleActive = async (offerId: string, currentStatus: boolean) => {
     try {
-      const { error } = await (supabase
-        .from('offers') as any)
-        .update({
-          is_approved: !currentStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', offerId);
+      if (!currentStatus) {
+        // We are activating. Use strict approval to ensure status is correct.
+        const { error } = await supabase.rpc('approve_offer', {
+          target_offer_id: offerId
+        });
+        if (error) throw error;
+      } else {
+        // Deactivating
+        const { error } = await (supabase
+          .from('offers') as any)
+          .update({
+            is_approved: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', offerId);
+        if (error) throw error;
+      }
 
       if (error) throw error;
 
@@ -143,7 +156,7 @@ export default function Offers() {
       const matchesSearch =
         offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         offer.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        offer.partner.business_name.toLowerCase().includes(searchTerm.toLowerCase());
+        (offer.partner?.business_name || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && offer.is_approved !== false) ||
@@ -157,14 +170,18 @@ export default function Offers() {
       return matchesSearch && matchesStatus && matchesCategory;
     })
     .sort((a, b) => {
+      // Helper for partner sort
+      const partnerA = a.partner?.business_name || '';
+      const partnerB = b.partner?.business_name || '';
+
       if (sortBy === 'date') {
         return sortOrder === 'desc'
           ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       } else if (sortBy === 'partner') {
         return sortOrder === 'desc'
-          ? b.partner.business_name.localeCompare(a.partner.business_name)
-          : a.partner.business_name.localeCompare(b.partner.business_name);
+          ? partnerB.localeCompare(partnerA)
+          : partnerA.localeCompare(partnerB);
       } else {
         return sortOrder === 'desc'
           ? b.title.localeCompare(a.title)
@@ -326,6 +343,7 @@ export default function Offers() {
             const subcategory = category?.subcategories.find(s => s.slug === offer.subcategory_slug);
             const mainVariant = offer.variants?.[0];
             const isActive = offer.is_approved !== false;
+            const heroImage = offer.image_url || offer.offer_media?.[0]?.url;
 
             return (
               <li key={offer.id}>
@@ -335,9 +353,9 @@ export default function Offers() {
                       <div className="flex items-center gap-4">
                         {/* Image */}
                         <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                          {(offer.image_url || offer.media?.[0]) ? (
+                          {heroImage ? (
                             <img
-                              src={offer.image_url || offer.media?.[0]?.url}
+                              src={heroImage}
                               alt={offer.title}
                               className="w-full h-full object-cover"
                             />
@@ -362,12 +380,12 @@ export default function Offers() {
                             </span>
                             {mainVariant && (
                               <span className="text-sm text-primary font-medium">
-                                À partir de {mainVariant.price}€
+                                À partir de {mainVariant.discounted_price || mainVariant.price}€
                               </span>
                             )}
                           </div>
                           <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
-                            <span className="font-medium">{offer.partner.business_name}</span>
+                            <span className="font-medium">{offer.partner?.business_name || 'Partenaire Inconnu'}</span>
                             <span>{category?.name}</span>
                             {subcategory && <span>• {subcategory.name}</span>}
                             <span className="flex items-center">
@@ -381,7 +399,7 @@ export default function Offers() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 ml-4">
-                      {offer.status === 'draft' && (
+                      {(offer.status === 'draft' || offer.status === 'pending') && (
                         <button
                           onClick={() => handleApproveOffer(offer.id)}
                           className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
@@ -427,7 +445,7 @@ export default function Offers() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Images */}
-                {(selectedOffer.image_url || selectedOffer.media.length > 0) && (
+                {(selectedOffer.image_url || (selectedOffer.offer_media && selectedOffer.offer_media.length > 0)) && (
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Images</h4>
                     <div className="grid grid-cols-2 gap-2">
@@ -438,7 +456,7 @@ export default function Offers() {
                           className="w-full h-32 object-cover rounded-lg"
                         />
                       )}
-                      {selectedOffer.media.map((media) => (
+                      {selectedOffer.offer_media && selectedOffer.offer_media.map((media) => (
                         <img
                           key={media.id}
                           src={media.url}
@@ -467,9 +485,9 @@ export default function Offers() {
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Partenaire</h4>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="font-medium">{selectedOffer.partner.business_name}</p>
-                      <p className="text-sm text-gray-600">{selectedOffer.partner.contact_name}</p>
-                      <p className="text-sm text-gray-600">{selectedOffer.partner.phone}</p>
+                      <p className="font-medium">{selectedOffer.partner?.business_name || 'Partenaire supprimé'}</p>
+                      <p className="text-sm text-gray-600">{selectedOffer.partner?.contact_name}</p>
+                      <p className="text-sm text-gray-600">{selectedOffer.partner?.phone}</p>
                     </div>
                   </div>
 
@@ -495,7 +513,7 @@ export default function Offers() {
                   </div>
 
                   {/* Variants */}
-                  {selectedOffer.variants.length > 0 && (
+                  {(selectedOffer.variants && selectedOffer.variants.length > 0) && (
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-2">Tarifs</h4>
                       <div className="space-y-2">
@@ -503,12 +521,12 @@ export default function Offers() {
                           <div key={variant.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                             <div>
                               <p className="font-medium">{variant.name}</p>
-                              <p className="text-sm text-gray-600">{variant.duration}</p>
+                              <p className="text-sm text-gray-600">{variant.description || ''}</p>
                             </div>
                             <div className="text-right">
-                              {variant.promo_price ? (
+                              {variant.discounted_price ? (
                                 <div>
-                                  <span className="text-lg font-bold text-primary">{variant.promo_price}€</span>
+                                  <span className="text-lg font-bold text-primary">{variant.discounted_price}€</span>
                                   <span className="text-sm text-gray-400 line-through ml-2">{variant.price}€</span>
                                 </div>
                               ) : (

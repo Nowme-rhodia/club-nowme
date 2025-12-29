@@ -23,6 +23,8 @@ export default function BookingSuccess() {
     const type = searchParams.get('type') as 'calendly' | 'event' | 'purchase';
     const amountParam = searchParams.get('amount');
 
+    const variantIdParam = searchParams.get('variant_id');
+
     useEffect(() => {
         const init = async () => {
             // If we don't have session_id (Stripe) AND don't have event_start_time (Direct Calendly Legacy), we have a problem
@@ -45,19 +47,17 @@ export default function BookingSuccess() {
                 setOffer(offerData);
 
                 // 2. Verified Booking Creation
-                // The booking should ideally be created by the webhook.
-                // But for immediate UX, we check if it exists or CREATE it if missing (fallback).
-                // We trust the session_id presence implies payment success for this MVP (secure backend validation happens in webhook).
-
                 if (user) {
                     const { data: existing } = await supabase
                         .from('bookings')
                         .select('id')
                         .eq('external_id', sessionId)
-                        .single();
+                        .maybeSingle();
 
                     if (!existing) {
                         // Fallback creation if webhook hasn't fired yet
+                        const safeVariantId = (variantIdParam && variantIdParam !== 'null' && variantIdParam !== 'undefined') ? variantIdParam : null;
+
                         const bookingData: any = {
                             user_id: user.id,
                             offer_id: offerIdParam,
@@ -67,13 +67,13 @@ export default function BookingSuccess() {
                             external_id: sessionId,
                             amount: amountParam ? parseFloat(amountParam) : (offerData.price || 0),
                             currency: 'EUR',
-                            partner_id: offerData.partner_id
+                            partner_id: offerData.partner_id,
+                            variant_id: safeVariantId // Added variant_id
                         };
 
                         const { error: insertError } = await supabase.from('bookings').insert(bookingData);
 
                         // If user sees 409 conflict, it means webhook won race condition. That's actually GOOD.
-                        // We shouldn't treat it as a hard error.
                         if (insertError) {
                             if (insertError.code === '23505') {
                                 console.log("Booking already exists (webhook or double submit), ignoring insert error.");
@@ -95,7 +95,7 @@ export default function BookingSuccess() {
         if (user) {
             init();
         }
-    }, [user, sessionId, offerIdParam]);
+    }, [user, sessionId, offerIdParam, variantIdParam]);
 
     // Load Calendly Script if needed
     useEffect(() => {

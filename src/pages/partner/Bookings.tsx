@@ -3,16 +3,12 @@ import {
   Calendar,
   Search,
   Filter,
-  ChevronDown,
   CheckCircle,
   XCircle,
   Clock,
   Mail,
   Phone,
-  Euro,
-  Loader2,
-  MapPin,
-  ExternalLink
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -34,6 +30,9 @@ interface Booking {
   };
   offer: {
     title: string;
+  };
+  variant?: {
+    name: string;
   };
 }
 
@@ -105,7 +104,8 @@ export default function Bookings() {
             amount,
             currency,
             user:user_profiles!user_id(first_name, last_name, email, phone),
-            offer:offers(title)
+            offer:offers(title),
+            variant:offer_variants(name)
         `)
         .eq('partner_id', profileData.partner_id)
         // Order by booking_date descending by default
@@ -229,8 +229,11 @@ export default function Bookings() {
                     <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/4">
-                      Offre réservée
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Offre
+                    </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Article / Option
                     </th>
                     <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Date
@@ -289,11 +292,18 @@ export default function Bookings() {
 
                         {/* Offer */}
                         <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <span className="text-sm font-medium text-gray-900 line-clamp-2" title={booking.offer?.title}>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]" title={booking.offer?.title}>
                               {booking.offer?.title || 'Offre inconnue'}
-                            </span>
+                            </p>
                           </div>
+                        </td>
+
+                        {/* Variant / Option (New Column) */}
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${booking.variant?.name ? 'bg-gray-100 text-gray-800' : 'text-gray-400 italic'}`}>
+                            {booking.variant?.name || '-'}
+                          </span>
                         </td>
 
                         {/* Date */}

@@ -31,6 +31,13 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
     }
   }, [isLoaded]);
 
+  // Sync initialValue change
+  useEffect(() => {
+    if (initialValue) {
+      setValue(initialValue);
+    }
+  }, [initialValue]);
+
   // ✅ Récupération des suggestions
   useEffect(() => {
     if (!value) {

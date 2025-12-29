@@ -9,18 +9,20 @@ interface FormData {
   contactName: string;
   email: string;
   phone: string;
+  address: string;
   message: string;
 }
 
 export default function PartnerApplication() {
   // Données de test en mode développement
   const isDev = import.meta.env.DEV;
-  
+
   const [formData, setFormData] = useState<FormData>({
     businessName: isDev ? 'Spa Zen & Bien-être' : '',
     contactName: isDev ? 'Marie Dupont' : '',
     email: isDev ? 'marie.dupont@spa-zen.fr' : '',
     phone: isDev ? '0612345678' : '',
+    address: isDev ? '12 rue de la Paix, 75001 Paris' : '',
     message: isDev ? 'Nous sommes un spa spécialisé dans les massages bien-être, la relaxation et les soins du corps. Nous proposons une gamme complète de services incluant massages, soins du visage, hammam et sauna. Notre équipe de professionnels qualifiés offre une expérience unique de détente et de bien-être.' : '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -41,6 +43,9 @@ export default function PartnerApplication() {
     }
     if (!formData.phone.trim() || !/^[0-9]{10}$/.test(formData.phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Un numéro de téléphone à 10 chiffres est requis';
+    }
+    if (!formData.address.trim()) {
+      newErrors.address = "L'adresse légale est requise";
     }
     if (!formData.message.trim() || formData.message.trim().length < 20) {
       newErrors.message = 'Veuillez décrire votre activité (minimum 20 caractères)';
@@ -73,6 +78,7 @@ export default function PartnerApplication() {
             contactName: formData.contactName,
             email: formData.email,
             phone: formData.phone,
+            address: formData.address,
             message: formData.message,
           },
         },
@@ -158,15 +164,37 @@ export default function PartnerApplication() {
                 name="businessName"
                 value={formData.businessName}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.businessName ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.businessName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Ex: Spa Zen & Bien-être"
               />
               {errors.businessName && (
                 <p className="mt-1 text-sm text-red-600 flex items-center">
                   <AlertCircle className="w-4 h-4 mr-1" />
                   {errors.businessName}
+                </p>
+              )}
+            </div>
+
+            {/* Adresse légale */}
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                Adresse légale de l'entreprise <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.address ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                placeholder="Ex: 12 rue de la Paix, 75001 Paris"
+              />
+              {errors.address && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.address}
                 </p>
               )}
             </div>
@@ -182,9 +210,8 @@ export default function PartnerApplication() {
                 name="contactName"
                 value={formData.contactName}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.contactName ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.contactName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Ex: Marie Dupont"
               />
               {errors.contactName && (
@@ -206,9 +233,8 @@ export default function PartnerApplication() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="contact@votre-entreprise.fr"
               />
               {errors.email && (
@@ -230,9 +256,8 @@ export default function PartnerApplication() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.phone ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="0612345678"
               />
               {errors.phone && (
@@ -254,9 +279,8 @@ export default function PartnerApplication() {
                 rows={5}
                 value={formData.message}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none ${
-                  errors.message ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none ${errors.message ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Parlez-nous de votre entreprise, vos services, et pourquoi vous souhaitez rejoindre Nowme Club..."
               />
               <p className="mt-1 text-sm text-gray-500">

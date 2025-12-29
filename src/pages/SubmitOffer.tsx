@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
+import { LocationSearch } from '../components/LocationSearch'; // [NEW] Correctly imported
 
 interface FormData {
   businessName: string;
@@ -17,17 +18,19 @@ interface FormData {
   website: string;
   instagram: string;
   facebook: string;
+  address: string; // [NEW] - Address field
 }
 
 export default function SubmitOffer() {
   // Données de test en mode développement
   const isDev = import.meta.env.DEV;
-  
+
   const [formData, setFormData] = useState<FormData>({
     businessName: isDev ? 'Spa Zen & Bien-être' : '',
     contactName: isDev ? 'Marie Dupont' : '',
     email: isDev ? 'marie.dupont@spa-zen.fr' : '',
     phone: isDev ? '0612345678' : '',
+    address: isDev ? '12 rue de la Paix, 75001 Paris' : '', // [NEW] Default value
     message: isDev ? 'Nous sommes un spa spécialisé dans les massages bien-être, la relaxation et les soins du corps. Nous proposons une gamme complète de services incluant massages, soins du visage, hammam et sauna. Notre équipe de professionnels qualifiés offre une expérience unique de détente et de bien-être.' : '',
     website: isDev ? 'https://spa-zen.fr' : '',
     instagram: isDev ? '@spa_zen_bienetre' : '',
@@ -51,6 +54,9 @@ export default function SubmitOffer() {
     }
     if (!formData.phone.trim() || !/^[0-9]{10}$/.test(formData.phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Un numéro de téléphone à 10 chiffres est requis';
+    }
+    if (!formData.address.trim()) {
+      newErrors.address = "L'adresse légale est requise"; // [NEW] Validation
     }
     if (!formData.message.trim() || formData.message.trim().length < 20) {
       newErrors.message = 'Veuillez décrire votre activité (minimum 20 caractères)';
@@ -83,6 +89,7 @@ export default function SubmitOffer() {
             contactName: formData.contactName,
             email: formData.email,
             phone: formData.phone,
+            address: formData.address, // [NEW] Send address
             message: formData.message,
             website: formData.website || undefined,
             instagram: formData.instagram || undefined,
@@ -95,12 +102,12 @@ export default function SubmitOffer() {
         console.error('Supabase error:', error);
         throw error;
       }
-      
+
       console.log('✅ Full response:', { data, error });
       console.log('✅ data type:', typeof data);
       console.log('✅ data.success:', data?.success);
       console.log('✅ !data?.success:', !data?.success);
-      
+
       if (!data || data.success === false) {
         const errorMsg = data?.error || data?.debug?.message || "Erreur lors de l'envoi";
         console.error('❌ Function returned error:', data);
@@ -186,9 +193,8 @@ export default function SubmitOffer() {
                 name="businessName"
                 value={formData.businessName}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.businessName ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.businessName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Ex: Spa Zen & Bien-être"
               />
               {errors.businessName && (
@@ -197,6 +203,23 @@ export default function SubmitOffer() {
                   {errors.businessName}
                 </p>
               )}
+            </div>
+
+            {/* Adresse légale - [NEW] */}
+            <div className="relative">
+              <label htmlFor="address-search" className="block text-sm font-medium text-gray-700 mb-1">
+                Adresse légale de l'entreprise <span className="text-red-500">*</span>
+              </label>
+              <LocationSearch
+                initialValue={formData.address}
+                onSelect={(location) => {
+                  setFormData((prev) => ({ ...prev, address: location.address }));
+                  if (errors.address) {
+                    setErrors((prev) => ({ ...prev, address: undefined }));
+                  }
+                }}
+                error={errors.address}
+              />
             </div>
 
             {/* Nom du contact */}
@@ -210,9 +233,8 @@ export default function SubmitOffer() {
                 name="contactName"
                 value={formData.contactName}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.contactName ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.contactName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Ex: Marie Dupont"
               />
               {errors.contactName && (
@@ -234,9 +256,8 @@ export default function SubmitOffer() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.email ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="contact@votre-entreprise.fr"
               />
               {errors.email && (
@@ -258,9 +279,8 @@ export default function SubmitOffer() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${
-                  errors.phone ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="0612345678"
               />
               {errors.phone && (
@@ -282,9 +302,8 @@ export default function SubmitOffer() {
                 rows={5}
                 value={formData.message}
                 onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none ${
-                  errors.message ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none ${errors.message ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Parlez-nous de votre entreprise, vos services, et pourquoi vous souhaitez rejoindre Nowme Club..."
               />
               <p className="mt-1 text-sm text-gray-500">

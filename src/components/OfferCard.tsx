@@ -12,6 +12,7 @@ interface OfferCardProps {
   imageUrl: string;
   rating: number;
   category: string;
+  badge?: string;
 }
 
 export function OfferCard({
@@ -24,6 +25,7 @@ export function OfferCard({
   imageUrl,
   rating,
   category,
+  badge,
 }: OfferCardProps) {
   const discount = promoPrice ? Math.round(((price - promoPrice) / price) * 100) : 0;
 
@@ -43,11 +45,18 @@ export function OfferCard({
           alt={title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        {promoPrice && (
-          <div className="absolute top-4 right-4 bg-primary text-white px-3 py-1.5 rounded-full font-semibold text-sm shadow-lg">
-            -{discount}%
-          </div>
-        )}
+        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+          {badge && (
+            <div className="bg-white/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-full font-semibold text-xs shadow-sm uppercase tracking-wider">
+              {badge}
+            </div>
+          )}
+          {promoPrice && (
+            <div className="bg-primary text-white px-3 py-1.5 rounded-full font-semibold text-sm shadow-lg">
+              -{discount}%
+            </div>
+          )}
+        </div>
         <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent" />
       </div>
 

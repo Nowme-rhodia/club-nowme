@@ -51,6 +51,12 @@ serve(async (req) => {
         });
 
         if (!res.ok) {
+          // [NEW] Handle Quota Exceeded specifically to stop the loop
+          if (res.status === 429) {
+            logger.error("🚨 Quota Resend Exceeded (429). Stopping batch processing.");
+            // Stop processing the rest of the batch
+            break;
+          }
           const errText = await res.text();
           throw new Error(`Resend API error: ${errText}`);
         }
@@ -73,9 +79,15 @@ serve(async (req) => {
         ]);
 
         logger.success(`✅ Email sent to ${email.to_address}`);
-      } catch (error) {
+      } catch (error: any) {
         // 🔹 4. Gestion des échecs avec retry
         logger.error(`❌ Error sending email to ${email.to_address}`, error);
+
+        // [NEW] Check if it is a quota error string if not caught by 429 status check above
+        if (String(error).includes("quota") || String(error).includes("429")) {
+          logger.warn("⚠️ Aborting batch due to Quota limits.");
+          break; // Stop the loop
+        }
 
         const retryCount = (email.retry_count || 0) + 1;
         const status = retryCount >= MAX_RETRIES ? "failed" : "pending";
