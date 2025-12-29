@@ -18,10 +18,12 @@ export default function UpdatePassword() {
   const [isValidToken, setIsValidToken] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     const checkSessionAndToken = async () => {
       // 1. Check if we're already logged in (Implicit flow handling)
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (user && mounted) {
         console.log('✅ UpdatePassword - User already authenticated, allowing update');
         setIsValidToken(true);
         setChecking(false);
@@ -34,6 +36,7 @@ export default function UpdatePassword() {
 
       const tokenFromQuery = query.get('token_hash') || query.get('token') || query.get('access_token');
       const typeFromQuery = query.get('type');
+      const code = query.get('code'); // PKCE code
 
       const tokenFromHash = hash.get('token_hash') || hash.get('token') || hash.get('access_token');
       const typeFromHash = hash.get('type');
@@ -45,27 +48,67 @@ export default function UpdatePassword() {
         search: window.location.search,
         hash: window.location.hash,
         token: !!token,
-        type: tokenType
+        type: tokenType,
+        code: !!code
       });
 
-      if (token && tokenType === 'recovery') {
-        setTokenHash(token);
-        setType(tokenType);
-        setIsValidToken(true);
-      } else if (token && !tokenType) {
-        // Fallback
-        setTokenHash(token);
-        setType('recovery');
-        setIsValidToken(true);
-      } else {
-        // Only show error if NOT authenticated
-        setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
+      if (code) {
+        // If there is a code, we must wait for Supabase to exchange it for a session.
+        // We do nothing here and let the onAuthStateChange listener handle it.
+        console.log('🔄 UpdatePassword - PKCE code detected, waiting for session exchange...');
+        return;
       }
 
-      setChecking(false);
+      if (token && tokenType === 'recovery') {
+        if (mounted) {
+          setTokenHash(token);
+          setType(tokenType);
+          setIsValidToken(true);
+          setChecking(false);
+        }
+      } else if (token && !tokenType) {
+        // Fallback
+        if (mounted) {
+          setTokenHash(token);
+          setType('recovery');
+          setIsValidToken(true);
+          setChecking(false);
+        }
+      } else {
+        // Only show error if NOT authenticated and NO code pending
+        if (mounted) {
+          // Double check session one last time before erroring
+          setTimeout(async () => {
+            if (!mounted) return;
+            const { data: { user: retryUser } } = await supabase.auth.getUser();
+            if (retryUser) {
+              setIsValidToken(true);
+              setChecking(false);
+            } else {
+              setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
+              setChecking(false);
+            }
+          }, 2000); // 2s grace period
+        }
+      }
     };
 
     checkSessionAndToken();
+
+    // Listen for auth state changes (crucial for PKCE)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('UpdatePassword - Auth State Change:', event);
+      if (session?.user && mounted) {
+        console.log('✅ UpdatePassword - Session established via listener');
+        setIsValidToken(true);
+        setChecking(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const validatePassword = (pwd: string) => {
@@ -253,8 +296,8 @@ export default function UpdatePassword() {
                 type="submit"
                 disabled={loading}
                 className={`w-full flex justify-center items-center px-4 py-3 rounded-full font-medium text-white shadow-sm ${loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary'
                   }`}
               >
                 {loading ? 'Mise à jour en cours...' : 'Réinitialiser le mot de passe'}
