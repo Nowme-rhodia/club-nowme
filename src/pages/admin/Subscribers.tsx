@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { 
+import {
   Search,
   Filter,
   ChevronDown,
@@ -45,16 +45,39 @@ export default function Subscribers() {
 
   const loadSubscribers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select(`
-          *,
-          qr_codes:user_qr_codes(*)
-        `)
-        .order('created_at', { ascending: false });
+      // Fetch profiles and subscriptions in parallel
+      const [profilesRes, subscriptionsRes] = await Promise.all([
+        supabase
+          .from('user_profiles')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('subscriptions')
+          .select('user_id, status')
+      ]);
 
-      if (error) throw error;
-      setSubscribers(data);
+      if (profilesRes.error) throw profilesRes.error;
+      if (subscriptionsRes.error) throw subscriptionsRes.error;
+
+      // Create a map of usage subscriptions by user_id
+      const subMap = new Map();
+      subscriptionsRes.data.forEach(sub => {
+        if (sub.status === 'active') { // Prioritize active status if duplicates exist
+          subMap.set(sub.user_id, sub.status);
+        } else if (!subMap.has(sub.user_id)) {
+          subMap.set(sub.user_id, sub.status);
+        }
+      });
+
+      // Merge status into profiles and filter out admins/partners
+      const mergedData = profilesRes.data
+        .filter(profile => !profile.is_admin && !profile.partner_id)
+        .map(profile => ({
+          ...profile,
+          subscription_status: subMap.get(profile.user_id) || 'pending' // Default to pending if no sub found
+        }));
+
+      setSubscribers(mergedData);
     } catch (error) {
       console.error('Error loading subscribers:', error);
     } finally {
@@ -64,26 +87,32 @@ export default function Subscribers() {
 
   const filteredSubscribers = subscribers
     .filter(subscriber => {
-      const matchesSearch = 
+      const matchesSearch =
         subscriber.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         subscriber.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         subscriber.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || subscriber.subscription_status === statusFilter;
+      const safeStatus = subscriber.subscription_status || 'pending';
+      const matchesStatus = statusFilter === 'all' || safeStatus === statusFilter;
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
+      // Sort logic remains the same, assuming filteredSubscribers have the properties
+      // ...
       if (sortBy === 'date') {
-        return sortOrder === 'desc'
-          ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          : new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
       } else {
+        const nameA = `${a.last_name || ''} ${a.first_name || ''}`;
+        const nameB = `${b.last_name || ''} ${b.first_name || ''}`;
         return sortOrder === 'desc'
-          ? `${b.last_name} ${b.first_name}`.localeCompare(`${a.last_name} ${a.first_name}`)
-          : `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+          ? nameB.localeCompare(nameA)
+          : nameA.localeCompare(nameB);
       }
     });
 
   if (loading) {
+    // ... loading skeleton ... (keep existing)
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
@@ -101,6 +130,7 @@ export default function Subscribers() {
 
   return (
     <div className="p-8">
+      {/* ... Header and Filters ... */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Abonnées</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -108,7 +138,7 @@ export default function Subscribers() {
         </p>
       </div>
 
-      {/* Filtres et recherche */}
+      {/* Filters code (lines 112-157) remains roughly the same, verify closure */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <input
@@ -156,11 +186,15 @@ export default function Subscribers() {
         </div>
       </div>
 
+
       {/* Liste des abonnées */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
           {filteredSubscribers.map((subscriber) => {
-            const StatusIcon = statusConfig[subscriber.subscription_status].icon;
+            const statusKey = subscriber.subscription_status || 'pending';
+            const statusInfo = statusConfig[statusKey] || statusConfig.pending;
+            const StatusIcon = statusInfo.icon;
+
             return (
               <li key={subscriber.id}>
                 <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
@@ -176,7 +210,7 @@ export default function Subscribers() {
                         ) : (
                           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                             <span className="text-primary font-semibold">
-                              {subscriber.first_name[0]}{subscriber.last_name[0]}
+                              {(subscriber.first_name?.[0] || '').toUpperCase()}{(subscriber.last_name?.[0] || '').toUpperCase()}
                             </span>
                           </div>
                         )}
@@ -185,10 +219,16 @@ export default function Subscribers() {
                             {subscriber.first_name} {subscriber.last_name}
                           </h3>
                           <div className="mt-1 flex items-center gap-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[subscriber.subscription_status].className}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.className}`}>
                               <StatusIcon className="w-4 h-4 mr-1" />
-                              {statusConfig[subscriber.subscription_status].label}
+                              {statusInfo.label}
                             </span>
+                            {/* Display selected plan for pending users */}
+                            {statusKey === 'pending' && subscriber.selected_plan && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                Plan: {subscriber.selected_plan === 'yearly' ? 'Annuel' : 'Mensuel'}
+                              </span>
+                            )}
                             <span className="text-sm text-gray-500">
                               Inscrite le {format(new Date(subscriber.created_at), 'dd MMMM yyyy', { locale: fr })}
                             </span>
@@ -222,7 +262,7 @@ export default function Subscribers() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Détails de l'abonnée
               </h2>
-              
+
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -256,29 +296,21 @@ export default function Subscribers() {
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Statut</dt>
                       <dd className="mt-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[selectedSubscriber.subscription_status].className}`}>
-                          <StatusIcon className="w-4 h-4 mr-1" />
-                          {statusConfig[selectedSubscriber.subscription_status].label}
-                        </span>
+                        {(() => {
+                          const sKey = selectedSubscriber.subscription_status || 'pending';
+                          const sInfo = statusConfig[sKey] || statusConfig.pending;
+                          const SIcon = sInfo.icon;
+                          return (
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${sInfo.className}`}>
+                              <SIcon className="w-4 h-4 mr-1" />
+                              {sInfo.label}
+                            </span>
+                          );
+                        })()}
                       </dd>
                     </div>
                   </dl>
                 </div>
-
-                {selectedSubscriber.qr_codes?.[0] && (
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      QR Code
-                    </h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <img
-                        src={selectedSubscriber.qr_codes[0].qr_code}
-                        alt="QR Code"
-                        className="w-48 h-48 mx-auto"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="mt-6 flex justify-end">

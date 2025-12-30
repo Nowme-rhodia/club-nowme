@@ -27,7 +27,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Nowme <admin@nowme.io>", // Update if domain is different
+        from: "Nowme <contact@nowme.fr>", // Update if domain is different
         to: ["rhodia@nowme.fr"],
         subject: `⚠️ Offre modifiée : ${offerTitle}`,
         html: `
@@ -38,7 +38,7 @@ serve(async (req) => {
           <p>Cette offre a été passée automatiquement en statut "En validation".</p>
           <p>Merci de vérifier les modifications et de re-valider l'offre si tout est conforme.</p>
           <br/>
-          <a href="https://nowme.io/admin/offers" style="background-color: #E6007E; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Aller au Dashboard Admin</a>
+          <a href="https://club.nowme.fr/admin/offers" style="background-color: #E6007E; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Aller au Dashboard Admin</a>
         `,
       }),
     });

@@ -1,457 +1,414 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Send, 
-  Calendar, 
-  Users, 
-  Eye, 
-  Edit3, 
-  Trash2,
-  Plus,
-  Mail,
-  Clock,
-  CheckCircle,
-  AlertCircle
-} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-
-interface Newsletter {
-  id: string;
-  title: string;
-  content: string;
-  scheduled_date: string;
-  status: 'draft' | 'scheduled' | 'sent';
-  recipients_count: number;
-  open_rate?: number;
-  click_rate?: number;
-  created_at: string;
-}
-
-interface BonPlan {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  author_name: string;
-  likes_count: number;
-  created_at: string;
-}
+import { Send, Loader, Info, Calendar, Clock, RotateCcw, Pencil, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function Newsletter() {
-  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
-  const [bonPlans, setBonPlans] = useState<BonPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [selectedBonPlans, setSelectedBonPlans] = useState<string[]>([]);
-  const [newNewsletter, setNewNewsletter] = useState({
-    title: '',
-    content: '',
-    scheduled_date: ''
-  });
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Scheduling state
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+
+  // Editing state
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // History state
+  const [newsletters, setNewsletters] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
   useEffect(() => {
-    loadData();
+    fetchHistory();
   }, []);
 
-  const loadData = async () => {
+  const fetchHistory = async () => {
     try {
-      // Simuler des données pour la démo
-      const mockNewsletters: Newsletter[] = [
-        
-      ];
+      const { data, error } = await supabase
+        .from('admin_newsletters')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      const mockBonPlans: BonPlan[] = [
-        
-      ];
-
-      setNewsletters(mockNewsletters);
-      setBonPlans(mockBonPlans);
+      if (error) throw error;
+      setNewsletters(data || []);
     } catch (error) {
-      console.error('Erreur chargement données:', error);
+      console.error('Error fetching history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingId(item.id);
+    setSubject(item.subject);
+    setBody(item.body);
+
+    const dateObj = new Date(item.scheduled_at);
+    // Format YYYY-MM-DD
+    setScheduledDate(dateObj.toISOString().split('T')[0]);
+    // Format HH:MM
+    setScheduledTime(dateObj.toTimeString().slice(0, 5));
+
+    setIsScheduling(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer cet email programmé ?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('admin_newsletters')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Newsletter supprimée');
+      fetchHistory();
+
+      // If we were editing this one, clear form
+      if (editingId === id) cancelEdit();
+
+    } catch (error: any) {
+      toast.error('Erreur suppression: ' + error.message);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setSubject('');
+    setBody('');
+    setScheduledDate('');
+    setScheduledTime('');
+    setIsScheduling(false);
+  };
+
+  const handleSendOrSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!subject.trim() || !body.trim()) {
+      toast.error('Veuillez remplir le sujet et le contenu');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (isScheduling) {
+        // SCHEDULING MODE: Save to DB
+        if (!scheduledDate || !scheduledTime) {
+          toast.error('Veuillez choisir une date et une heure');
+          setLoading(false);
+          return;
+        }
+
+        const scheduledDateTime = new Date(scheduledDate + 'T' + scheduledTime);
+        if (scheduledDateTime < new Date()) {
+          toast.error('La date doit être dans le futur');
+          setLoading(false);
+          return;
+        }
+
+        if (editingId) {
+          // UPDATE existing
+          const { error } = await supabase
+            .from('admin_newsletters')
+            .update({
+              subject,
+              body,
+              scheduled_at: scheduledDateTime.toISOString(),
+              // reset status to scheduled in case it was failed or something else, 
+              // but usually we only edit scheduled ones.
+              status: 'scheduled'
+            })
+            .eq('id', editingId);
+
+          if (error) throw error;
+          toast.success('Newsletter mise à jour !');
+        } else {
+          // INSERT new
+          const { error } = await supabase
+            .from('admin_newsletters')
+            .insert({
+              subject,
+              body,
+              scheduled_at: scheduledDateTime.toISOString(),
+              status: 'scheduled'
+            });
+
+          if (error) throw error;
+          toast.success('Newsletter programmée avec succès !');
+        }
+
+        cancelEdit(); // Reset form
+        fetchHistory(); // Refresh list
+
+      } else {
+        // IMMEDIATE SEND MODE
+        // We insert with scheduled_at = NOW (or slightly in past to be safe)
+        // Then we force trigger the processor function.
+
+        const now = new Date();
+        now.setSeconds(now.getSeconds() - 1);
+
+        const { error } = await supabase
+          .from('admin_newsletters')
+          .insert({
+            subject,
+            body,
+            scheduled_at: now.toISOString(),
+            status: 'scheduled'
+          });
+
+        if (error) throw error;
+
+        // Force trigger
+        const { error: invokeError } = await supabase.functions.invoke('process-scheduled-newsletters');
+
+        if (invokeError) {
+          console.warn("Manual trigger failed, but cron will pick it up:", invokeError);
+          toast.success('Newsletter mise en file d\'attente (le cron va la traiter)');
+        } else {
+          toast.success('Traitement lancé !');
+        }
+
+        cancelEdit();
+        setTimeout(fetchHistory, 3000);
+      }
+
+    } catch (error: any) {
+      console.error('Error:', error);
+      toast.error('Erreur: ' + (error.message || 'Problème inconnu'));
     } finally {
       setLoading(false);
     }
   };
 
-  const generateDailyNewsletter = () => {
-    const today = new Date();
-    const title = `Kiff du jour - ${format(today, 'dd MMMM yyyy', { locale: fr })}`;
-    
-    // Sélectionner automatiquement les bons plans les plus populaires
-    const topBonPlans = bonPlans
-      .sort((a, b) => b.likes_count - a.likes_count)
-      .slice(0, 3);
-
-    const content = generateNewsletterContent(topBonPlans);
-    
-    setNewNewsletter({
-      title,
-      content,
-      scheduled_date: format(new Date(today.setHours(8, 0, 0, 0)), "yyyy-MM-dd'T'HH:mm")
-    });
-    
-    setSelectedBonPlans(topBonPlans.map(plan => plan.id));
-    setShowCreateForm(true);
-  };
-
-  const generateNewsletterContent = (plans: BonPlan[]) => {
-    const today = format(new Date(), 'dd MMMM yyyy', { locale: fr });
-    
-    return `
-# Ton kiff du ${today} 💕
-
-Salut ma belle !
-
-Voici les pépites du jour partagées par tes copines de la communauté :
-
-${plans.map((plan, index) => `
-## ${index + 1}. ${plan.title}
-
-${plan.description}
-
-**Catégorie :** ${plan.category}  
-**Partagé par :** ${plan.author_name}  
-**💕 ${plan.likes_count} likes**
-
----
-`).join('')}
-
-## 🎯 Rappel du jour
-
-N'oublie pas : tu mérites de kiffer ! Prends 5 minutes aujourd'hui pour faire quelque chose qui te fait du bien.
-
-## 📱 Partage tes découvertes
-
-Tu as testé un endroit génial ? Partage-le dans l'espace communautaire pour faire profiter tes copines !
-
-[Partager un bon plan](https://club.nowme.fr/community-space)
-
-Kiffe bien ta journée ! ✨
-
-L'équipe Nowme 💕
-
----
-
-*Tu reçois cet email car tu es abonnée à Nowme Club. [Se désabonner](https://club.nowme.fr/unsubscribe)*
-    `.trim();
-  };
-
-  const handleCreateNewsletter = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      // Ici tu intégreras avec Supabase
-      console.log('Création newsletter:', newNewsletter);
-      console.log('Bons plans sélectionnés:', selectedBonPlans);
-      
-      // Simuler la création
-      const newId = Date.now().toString();
-      const newsletter: Newsletter = {
-        id: newId,
-        title: newNewsletter.title,
-        content: newNewsletter.content,
-        scheduled_date: newNewsletter.scheduled_date,
-        status: 'scheduled',
-        recipients_count: 1250, // Nombre d'abonnées
-        created_at: new Date().toISOString()
-      };
-      
-      setNewsletters([newsletter, ...newsletters]);
-      setShowCreateForm(false);
-      setNewNewsletter({ title: '', content: '', scheduled_date: '' });
-      setSelectedBonPlans([]);
-      
-    } catch (error) {
-      console.error('Erreur création newsletter:', error);
-    }
-  };
-
-  const handleSendNow = async (newsletterId: string) => {
-    try {
-      // Logique d'envoi immédiat
-      console.log('Envoi newsletter:', newsletterId);
-      
-      setNewsletters(newsletters.map(n => 
-        n.id === newsletterId 
-          ? { ...n, status: 'sent' as const, recipients_count: 1250 }
-          : n
-      ));
-      
-    } catch (error) {
-      console.error('Erreur envoi newsletter:', error);
-    }
-  };
-
-  const getStatusIcon = (status: Newsletter['status']) => {
+  // Helper for badges
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'sent':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'scheduled':
-        return <Clock className="w-5 h-5 text-blue-600" />;
-      default:
-        return <Edit3 className="w-5 h-5 text-gray-600" />;
+      case 'scheduled': return <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Programmé</span>;
+      case 'processing': return <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">En cours</span>;
+      case 'sent': return <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Envoyé</span>;
+      case 'failed': return <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">Échoué</span>;
+      default: return <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">{status}</span>;
     }
   };
-
-  const getStatusLabel = (status: Newsletter['status']) => {
-    switch (status) {
-      case 'sent': return 'Envoyée';
-      case 'scheduled': return 'Programmée';
-      default: return 'Brouillon';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-12 bg-gray-200 rounded"></div>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-8">
+    <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Newsletter quotidienne</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Gérez la newsletter quotidienne "Kiff du jour"
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">Newsletter du Kiff</h1>
+        <p className="text-gray-600">Envoyez ou programmez vos emails aux abonnées.</p>
       </div>
 
-      {/* Actions */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <button
-          onClick={generateDailyNewsletter}
-          className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
-        >
-          <Calendar className="w-5 h-5 mr-2" />
-          Générer le kiff du jour
-        </button>
-        
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="inline-flex items-center px-6 py-3 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Newsletter personnalisée
-        </button>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* LEFT: editor */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              {editingId ? 'Modifier la newsletter' : 'Rédaction'}
+            </h2>
+            {editingId && (
+              <button onClick={cancelEdit} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                <X className="w-4 h-4" /> Annuler modification
+              </button>
+            )}
+          </div>
 
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-soft">
-          <div className="flex items-center">
-            <Users className="w-8 h-8 text-primary mr-3" />
+          <form onSubmit={handleSendOrSchedule} className="space-y-6">
             <div>
-              <p className="text-sm text-gray-500">Abonnées</p>
-              <p className="text-2xl font-bold text-gray-900">1,250</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sujet de l'email (Emojis supportés ✨)
+              </label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                placeholder="ex: Les pépites de la semaine 🔥"
+              />
             </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-soft">
-          <div className="flex items-center">
-            <Mail className="w-8 h-8 text-blue-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-500">Taux d'ouverture</p>
-              <p className="text-2xl font-bold text-gray-900">68.5%</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-soft">
-          <div className="flex items-center">
-            <Eye className="w-8 h-8 text-green-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-500">Taux de clic</p>
-              <p className="text-2xl font-bold text-gray-900">12.3%</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-soft">
-          <div className="flex items-center">
-            <Send className="w-8 h-8 text-purple-600 mr-3" />
-            <div>
-              <p className="text-sm text-gray-500">Envoyées ce mois</p>
-              <p className="text-2xl font-bold text-gray-900">20</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Liste des newsletters */}
-      <div className="bg-white rounded-xl shadow-soft overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Newsletters récentes</h2>
-        </div>
-        
-        <div className="divide-y divide-gray-200">
-          {newsletters.map((newsletter) => (
-            <div key={newsletter.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {getStatusIcon(newsletter.status)}
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {newsletter.title}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      newsletter.status === 'sent' ? 'bg-green-100 text-green-700' :
-                      newsletter.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {getStatusLabel(newsletter.status)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-6 text-sm text-gray-500">
-                    <span>
-                      📅 {format(new Date(newsletter.scheduled_date), 'dd/MM/yyyy à HH:mm', { locale: fr })}
-                    </span>
-                    <span>👥 {newsletter.recipients_count} destinataires</span>
-                    {newsletter.open_rate && (
-                      <span>📧 {newsletter.open_rate}% d'ouverture</span>
-                    )}
-                    {newsletter.click_rate && (
-                      <span>🔗 {newsletter.click_rate}% de clic</span>
-                    )}
-                  </div>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contenu (HTML supporté)
+              </label>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={12}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary transition-colors font-mono text-sm"
+                placeholder="<h1>Salut la commu !</h1><p>Voici les news...</p>"
+              />
+            </div>
 
-                <div className="flex items-center gap-2">
-                  <button className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100">
-                    <Eye className="w-5 h-5" />
-                  </button>
-                  
-                  {newsletter.status !== 'sent' && (
-                    <>
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-gray-100">
-                        <Edit3 className="w-5 h-5" />
-                      </button>
-                      
-                      {newsletter.status === 'scheduled' && (
-                        <button
-                          onClick={() => handleSendNow(newsletter.id)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                        >
-                          Envoyer maintenant
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
+            <div className="bg-blue-50 text-blue-800 p-4 rounded-lg flex items-start gap-3 text-sm">
+              <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Infos d'envoi</p>
+                <p className="mt-1">
+                  Cet email sera envoyé uniquement aux utilisateurs ayant le rôle <strong>Subscriber</strong> et l'option "Newsletter" activée.
+                </p>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Formulaire de création */}
-      {showCreateForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Créer une newsletter
-              </h2>
+            <div className="border-t border-gray-100 pt-6">
+              <div className="flex items-center gap-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setIsScheduling(!isScheduling)}
+                  // If editing, force scheduling mode essentially
+                  disabled={!!editingId}
+                  className={`text-sm font-medium flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${isScheduling ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  {isScheduling ? 'Mode Programmation activé' : 'Programmer pour plus tard ?'}
+                </button>
+              </div>
 
-              <form onSubmit={handleCreateNewsletter} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Titre
-                  </label>
-                  <input
-                    type="text"
-                    value={newNewsletter.title}
-                    onChange={(e) => setNewNewsletter({...newNewsletter, title: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date et heure d'envoi
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={newNewsletter.scheduled_date}
-                    onChange={(e) => setNewNewsletter({...newNewsletter, scheduled_date: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bons plans à inclure
-                  </label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-4">
-                    {bonPlans.map((plan) => (
-                      <label key={plan.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedBonPlans.includes(plan.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedBonPlans([...selectedBonPlans, plan.id]);
-                            } else {
-                              setSelectedBonPlans(selectedBonPlans.filter(id => id !== plan.id));
-                            }
-                          }}
-                          className="mr-3"
-                        />
-                        <span className="text-sm">
-                          {plan.title} - {plan.category} ({plan.likes_count} ❤️)
-                        </span>
-                      </label>
-                    ))}
+              {isScheduling && (
+                <div className="flex gap-4 mb-6 bg-gray-50 p-4 rounded-lg animate-in fade-in slide-in-from-top-2">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Date</label>
+                    <input
+                      type="date"
+                      className="w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2"
+                      value={scheduledDate}
+                      onChange={e => setScheduledDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Heure</label>
+                    <input
+                      type="time"
+                      className="w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2"
+                      value={scheduledTime}
+                      onChange={e => setScheduledTime(e.target.value)}
+                    />
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contenu (Markdown)
-                  </label>
-                  <textarea
-                    value={newNewsletter.content}
-                    onChange={(e) => setNewNewsletter({...newNewsletter, content: e.target.value})}
-                    rows={12}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary font-mono text-sm"
-                    required
-                  />
-                </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`w-full flex items-center justify-center px-6 py-3 rounded-xl text-white font-medium transition-all shadow-sm
+                        ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark hover:shadow-md'}
+                    `}
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-5 h-5 mr-2 animate-spin" />
+                    Traitement...
+                  </>
+                ) : isScheduling ? (
+                  <>
+                    <Clock className="w-5 h-5 mr-2" />
+                    {editingId ? 'Mettre à jour la programmation' : 'Programmer l\'envoi'}
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 mr-2" />
+                    Envoyer maintenant
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
 
-                <div className="flex justify-end gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                    className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark"
-                  >
-                    Programmer l'envoi
-                  </button>
+        {/* RIGHT: History */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 h-full flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <RotateCcw className="w-5 h-5 text-gray-500" />
+                Historique & Programmés
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const toastId = toast.loading('Traitement en cours...');
+                    try {
+                      const { error } = await supabase.functions.invoke('process-scheduled-newsletters');
+                      if (error) throw error;
+                      toast.success('Traitement terminé !', { id: toastId });
+                      setTimeout(fetchHistory, 2000);
+                    } catch (e: any) {
+                      console.error(e);
+                      toast.error('Erreur', { id: toastId });
+                    }
+                  }}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded-md transition-colors"
+                  title="Force le traitement des emails programmés"
+                >
+                  Traiter maintenant
+                </button>
+                <button onClick={fetchHistory} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto max-h-[600px] space-y-4 pr-2">
+              {loadingHistory ? (
+                <div className="text-center py-8 text-gray-500">Chargement...</div>
+              ) : newsletters.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                  Aucune newsletter trouvée
                 </div>
-              </form>
+              ) : (
+                newsletters.map((item) => (
+                  <div key={item.id} className="border border-gray-100 rounded-lg p-4 hover:shadow-sm transition-shadow bg-gray-50/50 group">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-medium text-gray-900 line-clamp-1 flex-1 mr-2">{item.subject}</h3>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(item.status)}
+
+                        {/* Actions only for scheduled items */}
+                        {item.status === 'scheduled' && (
+                          <div className="flex gap-1 ml-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                              title="Modifier"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 space-y-1">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Prévu : {new Date(item.scheduled_at).toLocaleString('fr-FR')}
+                      </div>
+                      {item.sent_at && (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <Send className="w-3 h-3" />
+                          Envoyé : {new Date(item.sent_at).toLocaleString('fr-FR')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

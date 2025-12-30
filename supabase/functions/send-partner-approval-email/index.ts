@@ -59,83 +59,129 @@ serve(async (req) => {
         }
         console.log("DEBUG: Partner email:", partner.contact_email)
 
-        // 2. Generate Magic Link (Create User if needed)
-        let magicLink: string | undefined;
-        const publicSiteUrl = Deno.env.get("PUBLIC_SITE_URL") || 'https://nowme.club';
+        // 2. Resolve User & Generate Password (The Pivot)
+        // 2. Resolve User & Generate Password (The Pivot)
+        console.log("DEBUG: Resolving Auth User...")
+        let userId: string | null = null;
 
-        console.log("DEBUG: Generating link via Admin API...")
-        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'recovery',
-            email: partner.contact_email,
-            options: { redirectTo: `${publicSiteUrl}/auth/update-password` }
-        })
-
-        if (!linkError && linkData) {
-            console.log("DEBUG: Link generated (User existed)")
-            magicLink = linkData.properties.action_link
-        } else if (linkError && linkError.message && linkError.message.includes("not found")) {
-            console.log("DEBUG: User not found. Creating user...")
-
-            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        try {
+            // Attempt 1: Create User
+            // Note: createUser throws if user exists in some client versions
+            const { data: createdUser, error: createError } = await supabase.auth.admin.createUser({
                 email: partner.contact_email,
                 email_confirm: true,
                 user_metadata: { full_name: partner.contact_name, role: 'partner' }
             })
 
-            if (createError) {
-                console.error("DEBUG: Creator user failed:", createError)
-                throw createError
+            if (createError) throw createError;
+            if (createdUser?.user) {
+                userId = createdUser.user.id;
             }
+        } catch (err: any) {
+            // Catch "User already exists" error
+            // Check for various error shapes (Supabase AuthApiError usually has code or message)
+            const isUserExistsError =
+                err.code === "email_exists" ||
+                (err.message && (err.message.includes("already registered") || err.message.includes("unique constraint")));
 
-            console.log("DEBUG: User created. Retrying link generation...")
-            const { data: newLinkData, error: newLinkError } = await supabase.auth.admin.generateLink({
-                type: 'recovery',
-                email: partner.contact_email,
-                options: { redirectTo: `${publicSiteUrl}/auth/update-password` }
-            })
+            if (isUserExistsError) {
+                console.log("DEBUG: User already exists (via Catch). Fetching ID via Admin Link Hack...");
 
-            if (newLinkError) throw newLinkError
-            magicLink = newLinkData.properties.action_link
-        } else {
-            console.error("DEBUG: Link generation error:", linkError)
-            throw linkError
+                // Fallback: Use generateLink to retrieve the User object
+                const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+                    type: 'magiclink',
+                    email: partner.contact_email
+                });
+
+                if (linkData?.user) {
+                    userId = linkData.user.id;
+                } else {
+                    console.error("DEBUG: Could not resolve User ID even via generateLink hack:", linkErr);
+                    throw new Error("User exists but ID resolution failed: " + (linkErr?.message || "Unknown"));
+                }
+            } else {
+                // Real error
+                console.error("DEBUG: Create User Failed:", err);
+                throw err;
+            }
         }
 
-        if (!magicLink) throw new Error("Magic Link is undefined after logic")
+        if (!userId) throw new Error("Failed to resolve User ID");
+        console.log("DEBUG: User ID Resolved:", userId);
 
-        console.log("DEBUG: MAGIC LINK GENERATED successfully")
-        console.log(">>> MAGIC LINK:", magicLink)
+        // 3. Generate & Set Random Password
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+        const tempPassword = Array(12).fill(null).map(() => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
+        console.log("DEBUG: Password generated. Updating user...");
 
-        // 3. Send Email
+        const { error: updateError } = await supabase.auth.admin.updateUserById(
+            userId,
+            {
+                password: tempPassword,
+                email_confirm: true,
+                user_metadata: { email_verified: true }
+            }
+        );
+
+        if (updateError) throw new Error("Failed to set password: " + updateError.message);
+
+        // 3b. Link User to Partner Record (Critical)
+        await supabase.from('partners').update({ user_id: userId }).eq('id', record.id);
+
+        // 4. Send Email
         console.log("DEBUG: Sending email...")
+        const publicSiteUrl = Deno.env.get("PUBLIC_SITE_URL") || 'https://club.nowme.fr';
+        const loginUrl = `${publicSiteUrl}/auth/signin`;
+
         try {
             const { error: emailError } = await resend.emails.send({
-                from: "Nowme <contact@nowme.fr>", // Changed to .fr based on logs
+                from: "Nowme Club <admin@nowme.fr>",
                 to: [partner.contact_email],
-                subject: "Bienvenue chez Nowme ! Votre compte est validé 🎉",
+                subject: "Bienvenue chez Nowme ! Vos accès Partenaire 🚀",
                 html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <h1>Félicitations ${partner.contact_name || ''} ! 🚀</h1>
-                <p>Votre compte partenaire est validé.</p>
-                <p><a href="${magicLink}">Cliquez ici pour activer votre compte</a></p>
+                <h1 style="color: #D33D8D;">Félicitations ! Votre compte Partenaire est validé 🎉</h1>
+                
+                <p>Bonjour ${partner.contact_name || ''},</p>
+                
+                <p>Nous avons le plaisir de vous annoncer que votre demande de partenariat a été validée par notre équipe !</p>
+                <p>Vous pouvez dès maintenant accéder à votre espace pour configurer vos offres.</p>
+                
+                <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin-bottom: 10px;"><strong>Vos identifiants de connexion :</strong></p>
+                    <p>Email : <strong>${partner.contact_email}</strong></p>
+                    <p>Mot de passe temporaire : <br/>
+                    <strong style="color: #D33D8D; font-size: 1.4em; letter-spacing: 1px; background: white; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 5px;">${tempPassword}</strong></p>
+                </div>
+
+                <p style="text-align: center; margin: 30px 0;">
+                    <a href="${loginUrl}" style="background-color: #D33D8D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                      Accéder à mon Espace Partenaire
+                    </a>
+                </p>
+                
+                <p><em>Nous vous conseillons de changer ce mot de passe dès votre première connexion via la page "Mon Profil".</em></p>
+                <p>À très vite,<br>L'équipe Nowme Club 💜</p>
             </div>
                 `
             })
 
             if (emailError) {
                 console.error("DEBUG: Resend API returned error:", emailError)
+                throw new Error("Resend Error: " + JSON.stringify(emailError));
             } else {
                 console.log("DEBUG: Email sent successfully via Resend")
             }
         } catch (err) {
             console.error("DEBUG: Resend Exception:", err)
+            throw err;
         }
 
-        // 4. Update DB
+        // 5. Update DB
         await supabase.from('partners').update({ welcome_sent: true }).eq('id', record.id)
         console.log("DEBUG: welcome_sent updated")
 
-        return new Response(JSON.stringify({ success: true, debug_message: "Process Complete", magic_link: magicLink }), {
+        return new Response(JSON.stringify({ success: true, debug_message: "Process Complete", type: "password_reset" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 200,
         })
@@ -149,7 +195,7 @@ serve(async (req) => {
             debug_tip: "Check Secrets in Supabase Dashboard"
         }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200 // Return 200 to verify error in client
+            status: 200
         })
     }
 })

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Trigger Reminder Debug</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #BE185D;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Outil de Debug - Email de Relance</h1>
+    <p>Cliquez ci-dessous pour déclencher la fonction manuellement et voir la réponse exacte du serveur.</p>
+
+    <button onclick="triggerFunction()">Lancer la vérification</button>
+
+    <h3>Résultat :</h3>
+    <pre id="output">En attente...</pre>
+
+    <script>
+        async function triggerFunction() {
+            const output = document.getElementById('output');
+            output.textContent = "Appel en cours...";
+
+            // Configuration (injectée automatiquement par le context, mais ici hardcodée pour le test d'après vos logs)
+            const PROJECT_URL = "https://dqfyuhwrjozoxadkccdj.supabase.co";
+            // Clé ANON publique (safe to expose in client side app usually, but ideally we use a proxy. for debug it's fine)
+            const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZnl1aHdyam96b3hhZGtjY2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1OTE1ODEsImV4cCI6MjA1NDE2NzU4MX0.AyNhHFCQmznBICOShFYL0dkCuGkN9FpKD4MNvQ0cHZA";
+
+            try {
+                const response = await fetch(`${PROJECT_URL}/functions/v1/send-abandoned-signup-reminder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    }
+                });
+
+                const data = await response.json();
+                output.textContent = JSON.stringify(data, null, 2);
+
+                if (!response.ok) {
+                    output.style.color = "red";
+                } else {
+                    output.style.color = "green";
+                }
+
+            } catch (err) {
+                output.textContent = "Erreur réseau/client : " + err.message;
+                output.style.color = "red";
+            }
+        }
+    </script>
+</body>
+
+</html>

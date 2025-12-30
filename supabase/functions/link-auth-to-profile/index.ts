@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, authUserId, role } = await req.json()
+    const { email, authUserId, role, plan } = await req.json()
     if (!email || !authUserId || !role) {
       throw new Error('Email, authUserId et role requis')
     }
@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
             email,
             user_id: authUserId,
             updated_at: now,
+            selected_plan: plan || null // Capture plan if provided
           },
           { onConflict: 'user_id' }
         )

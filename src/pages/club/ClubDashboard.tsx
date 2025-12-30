@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, ArrowRight, Sparkles } from 'lucide-react';
+import { Users, ArrowRight, Sparkles, MapPin } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
@@ -20,11 +20,14 @@ interface OfferDetails {
     address: string;
   };
   category: string;
+  department: string; // Numéro du département (ex: "75")
 }
 
 export default function ClubDashboard() {
   const { profile } = useAuth();
   const [offers, setOffers] = useState<OfferDetails[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -62,6 +65,8 @@ export default function ClubDashboard() {
         }
 
         if (data) {
+          const uniqueDepts = new Set<string>();
+
           const formattedOffers: OfferDetails[] = data.map((offer: any) => {
             const firstVariant = offer.offer_variants?.[0];
             const displayPrice = firstVariant ? Number(firstVariant.price) : 0;
@@ -79,6 +84,13 @@ export default function ClubDashboard() {
               lng = offer.coordinates[1];
             }
 
+            // Extract Department from Zip Code
+            let dept = 'Unknown';
+            if (offer.zip_code && offer.zip_code.length >= 2) {
+              dept = offer.zip_code.substring(0, 2);
+              uniqueDepts.add(dept);
+            }
+
             return {
               id: offer.id,
               title: offer.title,
@@ -93,9 +105,12 @@ export default function ClubDashboard() {
                 address: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || offer.partner?.address || 'Adresse non spécifiée'
               },
               category: offer.category?.name || 'Autre',
+              department: dept
             };
           });
+
           setOffers(formattedOffers);
+          setDepartments(Array.from(uniqueDepts).sort());
         }
       } catch (err) {
         console.error('Error in fetchOffers:', err);
@@ -107,6 +122,10 @@ export default function ClubDashboard() {
     fetchOffers();
   }, []);
 
+  const filteredOffers = selectedDepartment === 'all'
+    ? offers
+    : offers.filter(offer => offer.department === selectedDepartment);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4] py-12">
       <SEO
@@ -116,7 +135,7 @@ export default function ClubDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Bienvenue dans ton Club Nowme, {profile?.first_name || ''} !
           </h1>
@@ -124,6 +143,30 @@ export default function ClubDashboard() {
             Découvre nos événements exclusifs et rejoins la communauté
           </p>
         </div>
+
+        {/* Filter Section */}
+        {departments.length > 0 && (
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex items-center bg-white rounded-full shadow-sm p-1 border border-gray-200">
+              <div className="px-4 py-2 flex items-center text-gray-500 font-medium">
+                <MapPin className="w-4 h-4 mr-2" />
+                Filtrer par département :
+              </div>
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="form-select border-none bg-transparent py-2 pl-2 pr-8 text-primary font-bold focus:ring-0 cursor-pointer min-w-[150px]"
+              >
+                <option value="all">Tous ({offers.length})</option>
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>
+                    {dept} ({offers.filter(o => o.department === dept).length})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Offers Grid */}
         <div className="mb-16">
@@ -133,9 +176,9 @@ export default function ClubDashboard() {
                 <div key={i} className="animate-pulse bg-white rounded-2xl overflow-hidden shadow-sm aspect-[4/3]" />
               ))}
             </div>
-          ) : offers.length > 0 ? (
+          ) : filteredOffers.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
-              {offers.map((offer) => (
+              {filteredOffers.map((offer) => (
                 <OfferCard
                   key={offer.id}
                   {...offer}
@@ -147,8 +190,16 @@ export default function ClubDashboard() {
             <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
               <Sparkles className="w-12 h-12 text-primary mx-auto mb-4" />
               <p className="text-gray-600">
-                Aucun événement officiel disponible pour le moment. Reviens vite !
+                Aucun événement officiel disponible {selectedDepartment !== 'all' ? `dans le ${selectedDepartment}` : ''}.
               </p>
+              {selectedDepartment !== 'all' && (
+                <button
+                  onClick={() => setSelectedDepartment('all')}
+                  className="mt-4 text-primary font-medium hover:underline"
+                >
+                  Voir tous les départements
+                </button>
+              )}
             </div>
           )}
         </div>

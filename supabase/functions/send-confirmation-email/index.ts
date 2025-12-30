@@ -47,7 +47,7 @@ serve(async (req) => {
         const [userResponse, offerResponse, partnerResponse, variantResponse] = await Promise.all([
             supabase.from('user_profiles').select('first_name, last_name, email').eq('user_id', bookingData.user_id).single(),
             supabase.from('offers').select('title').eq('id', bookingData.offer_id).single(),
-            supabase.from('partners').select('business_name, description, website, address').eq('id', bookingData.partner_id).single(),
+            supabase.from('partners').select('business_name, description, website, address, contact_email, notification_settings').eq('id', bookingData.partner_id).single(),
             bookingData.variant_id ? supabase.from('offer_variants').select('name, price').eq('id', bookingData.variant_id).single() : Promise.resolve({ data: null, error: null })
         ])
 
@@ -135,7 +135,7 @@ serve(async (req) => {
 
         // Footer
         drawText("Merci pour votre confiance !", 50, 100, 10, font)
-        drawText("Généré par Nowme.io", 50, 80, 8, font)
+        drawText("Généré par club.nowme.fr", 50, 80, 8, font)
 
         const pdfBytes = await pdfDoc.save()
         const pdfBase64 = btoa(String.fromCharCode(...pdfBytes))
@@ -182,7 +182,7 @@ serve(async (req) => {
 
         // 6. Send Email
         const emailData = await resend.emails.send({
-            from: "Nowme <contact@nowme.io>",
+            from: "Nowme <contact@nowme.fr>",
             to: [user.email],
             subject: `Votre réservation confirmée : ${offerTitle}`,
             html: htmlContent,
@@ -194,9 +194,52 @@ serve(async (req) => {
             ],
         })
 
-        console.log("Email API Response:", emailData)
+        console.log("Customer Email API Response:", emailData)
 
-        // Handle Resend Errors
+        // 7. Send Partner Notification (if enabled)
+        // Default to true if settings are missing (for legacy compatibility) or check specific flag
+        const partnerSettings = partner.notification_settings || { new_booking: true }
+        const shouldNotifyPartner = partnerSettings.new_booking !== false // Default to true if undefined
+
+        if (shouldNotifyPartner && partner.contact_email) {
+            console.log(`📧 Notifying partner (${partner.contact_email}) about new booking...`)
+
+            const partnerHtmlContent = `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #0F172A;">Nouvelle réservation ! 🎉</h1>
+                    <p>Bonne nouvelle, vous avez reçu une nouvelle réservation pour <strong>${fullItemName}</strong>.</p>
+                    
+                    <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0;"><strong>Client :</strong> ${buyerName}</p>
+                        <p style="margin: 8px 0;"><strong>Email :</strong> ${user.email}</p>
+                        <p style="margin: 0;"><strong>Montant :</strong> ${price.toFixed(2)} €</p>
+                    </div>
+
+                    <p>Connectez-vous à votre espace partenaire pour voir les détails et gérer cette réservation.</p>
+                    
+                    <p style="margin-top: 30px;">
+                        <a href="${Deno.env.get("PUBLIC_SITE_URL")}/partner/bookings" style="background-color: #BE185D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Gérer mes réservations</a>
+                    </p>
+                </div>
+            `
+
+            try {
+                const partnerEmailData = await resend.emails.send({
+                    from: "Nowme <contact@nowme.fr>",
+                    to: [partner.contact_email],
+                    subject: `Nouvelle réservation : ${buyerName} - ${offerTitle}`,
+                    html: partnerHtmlContent,
+                })
+                console.log("Partner Email API Response:", partnerEmailData)
+            } catch (partnerEmailError) {
+                console.error("Failed to send partner notification:", partnerEmailError)
+                // Don't fail the whole request if partner email fails, just log it
+            }
+        } else {
+            console.log("Partner notification skipped (disabled or no email).")
+        }
+
+        // Handle Resend Errors (checking customer email error primarily)
         if (emailData.error) {
             console.error("Resend API Returned Error:", emailData.error)
 

@@ -1,6 +1,6 @@
 // signin.tsx - Version corrigée
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
@@ -8,8 +8,8 @@ import toast from 'react-hot-toast';
 
 export default function SignIn() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [email, setEmail] = useState('');
+  const [searchParams] = useSearchParams();
+  const [email, setEmail] = useState(searchParams.get('email') || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,8 +55,6 @@ export default function SignIn() {
 
       console.log('Utilisateur connecté avec succès:', user.id);
 
-      console.log('Utilisateur connecté avec succès:', user.id);
-
       // Étape 3: Vérifier le profil utilisateur (pour admin, partenaire, ou abonné)
       const { data: userDataObtained, error: userDataError } = await supabase
         .from('user_profiles')
@@ -71,9 +69,17 @@ export default function SignIn() {
       }
 
       // Étape 4: Rediriger en fonction du profil
-      // Priorité à la redirection demandée (ex: retour de booking)
+      // Priorité 1: Redirection explicite via 'next' param (email link)
+      const nextParam = searchParams.get('next');
+      if (nextParam) {
+        console.log('Redirection demandée via URL vers:', nextParam);
+        navigate(nextParam);
+        return;
+      }
+
+      // Priorité 2: Redirection demandée via state (router redirect)
       if (location.state?.from) {
-        console.log('Redirection demandée vers:', location.state.from);
+        console.log('Redirection demandée via State vers:', location.state.from);
         navigate(location.state.from);
         return;
       }

@@ -22,6 +22,9 @@ interface UserProfile {
   subscription_type?: string;
   stripe_customer_id?: string;
   is_admin?: boolean;
+  sub_auto_recap?: boolean;
+  selected_plan?: string;
+  sub_newsletter?: boolean;
   partner_id?: string;
   role?: Role;
   created_at?: string;
@@ -228,10 +231,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const merged = {
         ...(userData ?? {}),
-        ...(subscriptionData ? {
-          subscription: subscriptionData,
-          subscription_status: subscriptionData.status
-        } : {}),
+        // CRITICAL FIX: Ensure subscription_status is DRIVEN by the subscriptions table
+        // If no subscription data found, status MUST be undefined/null, regardless of what userData says
+        subscription: subscriptionData || null,
+        subscription_status: subscriptionData?.status || null,
         role,
       };
 

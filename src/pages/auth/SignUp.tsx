@@ -11,12 +11,12 @@ export default function SignUp() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isSubscriber } = useAuth();
-  
+
   // Générer des données aléatoires pour DEV/LOCAL
   const generateRandomData = () => {
     const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
     if (!isDev) return { email: '', password: '', firstName: '', lastName: '' };
-    
+
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000);
     return {
@@ -67,7 +67,7 @@ export default function SignUp() {
       }
 
       console.log('🚀 Étape 1: Création utilisateur auth...');
-      
+
       // Créer le compte dans auth.users avec email confirmé automatiquement
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
@@ -94,10 +94,10 @@ export default function SignUp() {
 
       // Étape 2: Créer le profil dans user_profiles via link-auth-to-profile
       console.log('🚀 Étape 2: Création profil utilisateur...');
-      
+
       const apiUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
+
       const profileResponse = await fetch(`${apiUrl}/functions/v1/link-auth-to-profile`, {
         method: 'POST',
         headers: {
@@ -107,7 +107,8 @@ export default function SignUp() {
         body: JSON.stringify({
           email: formData.email,
           authUserId: authData.user.id,
-          role: 'subscriber'
+          role: 'subscriber',
+          plan: plan // Envoyer le plan sélectionné (monthly/yearly)
         })
       });
 
@@ -121,7 +122,7 @@ export default function SignUp() {
 
       // Étape 3: Mettre à jour le profil avec prénom/nom
       console.log('🚀 Étape 3: Mise à jour prénom/nom...');
-      
+
       const { error: updateError } = await (supabase
         .from('user_profiles') as any)
         .update({
@@ -139,7 +140,7 @@ export default function SignUp() {
 
       // Étape 4: Connecter l'utilisateur explicitement
       console.log('🚀 Étape 4: Connexion automatique...');
-      
+
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
@@ -151,9 +152,9 @@ export default function SignUp() {
       } else {
         console.log('✅ Utilisateur connecté:', signInData.session ? 'Session active' : 'Pas de session');
       }
-      
+
       toast.success('Compte créé avec succès ! Redirection vers le paiement...');
-      
+
       // Rediriger vers checkout sans l'email dans l'URL (on utilise l'utilisateur connecté)
       navigate(`/checkout?plan=${plan}`);
 

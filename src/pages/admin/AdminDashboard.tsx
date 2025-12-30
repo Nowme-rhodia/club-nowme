@@ -29,9 +29,9 @@ export default function AdminDashboard() {
 
       const [subscribersRes, pendingPartnersRes, approvedPartnersRes] = await Promise.all([
         supabase
-          .from('profiles')
+          .from('subscriptions')
           .select('id', { count: 'exact', head: true })
-          .eq('subscription_status', 'active'),
+          .eq('status', 'active'),
         supabase
           .from('partners')
           .select('id', { count: 'exact', head: true })
