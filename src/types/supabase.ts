@@ -655,6 +655,77 @@ export type Database = {
         };
         Relationships: [];
       };
+
+      blog_posts: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          excerpt: string | null;
+          content: string | null;
+          cover_image: string | null;
+          category: string | null;
+          author_name: string | null;
+          location_tags: string[] | null;
+          published_at: string | null;
+          created_at: string;
+          updated_at: string | null;
+          status: string | null;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          excerpt?: string | null;
+          content?: string | null;
+          cover_image?: string | null;
+          category?: string | null;
+          author_name?: string | null;
+          location_tags?: string[] | null;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+          status?: string | null;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          title?: string;
+          excerpt?: string | null;
+          content?: string | null;
+          cover_image?: string | null;
+          category?: string | null;
+          author_name?: string | null;
+          location_tags?: string[] | null;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string | null;
+          status?: string | null;
+        };
+        Relationships: [];
+      };
+
+      newsletter_subscribers: {
+        Row: {
+          email: string;
+          created_at: string;
+          is_active: boolean;
+          source: string | null;
+        };
+        Insert: {
+          email: string;
+          created_at?: string;
+          is_active?: boolean;
+          source?: string | null;
+        };
+        Update: {
+          email?: string;
+          created_at?: string;
+          is_active?: boolean;
+          source?: string | null;
+        };
+        Relationships: [];
+      };
     };
 
     Functions: {

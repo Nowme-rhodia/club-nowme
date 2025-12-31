@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Share2, ArrowLeft, Star, Navigation, Copy, ExternalLink, Calendar as CalendarIcon, Clock, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { MapPin, Share2, ArrowLeft, Star, Navigation, Copy, ExternalLink, Calendar as CalendarIcon, Clock, CheckCircle, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { loadStripe } from '@stripe/stripe-js';
 import { MapComponent } from '../components/MapComponent';
@@ -9,11 +9,18 @@ import { getCategoryGradient } from '../utils/categoryColors';
 import { getCategoryBackground } from '../utils/categoryBackgrounds';
 import toast from 'react-hot-toast';
 import { useAuth } from '../lib/auth';
+import { SEO } from '../components/SEO';
 
 export default function OfferPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const location = useLocation();
+  const { user, profile, isAdmin, isPartner, isSubscriber } = useAuth();
+
+  // Access Control Logic
+  const hasAccess = isSubscriber || isAdmin || isPartner || (user?.email === 'rhodia@nowme.fr');
+  const isPending = user && !hasAccess;
+  const isGuest = !user;
 
   const [offer, setOffer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +48,7 @@ export default function OfferPage() {
           street_address,
           zip_code,
           city,
+          cancellation_conditions,
           coordinates,
           calendly_url,
           booking_type,
@@ -62,6 +70,7 @@ export default function OfferPage() {
         const formattedOffer = {
           ...data,
           location: [data.street_address, data.zip_code, data.city].filter(Boolean).join(', ') || 'Adresse non spécifiée',
+          public_location: data.city || 'Lieu secret', // For non-members
           category_slug: (data as any).category?.parent_slug || (data as any).category?.slug || 'autre',
           subcategory_slug: (data as any).category?.parent_slug ? (data as any).category.slug : undefined,
           parsed_coordinates: (typeof data.coordinates === 'string')
@@ -159,7 +168,7 @@ export default function OfferPage() {
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Lien copié dans le presse-papier !');
+      toast.success('Lien copié dans le presse-papier !');
     }
   };
 
@@ -265,9 +274,9 @@ export default function OfferPage() {
   };
 
   const handleBooking = async () => {
-    if (!user) {
-      toast.error("Veuillez vous connecter pour réserver");
-      navigate('/signin');
+    if (!hasAccess) {
+      // Should rely on CTA buttons instead but for safety:
+      toast('Rejoignez le club pour réserver !', { icon: '✨' });
       return;
     }
 
@@ -283,14 +292,14 @@ export default function OfferPage() {
       setBookingLoading(true);
       try {
         const { error } = await supabase.rpc('confirm_booking', {
-          p_user_id: user.id,
+          p_user_id: user!.id,
           p_offer_id: offer.id,
           p_booking_date: new Date().toISOString(),
           p_status: 'promo_claimed',
           p_source: 'promo',
           p_amount: price,
           p_variant_id: priceInfo.variant_id,
-          p_external_id: `promo_${offer.id}_${user.id}_${Date.now()}`
+          p_external_id: `promo_${offer.id}_${user!.id}_${Date.now()}`
         });
 
         if (error) throw error;
@@ -330,10 +339,19 @@ export default function OfferPage() {
     return 'Réserver';
   };
 
-  const rating = 4.8;
+  // SEO Description construction
+  const seoDescription = offer ? `${offer.description.substring(0, 150)}... Découvrez ce kiff exclusif sur Club Nowme !` : '';
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      {/* SEO Injection */}
+      <SEO
+        title={offer?.title || 'Détail offre'}
+        description={seoDescription}
+        image={offer?.image_url}
+        url={window.location.href}
+      />
+
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${backgroundImage})` }}
@@ -347,7 +365,7 @@ export default function OfferPage() {
       </div>
 
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate('/tous-les-kiffs')}
         className="fixed top-24 left-4 z-10 p-2 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 group"
       >
         <ArrowLeft className="w-6 h-6 text-gray-600 group-hover:text-primary" />
@@ -412,7 +430,12 @@ export default function OfferPage() {
                   <div className="flex items-center gap-6 mb-6 flex-wrap">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-5 h-5 text-gray-400" />
-                      <span className="text-gray-600">{offer.location || "Lieu non précisé"}</span>
+                      <span className={`text-gray-600 ${!hasAccess ? 'blur-[4px] select-none opacity-60' : ''}`}>
+                        {hasAccess ? (offer.location || "Lieu non précisé") : "Adresse réservée aux membres"}
+                      </span>
+                      {!hasAccess && (
+                        <span className="ml-2 text-sm text-gray-500">({offer.city || "Paris"})</span>
+                      )}
                     </div>
 
                     {offer.booking_type === 'event' && offer.event_start_date && (
@@ -426,126 +449,176 @@ export default function OfferPage() {
                         </span>
                       </div>
                     )}
-
-                    <div className="flex items-center gap-1.5">
-                      <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                      <span className="text-gray-600">{rating.toFixed(1)}</span>
-                    </div>
                   </div>
 
                   <div className="mb-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-2">Description</h2>
                     <p className="text-gray-600 leading-relaxed">{offer.description}</p>
                   </div>
+
+                  {offer.cancellation_conditions && (
+                    <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <h2 className="text-sm font-semibold text-gray-900 mb-1">Conditions d'annulation</h2>
+                      <p className="text-sm text-gray-600">{offer.cancellation_conditions}</p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="border-t border-gray-100 pt-6 mt-auto">
+                <div className="border-t border-gray-100 pt-6 mt-auto relative">
 
-                  {/* Variant Selector */}
-                  {offer.offer_variants && offer.offer_variants.length > 0 && (
-                    <div className="mb-6">
-                      <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
-                        Choisissez votre formule
-                      </label>
-                      <div className="space-y-3">
-                        {offer.offer_variants.map((variant: any) => {
-                          const isSelected = selectedVariant?.id === variant.id;
-                          const isVariantOutOfStock = variant.stock !== null && variant.stock <= 0;
-                          const hasPromo = variant.discounted_price && variant.discounted_price < variant.price;
+                  {/* PAYWALL OVERLAY */}
+                  {!hasAccess && (
+                    <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm flex items-center justify-center rounded-xl">
+                      <div className="bg-white p-6 rounded-2xl shadow-xl text-center max-w-sm border border-gray-100 mx-4">
+                        <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Lock className="w-6 h-6 text-pink-600" />
+                        </div>
 
-                          return (
-                            <button
-                              key={variant.id}
-                              onClick={() => !isVariantOutOfStock && setSelectedVariant(variant)}
-                              disabled={isVariantOutOfStock}
-                              className={`w-full text-left p-4 rounded-xl border-2 transition-all relative group ${isSelected
-                                ? 'border-primary bg-primary/5 shadow-md'
-                                : isVariantOutOfStock
-                                  ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
-                                  : 'border-gray-100 hover:border-primary/50 hover:bg-gray-50'
-                                }`}
+                        {isPending ? (
+                          <>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                              Contente de te revoir {profile?.first_name || 'chère membre'} ! ✨
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                              Tu y es presque ! Choisis ton plan pour débloquer ce kiff et tous les autres.
+                            </p>
+                            <Link
+                              to={`/subscription?redirectTo=${encodeURIComponent(location.pathname)}`}
+                              className="block w-full py-3 bg-pink-500 text-white rounded-full font-bold hover:bg-pink-600 transition-colors shadow-lg hover:shadow-pink-500/25"
                             >
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-primary' : 'border-gray-300'
-                                    }`}>
-                                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                                  </div>
-                                  <div>
-                                    <div className="font-bold text-gray-900 flex items-center gap-2">
-                                      {variant.name}
-                                      {isVariantOutOfStock && (
-                                        <span className="text-[10px] uppercase font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
-                                          Épuisé
-                                        </span>
-                                      )}
-                                    </div>
-                                    {variant.description && (
-                                      <p className="text-sm text-gray-500 mt-0.5">{variant.description}</p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="text-right">
-                                  {hasPromo ? (
-                                    <>
-                                      <div className="font-bold text-primary text-lg">
-                                        {variant.discounted_price}€
-                                      </div>
-                                      <div className="text-sm text-gray-400 line-through decoration-gray-400">
-                                        {variant.price}€
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <div className="font-bold text-gray-900 text-lg">
-                                      {variant.price}€
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
+                              Finaliser mon adhésion
+                            </Link>
+                          </>
+                        ) : (
+                          <>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">
+                              Ce kiff est réservé aux membres
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                              Rejoins le club pour profiter de cette offre et découvrir toute la collection.
+                            </p>
+                            <Link
+                              to={`/auth/signup?redirectTo=${encodeURIComponent(location.pathname)}`}
+                              className="block w-full py-3 bg-pink-500 text-white rounded-full font-bold hover:bg-pink-600 transition-colors shadow-lg hover:shadow-pink-500/25"
+                            >
+                              Rejoindre le club
+                            </Link>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1">Total à payer</p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-gray-900">
-                          {priceInfo.price}€
-                        </span>
-                        {priceInfo.original_price && (
-                          <span className="text-lg text-gray-400 line-through">
-                            {priceInfo.original_price}€
-                          </span>
-                        )}
+
+                  {/* Variant Selector (Blurred if no access) */}
+                  <div className={!hasAccess ? 'filter blur-sm select-none opacity-50' : ''}>
+                    {offer.offer_variants && offer.offer_variants.length > 0 && (
+                      <div className="mb-6">
+                        <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
+                          Choisissez votre formule
+                        </label>
+                        <div className="space-y-3">
+                          {offer.offer_variants.map((variant: any) => {
+                            const isSelected = selectedVariant?.id === variant.id;
+                            const isVariantOutOfStock = variant.stock !== null && variant.stock <= 0;
+                            const hasPromo = variant.discounted_price && variant.discounted_price < variant.price;
+
+                            return (
+                              <button
+                                key={variant.id}
+                                onClick={() => !isVariantOutOfStock && setSelectedVariant(variant)}
+                                disabled={isVariantOutOfStock || !hasAccess}
+                                className={`w-full text-left p-4 rounded-xl border-2 transition-all relative group ${isSelected
+                                  ? 'border-primary bg-primary/5 shadow-md'
+                                  : isVariantOutOfStock
+                                    ? 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                                    : 'border-gray-100 hover:border-primary/50 hover:bg-gray-50'
+                                  }`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-primary' : 'border-gray-300'
+                                      }`}>
+                                      {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                                    </div>
+                                    <div>
+                                      <div className="font-bold text-gray-900 flex items-center gap-2">
+                                        {variant.name}
+                                        {isVariantOutOfStock && (
+                                          <span className="text-[10px] uppercase font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
+                                            Épuisé
+                                          </span>
+                                        )}
+                                      </div>
+                                      {variant.description && (
+                                        <p className="text-sm text-gray-500 mt-0.5">{variant.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right">
+                                    {hasPromo ? (
+                                      <>
+                                        <div className="font-bold text-primary text-lg">
+                                          {variant.discounted_price}€
+                                        </div>
+                                        <div className="text-sm text-gray-400 line-through decoration-gray-400">
+                                          {variant.price}€
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="font-bold text-gray-900 text-lg">
+                                        {variant.price}€
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
+                    )}
+
+                    <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
+                      <div>
+                        <p className="text-sm text-gray-500 mb-1">Total à payer</p>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold text-gray-900">
+                            {priceInfo.price}€
+                          </span>
+                          {priceInfo.original_price && (
+                            <span className="text-lg text-gray-400 line-through">
+                              {priceInfo.original_price}€
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleShare}
+                        className="p-3 bg-white text-gray-700 rounded-full shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md active:scale-95"
+                      >
+                        <Share2 className="w-5 h-5" />
+                      </button>
                     </div>
+
+                    {/* Fake CTA for blurred view, although covered by overlay */}
                     <button
-                      onClick={handleShare}
-                      className="p-3 bg-white text-gray-700 rounded-full shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md active:scale-95"
+                      onClick={handleBooking}
+                      disabled={bookingLoading || isOutOfStock || !hasAccess}
+                      className={`w-full px-6 py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${isOutOfStock ? 'bg-gray-400' : 'bg-primary hover:bg-primary-dark'
+                        }`}
                     >
-                      <Share2 className="w-5 h-5" />
+                      {bookingLoading ? (
+                        <>
+                          <Clock className="w-5 h-5 animate-spin" />
+                          Traitement...
+                        </>
+                      ) : getButtonLabel()}
                     </button>
                   </div>
-                  <button
-                    onClick={handleBooking}
-                    disabled={bookingLoading || isOutOfStock}
-                    className={`w-full px-6 py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${isOutOfStock ? 'bg-gray-400' : 'bg-primary hover:bg-primary-dark'
-                      }`}
-                  >
-                    {bookingLoading ? (
-                      <>
-                        <Clock className="w-5 h-5 animate-spin" />
-                        Traitement...
-                      </>
-                    ) : getButtonLabel()}
-                  </button>
 
-                  {/* Promo Modal */}
+                  {/* Promo Modal and Event Modal remain same, but unreachable if !hasAccess */}
                   {showPromoModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                       <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl animate-scale-in relative">

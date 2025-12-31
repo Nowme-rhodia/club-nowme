@@ -78,7 +78,8 @@ export default function TousLesKiffs() {
             offer_variants(price, discounted_price),
             partner:partners(business_name, address)
           `)
-          .eq('status', 'approved');
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false }); // Tri par défaut : les plus récents d'abord
 
         if (error) {
           console.error('Error fetching offers:', error);

@@ -22,10 +22,21 @@ import {
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../types/supabase';
+import PartnerFinancials from '../../components/PartnerFinancials';
 
 type Offer = Database['public']['Tables']['offers']['Row'] & {
   variants: Database['public']['Tables']['offer_variants']['Row'][];
   media: Database['public']['Tables']['offer_media']['Row'][];
+  requires_agenda?: boolean;
+};
+
+type PartnerReport = {
+  total_bookings: number;
+  gross_total: number;
+  commission: number;
+  net_total: number;
+  count?: number;
+  period_label?: string;
 };
 
 type Booking = {
@@ -34,11 +45,13 @@ type Booking = {
   partner_id: string;
   user_id: string;
   date: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'paid';
   created_at: string;
   offer?: { title: string };
   user?: { first_name: string; last_name: string; email: string };
+  amount: number;
 };
+
 
 const statusConfig = {
   draft: {
@@ -81,18 +94,10 @@ export default function Dashboard() {
     netAmount: 0,
     thisMonth: 0
   });
-  const [partnerReport, setPartnerReport] = useState<{
-    total_bookings: number;
-    gross_total: number;
-    commission: number;
-    net_total: number;
-  } | null>(null);
+  const [partnerReport, setPartnerReport] = useState<PartnerReport | null>(null);
 
   // 👉 Nouveaux dérivés
-  const lowStockOffers = offers.filter(o => o.has_stock && (o.stock ?? 0) <= 5);
-  const upcomingBookings = bookings
-    .filter(b => b.status === 'confirmed')
-    .slice(0, 5); // afficher seulement les 5 prochaines
+
 
   const [hasAgenda, setHasAgenda] = useState(false);
   const [globalCalendly, setGlobalCalendly] = useState<string | null>(null);
@@ -194,58 +199,63 @@ export default function Dashboard() {
         let netThisMonth = 0;
         const commissionRate = partnerData.commission_rate ? partnerData.commission_rate / 100 : 0.15;
 
-        // Use 'amount' from bookings. If 0/null, use offer price fallback if needed, but prefer Amount column logic.
-        paidBookings.forEach((b: any) => {
-          const amount = b.amount ? parseFloat(b.amount) : 0;
-          if (amount > 0) {
-            const comm = amount * commissionRate;
-            const net = amount - comm;
+        // Fetch latest payout for consistency
+        const { data: latestPayouts } = await (supabase
+          .from('payouts') as any)
+          .select('total_amount_collected, commission_amount, commission_tva, net_payout_amount, period_start, period_end')
+          .eq('partner_id', partnerId)
+          .order('period_start', { ascending: false })
+          .limit(1);
 
-            grossTotal += amount;
-            commissionTotal += comm;
-            netTotal += net;
+        const latestPayout = latestPayouts?.[0];
 
-            const d = new Date(b.created_at);
-            const monthStart = startOfMonth(new Date());
-            const monthEnd = endOfMonth(new Date());
-            if (d >= monthStart && d <= monthEnd) {
-              netThisMonth += net;
-            }
-          }
-        });
-
-        // Update stats state
-        setRevenueStats({
-          totalBookings: (bookingsData || []).length,
-          totalRevenue: Math.round(grossTotal * 100) / 100,
-          nowmeCommission: Math.round(commissionTotal * 100) / 100,
-          netAmount: Math.round(netTotal * 100) / 100,
-          thisMonth: Math.round(netThisMonth * 100) / 100
-        });
-
-        // 🔹 Rapport partenaire (via RPC) - Disable RPC call as it doesn't exist
-        /*
-        const { data: reportData, error: reportError } = await (supabase as any).rpc(
-          "partner_payouts_report_by_partner",
-          { partner_uuid: partnerId }
-        );
-
-        if (!reportError && reportData && reportData.length > 0) {
+        if (latestPayout) {
           setPartnerReport({
-            total_bookings: reportData[0].total_bookings || 0,
-            gross_total: reportData[0].gross_total || 0,
-            commission: reportData[0].commission || 0,
-            net_total: reportData[0].net_total || 0,
+            count: (bookingsData || []).filter((b: any) => {
+              return (b.status === 'paid' || b.status === 'confirmed') && b.created_at >= latestPayout.period_start && b.created_at <= latestPayout.period_end;
+            }).length,
+            total_bookings: (bookingsData || []).filter((b: any) => {
+              return (b.status === 'paid' || b.status === 'confirmed') && b.created_at >= latestPayout.period_start && b.created_at <= latestPayout.period_end;
+            }).length,
+            gross_total: latestPayout.total_amount_collected,
+            commission: (latestPayout.commission_amount + latestPayout.commission_tva),
+            net_total: latestPayout.net_payout_amount,
+            period_label: `Dernier virement (${new Date(latestPayout.period_start).toLocaleDateString()} - ${new Date(latestPayout.period_end).toLocaleDateString()})`
+          });
+        } else {
+          // Fallback to live current month stats
+          const now = new Date();
+          const startOfCurrentMonth = startOfMonth(now);
+          const endOfCurrentMonth = endOfMonth(now);
+          const currentMonthBookings = paidBookings.filter((b: any) => {
+            const d = new Date(b.created_at);
+            return d >= startOfCurrentMonth && d <= endOfCurrentMonth;
+          });
+          // ... [existing live calc logic] ...
+          let monthGross = 0;
+          let monthComm = 0;
+          let monthNet = 0;
+          currentMonthBookings.forEach((b: any) => {
+            const amount = b.amount ? parseFloat(b.amount) : 0;
+            if (amount > 0) {
+              const comm = amount * commissionRate;
+              const tvaOnComm = comm * 0.20;
+              const net = amount - (comm + tvaOnComm);
+              monthGross += amount;
+              monthComm += (comm + tvaOnComm);
+              monthNet += net;
+            }
+          });
+
+          setPartnerReport({
+            count: currentMonthBookings.length,
+            total_bookings: currentMonthBookings.length,
+            gross_total: monthGross,
+            commission: monthComm,
+            net_total: monthNet,
+            period_label: "Activités du mois (Estimation en cours)"
           });
         }
-        */
-        // Use our calculated values
-        setPartnerReport({
-          total_bookings: paidBookings.length,
-          gross_total: grossTotal,
-          commission: commissionTotal,
-          net_total: netTotal,
-        });
 
       } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -299,33 +309,18 @@ export default function Dashboard() {
         </div>
 
         {/* 👉 Section stats revenus */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
-          <div className="bg-white shadow rounded-lg p-4">
-            <p className="text-sm text-gray-500">Réservations</p>
-            <p className="text-xl font-bold">{revenueStats.totalBookings}</p>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
-            <p className="text-sm text-gray-500">Revenu brut</p>
-            <p className="text-xl font-bold">{revenueStats.totalRevenue} €</p>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
-            <p className="text-sm text-gray-500">Commission Nowme</p>
-            <p className={`text-xl font-bold ${revenueStats.nowmeCommission !== 0 ? 'text-red-600' : ''}`}>-{revenueStats.nowmeCommission} €</p>
-          </div>
-          <div className="bg-white shadow rounded-lg p-4">
-            <p className="text-sm text-gray-500">Revenu net</p>
-            <p className="text-xl font-bold text-green-600">{revenueStats.netAmount} €</p>
-            <p className="text-xs text-gray-400">Ce mois-ci : {revenueStats.thisMonth} €</p>
-          </div>
+        <div className="mb-10">
+          <h2 className="text-xl font-bold mb-4">Mes Finances</h2>
+          <PartnerFinancials />
         </div>
         {/* 👉 Rapport détaillé du partenaire */}
         {partnerReport && (
           <>
-            <h2 className="text-xl font-bold mb-4">Rapport détaillé</h2>
+            <h2 className="text-xl font-bold mb-4">{partnerReport.period_label}</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
               <div className="bg-white shadow rounded-lg p-4">
                 <p className="text-sm text-gray-500">Réservations confirmées</p>
-                <p className="text-xl font-bold">{partnerReport.total_bookings}</p>
+                <p className="text-xl font-bold">{partnerReport.count}</p>
               </div>
               <div className="bg-white shadow rounded-lg p-4">
                 <p className="text-sm text-gray-500">Revenu brut</p>
@@ -335,7 +330,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="bg-white shadow rounded-lg p-4">
-                <p className="text-sm text-gray-500">Commission Nowme</p>
+                <p className="text-sm text-gray-500">Commission Nowme (HT + TVA 20%)</p>
                 <p className={`text-xl font-bold ${partnerReport.commission !== 0 ? 'text-red-600' : ''}`}>
                   -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
                     .format(partnerReport.commission)}
@@ -352,52 +347,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* 👉 Widget Stock bas + Prochaines réservations */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-          {/* Stock bas */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" /> Stock bas
-            </h2>
-            {lowStockOffers.length === 0 ? (
-              <p className="text-gray-500 text-sm">Aucune offre en rupture imminente.</p>
-            ) : (
-              <ul className="space-y-2">
-                {lowStockOffers.map(o => (
-                  <li key={o.id} className="flex justify-between text-sm">
-                    <span>{o.title}</span>
-                    <span className="font-semibold text-red-600">
-                      {o.stock} restant{o.stock && o.stock > 1 ? 's' : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
 
-          {/* Prochaines réservations */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" /> Prochaines réservations
-            </h2>
-            {upcomingBookings.length === 0 ? (
-              <p className="text-gray-500 text-sm">Aucune réservation confirmée.</p>
-            ) : (
-              <ul className="space-y-2">
-                {upcomingBookings.map(b => (
-                  <li key={b.id} className="flex justify-between text-sm">
-                    <span>
-                      {b.user ? `${b.user.first_name} ${b.user.last_name}` : 'Client'} — {b.offer?.title}
-                    </span>
-                    <span className="text-gray-600">
-                      {new Date(b.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
         {/* 👉 Section Agenda Calendly */}
         {hasAgenda && (
           <div className="mt-10 bg-white shadow rounded-lg p-6">
@@ -415,125 +365,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* 👉 Section Offres */}
-        <div className="mt-10 bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5" /> Mes offres
-          </h2>
-          <div className="flex items-center gap-2 mb-4">
-            <Search className="w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Rechercher une offre..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border rounded px-2 py-1 w-full"
-            />
-            <Filter className="w-4 h-4 text-gray-500" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border rounded px-2 py-1"
-            >
-              <option value="all">Toutes</option>
-              <option value="draft">Brouillons</option>
-              <option value="pending">En attente</option>
-              <option value="approved">Approuvées</option>
-              <option value="rejected">Refusées</option>
-            </select>
-          </div>
-
-          {filteredOffers.length === 0 ? (
-            <p className="text-gray-500">Aucune offre trouvée.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredOffers.map((offer) => (
-                <div key={offer.id} className="border rounded-lg p-4 shadow-sm bg-white">
-                  <h3 className="font-bold">{offer.title}</h3>
-                  <p className="text-sm text-gray-500 mb-2">{offer.description}</p>
-                  <div className="flex items-center gap-2 mb-2">
-                    {offer.variants?.[0] && (
-                      <div className="text-sm">
-                        {offer.variants[0].discounted_price ? (
-                          <>
-                            <span className="text-gray-400 line-through mr-2">
-                              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(offer.variants[0].price)}
-                            </span>
-                            <span className="font-bold text-primary">
-                              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(offer.variants[0].discounted_price)}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="font-bold text-gray-900">
-                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(offer.variants[0].price)}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mb-2">
-                    {statusConfig[offer.status as keyof typeof statusConfig] && (
-                      <span className={`px-2 py-1 rounded text-xs ${statusConfig[offer.status as keyof typeof statusConfig].className}`}>
-                        {statusConfig[offer.status as keyof typeof statusConfig].label}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => navigate(`/partner/offers?edit_offer_id=${offer.id}`)}
-                      className="text-blue-600 flex items-center gap-1"
-                    >
-                      <Edit3 className="w-4 h-4" /> Modifier
-                    </button>
-                    <button onClick={() => handleDelete(offer.id)} className="text-red-600 flex items-center gap-1">
-                      <Trash2 className="w-4 h-4" /> Supprimer
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 👉 Section Réservations */}
-        <div className="mt-10 bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4">Mes réservations</h2>
-          {bookings.length === 0 ? (
-            <p className="text-gray-500">Aucune réservation pour le moment.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Client</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Offre</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Date</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">Statut</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {bookings.map((b) => (
-                    <tr key={b.id}>
-                      <td className="px-4 py-2">
-                        {b.user
-                          ? `${b.user.first_name} ${b.user.last_name} (${b.user.email})`
-                          : b.user_id}
-                      </td>
-                      <td className="px-4 py-2">{b.offer ? b.offer.title : b.offer_id}</td>
-                      <td className="px-4 py-2">{new Date(b.date).toLocaleString("fr-FR")}</td>
-                      <td className="px-4 py-2">
-                        {b.status === 'pending' && <span className="text-yellow-600">En attente</span>}
-                        {b.status === 'confirmed' && <span className="text-green-600">Confirmée</span>}
-                        {b.status === 'cancelled' && <span className="text-red-600">Annulée</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 
 interface FormData {
   businessName: string;
+  siret?: string;
   contactName: string;
   email: string;
   phone: string;
@@ -19,6 +20,7 @@ export default function PartnerApplication() {
 
   const [formData, setFormData] = useState<FormData>({
     businessName: isDev ? 'Spa Zen & Bien-être' : '',
+    siret: isDev ? '12345678900012' : '',
     contactName: isDev ? 'Marie Dupont' : '',
     email: isDev ? 'marie.dupont@spa-zen.fr' : '',
     phone: isDev ? '0612345678' : '',
@@ -75,11 +77,14 @@ export default function PartnerApplication() {
         body: {
           business: {
             name: formData.businessName,
+            siret: formData.siret,
             contactName: formData.contactName,
             email: formData.email,
             phone: formData.phone,
             address: formData.address,
+            address: formData.address,
             message: formData.message,
+            termsAccepted: true,
           },
         },
       });
@@ -174,6 +179,22 @@ export default function PartnerApplication() {
                   {errors.businessName}
                 </p>
               )}
+            </div>
+
+            {/* SIRET */}
+            <div>
+              <label htmlFor="siret" className="block text-sm font-medium text-gray-700 mb-1">
+                Numéro SIRET <span className="text-gray-400 font-normal">(Optionnel pour la demande)</span>
+              </label>
+              <input
+                type="text"
+                id="siret"
+                name="siret"
+                value={formData.siret || ''}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                placeholder="123 456 789 00012"
+              />
             </div>
 
             {/* Adresse légale */}
@@ -292,6 +313,27 @@ export default function PartnerApplication() {
                   {errors.message}
                 </p>
               )}
+            </div>
+
+            {/* Terms Acceptance */}
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="acceptTerms"
+                  name="acceptTerms"
+                  type="checkbox"
+                  required
+                  className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="acceptTerms" className="font-medium text-gray-700">
+                  J'accepte les <Link to="/conditions-partenaires" target="_blank" className="text-primary hover:underline">Conditions Générales de Partenariat</Link>
+                </label>
+                <p className="text-gray-500">
+                  En cochant cette case, je donne mandat express à NOWME pour facturer en mon nom et pour mon compte.
+                </p>
+              </div>
             </div>
 
             {/* Submit button */}

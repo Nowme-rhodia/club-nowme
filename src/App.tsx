@@ -11,13 +11,15 @@ import { PrivateRoute } from './components/PrivateRoute';
 import { LoadingFallback } from './components/LoadingFallback';
 
 // Lazy load pages
-const Home = React.lazy(() => import('./pages/Home').then(module => ({ default: module.Home || module.default })));
+const Home = React.lazy(() => import('./pages/Home'));
 const Categories = React.lazy(() => import('./pages/Categories'));
 const TousLesKiffs = React.lazy(() => import('./pages/TousLesKiffs'));
 const OfferPage = React.lazy(() => import('./pages/OfferPage'));
 const Subscription = React.lazy(() => import('./pages/Subscription'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
 const Communaute = React.lazy(() => import('./pages/Community'));
+const Blog = React.lazy(() => import('./pages/Blog'));
+const BlogPost = React.lazy(() => import('./pages/BlogPost'));
 const SubscriptionSuccess = React.lazy(() => import('./pages/SubscriptionSuccess'));
 const Account = React.lazy(() => import('./pages/Account'));
 const Profile = React.lazy(() => import('./pages/account/Profile'));
@@ -26,6 +28,10 @@ const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
 const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const MyBookings = React.lazy(() => import('./pages/MyBookings'));
+const MentionsLegales = React.lazy(() => import('./pages/legal/MentionsLegales'));
+const PrivacyPolicy = React.lazy(() => import('./pages/legal/PrivacyPolicy'));
+const CGV = React.lazy(() => import('./pages/legal/CGV'));
+const ConditionsPartenaires = React.lazy(() => import('./pages/legal/ConditionsPartenaires'));
 
 // Auth pages
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
@@ -46,6 +52,8 @@ const CreateUsers = React.lazy(() => import('./pages/admin/CreateUsers'));
 const AdminBookings = React.lazy(() => import('./pages/admin/Bookings'));
 const Payouts = React.lazy(() => import('./pages/admin/Payouts'));
 const AdminCommunity = React.lazy(() => import('./pages/admin/Community'));
+const AdminBlog = React.lazy(() => import('./pages/admin/Blog'));
+const AdminBlogEditor = React.lazy(() => import('./pages/admin/BlogEditor'));
 
 // Partner pages
 const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
@@ -56,15 +64,14 @@ const PartnerBookings = React.lazy(() => import('./pages/partner/Bookings'));
 const PartnerBookingDetail = React.lazy(() => import('./pages/partner/BookingDetail'));
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
-
 // Club pages
 const ClubDashboard = React.lazy(() => import('./pages/club/ClubDashboard'));
 const Events = React.lazy(() => import('./pages/club/Events'));
 
 // Booking publique (Calendly intégré)
-// Booking publique (Calendly intégré)
 const Booking = React.lazy(() => import('./pages/Booking'));
 const BookingSuccess = React.lazy(() => import('./pages/BookingSuccess'));
+const CancellationFeedback = React.lazy(() => import('./pages/CancellationFeedback'));
 
 function App() {
   return (
@@ -86,10 +93,17 @@ function App() {
                   <Route path="/subscription" element={<Subscription />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+                  <Route path="/feedback" element={<CancellationFeedback />} />
                   <Route path="/devenir-partenaire" element={<SubmitOffer />} />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
-                  <Route path="/community-space" element={<CommunitySpace />} />
+                  <Route path="/community-space" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <CommunitySpace />
+                    </PrivateRoute>
+                  } />
                   <Route path="/communaute" element={<Communaute />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<BlogPost />} />
 
                   {/* Booking publique */}
                   <Route path="/booking/:id" element={<Booking />} />
@@ -168,7 +182,16 @@ function App() {
                     <Route path="bookings" element={<AdminBookings />} />
                     <Route path="payouts" element={<Payouts />} />
                     <Route path="community" element={<AdminCommunity />} />
+                    <Route path="blog" element={<AdminBlog />} />
+                    <Route path="blog/new" element={<AdminBlogEditor />} />
+                    <Route path="blog/edit/:id" element={<AdminBlogEditor />} />
                   </Route>
+
+                  {/* Legal routes */}
+                  <Route path="/mentions-legales" element={<MentionsLegales />} />
+                  <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
+                  <Route path="/cgv" element={<CGV />} />
+                  <Route path="/conditions-partenaires" element={<ConditionsPartenaires />} />
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />

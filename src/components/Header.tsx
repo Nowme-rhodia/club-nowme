@@ -42,7 +42,7 @@ export function Header() {
           <nav className="hidden md:flex items-center space-x-8">
             {Array.isArray(navigationItems) &&
               navigationItems.map((item) =>
-                item.requiresSubscription && !isSubscriber ? null : (
+                (item.requiresSubscription && !isSubscriber && !isAdmin && user?.email !== 'rhodia@nowme.fr') || (isPartner && !isAdmin && user?.email !== 'rhodia@nowme.fr' && (item.path === '/community-space' || item.path === '/club')) ? null : (
                   <Link
                     key={item.name}
                     to={item.path}
@@ -57,7 +57,7 @@ export function Header() {
 
           {/* CTA Button */}
           <div className="hidden md:flex items-center space-x-6">
-            {!isSubscriber && (
+            {!isSubscriber && !isPartner && (
               <Link
                 to="/subscription"
                 className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
@@ -66,12 +66,14 @@ export function Header() {
               </Link>
             )}
 
-            <Link
-              to="/devenir-partenaire"
-              className="text-primary hover:text-primary-dark font-semibold transition-colors duration-200"
-            >
-              Devenir partenaire
-            </Link>
+            {!isPartner && (
+              <Link
+                to="/devenir-partenaire"
+                className="text-primary hover:text-primary-dark font-semibold transition-colors duration-200"
+              >
+                Devenir partenaire
+              </Link>
+            )}
 
             {isAdmin && (
               <Link
@@ -82,14 +84,7 @@ export function Header() {
               </Link>
             )}
 
-            {isPartner && !isAdmin && (
-              <Link
-                to="/partner/dashboard"
-                className="inline-flex items-center bg-primary text-white px-5 py-2.5 rounded-full font-semibold transition hover:bg-primary-dark"
-              >
-                Espace Partenaire
-              </Link>
-            )}
+
 
             {user ? (
               <Link
@@ -129,7 +124,7 @@ export function Header() {
             <nav className="flex flex-col space-y-4">
               {Array.isArray(navigationItems) &&
                 navigationItems.map((item) =>
-                  item.requiresSubscription && !isSubscriber ? null : (
+                  (item.requiresSubscription && !isSubscriber && !isAdmin && user?.email !== 'rhodia@nowme.fr') || (isPartner && !isAdmin && user?.email !== 'rhodia@nowme.fr' && (item.path === '/community-space' || item.path === '/club')) ? null : (
                     <Link
                       key={item.name}
                       to={item.path}
@@ -140,7 +135,7 @@ export function Header() {
                     </Link>
                   )
                 )}
-              {!isSubscriber && (
+              {!isSubscriber && !isPartner && (
                 <Link
                   to="/subscription"
                   className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 transform hover:scale-105 w-full text-center active:scale-95"
@@ -149,13 +144,15 @@ export function Header() {
                   Tester à 12,99€
                 </Link>
               )}
-              <Link
-                to="/devenir-partenaire"
-                className="text-primary hover:text-primary-dark font-medium px-2 py-1"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Devenir partenaire
-              </Link>
+              {!isPartner && (
+                <Link
+                  to="/devenir-partenaire"
+                  className="text-primary hover:text-primary-dark font-medium px-2 py-1"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Devenir partenaire
+                </Link>
+              )}
               {isAdmin && (
                 <>
                   <Link
@@ -174,15 +171,7 @@ export function Header() {
                   </Link>
                 </>
               )}
-              {isPartner && !isAdmin && (
-                <Link
-                  to="/partner/dashboard"
-                  className="w-full text-center bg-primary text-white px-4 py-2 rounded-full font-semibold hover:bg-primary-dark transition"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Espace Partenaire
-                </Link>
-              )}
+
               {user ? (
                 <Link
                   to={getAccountPath()}

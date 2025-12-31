@@ -14,7 +14,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
   const { user } = useAuth();
   const totalValue = 185;
   const savings = tier.id === 'yearly' ? YEARLY_SAVINGS.savings : 0;
-  
+
   // Si l'utilisateur est connecté, aller directement au checkout, sinon inscription
   const ctaLink = user ? `/checkout?plan=${tier.id}` : `/auth/signup?plan=${tier.id}`;
 
@@ -120,7 +120,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
         )}
 
         <p className="text-center text-xs text-gray-500">
-          Sans engagement • Résiliation en 1 clic
+          {tier.id === 'yearly' ? "Engagement d'un an" : "Annulable à tout moment"} • Résiliation en 1 clic
         </p>
       </div>
     </div>

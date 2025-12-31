@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { translateError } from '../../lib/errorTranslations';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ export default function SignUp() {
 
       navigate('/partner/dashboard');
     } catch (err) {
-      setError('Erreur lors de la création du compte');
+      setError(translateError(err));
     } finally {
       setLoading(false);
     }

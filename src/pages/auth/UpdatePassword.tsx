@@ -1,14 +1,17 @@
 // src/pages/auth/UpdatePassword.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, AlertCircle, Check, ArrowLeft } from 'lucide-react';
+import { Lock, AlertCircle, Check, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
+import { translateError } from '../../lib/errorTranslations';
 
 export default function UpdatePassword() {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,18 +162,20 @@ export default function UpdatePassword() {
 
         if (passwordError) throw passwordError;
 
-      } catch (verifyErr) {
+      } catch (verifyErr: any) {
         console.log('verifyOtp failed, trying direct password update:', verifyErr.message);
 
-        // Fallback : essayer directement updateUser avec le token
-        const { error: directError } = await supabase.auth.updateUser(
-          { password: password },
-          { accessToken: tokenHash }
-        );
+        // Fallback : essayer directement updateUser avec le token - DEPRECATED/INVALID in v2
+        // const { error: directError } = await supabase.auth.updateUser(
+        //   { password: password },
+        //   { accessToken: tokenHash }
+        // );
 
-        if (directError) {
-          updateError = directError;
-        }
+        // if (directError) {
+        //   updateError = directError;
+        // }
+        // For v2, verifyOtp should work. If it fails, there is no direct fallback like this.
+        updateError = verifyErr;
       }
 
       if (updateError) {
@@ -184,7 +189,7 @@ export default function UpdatePassword() {
         });
       }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue.');
+      setError(translateError(err));
     } finally {
       setLoading(false);
     }
@@ -260,15 +265,39 @@ export default function UpdatePassword() {
                   <input
                     id="password"
                     name="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 pr-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                     placeholder="Ton nouveau mot de passe"
                   />
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+
+                {/* Password Requirements */}
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-gray-500 mb-2">Votre mot de passe doit contenir :</p>
+                  <div className={`flex items-center text-xs ${password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                    {password.length >= 8 ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                    8 caractères minimum
+                  </div>
+                  <div className={`flex items-center text-xs ${/[A-Z]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    {/[A-Z]/.test(password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                    1 majuscule
+                  </div>
+                  <div className={`flex items-center text-xs ${/[0-9]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    {/[0-9]/.test(password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                    1 chiffre
+                  </div>
                 </div>
               </div>
 
@@ -280,15 +309,22 @@ export default function UpdatePassword() {
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     required
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 pr-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                     placeholder="Encore une fois pour être sûre"
                   />
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 

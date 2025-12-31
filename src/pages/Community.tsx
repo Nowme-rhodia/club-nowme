@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, 
-  Star, 
-  Shield, 
-  Gift, 
+import {
+  Sparkles,
+  Star,
+  Shield,
+  Gift,
   Heart,
   Send,
   MapPin,
@@ -97,7 +97,7 @@ export default function Subscription() {
       fullStory: "J'étais nouvelle sur Paris et je ne connaissais personne. En 3 mois avec Nowme, j'ai trouvé ma tribu ! Les apéros mensuels sont géniaux pour rencontrer du monde, et les réductions m'ont fait découvrir des endroits que je n'aurais jamais osé essayer. La box du dernier trimestre était dingue avec des produits locaux que j'adore maintenant."
     },
     {
-      name: "Emma, 28 ans", 
+      name: "Emma, 28 ans",
       role: "Cadre en reconversion",
       image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150",
       quote: "Les événements Nowme sont toujours au top ! Atelier poterie, dégustation de vins, soirée salsa... J'ai enfin un agenda qui me fait vibrer !",
@@ -107,7 +107,7 @@ export default function Subscription() {
     {
       name: "Julie, 35 ans",
       role: "Maman active",
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150", 
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150",
       quote: "12,99€ pour tester, puis j'ai vu la valeur : 39,99€ c'est donné pour tout ça ! Les séjours entre filles, un rêve devenu réalité.",
       highlight: "Séjours de rêve",
       fullStory: "Le premier séjour Nowme en Normandie était magique ! 3 jours entre filles, activités incluses, hébergement de qualité, et tout ça à un prix défiant toute concurrence. J'ai rencontré des femmes extraordinaires de toute la France. On a créé un groupe WhatsApp et on se revoit régulièrement !"
@@ -115,29 +115,29 @@ export default function Subscription() {
   ];
 
   const faqItems = [
-    { 
-      question: "Pourquoi 12,99€ puis 39,99€ ?", 
-      answer: "Le 1er mois à 12,99€ te permet de découvrir la communauté et les premiers avantages sans risque. Ensuite, 39,99€ te donne accès à TOUT : événements premium, box trimestrielle, apéros mensuels, séjours entre filles, carte interactive... Plus de 120€ de valeur réelle !" 
+    {
+      question: "Pourquoi 12,99€ puis 39,99€ ?",
+      answer: "Le 1er mois à 12,99€ te permet de découvrir la communauté et les premiers avantages sans risque. Ensuite, 39,99€ te donne accès à TOUT : événements premium, box trimestrielle, apéros mensuels, séjours entre filles, carte interactive... Plus de 120€ de valeur réelle !"
     },
-    { 
-      question: "Qu'est-ce que j'ai concrètement chaque mois ?", 
-      answer: "Dès le 1er mois : réductions jusqu'à -50% + 1 événement découverte + groupe WhatsApp + newsletter. À partir du 2ème : tout ça PLUS événements premium + box trimestrielle + apéros mensuels + carte interactive + séjours entre filles + service conciergerie !" 
+    {
+      question: "Qu'est-ce que j'ai concrètement chaque mois ?",
+      answer: "Dès le 1er mois : réductions jusqu'à -50% + 1 événement découverte + groupe WhatsApp + newsletter. À partir du 2ème : tout ça PLUS événements premium + box trimestrielle + apéros mensuels + carte interactive + séjours entre filles + service conciergerie !"
     },
-    { 
-      question: "Je peux annuler quand ?", 
-      answer: "Quand tu veux ! Résiliation en 1 clic depuis ton compte, sans justification. Tu gardes l'accès jusqu'à la fin de ton mois payé. Aucun engagement, aucune contrainte." 
+    {
+      question: "Je peux annuler quand ?",
+      answer: "Quand tu veux ! Résiliation en 1 clic depuis ton compte, sans justification. Tu gardes l'accès jusqu'à la fin de ton mois payé. Aucun engagement, aucune contrainte."
     },
-    { 
-      question: "C'est où exactement ?", 
-      answer: "Paris et Île-de-France pour l'instant, avec extension prévue dans toute la France ! Dis-nous ta région pour être prévenue en priorité quand on arrive chez toi." 
+    {
+      question: "C'est où exactement ?",
+      answer: "Pour l'instant, nos événements se déroulent dans tous les départements d'Île-de-France. On arrive très vite dans toute la France ! Inscris-toi pour être la première informée quand on débarque chez toi."
     },
-    { 
-      question: "Et si je ne connais personne ?", 
-      answer: "C'est fait pour ça ! 90% de nos membres ne connaissaient personne au début. Les apéros mensuels et la carte interactive sont parfaits pour rencontrer des femmes qui te ressemblent près de chez toi." 
+    {
+      question: "Et si je ne connais personne ?",
+      answer: "C'est fait pour ça ! 90% de nos membres ne connaissaient personne au début. Les apéros mensuels et la carte interactive sont parfaits pour rencontrer des femmes qui te ressemblent près de chez toi."
     },
-    { 
-      question: "Les séjours entre filles, comment ça marche ?", 
-      answer: "2-3 fois par an, on organise des weekends ou séjours dans toute la France. Hébergement, activités, repas : tout est inclus à prix membre. Tu peux venir seule, tu repartiras avec des copines !" 
+    {
+      question: "Les séjours entre filles, comment ça marche ?",
+      answer: "2-3 fois par an, on organise des weekends ou séjours dans toute la France. Hébergement, activités, repas : tout est inclus à prix membre. Tu peux venir seule, tu repartiras avec des copines !"
     }
   ];
 
@@ -165,10 +165,10 @@ export default function Subscription() {
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-4">
-              <img 
-                src={testimonial.image} 
-                alt={testimonial.name} 
-                className="w-20 h-20 rounded-full object-cover border-4 border-white/20" 
+              <img
+                src={testimonial.image}
+                alt={testimonial.name}
+                className="w-20 h-20 rounded-full object-cover border-4 border-white/20"
               />
               <div>
                 <h3 className="text-2xl font-bold">{testimonial.name}</h3>
@@ -179,7 +179,7 @@ export default function Subscription() {
               </div>
             </div>
           </div>
-          
+
           <div className="p-8">
             <div className="flex items-center gap-1 mb-4">
               {[...Array(5)].map((_, i) => (
@@ -203,13 +203,13 @@ export default function Subscription() {
 
   return (
     <div className="min-h-screen bg-white overflow-hidden">
-      <SEO 
+      <SEO
         title="Nowme Club - Kiffe ta vie à prix mini"
         description="Rejoins une communauté de femmes qui découvrent, partagent et kiffent ensemble !"
       />
 
       {/* Hero Section - Design asymétrique */}
-      <motion.section 
+      <motion.section
         className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-br from-[#FDF8F4] via-white to-[#FDF8F4]"
         initial="initial"
         whileInView="whileInView"
@@ -219,7 +219,7 @@ export default function Subscription() {
         <div className="absolute top-20 right-10 w-32 h-32 bg-primary/10 rounded-full blur-xl animate-pulse"></div>
         <div className="absolute bottom-20 left-10 w-24 h-24 bg-secondary/10 rounded-full blur-lg animate-pulse" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-primary/5 rounded-full blur-md animate-pulse" style={{ animationDelay: '2s' }}></div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Texte principal */}
@@ -228,22 +228,22 @@ export default function Subscription() {
                 <Users className="w-4 h-4 mr-2" />
                 Plus de 500 femmes kiffent déjà avec nous
               </div>
-              
+
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 Stop à la routine,{' '}
                 <span className="text-primary relative">
                   place au kiff quotidien !
                   <svg className="absolute -bottom-2 left-0 w-full h-3" viewBox="0 0 200 12" fill="none">
-                    <path d="M2 10C50 2 150 2 198 10" stroke="#E4D44C" strokeWidth="3" strokeLinecap="round"/>
+                    <path d="M2 10C50 2 150 2 198 10" stroke="#E4D44C" strokeWidth="3" strokeLinecap="round" />
                   </svg>
                 </span>
               </h1>
-              
+
               <p className="text-lg sm:text-xl text-gray-700 mb-8 leading-relaxed">
-                Rejoins une communauté de femmes qui découvrent des expériences incroyables, 
+                Rejoins une communauté de femmes qui découvrent des expériences incroyables,
                 partagent leurs bons plans et se soutiennent pour kiffer la vie ensemble.
               </p>
-              
+
               {/* Prix en évidence */}
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-lg transform -rotate-1">
                 <div className="text-center">
@@ -265,7 +265,7 @@ export default function Subscription() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   to="/checkout?plan=discovery"
@@ -275,13 +275,13 @@ export default function Subscription() {
                   Je teste maintenant !
                 </Link>
                 <p className="text-sm text-gray-600 self-center">
-                  ✨ Sans engagement • Résiliation en 1 clic
+                  ✨ Annulable à tout moment (mensuel) • Résiliation en 1 clic
                 </p>
               </div>
             </motion.div>
 
             {/* Images décalées */}
-            <motion.div 
+            <motion.div
               className="relative"
               {...fadeInUp}
               transition={{ delay: 0.3 }}
@@ -295,7 +295,7 @@ export default function Subscription() {
                     className="rounded-2xl shadow-2xl"
                   />
                 </div>
-                
+
                 {/* Petites images flottantes */}
                 <div className="absolute -top-8 -right-8 transform -rotate-12 hover:rotate-0 transition-transform duration-500">
                   <img
@@ -304,7 +304,7 @@ export default function Subscription() {
                     className="w-32 h-32 rounded-xl shadow-lg object-cover border-4 border-white"
                   />
                 </div>
-                
+
                 <div className="absolute -bottom-6 -left-6 transform rotate-12 hover:rotate-0 transition-transform duration-500">
                   <img
                     src="https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&q=80&w=200"
@@ -312,7 +312,7 @@ export default function Subscription() {
                     className="w-28 h-28 rounded-xl shadow-lg object-cover border-4 border-white"
                   />
                 </div>
-                
+
                 {/* Bulle de témoignage */}
                 <div className="absolute -bottom-4 right-4 bg-white p-4 rounded-xl shadow-lg max-w-xs transform rotate-2">
                   <p className="text-sm font-semibold text-gray-900">"Enfin des copines qui me comprennent !"</p>
@@ -353,7 +353,7 @@ export default function Subscription() {
                   😩 "Je galère à trouver des plans sympas"
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Entre les avis bidons sur internet et les recommandations de ta belle-mère, 
+                  Entre les avis bidons sur internet et les recommandations de ta belle-mère,
                   tu ne sais plus où donner de la tête. Tu finis toujours dans les mêmes endroits...
                 </p>
                 <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded transform rotate-1">
@@ -380,7 +380,7 @@ export default function Subscription() {
                   ✨ Avec Nowme : Des expériences testées et approuvées
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  500+ femmes qui partagent leurs découvertes et te donnent les vrais bons plans. 
+                  2000+ femmes qui ont participé à nos événements, partagent leurs découvertes et te donnent les vrais bons plans.
                   Chaque expérience est validée par la communauté !
                 </p>
                 <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded transform -rotate-1">
@@ -407,7 +407,7 @@ export default function Subscription() {
                   😔 "Je n'ai personne avec qui sortir"
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Tes copines sont occupées, ton mec n'est pas chaud pour tes activités... 
+                  Tes copines sont occupées, ton mec n'est pas chaud pour tes activités...
                   Tu finis par rester chez toi et scroller sur ton canapé.
                 </p>
                 <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded transform rotate-1">
@@ -434,7 +434,7 @@ export default function Subscription() {
                   🎉 Avec Nowme : Toujours des copines dispo
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Communauté active, apéros mensuels, carte interactive pour trouver 
+                  Communauté active, apéros mensuels, carte interactive pour trouver
                   des membres près de chez toi... Fini la galère pour trouver quelqu'un !
                 </p>
                 <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded transform -rotate-1">
@@ -546,7 +546,7 @@ export default function Subscription() {
               </p>
               <div className="bg-green-200 rounded-lg p-3">
                 <p className="text-green-800 font-semibold text-sm">
-                  👭 500+ femmes qui partagent et s'entraident
+                  👭 2000+ femmes qui vibrent ensemble
                 </p>
               </div>
             </motion.div>
@@ -584,10 +584,10 @@ export default function Subscription() {
                 onClick={() => setSelectedTestimonial(index)}
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <img 
-                    src={testimonial.image} 
-                    alt={testimonial.name} 
-                    className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-md" 
+                  <img
+                    src={testimonial.image}
+                    alt={testimonial.name}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-md"
                   />
                   <div>
                     <h3 className="font-bold text-gray-900">{testimonial.name}</h3>
@@ -618,7 +618,7 @@ export default function Subscription() {
         {/* Éléments décoratifs */}
         <div className="absolute top-10 left-10 w-20 h-20 bg-primary/5 rounded-full blur-xl"></div>
         <div className="absolute bottom-10 right-10 w-32 h-32 bg-secondary/5 rounded-full blur-2xl"></div>
-        
+
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
             Prête à rejoindre l'aventure ?
@@ -626,9 +626,9 @@ export default function Subscription() {
           <motion.p className="text-xl text-gray-600 mb-12">
             Teste d'abord, kiffe ensuite ! Premier mois découverte puis accès à tout le premium.
           </motion.p>
-          
+
           {/* Carte de pricing unique */}
-          <motion.div 
+          <motion.div
             className="bg-white rounded-3xl shadow-2xl p-8 border-2 border-primary/20 relative transform hover:scale-105 transition-all duration-500"
             {...fadeInUp}
           >
@@ -637,12 +637,12 @@ export default function Subscription() {
                 ✨ OFFRE DÉCOUVERTE ✨
               </span>
             </div>
-            
+
             <div className="text-center mb-8">
               <h3 className="text-3xl font-bold text-gray-900 mb-4">Nowme Club Premium</h3>
               <p className="text-gray-600">Tout l'accès, tarif progressif</p>
             </div>
-            
+
             {/* Pricing visuel */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div className="bg-blue-50 rounded-2xl p-6 transform rotate-1">
@@ -658,7 +658,7 @@ export default function Subscription() {
                   </ul>
                 </div>
               </div>
-              
+
               <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-6 transform -rotate-1">
                 <div className="text-center">
                   <div className="text-sm text-primary uppercase tracking-wide mb-2">Dès le mois 2 - Premium</div>
@@ -675,7 +675,7 @@ export default function Subscription() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 mb-6">
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-900 mb-1">💰 Calcul de la valeur premium :</p>
@@ -691,16 +691,16 @@ export default function Subscription() {
                 <p className="text-primary font-bold mt-1">= Plus de 120€ de valeur pour 39,99€ !</p>
               </div>
             </div>
-            
-            <Link 
-              to="/checkout?plan=discovery" 
+
+            <Link
+              to="/checkout?plan=discovery"
               className="block w-full text-center px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg hover:shadow-lg transition-all transform hover:scale-105"
             >
               🚀 Je commence mon aventure Nowme !
             </Link>
-            
+
             <p className="text-center text-xs text-gray-500 mt-4">
-              Sans engagement • Résiliation en 1 clic • Support 7j/7
+              Annulable à tout moment (mensuel) • Résiliation en 1 clic • Support 7j/7
             </p>
           </motion.div>
         </div>
@@ -716,10 +716,10 @@ export default function Subscription() {
           </div>
           <div className="space-y-4">
             {faqItems.map((item, index) => (
-              <motion.div 
-                key={index} 
+              <motion.div
+                key={index}
                 className="bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-102 transition-all duration-300"
-                {...fadeInUp} 
+                {...fadeInUp}
                 transition={{ delay: index * 0.1 }}
               >
                 <button
@@ -757,9 +757,9 @@ export default function Subscription() {
             Pas encore chez toi ? Fais-le venir !
           </motion.h2>
           <motion.p className="text-xl text-gray-600 mb-8">
-            On commence à Paris et banlieue, mais ton kiff arrive bientôt partout. Dis-nous où tu es !
+            On couvre déjà toute l'Île-de-France, et le kiff arrive bientôt dans toute la France. Dis-nous où tu es !
           </motion.p>
-          
+
           <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md mx-auto transform hover:scale-105 transition-all duration-300">
             <form onSubmit={handleRegionSubmit} className="space-y-4">
               <input
@@ -797,14 +797,14 @@ export default function Subscription() {
       <motion.section className="py-20 bg-gradient-to-r from-primary to-secondary text-white relative overflow-hidden" {...fadeInUp}>
         <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
         <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-        
+
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.h2 className="text-3xl md:text-4xl font-bold mb-6">
             Prête à reprendre le contrôle de ta vie ?
           </motion.h2>
-          
+
           <motion.p className="text-xl mb-8 opacity-90">
-            Rejoins les 500+ femmes qui ont déjà dit STOP à la routine et OUI au kiff !
+            Rejoins les 2000+ femmes qui ont déjà dit STOP à la routine et OUI au kiff !
           </motion.p>
 
           <motion.div className="space-y-6">
@@ -816,11 +816,11 @@ export default function Subscription() {
               Je teste maintenant à 12,99€
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
-            
+
             <div className="flex items-center justify-center space-x-6 text-sm opacity-90">
               <div className="flex items-center">
                 <Shield className="w-4 h-4 mr-2" />
-                Sans engagement
+                Annulable à tout moment (mensuel)
               </div>
               <div className="flex items-center">
                 <CheckCircle className="w-4 h-4 mr-2" />
@@ -828,7 +828,7 @@ export default function Subscription() {
               </div>
               <div className="flex items-center">
                 <Users className="w-4 h-4 mr-2" />
-                500+ membres actives
+                2000+ participantes
               </div>
             </div>
           </motion.div>
@@ -838,9 +838,9 @@ export default function Subscription() {
       {/* Modales */}
       <AnimatePresence>
         {selectedTestimonial !== null && (
-          <TestimonialModal 
-            testimonial={testimonials[selectedTestimonial]} 
-            onClose={() => setSelectedTestimonial(null)} 
+          <TestimonialModal
+            testimonial={testimonials[selectedTestimonial]}
+            onClose={() => setSelectedTestimonial(null)}
           />
         )}
       </AnimatePresence>

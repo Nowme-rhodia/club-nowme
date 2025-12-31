@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
+import { translateError } from '../../lib/errorTranslations';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export default function ResetPassword() {
       }, 2500);
     } catch (err) {
       console.error('Erreur:', err);
-      setError('Une erreur est survenue. Veuillez réessayer.');
+      setError(translateError(err));
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <SEO 
+      <SEO
         title="Réinitialisation du mot de passe - Espace partenaire"
         description="Choisissez un nouveau mot de passe pour votre compte partenaire"
       />

@@ -6,6 +6,7 @@ import { Plus, Trash2, Info, Image as ImageIcon, X, Euro } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LocationSearch } from '../../components/LocationSearch';
 import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
+import { translateError } from '../../lib/errorTranslations';
 
 interface CreateOfferProps {
   offer?: any;
@@ -61,6 +62,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   const [calendlyUrl, setCalendlyUrl] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  const [cancellationConditions, setCancellationConditions] = useState('Non remboursable');
 
   // Variants
   const [variants, setVariants] = useState<Variant[]>([
@@ -128,7 +130,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setEventEndDate(offer.event_end_date ? formatDateTimeForInput(offer.event_end_date) : '');
       setCalendlyUrl(offer.calendly_url || '');
       setExternalLink(offer.external_link || '');
+      setExternalLink(offer.external_link || '');
       setPromoCode(offer.promo_code || '');
+      setCancellationConditions(offer.cancellation_conditions || 'Non remboursable');
 
       if (offer.offer_variants && offer.offer_variants.length > 0) {
         setVariants(offer.offer_variants.map((v: any) => ({
@@ -327,6 +331,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         department: locationState.department,
         coordinates: locationState.coordinates ? `(${locationState.coordinates[0]},${locationState.coordinates[1]})` : null,
         image_url: uploadedImageUrl,
+        cancellation_conditions: cancellationConditions,
         // Status remains mostly unchanged or resets to draft if needed, but let's keep it simple
         status: offer ? offer.status : 'draft'
       };
@@ -427,7 +432,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       onSuccess();
     } catch (error: any) {
       console.error('Error:', error);
-      toast.error(error.message || "Une erreur est survenue");
+      toast.error(translateError(error));
     } finally {
       setLoading(false);
     }
@@ -594,6 +599,43 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
               }}
               initialValue={locationState.street_address ? `${locationState.street_address}, ${locationState.city}` : ''}
             />
+          </div>
+
+          {/* --- Cancellation Conditions --- */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Conditions d'annulation</label>
+            <div className="space-y-3">
+              <textarea
+                value={cancellationConditions}
+                onChange={(e) => setCancellationConditions(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                placeholder="Ex: Toute réservation est ferme et définitive."
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCancellationConditions('Non remboursable')}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700"
+                >
+                  Strict (Non remboursable)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCancellationConditions('Annulation gratuite jusqu\'à 24h avant')}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700"
+                >
+                  Flexible (24h)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCancellationConditions('Annulation gratuite jusqu\'à 7 jours avant')}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700"
+                >
+                  Modérée (7 jours)
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* --- Type --- */}

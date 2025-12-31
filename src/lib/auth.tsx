@@ -322,6 +322,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Ref pour distinguer la déconnexion volontaire de l'expiration
+  const isSigningOut = React.useRef(false);
+
   // ---- init + subscriptions ----
   useEffect(() => {
     let mounted = true;
@@ -361,6 +364,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
+          // Détection d'expiration de session (SIGNED_OUT sans action volontaire)
+          if (event === 'SIGNED_OUT' && !isSigningOut.current) {
+            console.log('⚠️ Session expired or remote sign out detected');
+            toast.error('Votre session a expiré. Veuillez vous reconnecter.', {
+              duration: 5000,
+              icon: '🔒'
+            });
+            // On peut aussi rediriger vers la page de connexion si on veut être strict
+            // navigate('/auth/signin'); 
+          }
+
+          // Reset du flag après le traitement de l'événement
+          if (event === 'SIGNED_OUT') {
+            isSigningOut.current = false;
+          }
+
           logger.auth.stateChange(event, session);
           setLoading(true);
           setUser(session?.user ?? null);
@@ -371,6 +390,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             navigate('/auth/update-password');
           }
 
+          // Special handling for TOKEN_REFRESHED to avoid clearing profile on transient errors
+          if (event === 'TOKEN_REFRESHED' && session?.user && profile) {
+            console.log('🔄 Token refreshed. Keeping existing profile to prevent flicker/logout.');
+            // Optionally: Background refresh if needed, but safe to skip to rely on cache
+            // await loadUserProfile(session.user.id); 
+            setLoading(false);
+            return;
+          }
+
           if (session?.user) {
             await loadUserProfile(session.user.id);
           } else {
@@ -378,7 +406,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (e) {
           console.error('onAuthStateChange error:', e);
-          setProfile(null);
+          // Only clear profile if we are absolutely sure the session is gone or invalid
+          if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            setProfile(null);
+          } else {
+            console.warn('⚠️ Keeping previous profile despite error during auth event:', event);
+          }
         } finally {
           setLoading(false);
         }
@@ -436,6 +469,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Flag pour indiquer que c'est une action volontaire
+      isSigningOut.current = true;
+
       // 1. Immediate state clear to prevent UI from thinking we are still logged in
       setUser(null);
       setProfile(null);

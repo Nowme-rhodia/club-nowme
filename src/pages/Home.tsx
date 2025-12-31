@@ -4,8 +4,101 @@ import * as LucideIcons from 'lucide-react';
 import { Sparkles, MapPin, ChevronRight, Star } from 'lucide-react';
 import { SEO } from '../components/SEO';
 
+import { supabase } from '../lib/supabase';
+import { OfferCard } from '../components/OfferCard';
+
 // ✅ On tape explicitement les noms d’icônes
 type IconName = keyof typeof LucideIcons;
+
+function LatestOffers() {
+  const [offers, setOffers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLatestOffers() {
+      try {
+        const { data, error } = await supabase
+          .from('offers')
+          .select(`
+            *,
+            offer_variants(price, discounted_price),
+            partner:partners(business_name, address)
+          `)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false })
+          .limit(4);
+
+        if (error) throw error;
+
+        if (data) {
+          const formatted = data.map((offer: any) => {
+            // Basic formatting similar to TousLesKiffs but simplified
+            const firstVariant = offer.offer_variants?.[0];
+            // Coordinates parsing
+            let lat = 0, lng = 0;
+            if (typeof offer.coordinates === 'string') {
+              const matches = offer.coordinates.match(/\((.*),(.*)\)/);
+              if (matches) {
+                lat = parseFloat(matches[1]);
+                lng = parseFloat(matches[2]);
+              }
+            } else if (Array.isArray(offer.coordinates)) {
+              lat = offer.coordinates[0];
+              lng = offer.coordinates[1];
+            }
+
+            return {
+              id: offer.id,
+              title: offer.title,
+              description: offer.description,
+              imageUrl: offer.image_url || offer.offer_media?.[0]?.url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
+              price: firstVariant ? Number(firstVariant.price) : 0,
+              promoPrice: firstVariant?.discounted_price ? Number(firstVariant.discounted_price) : undefined,
+              rating: 4.8, // Static for now or fetch
+              location: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || offer.partner?.address || 'Paris',
+              category: 'Nouveauté',
+              partnerName: offer.partner?.business_name
+            };
+          });
+          setOffers(formatted);
+        }
+      } catch (err) {
+        console.error('Error fetching latest offers:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLatestOffers();
+  }, []);
+
+  if (loading) return null;
+  if (offers.length === 0) return null;
+
+  return (
+    <div className="py-24 bg-white border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            🔥 Les dernières pépites
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Elles viennent d'arriver, fonce avant qu'il n'y ait plus de place !
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {offers.map((offer) => (
+            <OfferCard key={offer.id} {...offer} />
+          ))}
+        </div>
+        <div className="text-center mt-12">
+          <Link to="/tous-les-kiffs" className="text-pink-600 font-semibold hover:text-pink-700 inline-flex items-center">
+            Voir tous les kiffs <ChevronRight className="w-4 h-4 ml-1" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
@@ -62,7 +155,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO 
+      <SEO
         title="Nowme - Ton kiff commence ici"
         description="Massages, sorties, ateliers : l'abonnement qui te redonne le contrôle en Île-de-France."
       />
@@ -106,22 +199,22 @@ export default function Home() {
             Pourquoi Nowme va changer ton quotidien
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {features.map((feature, index) => {
-  const Icon = LucideIcons[feature.icon] as React.ComponentType<{ className?: string }>;
-  return (
-    <div
-      key={index}
-      className="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all animate-slide-up"
-      style={{ animationDelay: `${index * 0.2}s` }}
-    >
-      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-6">
-        {Icon && <Icon className="w-8 h-8 text-pink-500" />}
-      </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-      <p className="text-gray-600">{feature.description}</p>
-    </div>
-  );
-})}
+            {features.map((feature, index) => {
+              const Icon = LucideIcons[feature.icon] as React.ComponentType<{ className?: string }>;
+              return (
+                <div
+                  key={index}
+                  className="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all animate-slide-up"
+                  style={{ animationDelay: `${index * 0.2}s` }}
+                >
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-6">
+                    {Icon && <Icon className="w-8 h-8 text-pink-500" />}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
+                  <p className="text-gray-600">{feature.description}</p>
+                </div>
+              );
+            })}
 
           </div>
         </div>
@@ -131,10 +224,10 @@ export default function Home() {
       <div className="py-12 px-4 bg-yellow-50 border-t border-b border-yellow-200">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
-            Rejoins les 500+ femmes qui ont décidé de kiffer
+            Déjà 2000+ femmes qui ont participés à nos kiffs
           </h2>
           <p className="text-gray-700 text-lg mb-6">
-            Commence dès aujourd’hui. Sans engagement. Sans excuses.
+            Commence dès aujourd’hui. Sans engagement (mensuel). Sans excuses.
           </p>
           <Link
             to="/subscription"
@@ -144,6 +237,9 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Les derniers Kiffs */}
+      <LatestOffers />
 
       {/* Témoignages */}
       <div className="py-24 bg-white">

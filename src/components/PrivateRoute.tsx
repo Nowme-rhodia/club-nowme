@@ -42,6 +42,9 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   // 3️⃣ Vérification des rôles si demandés
   if (allowedRoles && user) {
     const hasAllowedRole = allowedRoles.some((role) => {
+      // Exception pour rhodia@nowme.fr : accès illimité
+      if (user.email === 'rhodia@nowme.fr') return true;
+
       switch (role) {
         case 'admin':
           return isAdmin;

@@ -53,7 +53,7 @@ export default function PricingComparison() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4] py-12">
-      <SEO 
+      <SEO
         title="Comparaison des offres"
         description="Découvrez les différences entre nos offres Découverte et Premium"
       />
@@ -65,8 +65,8 @@ export default function PricingComparison() {
             Choisis ton niveau de kiff !
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Commence par découvrir à 12,99€, puis accède à tout le premium à 39,99€. 
-            Résilie quand tu veux, sans engagement.
+            Commence par découvrir à 12,99€, puis accède à tout le premium à 39,99€.
+            Résilie quand tu veux, sans engagement (sur le mensuel).
           </p>
         </div>
 
@@ -214,7 +214,7 @@ export default function PricingComparison() {
               </p>
             </div>
           </div>
-          
+
           <div className="mt-8">
             <Link
               to="/subscription"

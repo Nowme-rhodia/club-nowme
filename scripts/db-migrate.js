@@ -50,15 +50,15 @@ async function createMigration(name) {
     console.log('Usage: npm run db:create nom_de_la_migration');
     process.exit(1);
   }
-  
+
   // Créer un nom de fichier avec timestamp
   const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').substring(0, 14);
   const fileName = `${timestamp}_${name}.sql`;
   const filePath = path.join(MIGRATIONS_DIR, fileName);
-  
+
   // Créer le fichier avec un contenu initial
   fs.writeFileSync(filePath, `-- Migration: ${name}\n-- Created at: ${new Date().toISOString()}\n\n-- Votre SQL ici\n`);
-  
+
   console.log(`Migration créée: ${fileName}`);
   return fileName;
 }
@@ -66,26 +66,29 @@ async function createMigration(name) {
 // Fonction pour exécuter une migration spécifique
 async function runMigration(fileName) {
   const filePath = path.join(MIGRATIONS_DIR, fileName);
-  
+
   if (!fs.existsSync(filePath)) {
     console.error(`Erreur: Le fichier de migration ${fileName} n'existe pas`);
     process.exit(1);
   }
-  
+
   const sql = fs.readFileSync(filePath, 'utf8');
   console.log(`Exécution de la migration: ${fileName}`);
-  
+
   try {
-    // Exécuter la migration via l'API Supabase
-    const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
-    
+    const { data, error } = await supabase.rpc('exec_sql', { sql_query: sql });
+
+    // Attempt to parse result if it was a select? 
+    // exec_sql returns void usually. 
+    // We can't get results from exec_sql unless we modify it.
+
     if (error) {
-      console.error('Erreur lors de l\'exécution de la migration:', error);
+      console.error('Erreur lors de l\'exécution de la migration:', JSON.stringify(error, null, 2));
       process.exit(1);
     }
-    
+
     console.log(`Migration ${fileName} exécutée avec succès`);
-    
+
     // Enregistrer la migration dans la table des migrations
     await recordMigration(fileName);
   } catch (error) {
@@ -99,15 +102,15 @@ async function recordMigration(fileName) {
   try {
     // Vérifier si la table des migrations existe, sinon la créer
     await ensureMigrationsTable();
-    
+
     // Insérer l'enregistrement de la migration
     const { error } = await supabase
       .from('migrations')
-      .insert([{ 
-        name: fileName, 
-        executed_at: new Date().toISOString() 
+      .insert([{
+        name: fileName,
+        executed_at: new Date().toISOString()
       }]);
-    
+
     if (error) {
       console.error('Erreur lors de l\'enregistrement de la migration:', error);
     }
@@ -124,7 +127,7 @@ async function ensureMigrationsTable() {
       .from('migrations')
       .select('name')
       .limit(1);
-    
+
     if (error && error.code === '42P01') { // Table doesn't exist
       // Créer la table des migrations
       const createTableSQL = `
@@ -134,7 +137,7 @@ async function ensureMigrationsTable() {
           executed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
         );
       `;
-      
+
       await supabase.rpc('exec_sql', { sql_query: createTableSQL });
       console.log('Table des migrations créée');
     } else if (error) {
@@ -148,31 +151,31 @@ async function ensureMigrationsTable() {
 // Fonction pour lister les migrations
 async function listMigrations() {
   console.log('Migrations disponibles:');
-  
+
   if (!fs.existsSync(MIGRATIONS_DIR) || fs.readdirSync(MIGRATIONS_DIR).length === 0) {
     console.log('Aucune migration trouvée');
     return;
   }
-  
+
   const files = fs.readdirSync(MIGRATIONS_DIR)
     .filter(file => file.endsWith('.sql'))
     .sort();
-  
+
   // Récupérer les migrations déjà exécutées
   try {
     await ensureMigrationsTable();
     const { data: executedMigrations, error } = await supabase
       .from('migrations')
       .select('name');
-    
+
     if (error) {
       console.error('Erreur lors de la récupération des migrations exécutées:', error);
       files.forEach(file => console.log(`- ${file}`));
       return;
     }
-    
+
     const executedSet = new Set(executedMigrations.map(m => m.name));
-    
+
     files.forEach(file => {
       const status = executedSet.has(file) ? '[EXÉCUTÉE]' : '[EN ATTENTE]';
       console.log(`- ${status} ${file}`);
@@ -189,36 +192,36 @@ async function runPendingMigrations() {
     console.log('Aucune migration trouvée');
     return;
   }
-  
+
   const files = fs.readdirSync(MIGRATIONS_DIR)
     .filter(file => file.endsWith('.sql'))
     .sort();
-  
+
   try {
     await ensureMigrationsTable();
     const { data: executedMigrations, error } = await supabase
       .from('migrations')
       .select('name');
-    
+
     if (error) {
       console.error('Erreur lors de la récupération des migrations exécutées:', error);
       return;
     }
-    
+
     const executedSet = new Set(executedMigrations.map(m => m.name));
     const pendingMigrations = files.filter(file => !executedSet.has(file));
-    
+
     if (pendingMigrations.length === 0) {
       console.log('Aucune migration en attente');
       return;
     }
-    
+
     console.log(`${pendingMigrations.length} migration(s) en attente`);
-    
+
     for (const migration of pendingMigrations) {
       await runMigration(migration);
     }
-    
+
     console.log('Toutes les migrations en attente ont été exécutées');
   } catch (error) {
     console.error('Erreur lors de l\'exécution des migrations en attente:', error);
@@ -229,20 +232,20 @@ async function runPendingMigrations() {
 async function resetDatabase() {
   console.log('⚠️ ATTENTION: Cette opération va réinitialiser la base de données ⚠️');
   console.log('Toutes les tables seront supprimées et les migrations seront marquées comme non exécutées.');
-  
+
   // Demander confirmation (simulé ici, dans un environnement Node.js réel, utilisez readline)
   const confirmation = process.argv.includes('--confirm');
-  
+
   if (!confirmation) {
     console.log('Opération annulée. Pour confirmer, ajoutez --confirm à la commande.');
     return;
   }
-  
+
   try {
     // Supprimer la table des migrations
     const dropMigrationsSQL = `DROP TABLE IF EXISTS migrations;`;
     await supabase.rpc('exec_sql', { sql_query: dropMigrationsSQL });
-    
+
     console.log('Base de données réinitialisée avec succès.');
     console.log('Vous pouvez maintenant exécuter npm run db:push pour réappliquer toutes les migrations.');
   } catch (error) {
@@ -263,7 +266,7 @@ async function createExecSqlFunction() {
     END;
     $$;
   `;
-  
+
   try {
     // Utiliser directement l'API REST de Supabase pour créer la fonction
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
@@ -275,7 +278,7 @@ async function createExecSqlFunction() {
       },
       body: JSON.stringify({ sql_query: createFunctionSQL })
     });
-    
+
     if (!response.ok) {
       // Si la fonction n'existe pas encore, créons-la d'abord
       const createResponse = await fetch(`${supabaseUrl}/rest/v1/`, {
@@ -288,7 +291,7 @@ async function createExecSqlFunction() {
         },
         body: JSON.stringify({ query: createFunctionSQL })
       });
-      
+
       if (!createResponse.ok) {
         console.error('Erreur lors de la création de la fonction exec_sql');
         console.error('Vous devrez peut-être créer cette fonction manuellement dans l\'éditeur SQL de Supabase');
@@ -305,10 +308,10 @@ async function createExecSqlFunction() {
 // Fonction principale
 async function main() {
   const args = process.argv.slice(2);
-  
+
   // Vérifier si la fonction exec_sql existe
   await createExecSqlFunction();
-  
+
   if (args.length === 0) {
     console.log('\nMigration CLI pour StackBlitz + Supabase\n');
     console.log('Options disponibles:');
@@ -320,9 +323,9 @@ async function main() {
     console.log('  ');
     return;
   }
-  
+
   const command = args[0];
-  
+
   if (command === '--create') {
     await createMigration(args[1]);
   } else if (command === '--run') {

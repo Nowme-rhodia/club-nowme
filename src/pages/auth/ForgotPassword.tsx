@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { SEO } from '../../components/SEO';
+import { translateError } from '../../lib/errorTranslations';
 
 export default function ForgotPassword() {
   const { resetPassword } = useAuth();
@@ -23,17 +24,17 @@ export default function ForgotPassword() {
       setSuccess(true);
     } catch (err: any) {
       console.error('Error sending reset password email:', err);
-      
+
       // Vérifier si c'est une erreur de limitation de taux (rate limiting)
       if (err.message && err.message.includes('you can only request this after')) {
         // Extraire le nombre de secondes à attendre
         const secondsMatch = err.message.match(/after (\d+) seconds/);
         const seconds = secondsMatch ? parseInt(secondsMatch[1]) : 60;
-        
+
         setCooldownTime(seconds);
         setError(`Pour des raisons de sécurité, veuillez attendre ${seconds} secondes avant de réessayer.`);
       } else {
-        setError('Une erreur est survenue. Veuillez réessayer.');
+        setError(translateError(err));
       }
     } finally {
       setLoading(false);
@@ -46,7 +47,7 @@ export default function ForgotPassword() {
       const timer = setTimeout(() => {
         setCooldownTime(cooldownTime - 1);
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     } else if (cooldownTime === 0) {
       setCooldownTime(null);
@@ -56,7 +57,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <SEO 
+      <SEO
         title="Mot de passe oublié"
         description="Réinitialisez votre mot de passe Nowme"
       />

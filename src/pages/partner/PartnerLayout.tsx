@@ -3,6 +3,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Briefcase, Calendar, Settings, LogOut } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
+import MissingInfoBanner from "../../components/partner/MissingInfoBanner";
+import NotificationCenter from "../../components/partner/NotificationCenter";
 
 export default function PartnerLayout() {
   const { user, signOut, profile } = useAuth();
@@ -14,11 +16,11 @@ export default function PartnerLayout() {
     const loadPartner = async () => {
       console.log('PartnerLayout: Loading partner for user', user.id);
       console.log('PartnerLayout: Full profile:', profile);
-      
+
       // Utiliser partner_id depuis le profil si disponible
       const partnerId = profile?.partner_id;
       console.log('PartnerLayout: partner_id from profile:', partnerId);
-      
+
       if (!partnerId) {
         // Fallback: récupérer depuis user_profiles
         const { data: profileData, error: profileError } = await supabase
@@ -34,7 +36,7 @@ export default function PartnerLayout() {
           setBusinessName("Mon entreprise");
           return;
         }
-        
+
         // Récupérer les infos du partenaire
         const { data, error } = await (supabase
           .from("partners") as any)
@@ -79,7 +81,6 @@ export default function PartnerLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-soft px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-primary">{businessName}</h1>
@@ -89,14 +90,20 @@ export default function PartnerLayout() {
             </p>
           )}
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition"
-        >
-          <LogOut className="w-5 h-5" />
-          Déconnexion
-        </button>
+        <div className="flex items-center">
+          <NotificationCenter />
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 transition"
+          >
+            <LogOut className="w-5 h-5" />
+            Déconnexion
+          </button>
+        </div>
       </header>
+
+      {/* Banner info manquante */}
+      <MissingInfoBanner />
 
       {/* Layout principal */}
       <div className="flex flex-1">
@@ -106,8 +113,7 @@ export default function PartnerLayout() {
             <NavLink
               to="/partner/dashboard"
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${
-                  isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
                 }`
               }
             >
@@ -117,8 +123,7 @@ export default function PartnerLayout() {
             <NavLink
               to="/partner/offers"
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${
-                  isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
                 }`
               }
             >
@@ -128,8 +133,7 @@ export default function PartnerLayout() {
             <NavLink
               to="/partner/bookings"
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${
-                  isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
                 }`
               }
             >
@@ -139,8 +143,7 @@ export default function PartnerLayout() {
             <NavLink
               to="/partner/settings/general"
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${
-                  isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
                 }`
               }
             >

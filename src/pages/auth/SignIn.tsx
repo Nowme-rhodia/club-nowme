@@ -1,16 +1,18 @@
 // signin.tsx - Version corrigée
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
+import { translateError } from '../../lib/errorTranslations';
 
 export default function SignIn() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState(searchParams.get('email') || '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export default function SignIn() {
       }
     } catch (err) {
       console.error('Erreur complète:', err);
-      setError('Email ou mot de passe incorrect');
+      setError(translateError(err));
     } finally {
       setLoading(false);
     }
@@ -166,9 +168,16 @@ export default function SignIn() {
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">Mot de passe</label>
               <div className="mt-1 relative">
-                <input id="password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" />
+                <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 pr-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" />
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
             </div>
 

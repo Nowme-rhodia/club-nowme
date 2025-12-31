@@ -91,7 +91,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4] py-12">
-      <SEO 
+      <SEO
         title="Finaliser votre abonnement"
         description="Finalisez votre abonnement Nowme et commencez à kiffer !"
       />
@@ -171,7 +171,9 @@ export default function Checkout() {
             </div>
             <div className="flex items-center">
               <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-              <span className="text-sm text-gray-700">Sans engagement</span>
+              <span className="text-sm text-gray-700">
+                {selectedPlan === 'yearly' ? "Engagement d'un an" : "Annulable à tout moment"}
+              </span>
             </div>
             <div className="flex items-center">
               <CreditCard className="w-5 h-5 text-green-600 mr-2" />
@@ -220,7 +222,7 @@ export default function Checkout() {
             <div>
               <span className="font-medium text-gray-900">Quand serai-je prélevé ?</span>
               <p className="text-gray-600">
-                {selectedPlan === 'discovery' 
+                {selectedPlan === 'discovery'
                   ? 'Aujourd\'hui 12,99€, puis 39,99€ le mois prochain.'
                   : selectedPlan === 'yearly'
                     ? 'Paiement unique de 399€ pour toute l\'année.'

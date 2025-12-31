@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Users, Building2, Settings, Mail, Clock, CheckCircle, CreditCard, LogOut, MessageSquare } from 'lucide-react';
+import { Users, Building2, Settings, Mail, Clock, CheckCircle, CreditCard, LogOut, MessageSquare, Edit3 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 
 export default function AdminLayout() {
@@ -52,6 +52,12 @@ export default function AdminLayout() {
       href: '/admin/subscribers',
       icon: Users,
       current: location.pathname === '/admin/subscribers'
+    },
+    {
+      name: 'Blog',
+      href: '/admin/blog',
+      icon: Edit3,
+      current: location.pathname.startsWith('/admin/blog')
     },
     {
       name: 'Newsletter',

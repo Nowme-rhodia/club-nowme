@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { UserPlus, Mail, Lock, User, AlertCircle, Sparkles } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, AlertCircle, Sparkles, Eye, EyeOff, Check } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../types/supabase';
 import { useAuth } from '../../lib/auth';
 import toast from 'react-hot-toast';
+import { translateError } from '../../lib/errorTranslations';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function SignUp() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const plan = searchParams.get('plan') || 'monthly';
 
   // Rediriger les utilisateurs déjà connectés
@@ -108,7 +110,8 @@ export default function SignUp() {
           email: formData.email,
           authUserId: authData.user.id,
           role: 'subscriber',
-          plan: plan // Envoyer le plan sélectionné (monthly/yearly)
+          plan: plan, // Envoyer le plan sélectionné (monthly/yearly)
+          termsAccepted: true
         })
       });
 
@@ -160,7 +163,7 @@ export default function SignUp() {
 
     } catch (err: any) {
       console.error('❌ Erreur inscription:', err);
-      setError(err.message || 'Une erreur est survenue lors de l\'inscription');
+      setError(translateError(err));
       setIsSigningUp(false);
     } finally {
       setLoading(false);
@@ -280,16 +283,61 @@ export default function SignUp() {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 pr-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
                 />
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">Minimum 6 caractères</p>
+
+              {/* Password Requirements */}
+              <div className="mt-2 space-y-1">
+                <p className="text-xs text-gray-500 mb-2">Votre mot de passe doit contenir :</p>
+                <div className={`flex items-center text-xs ${formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                  {formData.password.length >= 8 ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                  8 caractères minimum
+                </div>
+                <div className={`flex items-center text-xs ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                  {/[A-Z]/.test(formData.password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                  1 majuscule
+                </div>
+                <div className={`flex items-center text-xs ${/[0-9]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                  {/[0-9]/.test(formData.password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                  1 chiffre
+                </div>
+              </div>
+            </div>
+
+            {/* Terms Acceptance */}
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="acceptTerms"
+                  name="acceptTerms"
+                  type="checkbox"
+                  required
+                  className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="acceptTerms" className="font-medium text-gray-700">
+                  J'accepte les <Link to="/cgv" target="_blank" className="text-primary hover:underline">Conditions Générales de Vente</Link> et la <Link to="/politique-de-confidentialite" target="_blank" className="text-primary hover:underline">Politique de Confidentialité</Link>
+                </label>
+              </div>
             </div>
 
             <div>
@@ -305,16 +353,7 @@ export default function SignUp() {
             </div>
           </form>
 
-          <p className="mt-6 text-xs text-center text-gray-500">
-            En créant un compte, vous acceptez nos{' '}
-            <Link to="/terms" className="text-primary hover:text-primary-dark">
-              conditions d'utilisation
-            </Link>{' '}
-            et notre{' '}
-            <Link to="/privacy" className="text-primary hover:text-primary-dark">
-              politique de confidentialité
-            </Link>
-          </p>
+
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
+import { translateError } from '../../lib/errorTranslations';
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function SignIn() {
       navigate('/partner/dashboard');
     } catch (err) {
       console.error('Error:', err);
-      setError('Email ou mot de passe incorrect');
+      setError(translateError(err));
     } finally {
       setLoading(false);
     }

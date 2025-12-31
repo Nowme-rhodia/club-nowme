@@ -47,7 +47,7 @@ serve(async (req) => {
         const [userResponse, offerResponse, partnerResponse, variantResponse] = await Promise.all([
             supabase.from('user_profiles').select('first_name, last_name, email').eq('user_id', bookingData.user_id).single(),
             supabase.from('offers').select('title').eq('id', bookingData.offer_id).single(),
-            supabase.from('partners').select('business_name, description, website, address, contact_email, notification_settings').eq('id', bookingData.partner_id).single(),
+            supabase.from('partners').select('business_name, description, website, address, contact_email, notification_settings, siret, tva_intra').eq('id', bookingData.partner_id).single(),
             bookingData.variant_id ? supabase.from('offer_variants').select('name, price').eq('id', bookingData.variant_id).single() : Promise.resolve({ data: null, error: null })
         ])
 
@@ -55,7 +55,7 @@ serve(async (req) => {
 
         let user = userResponse.data || { first_name: '', last_name: '', email: '' }
         const offer = offerResponse.data || { title: 'Offre inconnue' }
-        const partner = partnerResponse.data || { business_name: 'Partenaire', address: '' }
+        const partner = partnerResponse.data || { business_name: 'Partenaire', address: '', siret: '', tva_intra: '', contact_email: '' }
         const variant = variantResponse.data
 
         // [CRITICAL FIX] 2. Robust Email Fetching
@@ -88,6 +88,9 @@ serve(async (req) => {
 
         const partnerName = partner?.business_name || 'Nowme Partner'
         const partnerAddress = partner?.address || ''
+        const partnerSiret = partner?.siret || ''
+        const partnerTva = partner?.tva_intra || ''
+        const partnerEmail = partner?.contact_email || 'Pas d\'email de contact'
 
         // 4. Generate PDF Invoice
         const pdfDoc = await PDFDocument.create()
@@ -102,47 +105,71 @@ serve(async (req) => {
 
         // Invoice Header
         drawText("FACTURE / REÇU", 50, height - 50, 20, boldFont)
-        drawText(`NOWME`, 50, height - 80, 15, boldFont)
+        drawText(`Émise par NOWME (Mandataire)`, 50, height - 75, 10, font)
+
         drawText(`Date: ${new Date(bookingData.booking_date).toLocaleDateString('fr-FR')}`, 400, height - 50, 10)
         drawText(`Facture #: ${bookingData.id.slice(0, 8).toUpperCase()}`, 400, height - 65, 10)
 
-        // Seller Info
-        drawText("Vendeur :", 50, height - 120, 10, boldFont)
-        drawText(partnerName, 50, height - 135, 10)
+        // Seller Info (The Partner)
+        let currentY = height - 110
+        drawText("Vendeur (Prestataire) :", 50, currentY, 10, boldFont); currentY -= 15;
+        drawText(partnerName, 50, currentY, 10); currentY -= 15;
         if (partnerAddress) {
-            drawText(partnerAddress, 50, height - 150, 10)
+            drawText(partnerAddress, 50, currentY, 10); currentY -= 15;
+        }
+        if (partnerSiret) {
+            drawText(`SIRET : ${partnerSiret}`, 50, currentY, 10); currentY -= 15;
+        }
+        if (partnerTva) {
+            drawText(`TVA : ${partnerTva}`, 50, currentY, 10); currentY -= 15;
         }
 
+        // Mandataire Info (NOWME)
+        currentY = height - 110;
+        drawText("Émetteur (Mandataire) :", 300, currentY, 10, boldFont); currentY -= 15;
+        drawText("NOWME", 300, currentY, 10); currentY -= 15;
+        drawText("59 RUE du Ponthieu, Bureau 326", 300, currentY, 10); currentY -= 15;
+        drawText("75008 Paris, FRANCE", 300, currentY, 10); currentY -= 15;
+        drawText("SIREN : 933 108 011", 300, currentY, 10); currentY -= 15;
+
         // Buyer Info
-        drawText("Acheteur :", 300, height - 120, 10, boldFont)
-        drawText(buyerName, 300, height - 135, 10)
-        drawText(user.email || '', 300, height - 150, 10)
+        drawText("Acheteur :", 50, height - 200, 10, boldFont) // Fixed position lower to accommodate variable seller lines
+        drawText(buyerName, 50, height - 215, 10)
+        drawText(user.email || '', 50, height - 230, 10)
 
         // Divider
-        page.drawLine({ start: { x: 50, y: height - 180 }, end: { x: width - 50, y: height - 180 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) })
+        page.drawLine({ start: { x: 50, y: height - 250 }, end: { x: width - 50, y: height - 250 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) })
 
         // Items
-        drawText("Description", 50, height - 200, 10, boldFont)
-        drawText("Montant", 450, height - 200, 10, boldFont)
+        drawText("Description", 50, height - 270, 10, boldFont)
+        drawText("Montant", 450, height - 270, 10, boldFont)
 
-        drawText(fullItemName, 50, height - 230, 10)
-        drawText(`${price.toFixed(2)} €`, 450, height - 230, 10)
+        drawText(fullItemName, 50, height - 300, 10)
+        drawText(`${price.toFixed(2)} €`, 450, height - 300, 10)
 
         // Total
-        page.drawLine({ start: { x: 50, y: height - 260 }, end: { x: width - 50, y: height - 260 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) })
-        drawText("TOTAL PAYÉ", 350, height - 290, 12, boldFont)
-        drawText(`${price.toFixed(2)} €`, 450, height - 290, 12, boldFont)
+        page.drawLine({ start: { x: 50, y: height - 330 }, end: { x: width - 50, y: height - 330 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) })
+        drawText("TOTAL PAYÉ", 350, height - 360, 12, boldFont)
+        drawText(`${price.toFixed(2)} €`, 450, height - 360, 12, boldFont)
 
-        // Footer
-        drawText("Merci pour votre confiance !", 50, 100, 10, font)
-        drawText("Généré par club.nowme.fr", 50, 80, 8, font)
+        // Footer Legal Notice
+        page.drawLine({ start: { x: 50, y: 120 }, end: { x: width - 50, y: 120 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) })
+        drawText("Facture émise au nom et pour le compte de " + partnerName + " par NOWME.", 50, 100, 8, font)
+        drawText("NOWME agit en qualité de mandataire de facturation conformément aux dispositions légales.", 50, 88, 8, font)
+        drawText("TVA applicable : Celle du Vendeur (Prestataire).", 50, 76, 8, font)
+
+        // Footer Contact Logic
+        drawText("Besoin d'aide ?", 50, 50, 8, boldFont)
+        drawText("Problème avec la commande : Contactez le prestataire à " + partnerEmail, 50, 38, 8, font)
+        drawText("Problème technique : Contactez NOWME à support@nowme.fr", 50, 26, 8, font)
+
 
         const pdfBytes = await pdfDoc.save()
         const pdfBase64 = btoa(String.fromCharCode(...pdfBytes))
 
         // 5. Prepare Email Content
         const htmlContent = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
             <h1 style="color: #0F172A;">Félicitations ${user.first_name || ''} ! 🎉</h1>
             <p>Votre réservation pour <strong>${fullItemName}</strong> est bien confirmée.</p>
             <p><strong>Montant payé :</strong> ${price.toFixed(2)} €</p>
@@ -157,9 +184,23 @@ serve(async (req) => {
                 <a href="${Deno.env.get("PUBLIC_SITE_URL")}/mes-reservations" style="background-color: #0F172A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Voir ma réservation</a>
             </p>
             
-            <p style="margin-top: 40px; font-size: 12px; color: #64748b;">
+            <p style="margin-top: 40px; font-size: 14px;">
                 Vous trouverez votre facture en pièce jointe de ce mail.
             </p>
+
+            <hr style="border: 1px solid #e2e8f0; margin: 30px 0;" />
+
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px;">
+                <h3 style="margin-top: 0; color: #0F172A;">Besoin d'aide ?</h3>
+                
+                <p style="margin-bottom: 8px;"><strong>🏷️ Problème avec votre commande ?</strong><br/>
+                (Annulation, retard, question sur la prestation)<br/>
+                Veuillez contacter directement le prestataire : <a href="mailto:${partnerEmail}" style="color: #BE185D;">${partnerEmail}</a></p>
+                
+                <p style="margin-top: 16px;"><strong>💻 Problème technique ?</strong><br/>
+                (Site web, paiement, compte)<br/>
+                Contactez l'équipe NOWME : <a href="mailto:support@nowme.fr" style="color: #BE185D;">support@nowme.fr</a></p>
+            </div>
         </div>
       `
 
@@ -204,6 +245,7 @@ serve(async (req) => {
         if (shouldNotifyPartner && partner.contact_email) {
             console.log(`📧 Notifying partner (${partner.contact_email}) about new booking...`)
 
+            // 1. Send Email to Partner
             const partnerHtmlContent = `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #0F172A;">Nouvelle réservation ! 🎉</h1>
@@ -235,6 +277,28 @@ serve(async (req) => {
                 console.error("Failed to send partner notification:", partnerEmailError)
                 // Don't fail the whole request if partner email fails, just log it
             }
+
+            // 2. Insert In-App Notification (Database)
+            try {
+                const { error: notificationError } = await supabase
+                    .from('partner_notifications')
+                    .insert({
+                        partner_id: bookingData.partner_id,
+                        type: 'new_booking',
+                        title: 'Nouvelle réservation !',
+                        content: `${buyerName} a réservé ${fullItemName}.`,
+                        data: { booking_id: bookingData.id }
+                    })
+
+                if (notificationError) {
+                    console.error("Failed to create in-app notification:", notificationError)
+                } else {
+                    console.log("✅ In-app notification created for partner.")
+                }
+            } catch (err) {
+                console.error("Error creating in-app notification:", err)
+            }
+
         } else {
             console.log("Partner notification skipped (disabled or no email).")
         }

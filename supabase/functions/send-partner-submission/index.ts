@@ -13,6 +13,7 @@ type BusinessPayload = {
   website?: string;
   siret?: string;
   address?: string;
+  termsAccepted?: boolean;
 };
 
 type OfferPayload = {
@@ -60,7 +61,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         // Champs optionnels pour compatibilité
         website: business.website ?? null,
         siret: business.siret ?? null,
+        siret: business.siret ?? null,
         address: business.address ?? null,
+        terms_accepted_at: business.termsAccepted ? new Date() : null,
         status: "pending",
       })
       .select("id, business_name, contact_name, contact_email")
