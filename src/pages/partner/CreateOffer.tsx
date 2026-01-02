@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { categories } from '../../data/categories';
-import { Plus, Trash2, Info, Image as ImageIcon, X, Euro, Upload } from 'lucide-react';
+import { Plus, Trash2, Info, Image as ImageIcon, X, Euro, Upload, Link } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LocationSearch } from '../../components/LocationSearch';
 import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
@@ -38,9 +38,15 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   // Image Upload State
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [coverImageUrlInput, setCoverImageUrlInput] = useState('');
+  const [coverImageMode, setCoverImageMode] = useState<'upload' | 'url'>('upload');
+
   const [isUploading, setIsUploading] = useState(false);
   const [additionalImages, setAdditionalImages] = useState<File[]>([]);
+  const [additionalImageUrls, setAdditionalImageUrls] = useState<string[]>([]);
   const [existingMedia, setExistingMedia] = useState<OfferMedia[]>([]);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [newGalleryUrl, setNewGalleryUrl] = useState('');
 
   // Basic Info
   const [categorySlug, setCategorySlug] = useState('');
@@ -64,9 +70,15 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   const [calendlyUrl, setCalendlyUrl] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  const [promoConditions, setPromoConditions] = useState('');
   const [digitalProductFile, setDigitalProductFile] = useState<string | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [cancellationPolicy, setCancellationPolicy] = useState<'flexible' | 'moderate' | 'strict' | 'non_refundable'>('flexible');
+
+  // Duration
+  const [durationType, setDurationType] = useState<'lifetime' | 'fixed'>('lifetime');
+  const [validityStartDate, setValidityStartDate] = useState('');
+  const [validityEndDate, setValidityEndDate] = useState('');
 
   // Variants
   const [variants, setVariants] = useState<Variant[]>([
@@ -144,8 +156,13 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setExternalLink(offer.external_link || '');
       setExternalLink(offer.external_link || '');
       setPromoCode(offer.promo_code || '');
+      setPromoConditions(offer.promo_conditions || '');
       setDigitalProductFile(offer.digital_product_file || null);
       setCancellationPolicy(offer.cancellation_policy || 'flexible');
+
+      setDurationType(offer.duration_type || 'lifetime');
+      setValidityStartDate(offer.validity_start_date ? formatDateTimeForInput(offer.validity_start_date) : '');
+      setValidityEndDate(offer.validity_end_date ? formatDateTimeForInput(offer.validity_end_date) : '');
 
       setLocationMode(offer.is_online ? 'online' : (offer.street_address === 'Au domicile du client' ? 'at_home' : 'physical'));
 
@@ -192,11 +209,16 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         })));
       }
 
+
       // Handle Media (both original field name and alias)
       const mediaList = offer.offer_media || offer.media || [];
       const coverUrl = offer.image_url || mediaList[0]?.url || null;
 
       setCoverImagePreview(coverUrl);
+      if (coverUrl && !coverUrl.includes('storage')) {
+        setCoverImageMode('url');
+        setCoverImageUrlInput(coverUrl);
+      }
 
       if (mediaList.length > 0) {
         // Filter out main image if needed, or just map all
@@ -212,8 +234,20 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
     }
   };
 
+  const addGalleryUrl = () => {
+    if (newGalleryUrl) {
+      setAdditionalImageUrls(prev => [...prev, newGalleryUrl]);
+      setNewGalleryUrl('');
+      setShowUrlInput(false);
+    }
+  };
+
   const removeAdditionalImage = (index: number) => {
     setAdditionalImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeAdditionalUrl = (index: number) => {
+    setAdditionalImageUrls(prev => prev.filter((_, i) => i !== index));
   };
 
   const removeExistingMedia = async (mediaId: string) => {
@@ -274,15 +308,24 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       }
 
       const validVariants = variants.filter(v => v.name && v.price);
-      if (validVariants.length === 0) {
+      if (eventType !== 'promo' && validVariants.length === 0) {
         toast.error('Veuillez ajouter au moins un tarif valide (Nom et Prix)');
         setLoading(false);
         return;
       }
 
-      // 2. Upload Image
+      if (eventType === 'promo' && !promoConditions) {
+        toast.error('Veuillez indiquer les conditions du code promo');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Upload Image or Get URL
       let uploadedImageUrl = offer?.image_url;
-      if (coverImage) {
+
+      if (coverImageMode === 'url' && coverImageUrlInput) {
+        uploadedImageUrl = coverImageUrlInput;
+      } else if (coverImage) {
         setIsUploading(true);
         const fileExt = coverImage.name.split('.').pop();
         const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
@@ -307,8 +350,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         setIsUploading(false);
       }
 
-      // 2.5 Upload Additional Images
-      const uploadedMediaUrls: string[] = [];
+      // 2.5 Upload Additional Images & Merge URLs
+      const finalMediaUrls: string[] = [...additionalImageUrls];
+
       if (additionalImages.length > 0) {
         setIsUploading(true);
         for (const file of additionalImages) {
@@ -317,7 +361,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           const { error: uploadEr } = await supabase.storage.from('offer-images').upload(fileName, file);
           if (!uploadEr) {
             const { data: { publicUrl } } = supabase.storage.from('offer-images').getPublicUrl(fileName);
-            uploadedMediaUrls.push(publicUrl);
+            finalMediaUrls.push(publicUrl);
           }
         }
         setIsUploading(false);
@@ -358,8 +402,12 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         calendly_url: eventType === 'calendly' ? calendlyUrl : null,
         event_start_date: eventType === 'event' ? eventDate : null,
         event_end_date: eventType === 'event' ? eventEndDate : null,
-        external_link: eventType === 'promo' ? externalLink : null,
+        external_link: (eventType === 'promo' || (eventType === 'event' && locationMode === 'online')) ? externalLink : null,
         promo_code: eventType === 'promo' ? promoCode : null,
+        promo_conditions: eventType === 'promo' ? promoConditions : null,
+        duration_type: durationType,
+        validity_start_date: durationType === 'fixed' ? validityStartDate : null,
+        validity_end_date: durationType === 'fixed' ? validityEndDate : null,
         street_address: locationMode === 'at_home' ? 'Au domicile du client' : (locationMode === 'online' ? 'En ligne' : locationState.street_address),
         zip_code: locationMode === 'physical' ? locationState.zip_code : '',
         // For At Home: we set 'city' to a readable summary like "Paris, 92, 94..." for display cards
@@ -434,32 +482,34 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
       // 3. Upsert Variants
       // 3. Upsert Variants
-      const variantsToUpsert = validVariants.map(v => {
-        const variantData: any = {
-          offer_id: outputOfferId,
-          name: v.name,
-          description: v.description,
-          price: parseFloat(v.price),
-          discounted_price: v.discounted_price ? parseFloat(v.discounted_price) : null,
-          stock: v.has_stock && v.stock ? parseInt(v.stock) : null
-        };
-        // Only include ID if it's a real Update (not a new variant)
-        if (v.id) {
-          variantData.id = v.id;
-        }
-        return variantData;
-      });
+      if (eventType !== 'promo') {
+        const variantsToUpsert = validVariants.map(v => {
+          const variantData: any = {
+            offer_id: outputOfferId,
+            name: v.name,
+            description: v.description,
+            price: parseFloat(v.price),
+            discounted_price: v.discounted_price ? parseFloat(v.discounted_price) : null,
+            stock: v.has_stock && v.stock ? parseInt(v.stock) : null
+          };
+          // Only include ID if it's a real Update (not a new variant)
+          if (v.id) {
+            variantData.id = v.id;
+          }
+          return variantData;
+        });
 
-      // Separate new and existing variants if needed or just upsert with ID
-      const { error: variantsError } = await supabase
-        .from('offer_variants')
-        .upsert(variantsToUpsert); // upsert works if ID matches
+        // Separate new and existing variants if needed or just upsert with ID
+        const { error: variantsError } = await supabase
+          .from('offer_variants')
+          .upsert(variantsToUpsert); // upsert works if ID matches
 
-      if (variantsError) throw variantsError;
+        if (variantsError) throw variantsError;
+      }
 
       // 6. Handle Media Insert
-      if (uploadedMediaUrls.length > 0) {
-        const mediaToInsert = uploadedMediaUrls.map((url, idx) => ({
+      if (finalMediaUrls.length > 0) {
+        const mediaToInsert = finalMediaUrls.map((url, idx) => ({
           offer_id: outputOfferId,
           url: url,
           type: 'image',
@@ -514,33 +564,74 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
           {/* --- Image --- */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Image d'illustration ({offer ? 'actuelle conservée si non modifiée' : 'obligatoire'})</label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-primary transition-colors">
-              <div className="space-y-1 text-center">
-                {coverImagePreview ? (
-                  <div className="relative">
-                    <img src={coverImagePreview} alt="Aperçu" className="mx-auto h-48 object-cover rounded-md" />
-                    <button
-                      type="button"
-                      onClick={() => { setCoverImage(null); setCoverImagePreview(null); }}
-                      className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="flex text-sm text-gray-600 justify-center">
-                      <label className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark">
-                        <span>Télécharger un fichier</span>
-                        <input type="file" className="sr-only" accept="image/*" onChange={handleImageSelect} />
-                      </label>
-                    </div>
-                  </>
-                )}
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">Image d'illustration ({offer ? 'actuelle conservée si non modifiée' : 'obligatoire'})</label>
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => setCoverImageMode('upload')}
+                  className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${coverImageMode === 'upload' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Upload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCoverImageMode('url');
+                  }}
+                  className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${coverImageMode === 'url' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Lien URL
+                </button>
               </div>
             </div>
+
+            {coverImageMode === 'upload' ? (
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-primary transition-colors">
+                <div className="space-y-1 text-center">
+                  {coverImagePreview && !coverImageUrlInput ? (
+                    <div className="relative">
+                      <img src={coverImagePreview} alt="Aperçu" className="mx-auto h-48 object-cover rounded-md" />
+                      <button
+                        type="button"
+                        onClick={() => { setCoverImage(null); setCoverImagePreview(null); }}
+                        className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="flex text-sm text-gray-600 justify-center">
+                        <label className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark">
+                          <span>Télécharger un fichier</span>
+                          <input type="file" className="sr-only" accept="image/*" onChange={handleImageSelect} />
+                        </label>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-1">
+                <input
+                  type="text"
+                  value={coverImageUrlInput}
+                  onChange={(e) => {
+                    setCoverImageUrlInput(e.target.value);
+                    setCoverImagePreview(e.target.value);
+                  }}
+                  placeholder="https://exemple.com/image.jpg"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                />
+                {coverImageUrlInput && (
+                  <div className="mt-2 relative">
+                    <img src={coverImageUrlInput} alt="Aperçu URL" className="w-full h-48 object-cover rounded-md bg-gray-50" onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/150')} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* --- Global Gallery --- */}
@@ -563,11 +654,43 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                   </button>
                 </div>
               ))}
-              <label className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary aspect-square">
-                <Plus className="w-8 h-8 text-gray-400" />
-                <span className="text-xs text-gray-500 mt-2">Ajouter</span>
-                <input type="file" multiple accept="image/*" className="hidden" onChange={handleAdditionalImagesSelect} />
-              </label>
+              {additionalImageUrls.map((url, idx) => (
+                <div key={`url-${idx}`} className="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                  <img src={url} alt="Preview URL" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => removeAdditionalUrl(idx)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1">
+                    <X className="w-3 h-3" />
+                  </button>
+                  <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/50 text-white text-[10px] rounded">URL</span>
+                </div>
+              ))}
+
+              {!showUrlInput ? (
+                <div className="flex flex-col gap-2">
+                  <label className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary aspect-square">
+                    <Plus className="w-8 h-8 text-gray-400" />
+                    <span className="text-xs text-gray-500 mt-2">Upload</span>
+                    <input type="file" multiple accept="image/*" className="hidden" onChange={handleAdditionalImagesSelect} />
+                  </label>
+                  <button type="button" onClick={() => setShowUrlInput(true)} className="text-xs text-primary underline">
+                    Ajouter par lien
+                  </button>
+                </div>
+              ) : (
+                <div className="border border-gray-300 rounded-lg p-2 flex flex-col justify-center gap-2 aspect-square">
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={newGalleryUrl}
+                    onChange={(e) => setNewGalleryUrl(e.target.value)}
+                    className="w-full text-xs p-1 border rounded"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={addGalleryUrl} className="flex-1 bg-primary text-white text-xs py-1 rounded">Ajouter</button>
+                    <button type="button" onClick={() => setShowUrlInput(false)} className="bg-gray-200 text-gray-600 px-2 rounded"><X className="w-3 h-3" /></button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -925,25 +1048,40 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             )}
 
             {eventType === 'event' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Début</label>
-                  <input
-                    type="datetime-local"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Début</label>
+                    <input
+                      type="datetime-local"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
+                    <input
+                      type="datetime-local"
+                      value={eventEndDate}
+                      onChange={(e) => setEventEndDate(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
-                  <input
-                    type="datetime-local"
-                    value={eventEndDate}
-                    onChange={(e) => setEventEndDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  />
-                </div>
+
+                {locationMode === 'online' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Lien de la visio (Zoom, Meet...) - Sera envoyé par email</label>
+                    <input
+                      type="url"
+                      value={externalLink}
+                      onChange={(e) => setExternalLink(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      placeholder="https://zoom.us/..."
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -966,6 +1104,17 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Conditions (Texte affiché à la place du prix)</label>
+                  <input
+                    type="text"
+                    value={promoConditions}
+                    onChange={(e) => setPromoConditions(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg font-bold text-primary"
+                    placeholder="Ex: -15% sur tout le site, -50% sur la 1ère commande..."
+                    required={eventType === 'promo'}
                   />
                 </div>
               </div>
@@ -1037,102 +1186,105 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
 
           {/* --- Variants --- */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <label className="block text-sm font-medium text-gray-700">Tarifs & Options</label>
-              <button
-                type="button"
-                onClick={addVariant}
-                className="text-sm text-primary font-medium hover:text-primary-dark flex items-center"
-              >
-                <Plus className="w-4 h-4 mr-1" /> Ajouter une option
-              </button>
-            </div>
+          {/* --- Variants --- */}
+          {eventType !== 'promo' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <label className="block text-sm font-medium text-gray-700">Tarifs & Options</label>
+                <button
+                  type="button"
+                  onClick={addVariant}
+                  className="text-sm text-primary font-medium hover:text-primary-dark flex items-center"
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Ajouter une option
+                </button>
+              </div>
 
-            <div className="space-y-4">
-              {variants.map((variant, index) => (
-                <div key={index} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-                    <div>
-                      <label className="text-xs text-gray-500">Nom de l'option (ex: Solo, Duo)</label>
-                      <input
-                        type="text"
-                        value={variant.name}
-                        onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="Standard"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Prix (€)</label>
-                      <input
-                        type="number"
-                        value={variant.price}
-                        onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500">Prix Promo (€)</label>
-                      <input
-                        type="number"
-                        value={variant.discounted_price || ''}
-                        onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
-                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="text-xs text-gray-500">Description courte (optionnel)</label>
-                    <input
-                      type="text"
-                      value={variant.description || ''}
-                      onChange={(e) => updateVariant(index, 'description', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                      placeholder="Donne accès à..."
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={variant.has_stock}
-                        onChange={(e) => updateVariant(index, 'has_stock', e.target.checked)}
-                        className="rounded text-primary focus:ring-primary"
-                      />
-                      <span className="text-sm text-gray-700">Limiter les places</span>
-                    </label>
-
-                    {variant.has_stock && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">Qté:</span>
+              <div className="space-y-4">
+                {variants.map((variant, index) => (
+                  <div key={index} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className="text-xs text-gray-500">Nom de l'option (ex: Solo, Duo)</label>
                         <input
-                          type="number"
-                          value={variant.stock}
-                          onChange={(e) => updateVariant(index, 'stock', e.target.value)}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                          type="text"
+                          value={variant.name}
+                          onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Standard"
                         />
                       </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Prix (€)</label>
+                        <input
+                          type="number"
+                          value={variant.price}
+                          onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500">Prix Promo (€)</label>
+                        <input
+                          type="number"
+                          value={variant.discounted_price || ''}
+                          onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="text-xs text-gray-500">Description courte (optionnel)</label>
+                      <input
+                        type="text"
+                        value={variant.description || ''}
+                        onChange={(e) => updateVariant(index, 'description', e.target.value)}
+                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="Donne accès à..."
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={variant.has_stock}
+                          onChange={(e) => updateVariant(index, 'has_stock', e.target.checked)}
+                          className="rounded text-primary focus:ring-primary"
+                        />
+                        <span className="text-sm text-gray-700">Limiter les places</span>
+                      </label>
+
+                      {variant.has_stock && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Qté:</span>
+                          <input
+                            type="number"
+                            value={variant.stock}
+                            onChange={(e) => updateVariant(index, 'stock', e.target.value)}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {variants.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(index)}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
-
-                  {variants.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(index)}
-                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* --- Submit --- */}
           <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">

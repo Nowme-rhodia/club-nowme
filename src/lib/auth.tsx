@@ -454,8 +454,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (userData?.is_admin) {
         navigate('/admin');
-      } else if (userData?.subscription_status === 'active') {
-        navigate('/dashboard');
+      } else if (userData?.subscription_status === 'active' || userData?.subscription_status === 'trialing') {
+        navigate('/account');
       } else {
         navigate('/subscription');
       }

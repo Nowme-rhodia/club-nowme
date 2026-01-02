@@ -71,8 +71,8 @@ export default function SignIn() {
       }
 
       // Étape 4: Rediriger en fonction du profil
-      // Priorité 1: Redirection explicite via 'next' param (email link)
-      const nextParam = searchParams.get('next');
+      // Priorité 1: Redirection explicite via 'next' ou 'redirectTo' param
+      const nextParam = searchParams.get('next') || searchParams.get('redirectTo');
       if (nextParam) {
         console.log('Redirection demandée via URL vers:', nextParam);
         navigate(nextParam);

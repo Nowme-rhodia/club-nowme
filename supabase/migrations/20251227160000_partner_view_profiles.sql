@@ -1,6 +1,8 @@
 -- Allow partners to view user profiles of people who have booked them
 -- This is necessary for the bookings table to display client contact info
 
+DROP POLICY IF EXISTS "Partners can view profiles of their bookings" ON user_profiles;
+
 CREATE POLICY "Partners can view profiles of their bookings"
 ON user_profiles
 FOR SELECT

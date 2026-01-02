@@ -13,7 +13,7 @@ declare global {
 export default function BookingSuccess() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [offer, setOffer] = useState<any>(null);
 
@@ -71,15 +71,12 @@ export default function BookingSuccess() {
                             variant_id: safeVariantId // Added variant_id
                         };
 
-                        const { error: insertError } = await supabase.from('bookings').insert(bookingData);
+                        const { error: insertError } = await supabase
+                            .from('bookings')
+                            .upsert(bookingData, { onConflict: 'external_id', ignoreDuplicates: true });
 
-                        // If user sees 409 conflict, it means webhook won race condition. That's actually GOOD.
                         if (insertError) {
-                            if (insertError.code === '23505') {
-                                console.log("Booking already exists (webhook or double submit), ignoring insert error.");
-                            } else {
-                                console.error("Booking insert error", insertError);
-                            }
+                            console.error("Booking upsert error", insertError);
                         }
                     }
                 }
@@ -195,7 +192,23 @@ export default function BookingSuccess() {
                         </div>
                         <div
                             className="calendly-inline-widget"
-                            data-url={offer.calendly_url}
+                            data-url={(() => {
+                                const baseUrl = offer.calendly_url;
+                                const queryParts: string[] = [];
+
+                                if (user?.email) {
+                                    queryParts.push(`email=${encodeURIComponent(user.email)}`);
+                                }
+
+                                if (profile?.first_name && profile?.last_name) {
+                                    const fullName = `${profile.first_name} ${profile.last_name}`;
+                                    queryParts.push(`name=${encodeURIComponent(fullName)}`);
+                                    queryParts.push(`full_name=${encodeURIComponent(fullName)}`);
+                                }
+
+                                if (queryParts.length === 0) return baseUrl;
+                                return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${queryParts.join('&')}`;
+                            })()}
                             style={{ minWidth: '320px', height: '700px' }}
                         />
                     </div>
@@ -208,6 +221,39 @@ export default function BookingSuccess() {
                         <p className="text-gray-600 mb-6">
                             L'événement est ajouté à vos réservations. Présentez-vous 15 min avant l'heure indiquée.
                         </p>
+
+                        {/* External Link for Online Events */}
+                        {offer?.external_link && offer?.is_online && (
+                            <div className="mb-8 p-4 bg-blue-50 border border-blue-100 rounded-xl text-left">
+                                <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                                    <span className="bg-blue-200 p-1 rounded-full">📹</span>
+                                    Lien de connexion pour le jour J
+                                </h3>
+                                <p className="text-sm text-blue-700 mb-3">
+                                    Voici le lien à utiliser pour rejoindre la session le <strong>{new Date(offer.event_start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</strong> :
+                                </p>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={offer.external_link}
+                                        className="flex-1 text-xs bg-white border border-blue-200 rounded px-2 py-2 text-gray-600 truncate"
+                                    />
+                                    <a
+                                        href={offer.external_link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="shrink-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        Tester le lien
+                                    </a>
+                                </div>
+                                <p className="text-xs text-blue-600 mt-2">
+                                    (Ce lien est aussi conservé dans "Mes Réservations" et envoyé par email)
+                                </p>
+                            </div>
+                        )}
+
                         <Link to="/mes-reservations" className="inline-flex items-center px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors">
                             Voir mes réservations
                             <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />

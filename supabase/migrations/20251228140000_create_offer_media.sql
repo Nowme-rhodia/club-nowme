@@ -12,10 +12,12 @@ CREATE TABLE IF NOT EXISTS public.offer_media (
 ALTER TABLE public.offer_media ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Public read access for offer media" ON public.offer_media;
 CREATE POLICY "Public read access for offer media"
     ON public.offer_media FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Partners can upload media for their own offers" ON public.offer_media;
 CREATE POLICY "Partners can upload media for their own offers"
     ON public.offer_media FOR INSERT
     WITH CHECK (
@@ -23,11 +25,12 @@ CREATE POLICY "Partners can upload media for their own offers"
             SELECT 1 FROM public.offers
             WHERE id = offer_media.offer_id
             AND partner_id IN (
-                SELECT id FROM public.partners WHERE user_id = auth.uid()
+                SELECT partner_id FROM public.user_profiles WHERE user_id = auth.uid()
             )
         )
     );
 
+DROP POLICY IF EXISTS "Partners can delete their own offer media" ON public.offer_media;
 CREATE POLICY "Partners can delete their own offer media"
     ON public.offer_media FOR DELETE
     USING (
@@ -35,11 +38,12 @@ CREATE POLICY "Partners can delete their own offer media"
             SELECT 1 FROM public.offers
             WHERE id = offer_media.offer_id
             AND partner_id IN (
-                SELECT id FROM public.partners WHERE user_id = auth.uid()
+                SELECT partner_id FROM public.user_profiles WHERE user_id = auth.uid()
             )
         )
     );
 
+DROP POLICY IF EXISTS "Admins can manage all media" ON public.offer_media;
 CREATE POLICY "Admins can manage all media"
     ON public.offer_media FOR ALL
     USING (

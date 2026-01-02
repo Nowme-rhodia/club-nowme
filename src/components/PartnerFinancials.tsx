@@ -69,6 +69,29 @@ export default function PartnerFinancials() {
         }
     }
 
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'period_start', direction: 'desc' });
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedPayouts = [...payouts].sort((a, b) => {
+        if (sortConfig.key === 'amount') {
+            return sortConfig.direction === 'asc' ? a.net_payout_amount - b.net_payout_amount : b.net_payout_amount - a.net_payout_amount;
+        }
+        if (sortConfig.key === 'status') {
+            return sortConfig.direction === 'asc' ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status);
+        }
+        // Default date sort
+        return sortConfig.direction === 'asc'
+            ? new Date(a.period_start).getTime() - new Date(b.period_start).getTime()
+            : new Date(b.period_start).getTime() - new Date(a.period_start).getTime();
+    });
+
     if (loading) return <div className="p-8 text-center">Chargement...</div>;
 
     return (
@@ -100,14 +123,29 @@ export default function PartnerFinancials() {
                 <table className="w-full text-left">
                     <thead className="bg-gray-50 text-gray-600 text-sm">
                         <tr>
-                            <th className="px-6 py-3">Période</th>
-                            <th className="px-6 py-3">Montant Net</th>
-                            <th className="px-6 py-3">Statut</th>
+                            <th
+                                className="px-6 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => handleSort('period_start')}
+                            >
+                                Période {sortConfig.key === 'period_start' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                            </th>
+                            <th
+                                className="px-6 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => handleSort('amount')}
+                            >
+                                Montant Net {sortConfig.key === 'amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                            </th>
+                            <th
+                                className="px-6 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => handleSort('status')}
+                            >
+                                Statut {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                            </th>
                             <th className="px-6 py-3">Document</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {payouts.map(payout => (
+                        {sortedPayouts.map(payout => (
                             <tr key={payout.id}>
                                 <td className="px-6 py-4 text-sm">
                                     {new Date(payout.period_start).toLocaleDateString()} - {new Date(payout.period_end).toLocaleDateString()}
@@ -138,7 +176,7 @@ export default function PartnerFinancials() {
                                 </td>
                             </tr>
                         ))}
-                        {payouts.length === 0 && (
+                        {sortedPayouts.length === 0 && (
                             <tr>
                                 <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm">
                                     Aucun virement pour le moment.

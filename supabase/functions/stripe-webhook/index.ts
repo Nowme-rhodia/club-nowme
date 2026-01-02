@@ -1,39 +1,38 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-// [FIX] Use a newer, stable Stripe version for Deno to avoid 'runMicrotasks' and Crypto errors
-import Stripe from 'https://esm.sh/stripe@14.10.0?target=deno&no-check'
 
-console.log("Stripe Webhook Function Invoked (v3 - CONFIRMED UPDATE)")
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+import Stripe from 'npm:stripe@^14.10.0'
 
-serve(async (req) => {
-    // [FIX] Read the raw body ONCE as text to use suitable for both signature verification and JSON parsing
-    const body = await req.text()
-    const signature = req.headers.get('Stripe-Signature')
+console.log("Stripe Webhook Function Invoked (v7 - NPM Native)")
 
-    if (!signature) {
-        return new Response('No signature', { status: 400 })
-    }
-
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-        apiVersion: '2023-10-16', // Updated API version
-        httpClient: Stripe.createFetchHttpClient(),
-    })
-
-    const supabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
+Deno.serve(async (req) => {
     try {
-        const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+        const signature = req.headers.get('Stripe-Signature')
+        if (!signature) {
+            return new Response('No signature', { status: 400 })
+        }
 
+        const body = await req.text()
+
+        // 1. Init Stripe (NPM Mode)
+        const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
+            apiVersion: '2023-10-16',
+            httpClient: Stripe.createFetchHttpClient(), // Explicitly adding fetch client for safety in Deno
+        })
+
+        const supabaseClient = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        )
+
+        const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
         let event;
 
+        // 2. Async Verify
         if (endpointSecret) {
             try {
-                // [FIX] constructEventAsync is safer for Deno environments
+                // constructEventAsync is safer in Deno/Edge
                 event = await stripe.webhooks.constructEventAsync(body, signature, endpointSecret)
-            } catch (err) {
+            } catch (err: any) {
                 console.error(`Webhook signature verification failed: ${err.message}`)
                 return new Response(`Webhook Error: ${err.message}`, { status: 400 })
             }
@@ -44,71 +43,84 @@ serve(async (req) => {
 
         if (event.type === 'checkout.session.completed') {
             const session = event.data.object
-            const metadata = session.metadata
 
-            console.log('--- PROCESSING CHECKOUT SESSION ---');
-            console.log('Session ID:', session.id);
-            // Log fewer details to avoid circular log crashes, but show metadata
-            console.log('Metadata:', JSON.stringify(metadata, null, 2));
+            // --- VERBOSE LOG 1: RAW METADATA ---
+            console.log("RAW_STRIPE_METADATA:", JSON.stringify(session.metadata, null, 2))
 
-            if (metadata && metadata.source === 'club-nowme') {
-                const { user_id, offer_id, booking_type, variant_id, meeting_location } = metadata
+            if (session.metadata && session.metadata.source === 'club-nowme') {
+                const { user_id, offer_id, variant_id, meeting_location } = session.metadata
                 const amount = session.amount_total ? session.amount_total / 100 : 0
 
-                const safeMeetingLocation = meeting_location || null;
-                const parsedVariantId = (variant_id && variant_id !== 'null' && variant_id !== 'undefined') ? variant_id : null;
+                // Address Fallback Logic
+                const finalMeetingLocation = meeting_location || "";
 
-                console.log('Using Meeting Location:', safeMeetingLocation);
+                // Date Logic
+                const nowIso = new Date().toISOString();
 
-                // 1. Call RPC to confirm booking (Stock decrement, Status update)
-                // We pass meeting_location here, but we DON'T trust it to stick if the RPC is stale.
-                const { data, error } = await supabaseClient.rpc('confirm_booking', {
+                // --- VERBOSE LOG 2: MAPPED DATA ---
+                const bookingObject = {
                     p_user_id: user_id,
                     p_offer_id: offer_id,
-                    p_booking_date: new Date().toISOString(),
+                    p_booking_date: nowIso,
                     p_status: 'confirmed',
                     p_source: 'stripe',
                     p_amount: amount,
-                    p_variant_id: parsedVariantId,
+                    p_variant_id: (variant_id && variant_id !== 'null') ? variant_id : null,
                     p_external_id: session.id,
-                    p_meeting_location: safeMeetingLocation
-                })
+                    p_meeting_location: finalMeetingLocation
+                };
+                console.log("MAPPED_BOOKING_DATA_BEFORE_SAVE:", JSON.stringify(bookingObject, null, 2))
+
+                // --- NEW: Email Consistency Check ---
+                // We trust the Stripe session email because we forced it (or user entered it).
+                // We want to check if it matches the internal user email.
+                // We need to fetch the internal user email first.
+                const { data: userProfileCheck } = await supabaseClient
+                    .from('user_profiles')
+                    .select('email')
+                    .eq('user_id', user_id)
+                    .single();
+
+                const internalEmail = userProfileCheck?.email;
+                const stripeEmail = session.customer_details?.email || session.customer_email;
+
+                if (internalEmail && stripeEmail && internalEmail.toLowerCase() !== stripeEmail.toLowerCase()) {
+                    console.error(`[CRITICAL_EMAIL_MISMATCH] Internal User: ${internalEmail} vs Stripe Payer: ${stripeEmail}. ID: ${user_id}. Proceeding with attribution to ID ${user_id}.`);
+                } else {
+                    console.log("[EMAIL_MATCH_CONFIRMED] Stripe email matches internal profile.");
+                }
+                // ------------------------------------
+
+                // 3. Execute RPC
+                const { data, error } = await supabaseClient.rpc('confirm_booking', bookingObject)
+
+                // --- VERBOSE LOG 3: SQL RESULT ---
+                console.log("SQL_UPSERT_RESULT:", JSON.stringify({ data, error }, null, 2))
 
                 if (error) {
                     console.error('Failed to confirm booking (RPC error):', error)
-                    // We continue? No, usually stock decrement is critical.
-                    // But maybe the RPC failed because of the "column does not exist" error?
-                    // If so, we should try to fallback to a manual/simpler update?
-                    // For now, return error, but user can retry.
                     return new Response(`Booking Confirmation Failed: ${error.message}`, { status: 500 })
                 }
 
-                console.log('RPC Success. Booking ID:', data.booking_id);
-
-                // 2. [FAILSAFE] Force Update Address directly
-                // This bypasses any stale logic in the RPC function.
-                if (safeMeetingLocation && data.booking_id) {
-                    console.log('Force-updating address via Client...');
+                // 4. Force Address Update
+                if (finalMeetingLocation && data?.booking_id) {
                     const { error: updateError } = await supabaseClient
                         .from('bookings')
-                        .update({ meeting_location: safeMeetingLocation })
+                        .update({ meeting_location: finalMeetingLocation })
                         .eq('id', data.booking_id);
 
-                    if (updateError) {
-                        console.error('Failed to force-update address:', updateError);
-                    } else {
-                        console.log('Address force-updated successfully.');
-                    }
+                    if (updateError) console.error("FORCE_UPDATE_ERROR:", updateError);
+                    else console.log("FORCE_UPDATE_SUCCESS: Address saved directly.");
                 }
 
-                // 3. Trigger Confirmation Email
-                // Use a proper background fetch or just invoke without awaiting the full response
+                // 5. Trigger Email
+                const emailPayload = { id: data.booking_id };
+                console.log("EMAIL_VARIABLES_FINAL:", JSON.stringify(emailPayload))
+
                 try {
-                    console.log('Invoking send-confirmation-email...');
-                    supabaseClient.functions.invoke('send-confirmation-email', {
-                        body: { id: data.booking_id }
+                    await supabaseClient.functions.invoke('send-confirmation-email', {
+                        body: emailPayload
                     });
-                    // Don't wait strictly
                 } catch (emailErr) {
                     console.error('Failed to invoke email function:', emailErr);
                 }
@@ -119,7 +131,7 @@ serve(async (req) => {
             headers: { "Content-Type": "application/json" },
         })
 
-    } catch (err) {
+    } catch (err: any) {
         console.error("General Webhook Error:", err.message)
         return new Response(`Server Error: ${err.message}`, { status: 400 })
     }

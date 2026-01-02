@@ -110,24 +110,75 @@ export default function CommunitySpace() {
   const [selectedKiff, setSelectedKiff] = useState<CommunityContent | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
 
+  const [pastEvents, setPastEvents] = useState<CommunityContent[]>([]);
+
   useEffect(() => {
     fetchContent();
   }, []);
 
   const fetchContent = async () => {
     try {
-      const { data, error } = await supabase
+      // 1. Fetch Manual Community Content
+      const { data: communityData, error: communityError } = await supabase
         .from('community_content')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (communityError) throw communityError;
 
-      if (data) {
-        setAnnouncements(data.filter(i => i.type === 'announcement'));
-        setKiffs(data.filter(i => i.type === 'kiff'));
-      }
+      // 2. Fetch Rhodia's Offers
+      const RHODIA_PARTNER_ID = 'b8782294-f203-455b-980b-6893dd527bf2';
+
+      // Fetch Active/Upcoming Offers
+      const { data: activeOffers, error: offersError } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('partner_id', RHODIA_PARTNER_ID)
+        .eq('status', 'approved'); // Only approved offers (archived are past)
+
+      // Fetch Past/Archived Offers (Events only generally, or all archived)
+      // We look for 'archived' status OR past event_end_date (double check)
+      const { data: archivedOffers, error: archivedError } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('partner_id', RHODIA_PARTNER_ID)
+        .or('status.eq.archived,and(booking_type.eq.event,event_end_date.lt.now())');
+
+      if (offersError) console.error('Error fetching offers:', offersError);
+      if (archivedError) console.error('Error fetching archived offers:', archivedError);
+
+      // Process Data
+      const manualAnnouncements = communityData?.filter((i: any) => i.type === 'announcement') || [];
+      const manualKiffs = communityData?.filter((i: any) => i.type === 'kiff') || [];
+
+      // Map Active Offers to Kiffs format
+      const offerKiffs: CommunityContent[] = (activeOffers as any[] || []).map(offer => ({
+        id: offer.id,
+        type: 'kiff',
+        title: offer.title,
+        content: offer.description,
+        image_url: offer.image_url,
+        created_at: offer.created_at
+      }));
+
+      // Map Past Offers to Kiffs format
+      const pastOffersList: CommunityContent[] = (archivedOffers as any[] || []).map(offer => ({
+        id: offer.id,
+        type: 'kiff', // treated as kiff for display type
+        title: offer.title,
+        content: offer.description,
+        image_url: offer.image_url,
+        created_at: offer.created_at
+      }));
+
+      // Filter out duplicates if any overlap occurs due to date/status race
+      const uniquePastOffers = pastOffersList.filter(p => !offerKiffs.find(a => a.id === p.id));
+
+      setAnnouncements(manualAnnouncements);
+      setKiffs([...manualKiffs, ...offerKiffs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      setPastEvents(uniquePastOffers);
+
     } catch (err) {
       console.error('Error fetching content:', err);
     } finally {
@@ -146,7 +197,7 @@ export default function CommunitySpace() {
         .insert({
           user_id: profile?.user_id,
           suggestion_text: suggestion
-        });
+        } as any);
 
       if (error) throw error;
       toast.success("Merci ! Ton idée a été envoyée à l'équipe 💕");
@@ -356,7 +407,7 @@ export default function CommunitySpace() {
           </div>
         </section>
 
-        {/* SECTION 3: LA BOITE A IDÉES */}
+        {/* SECTION 4: LA BOITE A IDÉES */}
         <section className="max-w-2xl mx-auto text-center pt-8">
           <div className="bg-gradient-to-br from-primary to-primary-dark rounded-3xl p-8 sm:p-12 text-white shadow-xl">
             <h2 className="text-3xl font-bold mb-4">Une idée brillante ? 💡</h2>

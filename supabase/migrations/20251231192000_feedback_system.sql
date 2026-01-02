@@ -16,12 +16,14 @@ ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 
 -- 3. Policies
 -- Users can insert their own feedback
+DROP POLICY IF EXISTS "Users can insert their own feedback" ON public.feedback;
 CREATE POLICY "Users can insert their own feedback" 
 ON public.feedback FOR INSERT 
 TO authenticated 
 WITH CHECK (auth.uid() = feedback.user_id);
 
 -- Admin can view all
+DROP POLICY IF EXISTS "Admins can view all feedback" ON public.feedback;
 CREATE POLICY "Admins can view all feedback" 
 ON public.feedback FOR SELECT 
 TO authenticated 
@@ -29,7 +31,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.user_profiles
         WHERE user_id = auth.uid()
-        AND role = 'admin'
+        AND is_admin = true
     )
 );
 

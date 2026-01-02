@@ -9,7 +9,8 @@ import {
   Mail,
   Phone,
   Loader2,
-  MapPin
+  MapPin,
+  Download
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -74,7 +75,8 @@ export default function Bookings() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   useEffect(() => {
     if (user) {
       loadPartnerBookings();
@@ -83,9 +85,11 @@ export default function Bookings() {
 
   const loadPartnerBookings = async () => {
     try {
+      if (!user) return;
+
       // 1. Get Partner ID
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
+      const { data: profileData, error: profileError } = await (supabase
+        .from('user_profiles') as any)
         .select('partner_id')
         .eq('user_id', user.id)
         .maybeSingle();
@@ -146,8 +150,83 @@ export default function Bookings() {
 
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    // Date Filter
+    let matchesDate = true;
+    if (startDate || endDate) {
+      const dateToCheck = booking.booking_date || booking.created_at || '';
+
+      if (!dateToCheck) {
+        matchesDate = false;
+      } else {
+        if (startDate) {
+          if (dateToCheck < startDate) matchesDate = false;
+        }
+        if (endDate) {
+          // Compare dates (YYYY-MM-DD part)
+          if (dateToCheck.split('T')[0] > endDate) matchesDate = false;
+        }
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
+
+  const handleExport = () => {
+    if (filteredBookings.length === 0) {
+      toast.error("Aucune donnée à exporter");
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      "Client",
+      "Email",
+      "Téléphone",
+      "Offre",
+      "Option (Variante)",
+      "Date de Réservation",
+      "Statut",
+      "Montant",
+      "Devise",
+      "Source"
+    ];
+
+    // Helper to escape CSV fields
+    const escapeCsv = (str: string | null | undefined) => {
+      if (!str) return '""';
+      const safeStr = String(str).replace(/"/g, '""');
+      return `"${safeStr}"`;
+    };
+
+    // Map data to rows
+    const rows = filteredBookings.map(b => [
+      escapeCsv(`${b.user?.first_name || ''} ${b.user?.last_name || ''}`),
+      escapeCsv(b.user?.email),
+      escapeCsv(b.user?.phone),
+      escapeCsv(b.offer?.title),
+      escapeCsv(b.variant?.name || '-'),
+      escapeCsv(b.booking_date || b.created_at),
+      escapeCsv(statusConfig[b.status]?.label || b.status),
+      escapeCsv(b.amount?.toString()),
+      escapeCsv(b.currency),
+      escapeCsv(typeConfig[b.source]?.label || b.source)
+    ]);
+
+    // Build CSV content with BOM for Excel UTF-8
+    const csvContent = [
+      headers.join(';'), // Excel in Europe often expects semicolon
+      ...rows.map(r => r.join(';'))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `reservations_nowme_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (loading) {
     return (
@@ -196,6 +275,38 @@ export default function Bookings() {
               </select>
               <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+
+            {/* Date Range Inputs */}
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-transparent border-none text-sm focus:ring-0 p-1.5 text-gray-600 w-32"
+                placeholder="Du"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="bg-transparent border-none text-sm focus:ring-0 p-1.5 text-gray-600 w-32"
+                placeholder="Au"
+              />
+            </div>
+
+
+            {/* Export Button */}
+            <div className="w-full md:w-auto">
+              <button
+                onClick={handleExport}
+                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
+              >
+                <Download className="w-4 h-4" />
+                <span>Exporter (Excel)</span>
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -249,6 +360,9 @@ export default function Bookings() {
                     </th>
                     <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Montant
+                    </th>
+                    <th scope="col" className="relative px-6 py-4">
+                      <span className="sr-only">Actions</span>
                     </th>
                   </tr>
                 </thead>
@@ -351,6 +465,16 @@ export default function Bookings() {
                           <span className="text-sm font-bold text-gray-900 font-mono tracking-tight">
                             {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: booking.currency || 'EUR' }).format(booking.amount || 0)}
                           </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <a
+                            href={`/partner/bookings/${booking.id}`}
+                            className="text-primary hover:text-primary-dark font-semibold hover:underline"
+                          >
+                            Voir détails
+                          </a>
                         </td>
                       </tr>
                     );

@@ -24,7 +24,7 @@ BEGIN
         EXISTS (
             SELECT 1 FROM public.user_profiles AS up
             WHERE up.user_id = auth.uid()
-            AND up.role = 'admin'
+            AND up.is_admin = true
         )
     );
 END $$;

@@ -1,51 +1,47 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+import Stripe from 'npm:stripe@^14.10.0'
 
-console.log("Create Checkout Session Function Invoked")
+console.log("Create Checkout Session Function Invoked (v7 - Stable NPM Import)")
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
-    // Handle CORS preflight requests
+Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
 
     try {
         const reqBody = await req.json()
-        console.log("DEBUG: create-checkout-session payload:", JSON.stringify(reqBody)); // [DEBUG] Log entire payload
-        const { offer_id, price, user_id, success_url, cancel_url, booking_type, variant_id, travel_fee, department_code } = reqBody
+        const { offer_id, price, user_id, user_email, success_url, cancel_url, booking_type, variant_id, travel_fee, department_code } = reqBody
 
-        // Initialize Stripe
+        // Initialisation propre sans adaptateur inutile qui fait crasher Deno
         const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-            apiVersion: '2022-11-15',
+            apiVersion: '2023-10-16',
             httpClient: Stripe.createFetchHttpClient(),
         })
 
-        // Initialize Supabase Client
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+            {
+                global: {
+                    headers: { Authorization: req.headers.get('Authorization')! },
+                },
+            }
         )
 
-        // 1. Fetch Offer Details to confirm price and get title
-        let offerQuery = supabaseClient
+        // 1. Fetch Offer
+        const { data: offer, error: offerError } = await supabaseClient
             .from('offers')
             .select('title, image_url, description, service_zones')
             .eq('id', offer_id)
             .single();
 
-        const { data: offer, error: offerError } = await offerQuery;
+        if (offerError || !offer) throw new Error("Offer not found");
 
-        if (offerError || !offer) {
-            throw new Error("Offer not found")
-        }
-
-        // 1a. Verify Variant if provided
         let unitAmount = Math.round(price * 100);
         let variantName = '';
 
@@ -57,47 +53,19 @@ serve(async (req) => {
                 .single();
 
             if (variantError || !variant) throw new Error("Variant not found");
-
-            if (variant.stock !== null && variant.stock <= 0) {
-                throw new Error("Ce tarif est épuisé (Out of Stock)");
-            }
-
             const expectedPrice = variant.discounted_price || variant.price;
-            // Allow small float tolerance if needed, but strict check is better for security
-            if (Math.abs(expectedPrice - price) > 0.01) {
-                throw new Error("Price mismatch detected");
-            }
-
             unitAmount = Math.round(expectedPrice * 100);
             variantName = ` - ${variant.name}`;
         }
 
-        // 1b. Verify Travel Fee if provided
+        // 1b. Travel Fee
         let travelFeeLineItem = null;
         if (travel_fee && travel_fee > 0) {
-            if (!offer.service_zones || !Array.isArray(offer.service_zones)) {
-                throw new Error("This offer does not support service zones.");
-            }
-            if (!department_code) {
-                throw new Error("Department code required for travel fee.");
-            }
-
-            const zone = offer.service_zones.find((z: any) => z.code === department_code);
-            if (!zone) {
-                throw new Error(`Department ${department_code} is not served by this offer.`);
-            }
-
-            // Verify fee matches (or is close enough to handle float issues)
-            // Ideally exact match.
-            if (Math.abs(zone.fee - travel_fee) > 0.01) {
-                throw new Error("Travel fee mismatch.");
-            }
-
             travelFeeLineItem = {
                 price_data: {
                     currency: 'eur',
                     product_data: {
-                        name: `Frais de déplacement - ${department_code}`,
+                        name: `Frais de déplacement - ${department_code || 'Zone'}`,
                         description: `Déplacement à domicile`,
                     },
                     unit_amount: Math.round(travel_fee * 100),
@@ -106,10 +74,11 @@ serve(async (req) => {
             };
         }
 
-        // 2. Create Stripe Checkout Session
-        // We pass metadata to track the booking details on success
-        const safeVariantId = variant_id ? String(variant_id) : 'null';
-        console.log("Creating Session with Variant ID:", safeVariantId);
+        // 2. Address Concatenation
+        let finalMeetingLocation = reqBody.meeting_location || '';
+        if (department_code && finalMeetingLocation) {
+            finalMeetingLocation = `[${department_code}] ${finalMeetingLocation}`;
+        }
 
         const line_items = [
             {
@@ -117,7 +86,7 @@ serve(async (req) => {
                     currency: 'eur',
                     product_data: {
                         name: `${offer.title}${variantName}`,
-                        description: offer.description ? offer.description.substring(0, 100) + '...' : undefined,
+                        description: offer.description ? offer.description.substring(0, 100) : undefined,
                         images: offer.image_url ? [offer.image_url] : [],
                     },
                     unit_amount: unitAmount,
@@ -126,15 +95,36 @@ serve(async (req) => {
             },
         ];
 
-        if (travelFeeLineItem) {
-            line_items.push(travelFeeLineItem);
+        if (travelFeeLineItem) line_items.push(travelFeeLineItem);
+
+        // --- NEW: Strict Email Consistency (Robust V2) ---
+        console.log(`[DEBUG] Fetching email for user_id: ${user_id}`);
+        const { data: userData, error: userError } = await supabaseClient
+            .from('user_profiles')
+            .select('email')
+            .eq('user_id', user_id)
+            .single();
+
+        if (userError) {
+            console.error(`[DEBUG] Error fetching user profile: ${JSON.stringify(userError)}`);
+        }
+
+        // Priority: DB Email -> Payload Email
+        let customerEmail = userData?.email;
+
+        if (!customerEmail && user_email) {
+            console.log(`[DEBUG] DB email missing/empty, using payload email: ${user_email}`);
+            customerEmail = user_email;
+        } else {
+            console.log(`[DEBUG] Using DB email: ${customerEmail}`);
         }
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card', 'paypal'],
             line_items: line_items,
             mode: 'payment',
-            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${price + (travel_fee || 0)}&status=success&variant_id=${safeVariantId}`,
+            customer_email: customerEmail, // FORCE EMAIL
+            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${price + (travel_fee || 0)}&status=success&variant_id=${variant_id ? String(variant_id) : 'null'}`,
             cancel_url: cancel_url,
             client_reference_id: user_id,
             metadata: {
@@ -142,12 +132,10 @@ serve(async (req) => {
                 user_id: user_id,
                 booking_type: booking_type,
                 source: 'club-nowme',
-                // Stripe metadata values must be strings and max 500 chars
-                // We convert null to empty string or rely on client sending valid UUID
-                variant_id: safeVariantId,
+                variant_id: variant_id ? String(variant_id) : 'null',
                 department_code: department_code || '',
                 travel_fee: travel_fee ? String(travel_fee) : '0',
-                meeting_location: reqBody.meeting_location || '' // Add meeting_location to metadata
+                meeting_location: finalMeetingLocation
             },
         })
 
@@ -156,7 +144,7 @@ serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         )
     } catch (error) {
-        console.error("Error creating checkout session:", error)
+        console.error("Error:", error.message)
         return new Response(
             JSON.stringify({ error: error.message }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },

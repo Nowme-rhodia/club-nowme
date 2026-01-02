@@ -1,6 +1,6 @@
-import { serve } from "std/http/server.ts";
-import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@14.10.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,22 +25,38 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { priceId, email, success_url, cancel_url, subscription_type } = await req.json();
+    const { priceId, email, userId: requestUserId, success_url, cancel_url, subscription_type } = await req.json();
 
     if (!priceId || !email || !success_url || !cancel_url) {
       throw new Error("Paramètres manquants");
     }
 
-    console.log("📧 Recherche du profil pour:", email);
+    console.log("📧 Recherche du profil pour:", email, "userId:", requestUserId);
 
-    // Récupérer le profil utilisateur par email
-    const { data: profile, error: profileError } = await supabase
-      .from("user_profiles")
-      .select("user_id, stripe_customer_id")
-      .eq("email", email)
-      .single();
+    let profile = null;
 
-    if (profileError || !profile) {
+    // 1. Essayer avec userId si fourni (plus fiable)
+    if (requestUserId) {
+      const { data: p } = await supabase
+        .from("user_profiles")
+        .select("user_id, stripe_customer_id")
+        .eq("user_id", requestUserId)
+        .maybeSingle();
+      profile = p;
+    }
+
+    // 2. Si pas trouvé, essayer avec l'email
+    if (!profile) {
+      console.log("⚠️ Pas trouvé par ID, essai par email...");
+      const { data: p } = await supabase
+        .from("user_profiles")
+        .select("user_id, stripe_customer_id")
+        .eq("email", email)
+        .maybeSingle();
+      profile = p;
+    }
+
+    if (!profile) {
       throw new Error("Profil utilisateur non trouvé. Veuillez vous inscrire d'abord.");
     }
 

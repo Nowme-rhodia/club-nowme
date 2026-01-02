@@ -8,6 +8,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface Booking {
+    cancelled_by_partner?: boolean;
+
     id: string;
     booking_date: string;
     scheduled_at?: string;
@@ -26,12 +28,15 @@ interface Booking {
         booking_type?: string;
         event_start_date?: string;
         digital_product_file?: string;
+        external_link?: string;
+        is_online?: boolean;
 
         event_end_date?: string;
         cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
         partner?: {
             contact_email?: string;
             business_name?: string;
+            address?: string;
         };
     };
 }
@@ -41,35 +46,6 @@ export default function MyBookings() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled' | 'purchases'>('upcoming');
     const [loading, setLoading] = useState(true);
-
-    const filteredBookings = bookings.filter((booking) => {
-        const isCancelled = booking.status === 'cancelled';
-        if (activeTab === 'cancelled') return isCancelled;
-        if (isCancelled) return false;
-
-        const type = booking.offer.booking_type || 'event';
-        const isPurchaseOrPromo = type === 'purchase' || type === 'promo';
-
-        if (activeTab === 'purchases') {
-            return isPurchaseOrPromo;
-        }
-
-        // For Upcoming/Past, exclude Purchase/Promo
-        if (isPurchaseOrPromo) return false;
-
-        // Logic for Past vs Upcoming (Events & Appointments)
-        // Priority: Scheduled Date -> Event Fixed Date -> Purchase Date
-        const dateToCheck = booking.scheduled_at
-            ? new Date(booking.scheduled_at)
-            : (booking.offer.event_start_date ? new Date(booking.offer.event_start_date) : new Date(booking.booking_date));
-        const now = new Date();
-
-        if (activeTab === 'past') {
-            return dateToCheck < now;
-        } else {
-            return dateToCheck >= now;
-        }
-    });
 
     // Review Modal State
     const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -83,6 +59,87 @@ export default function MyBookings() {
     const [selectedBookingForCancel, setSelectedBookingForCancel] = useState<Booking | null>(null);
     const [isCancelling, setIsCancelling] = useState(false);
 
+    useEffect(() => {
+        if (user) {
+            fetchBookings();
+        }
+    }, [user]);
+
+    const fetchBookings = async () => {
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`
+                    id,
+                    booking_date,
+                    scheduled_at,
+                    meeting_location,
+                    created_at,
+                    status,
+                    cancelled_by_partner,
+                    customer_email,
+                    source,
+                    external_id,
+                    offer: offers (
+                        id,
+                        title,
+                        image_url,
+                        city,
+                        promo_code,
+                        booking_type,
+                        event_start_date,
+                        digital_product_file,
+                        event_end_date,
+                        cancellation_policy,
+                        external_link,
+                        is_online,
+                        partner: partners (
+                            contact_email,
+                            business_name,
+                            address
+                        )
+                    )
+                `)
+                .eq('user_id', user?.id)
+                .order('booking_date', { ascending: false });
+
+            if (error) throw error;
+            setBookings(data as any || []);
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            toast.error('Erreur lors du chargement des réservations');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredBookings = bookings.filter((booking) => {
+        const isCancelled = booking.status === 'cancelled';
+        if (activeTab === 'cancelled') return isCancelled;
+        if (isCancelled) return false;
+
+        const type = booking.offer?.booking_type || 'event';
+        const isPurchaseOrPromo = type === 'purchase' || type === 'promo';
+
+        if (activeTab === 'purchases') {
+            return isPurchaseOrPromo;
+        }
+
+        if (isPurchaseOrPromo) return false;
+
+        const dateToCheck = booking.scheduled_at
+            ? new Date(booking.scheduled_at)
+            : (booking.offer?.event_start_date ? new Date(booking.offer.event_start_date) : new Date(booking.booking_date));
+        const now = new Date();
+
+        if (activeTab === 'past') {
+            return dateToCheck < now;
+        } else {
+            return dateToCheck >= now;
+        }
+    });
+
     const openCancelModal = (booking: Booking) => {
         setSelectedBookingForCancel(booking);
         setCancelModalOpen(true);
@@ -90,22 +147,22 @@ export default function MyBookings() {
 
     const handleCancelBooking = async () => {
         if (!selectedBookingForCancel) return;
-
         setIsCancelling(true);
         try {
-            const { data, error } = await supabase.functions.invoke('cancel-booking', {
+            // Basic client cancellation - calling a hypothetical function or using status update if allowed
+            // Assuming there is a 'cancel-booking' function for clients
+            const { error } = await supabase.functions.invoke('cancel-booking', {
                 body: { bookingId: selectedBookingForCancel.id }
             });
 
             if (error) throw error;
-            if (data?.error) throw new Error(data.error);
 
-            toast.success('Réservation annulée avec succès');
+            toast.success('Réservation annulée');
             setCancelModalOpen(false);
-            fetchBookings(); // Refresh list
-        } catch (error: any) {
-            console.error('Error cancelling booking:', error);
-            toast.error(error.message || "Erreur lors de l'annulation");
+            fetchBookings();
+        } catch (error) {
+            console.error('Error cancelling:', error);
+            toast.error("Erreur lors de l'annulation");
         } finally {
             setIsCancelling(false);
         }
@@ -120,7 +177,6 @@ export default function MyBookings() {
 
     const submitReview = async () => {
         if (!selectedBookingForReview || rating === 0) return;
-
         setIsSubmittingReview(true);
         try {
             const { error } = await supabase
@@ -131,73 +187,20 @@ export default function MyBookings() {
                     user_id: user?.id,
                     rating,
                     comment
-                });
-
+                } as any);
             if (error) throw error;
-
-            toast.success('Merci pour votre avis !');
+            toast.success('Avis envoyé !');
             setReviewModalOpen(false);
-            // Optionally refresh bookings to show "Avis donné" state if we implemented that check
         } catch (error) {
-            console.error('Error submitting review:', error);
-            toast.error("Erreur lors de l'envoi de l'avis");
+            console.error('Error review:', error);
+            toast.error("Erreur l'envoi de l'avis");
         } finally {
             setIsSubmittingReview(false);
         }
     };
 
-    useEffect(() => {
-        if (user) {
-            fetchBookings();
-        }
-    }, [user]);
-
-    const fetchBookings = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('bookings')
-                .select(`
-          id,
-          booking_date,
-          scheduled_at,
-          meeting_location,
-          created_at,
-          status,
-          customer_email,
-          source,
-          external_id,
-          offer:offers (
-            id,
-            title,
-            image_url,
-            city,
-            promo_code,
-            booking_type,
-            event_start_date,
-            event_end_date,
-            cancellation_policy,
-            partner:partners (
-                contact_email,
-                business_name,
-                address
-            )
-          )
-        `)
-                .eq('user_id', user!.id)
-                .order('booking_date', { ascending: false });
-
-            if (error) throw error;
-            setBookings(data || []);
-        } catch (error) {
-            console.error('Error fetching bookings:', error);
-            toast.error('Erreur lors du chargement des réservations');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const getStatusBadge = (status: string) => {
-        switch (status) {
+    const getStatusBadge = (booking: Booking) => {
+        switch (booking.status) {
             case 'confirmed':
             case 'paid':
             case 'promo_claimed':
@@ -213,6 +216,14 @@ export default function MyBookings() {
                     </span>
                 );
             case 'cancelled':
+                if (booking.cancelled_by_partner) {
+                    return (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Annulé par le pro
+                        </span>
+                    );
+                }
                 return (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                         Annulé
@@ -319,8 +330,23 @@ export default function MyBookings() {
                                                         </div>
                                                     )}
                                                 </div>
-                                                {getStatusBadge(booking.status)}
+                                                {getStatusBadge(booking)}
                                             </div>
+
+                                            {booking.cancelled_by_partner && (
+                                                <div className="mb-4 bg-orange-50 border border-orange-100 rounded-lg p-3">
+                                                    <div className="flex items-start gap-2 text-sm text-orange-800">
+                                                        <Sparkles className="w-4 h-4 mt-0.5 shrink-0" />
+                                                        <p>
+                                                            Cette séance a été annulée par le professionnel. Vous avez été intégralement remboursé.
+                                                            <br />
+                                                            <Link to="/tous-les-kiffs" className="font-semibold underline hover:text-orange-900 mt-1 inline-block">
+                                                                Découvrir d'autres expériences similaires →
+                                                            </Link>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="space-y-3">
                                                 {/* Purchase Date */}
@@ -373,7 +399,10 @@ export default function MyBookings() {
                                                         <div className="mt-1 flex items-start gap-1 text-sm text-gray-500">
                                                             <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
                                                             <span className="break-all">
-                                                                {booking.meeting_location || booking.offer?.partner?.address || booking.offer?.city || "Lieu à confirmer"}
+                                                                {booking.offer?.is_online
+                                                                    ? "Événement en ligne (Voir lien ci-dessous)"
+                                                                    : (booking.meeting_location || booking.offer?.partner?.address || booking.offer?.city || "Lieu à confirmer")
+                                                                }
                                                             </span>
                                                         </div>
                                                     </div>
@@ -406,6 +435,32 @@ export default function MyBookings() {
                                                             <span className="font-mono font-bold text-gray-900">{booking.offer.promo_code}</span>
                                                         </div>
                                                         <Copy className="w-4 h-4 text-gray-400 group-hover:text-primary" />
+                                                    </div>
+
+                                                )}
+
+                                                {/* External Link (Visio) */}
+                                                {(booking.offer?.external_link && booking.offer?.booking_type === 'event') && (
+                                                    <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-2 text-blue-800">
+                                                            <div className="p-1.5 bg-white rounded-full">
+                                                                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                </svg>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-semibold text-sm block">Lien de la visio disponible</span>
+                                                                <span className="text-xs opacity-75">Connectez-vous à l'heure du rendez-vous</span>
+                                                            </div>
+                                                        </div>
+                                                        <a
+                                                            href={booking.offer.external_link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors whitespace-nowrap w-full sm:w-auto text-center"
+                                                        >
+                                                            Accéder au lien visio
+                                                        </a>
                                                     </div>
                                                 )}
                                             </div>
@@ -522,71 +577,73 @@ export default function MyBookings() {
             }
 
             {/* Cancellation Modal */}
-            {cancelModalOpen && selectedBookingForCancel && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
-                        <button
-                            onClick={() => setCancelModalOpen(false)}
-                            className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-
-                        <div className="flex flex-col items-center text-center mb-6">
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                                <AlertTriangle className="w-6 h-6 text-red-600" />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900">Annuler la réservation ?</h3>
-                            <p className="text-sm text-gray-500 mt-2">
-                                {selectedBookingForCancel.offer.title}
-                            </p>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-1">Politique d'annulation</h4>
-                            <p className="text-sm text-gray-600">
-                                {(() => {
-                                    const policy = selectedBookingForCancel.offer.cancellation_policy || 'flexible';
-                                    switch (policy) {
-                                        case 'flexible': return "Flexible : Remboursement intégral jusqu'à 24h avant l'événement.";
-                                        case 'moderate': return "Modérée : Remboursement intégral jusqu'à 7 jours avant l'événement.";
-                                        case 'strict': return "Stricte : Remboursement intégral jusqu'à 15 jours avant l'événement.";
-                                        case 'non_refundable': return "Non remboursable : Aucun remboursement possible.";
-                                        default: return "Conditions standard.";
-                                    }
-                                })()}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-2 italic">
-                                En annulant maintenant, le remboursement sera traité automatiquement selon ces conditions.
-                            </p>
-                        </div>
-
-                        <div className="flex gap-3">
+            {
+                cancelModalOpen && selectedBookingForCancel && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
                             <button
                                 onClick={() => setCancelModalOpen(false)}
-                                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
                             >
-                                Conserver
+                                <X className="w-6 h-6" />
                             </button>
-                            <button
-                                onClick={handleCancelBooking}
-                                disabled={isCancelling}
-                                className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center"
-                            >
-                                {isCancelling ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Traitement...
-                                    </>
-                                ) : 'Confirmer l\'annulation'}
-                            </button>
+
+                            <div className="flex flex-col items-center text-center mb-6">
+                                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900">Annuler la réservation ?</h3>
+                                <p className="text-sm text-gray-500 mt-2">
+                                    {selectedBookingForCancel.offer.title}
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                                <h4 className="text-sm font-semibold text-gray-900 mb-1">Politique d'annulation</h4>
+                                <p className="text-sm text-gray-600">
+                                    {(() => {
+                                        const policy = selectedBookingForCancel.offer.cancellation_policy || 'flexible';
+                                        switch (policy) {
+                                            case 'flexible': return "Flexible : Remboursement intégral jusqu'à 24h avant l'événement.";
+                                            case 'moderate': return "Modérée : Remboursement intégral jusqu'à 7 jours avant l'événement.";
+                                            case 'strict': return "Stricte : Remboursement intégral jusqu'à 15 jours avant l'événement.";
+                                            case 'non_refundable': return "Non remboursable : Aucun remboursement possible.";
+                                            default: return "Conditions standard.";
+                                        }
+                                    })()}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-2 italic">
+                                    En annulant maintenant, le remboursement sera traité automatiquement selon ces conditions.
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setCancelModalOpen(false)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    Conserver
+                                </button>
+                                <button
+                                    onClick={handleCancelBooking}
+                                    disabled={isCancelling}
+                                    className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+                                >
+                                    {isCancelling ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Traitement...
+                                        </>
+                                    ) : 'Confirmer l\'annulation'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 }

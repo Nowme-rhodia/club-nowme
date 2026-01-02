@@ -43,6 +43,10 @@ interface OfferDetails {
   filterPrice?: number;
   is_online?: boolean;
   service_zones?: { code: string; fee: number }[];
+  promoConditions?: string;
+  bookingType?: string;
+  is_event?: boolean;
+  event_end_date?: string;
 }
 
 export default function TousLesKiffs() {
@@ -78,9 +82,11 @@ export default function TousLesKiffs() {
           .from('offers')
           .select(`
             *,
+            promo_conditions,
+            booking_type,
             category:offer_categories!offers_category_id_fkey(*),
             offer_variants(price, discounted_price),
-            partner:partners(business_name, address)
+            partner:partners(business_name, address, contact_email)
           `)
           .eq('status', 'approved')
           .order('created_at', { ascending: false }); // Tri par défaut : les plus récents d'abord
@@ -114,6 +120,8 @@ export default function TousLesKiffs() {
               lng = offer.coordinates[1];
             }
 
+            const isOfficial = offer.partner?.contact_email === 'rhodia@nowme.fr' || offer.partner?.business_name === 'Nowme';
+
             return {
               id: offer.id,
               title: offer.title,
@@ -134,7 +142,12 @@ export default function TousLesKiffs() {
               subcategorySlug: offer.category?.parent_slug ? offer.category.slug : undefined,
               reviews: [],
               is_online: offer.is_online,
-              service_zones: offer.service_zones
+              service_zones: offer.service_zones,
+              is_event: offer.booking_type === 'event',
+              event_end_date: offer.event_end_date,
+              badge: isOfficial ? 'Événement Officiel' : undefined,
+              promoConditions: offer.promo_conditions,
+              bookingType: offer.booking_type
             };
           });
           setOffersWithLocations(formattedOffers);
@@ -208,6 +221,13 @@ export default function TousLesKiffs() {
     }
 
     filtered = filtered.filter(offer => {
+      // Filter out expired offers if they have an event date
+      // Note: Backend archiving job should handle this, but visual filter is immediate
+      if (offer.is_event && offer.event_end_date) {
+        const eventDate = new Date(offer.event_end_date);
+        if (eventDate < new Date()) return false;
+      }
+
       const priceToCheck = offer.filterPrice !== undefined ? offer.filterPrice : offer.price;
       return priceToCheck >= priceRange[0] &&
         priceToCheck <= priceRange[1] &&

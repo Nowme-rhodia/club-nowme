@@ -3,14 +3,15 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { Clock, CheckCircle2, XCircle, Calendar, User, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
+import CancellationModal from "../../components/partner/CancellationModal";
 
 interface Booking {
   id: string;
   partner_id: string;
   offer_id: string;
   user_id: string;
-  date: string;
-  status: "pending" | "confirmed" | "cancelled";
+  booking_date: string; // Corrected from 'date'
+  status: "pending" | "confirmed" | "cancelled" | "paid";
   created_at: string;
   offer?: { title: string; description: string };
   user?: { first_name: string; last_name: string; email: string };
@@ -22,6 +23,9 @@ export default function BookingDetail() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     if (id) fetchBooking(id);
   }, [id]);
@@ -31,10 +35,10 @@ export default function BookingDetail() {
     const { data, error } = await supabase
       .from("bookings")
       .select(`
-        *,
-        offer:offers(title, description),
-        user:user_profiles(first_name, last_name, email)
-      `)
+          *,
+          offer:offers(title, description),
+          user:user_profiles(first_name, last_name, email)
+        `)
       .eq("id", bookingId)
       .single();
 
@@ -46,22 +50,42 @@ export default function BookingDetail() {
     setLoading(false);
   }
 
-  async function cancelBooking() {
-    if (!id || !booking) return;
-    if (!window.confirm("Annuler cette réservation ?")) return;
+  const handleCancelClick = () => {
+    setShowCancelModal(true);
+  };
 
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", id);
+  const handleConfirmCancellation = async (reason: string) => {
+    if (!id) return;
+    setIsSubmitting(true);
 
-    if (error) {
-      toast.error("Impossible d'annuler");
-    } else {
-      toast.success("Réservation annulée ❌");
-      navigate("/partner/dashboard");
+    try {
+      const { data, error } = await supabase.functions.invoke('handle-partner-cancellation', {
+        body: {
+          booking_id: id,
+          reason: reason
+        }
+      });
+
+      if (error) throw error;
+
+      // If the function returns a custom error in the body
+      if (data && data.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success("Réservation annulée avec succès");
+
+      // Refresh booking data or navigate back
+      await fetchBooking(id);
+      setShowCancelModal(false);
+
+    } catch (err: any) {
+      console.error("Cancellation error:", err);
+      toast.error(err.message || "Erreur lors de l'annulation");
+    } finally {
+      setIsSubmitting(false);
     }
-  }
+  };
 
   if (loading) return <p className="p-6">Chargement...</p>;
   if (!booking) return <p className="p-6">Réservation introuvable.</p>;
@@ -70,10 +94,10 @@ export default function BookingDetail() {
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">
       <div className="max-w-3xl mx-auto">
         <Link
-          to="/partner/dashboard"
+          to="/partner/bookings"
           className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-primary mb-6 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" /> Retour au tableau de bord
+          <ArrowLeft className="w-4 h-4 mr-2" /> Retour aux réservations
         </Link>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -93,7 +117,7 @@ export default function BookingDetail() {
                   <Clock className="w-4 h-4 mr-2" /> En attente
                 </span>
               )}
-              {booking.status === "confirmed" && (
+              {(booking.status === "confirmed" || booking.status === "paid") && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200">
                   <CheckCircle2 className="w-4 h-4 mr-2" /> Confirmée
                 </span>
@@ -163,20 +187,20 @@ export default function BookingDetail() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Date du rendez-vous</h3>
                 <div className="text-2xl font-bold text-gray-900">
-                  {new Date(booking.date).toLocaleDateString("fr-FR", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(booking.booking_date).toLocaleDateString("fr-FR", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
                 <div className="text-lg text-gray-500">
-                  à {new Date(booking.date).toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' })}
+                  à {new Date(booking.booking_date).toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Action Footer */}
-          {booking.status === "pending" && (
+          {["pending", "confirmed", "paid"].includes(booking.status) && (
             <div className="bg-gray-50 px-8 py-6 border-t border-gray-100 flex justify-end">
               <button
-                onClick={cancelBooking}
+                onClick={handleCancelClick}
                 className="px-6 py-2.5 bg-white border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm"
               >
                 Annuler la réservation
@@ -185,6 +209,13 @@ export default function BookingDetail() {
           )}
         </div>
       </div>
+
+      <CancellationModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleConfirmCancellation}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

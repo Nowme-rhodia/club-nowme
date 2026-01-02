@@ -15,6 +15,8 @@ interface OfferCardProps {
   category: string;
   badge?: string;
   partnerName?: string;
+  promoConditions?: string;
+  bookingType?: string;
 }
 
 export function OfferCard({
@@ -29,6 +31,8 @@ export function OfferCard({
   category,
   badge,
   partnerName,
+  promoConditions,
+  bookingType
 }: OfferCardProps) {
   const { user, isSubscriber, isPartner, isAdmin } = useAuth();
   const hasAccess = isSubscriber || isPartner || isAdmin || (user?.email === 'rhodia@nowme.fr');
@@ -104,7 +108,11 @@ export function OfferCard({
 
             {/* Price display logic */}
             <div className={`flex items-baseline gap-2 ${!hasAccess ? 'filter blur-[5px] select-none opacity-50' : ''}`}>
-              {promoPrice ? (
+              {bookingType === 'promo' && promoConditions ? (
+                <span className="text-lg font-bold text-pink-600 break-words leading-tight">
+                  {promoConditions}
+                </span>
+              ) : promoPrice ? (
                 <>
                   <span className="text-xl font-bold text-primary">
                     {promoPrice}€

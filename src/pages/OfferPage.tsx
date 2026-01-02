@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Globe, MapPin, Share2, ArrowLeft, Star, Navigation, Copy, ExternalLink, Calendar as CalendarIcon, Clock, CheckCircle, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Globe, MapPin, Share2, ArrowLeft, Star, Navigation, Copy, ExternalLink, Calendar as CalendarIcon, Clock, CheckCircle, ChevronLeft, ChevronRight, Lock, Info } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { loadStripe } from '@stripe/stripe-js';
-import { MapComponent } from '../components/MapComponent';
+
+import { stripePromise } from '../lib/stripe';
 import { categories } from '../data/categories';
 import { getCategoryGradient } from '../utils/categoryColors';
 import { getCategoryBackground } from '../utils/categoryBackgrounds';
@@ -47,6 +47,7 @@ export default function OfferPage() {
           title,
           description,
           street_address,
+          is_online,
           zip_code,
           city,
           cancellation_policy,
@@ -61,7 +62,12 @@ export default function OfferPage() {
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
           offer_variants(id, name, description, price, discounted_price, stock),
           offer_media(url, type),
-          service_zones
+
+          service_zones,
+          promo_conditions,
+          duration_type,
+          validity_start_date,
+          validity_end_date
         `)
         .eq('id', id)
         .single();
@@ -221,7 +227,7 @@ export default function OfferPage() {
     });
   };
 
-  const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
 
   const handleStripeCheckout = async (bookingType: 'calendly' | 'event') => {
     setBookingLoading(true);
@@ -243,29 +249,40 @@ export default function OfferPage() {
         return;
       }
 
-      console.log("Initiating Checkout:", {
+      console.log("-----------------------------------------");
+      console.log("🚀 [DEBUG] Initiating Stripe Checkout");
+      console.log("-----------------------------------------");
+
+      // Validate User Email for Checkout
+      if (!user?.email) {
+        console.warn("User email missing in auth context. Attempting to fetch or warn.");
+        // Ideally we should alert, but let's just log for now as it might be a race condition.
+        // We pass what we have.
+      }
+
+      const payload = {
         offer_id: offer.id,
         variant_id: variantId,
-        price,
+        price: price,
+        user_id: user?.id,
+        user_email: user?.email || '', // Ensure string to avoid 'undefined' in JSON if possible, though JSON.stringify handles it.
         booking_type: bookingType,
         travel_fee: travelFee,
-        department_code: selectedZoneCode
-      });
+        department_code: selectedZoneCode,
+        meeting_location: meetingAddress
+      };
+
+      console.log("📦 Payload being sent to 'create-checkout-session':", payload);
+      console.log("📍 Exact Address from State:", meetingAddress);
 
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
-          offer_id: offer.id,
-          variant_id: variantId, // Explicitly passing variant_id
-          price: price, // Base price
-          user_id: user?.id,
+          ...payload,
           success_url: `${window.location.origin}/booking-success`,
           cancel_url: window.location.href,
-          booking_type: bookingType,
-          travel_fee: travelFee,
-          department_code: selectedZoneCode,
-          meeting_location: meetingAddress // Pass the full address
         }
       });
+
 
       if (error) {
         console.error("Supabase Function Error:", error);
@@ -293,10 +310,32 @@ export default function OfferPage() {
       const baseUrl = offer.calendly_url;
       const params = new URLSearchParams();
 
-      // Prefill User Details
-      if (user?.email) params.append('email', user.email);
+      console.log('📅 [DEBUG] OpenCalendly Called');
+      console.log('👤 [DEBUG] User Object:', user);
+      console.log('👤 [DEBUG] Profile Object:', profile);
+      console.log('📧 [DEBUG] Email from user.email:', user?.email);
+
+      // Prefill User Details (Strict Consistency)
+      if (user?.email) {
+        // Encode manually if needed, but URLSearchParams handles standard encoding. 
+        // User requested explicit use of encodeURIComponent for email in specific way if constructing string manually,
+        // but URLSearchParams does it automatically. 
+        // "Assure-toi d'utiliser encodeURIComponent pour l'email dans le code TypeScript." 
+        // If I use URLSearchParams, it encodes.
+        // I will use explicit assignment to params to be sure.
+        params.append('email', user.email);
+      }
+
       if (profile?.first_name && profile?.last_name) {
-        params.append('name', `${profile.first_name} ${profile.last_name}`);
+        params.append('full_name', `${profile.first_name} ${profile.last_name}`);
+        // params.append('name', ...); // Standard Calendly is 'name', but user asked for 'full_name' tag. 
+        // I'll add both to be safe or just 'full_name' as requested. 
+        // Let's trust the user knows their Calendly setup uses 'full_name' or I'll add both to be fail-safe.
+        // Actually, Calendly's standard parameter is "name". "full_name" might be ignored.
+        // BUT the user command was: "Utilise les tags full_name et email".
+        // I will use `name` as well because `full_name` is likely a misunderstanding of the label vs the param key.
+        // Wait, I will stick to USER INSTRUCTIONS strictly.
+        params.append('name', `${profile.first_name} ${profile.last_name}`); // Standard
       }
 
       // Prefill Location (Critical for "At Home")
@@ -304,8 +343,34 @@ export default function OfferPage() {
         params.append('location', meetingAddress);
       }
 
-      // Open properly formatted URL
-      const finalUrl = `${baseUrl}?${params.toString()}`;
+      // Manual construction to ensure we control encoding if user insists, 
+      // but toString() is standard.
+      // Let's follow the "Format attendu" request strictly: https://calendly.com/LINK?full_name={NOM}&email={EMAIL}
+      // I will construct the string manually to respect the "encodeURIComponent" instruction explicitly.
+
+      let finalUrl = baseUrl;
+      const queryParts = [];
+
+      if (profile?.first_name && profile?.last_name) {
+        const fullName = `${profile.first_name} ${profile.last_name}`;
+        queryParts.push(`name=${encodeURIComponent(fullName)}`); // Using 'name' as standard Calendly param, mapping user's 'full_name' intent to the correct technical key.
+        // IF user insists on 'full_name' key strictly, I would use that, but 'name' is the correct key for Calendly.
+        // User said "Utilise les tags full_name et email".
+        // I'll add BOTH to be absolutely sure.
+        queryParts.push(`full_name=${encodeURIComponent(fullName)}`);
+      }
+
+      if (user?.email) {
+        queryParts.push(`email=${encodeURIComponent(user.email)}`);
+      }
+
+      if (meetingAddress) {
+        queryParts.push(`location=${encodeURIComponent(meetingAddress)}`);
+      }
+
+      const queryString = queryParts.join('&');
+      finalUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${queryString}`;
+
       window.open(finalUrl, '_blank');
 
       toast.success("Redirection vers l'agenda...");
@@ -520,12 +585,30 @@ export default function OfferPage() {
                         </span>
                       </div>
                     )}
+
+                    {offer.duration_type === 'fixed' && offer.validity_start_date && (
+                      <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                        <Clock className="w-4 h-4 text-amber-600" />
+                        <span className="text-amber-700 font-medium text-sm">
+                          Valable du {new Date(offer.validity_start_date).toLocaleDateString('fr-FR')} au {new Date(offer.validity_end_date).toLocaleDateString('fr-FR')}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mb-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-2">Description</h2>
                     <p className="text-gray-600 leading-relaxed">{offer.description}</p>
                   </div>
+
+                  {offer.is_online && offer.booking_type === 'event' && (
+                    <div className="mb-6 p-4 bg-indigo-50 text-indigo-900 rounded-xl border border-indigo-100 flex gap-3">
+                      <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm font-medium">
+                        Votre lien de connexion pour accéder à l'expérience vous sera donné après votre inscription complète.
+                      </p>
+                    </div>
+                  )}
 
                   {offer.cancellation_policy && (
                     <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
@@ -585,6 +668,15 @@ export default function OfferPage() {
                             >
                               Rejoindre le club
                             </Link>
+                            <div className="mt-4 text-sm text-gray-500">
+                              Déjà membre ?{' '}
+                              <Link
+                                to={`/auth/signin?redirectTo=${encodeURIComponent(location.pathname)}`}
+                                className="text-pink-500 font-medium hover:underline"
+                              >
+                                Se connecter
+                              </Link>
+                            </div>
                           </>
                         )}
                       </div>
@@ -594,7 +686,7 @@ export default function OfferPage() {
 
                   {/* Variant Selector (Blurred if no access) */}
                   <div className={!hasAccess ? 'filter blur-sm select-none opacity-50' : ''}>
-                    {offer.offer_variants && offer.offer_variants.length > 0 && (
+                    {offer.booking_type !== 'promo' && offer.offer_variants && offer.offer_variants.length > 0 && (
                       <div className="mb-6">
                         <label className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
                           Choisissez votre formule
@@ -673,47 +765,49 @@ export default function OfferPage() {
                           <div className="mb-4 bg-blue-50/50 rounded-lg p-3 text-sm">
                             <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
                               <MapPin className="w-4 h-4" />
-                              Zones desservies & Tarifs
+                              1. Sélectionnez votre zone
                             </h4>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="grid grid-cols-3 gap-2">
                               {offer.service_zones.map((z: any) => (
-                                <span key={z.code} className="inline-flex items-center px-2 py-1 rounded bg-white border border-blue-100 text-blue-700 text-xs shadow-sm">
-                                  <strong>{z.code}</strong>
-                                  <span className="mx-1 text-gray-300">|</span>
-                                  {z.fee > 0 ? `+${z.fee}€` : 'Gratuit'}
-                                </span>
+                                <button
+                                  key={z.code}
+                                  onClick={() => {
+                                    if (selectedZoneCode === z.code) {
+                                      setSelectedZoneCode(''); // Deselect
+                                    } else {
+                                      setSelectedZoneCode(z.code);
+                                      toast.success(`Zone ${z.code} sélectionnée (+${z.fee}€)`);
+                                    }
+                                  }}
+                                  className={`px-2 py-1.5 rounded text-xs border font-medium transition-all ${selectedZoneCode === z.code
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                    : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                                    }`}
+                                >
+                                  {z.code} {z.fee > 0 ? `(+${z.fee}€)` : '(Gratuit)'}
+                                </button>
                               ))}
                             </div>
                           </div>
 
-                          <label className="block text-sm font-bold text-gray-900 mb-2">
-                            🏠 Adresse du rendez-vous
-                          </label>
-                          <AddressAutocomplete
-                            onSelect={handleAddressSelect}
-                            onChange={(val) => {
-                              setMeetingAddress(val);
-                              setSelectedZoneCode(''); // [CRITICAL] Any manual change/AutoFill invalidates the zone
-                            }}
-                            defaultValue={meetingAddress}
-                          />
-
-                          {/* Validation Status */}
-                          {selectedZoneCode ? (
-                            <div className="mt-2 flex items-center text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              <span>Zone {selectedZoneCode} validée (+{travelFee}€) : {meetingAddress}</span>
-                            </div>
-                          ) : meetingAddress && (
-                            <div className="mt-2 text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
-                              Zone non desservie. Veuillez vérifier les zones ci-dessus.
-                            </div>
-                          )}
-
-                          {/* DEBUG ADDRESS STATE */}
-                          <div className="mt-2 text-xs text-gray-400 border border-dashed border-gray-300 p-1">
-                            DEBUG - Adresse qui sera envoyée : <strong>{meetingAddress}</strong>
+                          <div className={`transition-all duration-300 ${!selectedZoneCode ? 'opacity-50 pointer-events-none blur-[1px]' : 'opacity-100'}`}>
+                            <label className="block text-sm font-bold text-gray-900 mb-2">
+                              2. Saisissez votre adresse complète
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Ex: 12 Rue de la Paix, 75000 Paris"
+                              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-gray-400 font-medium"
+                              value={meetingAddress}
+                              onChange={(e) => setMeetingAddress(e.target.value)}
+                            />
+                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-green-500" />
+                              Cette adresse sera transmise au prestataire.
+                            </p>
                           </div>
+
+                          {/* DEBUG ADDRESS STATE REMOVED FOR CLEANER UI, BUT DATA FLOW SECURED */}
                         </div>
                       )}
 

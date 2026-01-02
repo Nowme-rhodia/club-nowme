@@ -1,7 +1,8 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 // Initialiser Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!);
+console.log('[Stripe] Initializing with key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ? 'Present' : 'Missing');
+export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 // Prix Stripe - PRODUCTION (vrais Price IDs)
 export const STRIPE_PRICES = {
@@ -27,6 +28,8 @@ export const createCheckoutSession = async (planType: 'monthly' | 'yearly', user
 
     // Utiliser l'email fourni ou celui de l'utilisateur connecté
     const email = userEmail || user?.email;
+    const userId = user?.id;
+
     if (!email) {
       throw new Error('Email introuvable. Veuillez vous inscrire d\'abord.');
     }
@@ -45,6 +48,7 @@ export const createCheckoutSession = async (planType: 'monthly' | 'yearly', user
       body: JSON.stringify({
         priceId,
         email,
+        userId,
         success_url: `${origin}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/subscription`,
         subscription_type: planType

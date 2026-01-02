@@ -40,8 +40,7 @@ Deno.serve(async (req) => {
             email,
             user_id: authUserId,
             updated_at: now,
-            selected_plan: plan || null, // Capture plan if provided
-            terms_accepted_at: now // Log terms acceptance time
+            selected_plan: plan || null // Capture plan if provided
           },
           { onConflict: 'user_id' }
         )

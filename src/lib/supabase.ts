@@ -9,12 +9,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('⛔️ Variables Supabase manquantes (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)')
 }
 
-// Session par onglet: déconnexion à la fermeture
+// Session persistante via localStorage
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
-    persistSession: true,       // persiste dans sessionStorage (pas localStorage)
-    autoRefreshToken: true,     // peut être mis à false si tu veux éviter tout refresh
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    persistSession: true,
+    autoRefreshToken: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
   },
@@ -22,18 +22,6 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     headers: { 'x-client-info': 'nowme-web' },
   },
 })
-
-// Nettoyage des anciennes sessions en localStorage (une fois)
-if (typeof window !== 'undefined') {
-  try {
-    const keys = Object.keys(window.localStorage)
-    for (const k of keys) {
-      if (k.startsWith('sb-')) window.localStorage.removeItem(k)
-    }
-  } catch {
-    // no-op
-  }
-}
 
 export const auth = {
   signIn: async (email: string, password: string) => {

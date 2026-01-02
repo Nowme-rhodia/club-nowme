@@ -6,8 +6,8 @@ SECURITY DEFINER
 SET search_path = public
 STABLE
 AS $$
-  -- Assuming 'partners' table has 'id' as partner_id and 'user_id' linking to auth.users
-  SELECT id FROM partners WHERE user_id = auth.uid();
+  -- Fallback to using user_profiles since partners.user_id might not exist
+  SELECT partner_id FROM user_profiles WHERE user_id = auth.uid();
 $$;
 
 -- 2. Re-apply the policy using the safe function

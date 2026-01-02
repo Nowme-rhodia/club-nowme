@@ -813,6 +813,20 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: void;
       };
+      confirm_booking: {
+        Args: {
+          p_user_id: string;
+          p_offer_id: string;
+          p_booking_date: string;
+          p_status: string;
+          p_source: string;
+          p_amount: number;
+          p_variant_id: string | null;
+          p_external_id: string;
+          p_meeting_location?: string | null;
+        };
+        Returns: void;
+      };
     };
 
     Enums: {

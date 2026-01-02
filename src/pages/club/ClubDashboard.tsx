@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, ArrowRight, Sparkles, MapPin } from 'lucide-react';
+import { Users, ArrowRight, Sparkles, MapPin, BookOpen } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
@@ -21,11 +21,14 @@ interface OfferDetails {
   };
   category: string;
   department: string; // Numéro du département (ex: "75")
+  promoConditions?: string;
+  bookingType?: string;
 }
 
 export default function ClubDashboard() {
   const { profile } = useAuth();
   const [offers, setOffers] = useState<OfferDetails[]>([]);
+  const [archivedOffers, setArchivedOffers] = useState<OfferDetails[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
@@ -51,13 +54,15 @@ export default function ClubDashboard() {
           .from('offers')
           .select(`
             *,
+            promo_conditions,
+            booking_type,
             category:offer_categories!offers_category_id_fkey(*),
             offer_variants(price, discounted_price),
             partner:partners(business_name, address),
             offer_media(url)
           `)
           .eq('partner_id', partnerData.id)
-          .eq('status', 'approved');
+          .or('status.eq.approved,status.eq.archived');
 
         if (error) {
           console.error('Error fetching offers:', error);
@@ -66,8 +71,9 @@ export default function ClubDashboard() {
 
         if (data) {
           const uniqueDepts = new Set<string>();
+          const rawOffers = data as any[];
 
-          const formattedOffers: OfferDetails[] = data.map((offer: any) => {
+          const formattedOffers: OfferDetails[] = rawOffers.map((offer: any) => {
             const firstVariant = offer.offer_variants?.[0];
             const displayPrice = firstVariant ? Number(firstVariant.price) : 0;
             const displayPromo = firstVariant && firstVariant.discounted_price ? Number(firstVariant.discounted_price) : undefined;
@@ -105,11 +111,17 @@ export default function ClubDashboard() {
                 address: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || offer.partner?.address || 'Adresse non spécifiée'
               },
               category: offer.category?.name || 'Autre',
-              department: dept
+              department: dept,
+              promoConditions: offer.promo_conditions,
+              bookingType: offer.booking_type
             };
           });
 
-          setOffers(formattedOffers);
+          const activeOffersList = formattedOffers.filter((o: any) => rawOffers.find((raw: any) => raw.id === o.id)?.status === 'approved');
+          const archivedOffersList = formattedOffers.filter((o: any) => rawOffers.find((raw: any) => raw.id === o.id)?.status === 'archived');
+
+          setOffers(activeOffersList);
+          setArchivedOffers(archivedOffersList);
           setDepartments(Array.from(uniqueDepts).sort());
         }
       } catch (err) {
@@ -203,6 +215,29 @@ export default function ClubDashboard() {
             </div>
           )}
         </div>
+
+        {/* Section Archives */}
+        {archivedOffers.length > 0 && (
+          <div className="mb-16 opacity-75 grayscale hover:grayscale-0 transition-all duration-500">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="bg-gray-200 p-2 rounded-full">
+                <BookOpen className="w-5 h-5 text-gray-500" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-500">Archives & Souvenirs</h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+              {archivedOffers.map((offer) => (
+                <div key={offer.id} className="pointer-events-none">
+                  <OfferCard
+                    {...offer}
+                    badge="Terminé"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Section communauté */}
         <div className="bg-white rounded-2xl shadow-lg p-8 text-center">

@@ -12,6 +12,7 @@ $$;
 
 -- 2. Create the safe policy for partners to view client profiles
 -- We use the secure function instead of querying user_profiles directly in the policy
+DROP POLICY IF EXISTS "Partners can view profiles of their bookings" ON user_profiles;
 CREATE POLICY "Partners can view profiles of their bookings"
 ON user_profiles
 FOR SELECT

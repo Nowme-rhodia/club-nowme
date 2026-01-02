@@ -20,7 +20,7 @@ BEGIN
         EXISTS (
             SELECT 1 FROM public.user_profiles
             WHERE user_id = auth.uid()
-            AND role = 'admin'
+            AND is_admin = true
         )
     );
 END $$;

@@ -22,6 +22,7 @@ ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
 -- RLS Policies
 
 -- Admins can do everything
+DROP POLICY IF EXISTS "Admins can manage all payouts" ON payouts;
 CREATE POLICY "Admins can manage all payouts" ON payouts
     FOR ALL
     USING (
@@ -32,6 +33,7 @@ CREATE POLICY "Admins can manage all payouts" ON payouts
     );
 
 -- Partners can view their own payouts
+DROP POLICY IF EXISTS "Partners can view own payouts" ON payouts;
 CREATE POLICY "Partners can view own payouts" ON payouts
     FOR SELECT
     USING (

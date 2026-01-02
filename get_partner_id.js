@@ -1,23 +1,32 @@
-import { createClient } from '@supabase/supabase-js'
-import * as dotenv from 'dotenv'
-import path from 'path'
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') })
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY
-)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-async function getPartnerId() {
-    const email = 'entreprisepartenaire@gmail.com'
-    const password = 'MvPbSa2Fblb2'
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
-    const { data: { session } } = await supabase.auth.signInWithPassword({ email, password })
-    const user = session.user
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const { data: profile } = await supabase.from('user_profiles').select('partner_id').eq('user_id', user.id).single()
-    console.log('REAL PARTNER ID:', profile.partner_id)
+if (!supabaseUrl || !supabaseKey) {
+    process.exit(1);
 }
 
-getPartnerId()
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function getRhodiaId() {
+    const { data, error } = await supabase
+        .from('partners')
+        .select('id, contact_email, business_name')
+        .ilike('contact_email', '%rhodia%') // Try fuzzy search first
+        .limit(5);
+
+    if (error) console.error(error);
+    else console.table(data);
+}
+
+getRhodiaId();

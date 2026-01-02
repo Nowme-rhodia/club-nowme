@@ -22,26 +22,24 @@ alter table public.partner_notifications enable row level security;
 
 -- 1. Partners can view their own notifications
 -- Re-using the logic that partners has a user_id column that links to auth.uid()
+DROP POLICY IF EXISTS "Partners can view own notifications" ON public.partner_notifications;
 create policy "Partners can view own notifications"
   on public.partner_notifications
   for select
   using (
-    exists (
-      select 1 from public.partners
-      where partners.id = partner_notifications.partner_id
-      and partners.user_id = auth.uid()
+    partner_id IN (
+        SELECT partner_id FROM public.user_profiles WHERE user_id = auth.uid()
     )
   );
 
 -- 2. Partners can update (mark as read) their own notifications
+DROP POLICY IF EXISTS "Partners can update own notifications" ON public.partner_notifications;
 create policy "Partners can update own notifications"
   on public.partner_notifications
   for update
   using (
-    exists (
-      select 1 from public.partners
-      where partners.id = partner_notifications.partner_id
-      and partners.user_id = auth.uid()
+    partner_id IN (
+        SELECT partner_id FROM public.user_profiles WHERE user_id = auth.uid()
     )
   );
 

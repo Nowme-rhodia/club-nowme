@@ -12,6 +12,7 @@ $$;
 
 -- 2. Create the policy for Partners to view client profiles
 -- This uses the helper function to avoid recursion
+DROP POLICY IF EXISTS "Partners can view profiles of their bookings" ON user_profiles;
 CREATE POLICY "Partners can view profiles of their bookings"
 ON user_profiles
 FOR SELECT

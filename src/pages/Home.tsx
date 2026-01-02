@@ -21,6 +21,8 @@ function LatestOffers() {
           .from('offers')
           .select(`
             *,
+            promo_conditions,
+            booking_type,
             offer_variants(price, discounted_price),
             partner:partners(business_name, address)
           `)
@@ -57,7 +59,9 @@ function LatestOffers() {
               rating: 4.8, // Static for now or fetch
               location: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || offer.partner?.address || 'Paris',
               category: 'Nouveauté',
-              partnerName: offer.partner?.business_name
+              partnerName: offer.partner?.business_name,
+              promoConditions: offer.promo_conditions,
+              bookingType: offer.booking_type
             };
           });
           setOffers(formatted);

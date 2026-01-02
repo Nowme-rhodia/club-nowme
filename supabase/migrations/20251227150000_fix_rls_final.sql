@@ -42,6 +42,7 @@ DROP POLICY IF EXISTS "Public can view active offers" ON offers;
 DROP POLICY IF EXISTS "Everyone can view active offers" ON offers;
 DROP POLICY IF EXISTS "Everyone can view approved offers" ON offers;
 
+DROP POLICY IF EXISTS "Public can view all offers" ON offers;
 CREATE POLICY "Public can view all offers"
 ON offers FOR SELECT
 USING ( true ); 

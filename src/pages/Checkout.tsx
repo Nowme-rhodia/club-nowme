@@ -40,19 +40,22 @@ export default function Checkout() {
   const currentTier = PRICING_TIERS.find(tier => tier.id === selectedPlan);
 
   const handleCheckout = async () => {
-    if (!user || !profile?.email) {
-      logger.error('Checkout', 'User or email missing', { user: !!user, email: profile?.email });
+    // Use user.email from auth session as it's more reliable than profile.email
+    const email = user?.email || profile?.email;
+
+    if (!user || !email) {
+      logger.error('Checkout', 'User or email missing', { user: !!user, email });
       toast.error('Vous devez être connecté pour continuer');
       navigate('/auth/signin');
       return;
     }
 
-    logger.payment.checkoutStart(selectedPlan, profile.email);
+    logger.payment.checkoutStart(selectedPlan, email);
     setLoading(true);
     try {
       // Utiliser l'email de l'utilisateur connecté
       const { createCheckoutSession } = await import('../lib/stripe');
-      await createCheckoutSession(selectedPlan as 'monthly' | 'yearly', profile.email);
+      await createCheckoutSession(selectedPlan as 'monthly' | 'yearly', email);
     } catch (error) {
       console.error('Erreur checkout:', error);
       toast.error('Erreur lors de la redirection vers le paiement');

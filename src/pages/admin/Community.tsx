@@ -87,7 +87,7 @@ export default function AdminCommunity() {
         try {
             const { error } = await supabase
                 .from('community_content')
-                .insert([newContent]);
+                .insert([newContent] as any);
 
             if (error) throw error;
 
@@ -105,7 +105,7 @@ export default function AdminCommunity() {
         try {
             const { error } = await supabase
                 .from('community_content')
-                .update({ is_active: !currentState })
+                .update({ is_active: !currentState } as any)
                 .eq('id', id);
 
             if (error) throw error;
