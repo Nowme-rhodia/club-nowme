@@ -8,7 +8,8 @@ import {
   Clock,
   Mail,
   Phone,
-  Loader2
+  Loader2,
+  MapPin
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -18,6 +19,7 @@ interface Booking {
   id: string;
   created_at: string;
   booking_date: string;
+  meeting_location?: string; // New field
   status: 'paid' | 'confirmed' | 'cancelled' | 'pending';
   source: 'calendly' | 'event' | 'promo' | 'purchase';
   amount: number;
@@ -85,8 +87,8 @@ export default function Bookings() {
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('partner_id')
-        .eq('user_id', user?.id)
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       if (profileError || !profileData?.partner_id) {
         setLoading(false);
@@ -99,6 +101,7 @@ export default function Bookings() {
         .select(`
             id,
             booking_date,
+            meeting_location,
             status,
             source,
             amount,
@@ -319,6 +322,12 @@ export default function Bookings() {
                             <span className="text-xs text-gray-500">
                               à {new Date(booking.booking_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
+                            <div className="flex items-center gap-1 mt-1 text-xs text-blue-600" title={booking.meeting_location || "Lieu de l'offre (Cabinet/Partenaire)"}>
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              <span className="truncate max-w-[150px]">
+                                {booking.meeting_location || "Lieu: Cabinet / Standard"}
+                              </span>
+                            </div>
                           </div>
                         </td>
 

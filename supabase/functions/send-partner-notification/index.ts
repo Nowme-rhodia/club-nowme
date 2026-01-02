@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
@@ -96,7 +97,10 @@ serve(async (req) => {
 
             ${content}
 
-            Connectez-vous à votre espace partenaire pour plus de détails.
+            ${data.meeting_location ? `📍 Lieu : ${data.meeting_location}` : ''}
+            ${data.scheduled_at ? `📅 Date : ${new Date(data.scheduled_at).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}
+
+            Connectez-vous à votre espace partenaire pour plus de détails et gérer cette réservation.
 
             L'équipe Nowme
           `,
@@ -115,9 +119,9 @@ serve(async (req) => {
     console.error('Error sending notification:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400 
+        status: 400
       }
     );
   }

@@ -16,7 +16,9 @@ serve(async (req) => {
     }
 
     try {
-        const { offer_id, price, user_id, success_url, cancel_url, booking_type, variant_id } = await req.json()
+        const reqBody = await req.json()
+        console.log("DEBUG: create-checkout-session payload:", JSON.stringify(reqBody)); // [DEBUG] Log entire payload
+        const { offer_id, price, user_id, success_url, cancel_url, booking_type, variant_id, travel_fee, department_code } = reqBody
 
         // Initialize Stripe
         const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
@@ -33,7 +35,7 @@ serve(async (req) => {
         // 1. Fetch Offer Details to confirm price and get title
         let offerQuery = supabaseClient
             .from('offers')
-            .select('title, image_url, description')
+            .select('title, image_url, description, service_zones')
             .eq('id', offer_id)
             .single();
 
@@ -70,29 +72,69 @@ serve(async (req) => {
             variantName = ` - ${variant.name}`;
         }
 
+        // 1b. Verify Travel Fee if provided
+        let travelFeeLineItem = null;
+        if (travel_fee && travel_fee > 0) {
+            if (!offer.service_zones || !Array.isArray(offer.service_zones)) {
+                throw new Error("This offer does not support service zones.");
+            }
+            if (!department_code) {
+                throw new Error("Department code required for travel fee.");
+            }
+
+            const zone = offer.service_zones.find((z: any) => z.code === department_code);
+            if (!zone) {
+                throw new Error(`Department ${department_code} is not served by this offer.`);
+            }
+
+            // Verify fee matches (or is close enough to handle float issues)
+            // Ideally exact match.
+            if (Math.abs(zone.fee - travel_fee) > 0.01) {
+                throw new Error("Travel fee mismatch.");
+            }
+
+            travelFeeLineItem = {
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: `Frais de déplacement - ${department_code}`,
+                        description: `Déplacement à domicile`,
+                    },
+                    unit_amount: Math.round(travel_fee * 100),
+                },
+                quantity: 1,
+            };
+        }
+
         // 2. Create Stripe Checkout Session
         // We pass metadata to track the booking details on success
         const safeVariantId = variant_id ? String(variant_id) : 'null';
         console.log("Creating Session with Variant ID:", safeVariantId);
 
+        const line_items = [
+            {
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: `${offer.title}${variantName}`,
+                        description: offer.description ? offer.description.substring(0, 100) + '...' : undefined,
+                        images: offer.image_url ? [offer.image_url] : [],
+                    },
+                    unit_amount: unitAmount,
+                },
+                quantity: 1,
+            },
+        ];
+
+        if (travelFeeLineItem) {
+            line_items.push(travelFeeLineItem);
+        }
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card', 'paypal'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'eur',
-                        product_data: {
-                            name: `${offer.title}${variantName}`,
-                            description: offer.description ? offer.description.substring(0, 100) + '...' : undefined,
-                            images: offer.image_url ? [offer.image_url] : [],
-                        },
-                        unit_amount: unitAmount,
-                    },
-                    quantity: 1,
-                },
-            ],
+            line_items: line_items,
             mode: 'payment',
-            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${price}&status=success&variant_id=${safeVariantId}`,
+            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${price + (travel_fee || 0)}&status=success&variant_id=${safeVariantId}`,
             cancel_url: cancel_url,
             client_reference_id: user_id,
             metadata: {
@@ -102,7 +144,10 @@ serve(async (req) => {
                 source: 'club-nowme',
                 // Stripe metadata values must be strings and max 500 chars
                 // We convert null to empty string or rely on client sending valid UUID
-                variant_id: safeVariantId
+                variant_id: safeVariantId,
+                department_code: department_code || '',
+                travel_fee: travel_fee ? String(travel_fee) : '0',
+                meeting_location: reqBody.meeting_location || '' // Add meeting_location to metadata
             },
         })
 

@@ -175,6 +175,7 @@ export type Database = {
           zip_code: string | null;
           department: string | null;
           city: string | null;
+          cancellation_policy: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
           created_at: string;
           updated_at: string;
         };
@@ -195,6 +196,7 @@ export type Database = {
           zip_code?: string | null;
           department?: string | null;
           city?: string | null;
+          cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
           created_at?: string;
           updated_at?: string;
         };
@@ -215,6 +217,7 @@ export type Database = {
           zip_code?: string | null;
           department?: string | null;
           city?: string | null;
+          cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
           created_at?: string;
           updated_at?: string;
         };
@@ -725,6 +728,59 @@ export type Database = {
           source?: string | null;
         };
         Relationships: [];
+      };
+
+      reviews: {
+        Row: {
+          id: string;
+          booking_id: string;
+          offer_id: string;
+          user_id: string;
+          rating: number;
+          comment: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          booking_id: string;
+          offer_id: string;
+          user_id: string;
+          rating: number;
+          comment?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          booking_id?: string;
+          offer_id?: string;
+          user_id?: string;
+          rating?: number;
+          comment?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey";
+            columns: ["booking_id"];
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reviews_offer_id_fkey";
+            columns: ["offer_id"];
+            referencedRelation: "offers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "reviews_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
 

@@ -41,6 +41,8 @@ interface OfferDetails {
   reviews: any[];
   partnerName?: string;
   filterPrice?: number;
+  is_online?: boolean;
+  service_zones?: { code: string; fee: number }[];
 }
 
 export default function TousLesKiffs() {
@@ -55,7 +57,9 @@ export default function TousLesKiffs() {
     lat: number;
     lng: number;
     address: string;
+    zip_code?: string;
   } | null>(null);
+  const [isOnlineFilter, setIsOnlineFilter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
@@ -128,7 +132,9 @@ export default function TousLesKiffs() {
               category: offer.category?.name || 'Autre',
               categorySlug: offer.category?.parent_slug || offer.category?.slug || 'autre',
               subcategorySlug: offer.category?.parent_slug ? offer.category.slug : undefined,
-              reviews: []
+              reviews: [],
+              is_online: offer.is_online,
+              service_zones: offer.service_zones
             };
           });
           setOffersWithLocations(formattedOffers);
@@ -155,6 +161,10 @@ export default function TousLesKiffs() {
       );
     }
 
+    if (isOnlineFilter) {
+      filtered = filtered.filter(offer => offer.is_online === true);
+    }
+
     if (activeCategory !== 'all') {
       filtered = filtered.filter(offer => offer.categorySlug === activeCategory);
       if (activeSubcategory) {
@@ -164,13 +174,36 @@ export default function TousLesKiffs() {
 
     if (selectedLocation) {
       filtered = filtered.filter(offer => {
-        const distance = getDistance(
-          selectedLocation.lat,
-          selectedLocation.lng,
-          offer.location.lat,
-          offer.location.lng
-        );
-        return distance <= 15;
+        // CASE 1: At Home Offers (Zones)
+        if (offer.service_zones && Array.isArray(offer.service_zones) && offer.service_zones.length > 0) {
+          const userZip = selectedLocation.zip_code;
+          if (!userZip) return false; // Need zip to know department
+          const userDept = userZip.substring(0, 2);
+          const servesZone = offer.service_zones.some(z => z.code === userDept);
+          // Also check if user is close enough to center? No, zone is the truth.
+          return servesZone;
+        }
+
+        // CASE 2: Physical Offers (Distance)
+        // Only if coords exist
+        if (offer.location.lat !== 0 && offer.location.lng !== 0) {
+          const distance = getDistance(
+            selectedLocation.lat,
+            selectedLocation.lng,
+            offer.location.lat,
+            offer.location.lng
+          );
+          return distance <= 15; // 15km radius
+        }
+
+        // CASE 3: Online
+        if (offer.is_online) return true; // Online is everywhere, but we likely filter it out via format toggles if implemented, else keep it.
+        // Actually if I search "Paris", do I want Online offers? Maybe.
+        // But usually online offers are filtered by "Online" pill.
+        // If I input a location, I probably want things near me OR served at my home.
+        // Let's exclude purely Online offers if a location is explicitly set, UNLESS they are smart enough.
+        // Currently existing logic didn't exclude online. Let's keep them if they are 'is_online'.
+        return offer.is_online;
       });
     }
 
@@ -182,7 +215,7 @@ export default function TousLesKiffs() {
     });
 
     return filtered;
-  }, [searchTerm, activeCategory, activeSubcategory, selectedLocation, priceRange, ratingFilter, offersWithLocations]);
+  }, [searchTerm, activeCategory, activeSubcategory, selectedLocation, priceRange, ratingFilter, offersWithLocations, isOnlineFilter]);
 
   const paginatedOffers = useMemo(() => {
     return filteredOffers.slice(0, page * itemsPerPage);
@@ -215,7 +248,7 @@ export default function TousLesKiffs() {
     };
   }, [isLoading, paginatedOffers.length, filteredOffers.length]);
 
-  const handleLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+  const handleLocationSelect = (location: { lat: number; lng: number; address: string; zip_code?: string }) => {
     setSelectedLocation(location);
   };
 
@@ -323,6 +356,20 @@ export default function TousLesKiffs() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Filtre Flemme de bouger */}
+                  <div className="flex items-center pt-2">
+                    <button
+                      onClick={() => setIsOnlineFilter(!isOnlineFilter)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isOnlineFilter
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                        }`}
+                    >
+                      <span className="text-xl">🛋️</span>
+                      <span className="font-medium">Flemme de bouger de chez moi</span>
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -398,6 +445,7 @@ export default function TousLesKiffs() {
                 setActiveCategory('all');
                 setActiveSubcategory(null);
                 setSelectedLocation(null);
+                setIsOnlineFilter(false);
               }}
               className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-primary/10 hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
             >

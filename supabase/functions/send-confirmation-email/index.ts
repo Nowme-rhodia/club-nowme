@@ -46,7 +46,7 @@ serve(async (req) => {
         // B. Parallel Fetch of related entities
         const [userResponse, offerResponse, partnerResponse, variantResponse] = await Promise.all([
             supabase.from('user_profiles').select('first_name, last_name, email').eq('user_id', bookingData.user_id).single(),
-            supabase.from('offers').select('title').eq('id', bookingData.offer_id).single(),
+            supabase.from('offers').select('title, is_online, booking_type, calendly_url').eq('id', bookingData.offer_id).single(),
             supabase.from('partners').select('business_name, description, website, address, contact_email, notification_settings, siret, tva_intra').eq('id', bookingData.partner_id).single(),
             bookingData.variant_id ? supabase.from('offer_variants').select('name, price').eq('id', bookingData.variant_id).single() : Promise.resolve({ data: null, error: null })
         ])
@@ -167,6 +167,115 @@ serve(async (req) => {
         const pdfBytes = await pdfDoc.save()
         const pdfBase64 = btoa(String.fromCharCode(...pdfBytes))
 
+        // Fetch is_online status from offer (if not already fetched)
+        // We already fetched 'offer'. Let's ensure we get 'is_online' and 'digital_product_file' 
+        // NOTE: The previous SELECT for offers might need to include these fields.
+        // Let's assume we update the SELECT query below first.
+
+        const isOnline = offer.is_online || false;
+
+        // Dynamic Logistics Instructions
+        let logisticsHtml = '';
+
+        // Initialize display variables
+        let dateDisplay = "Date à définir";
+        let locationDisplay = partnerAddress; // Default to Partner Address for physical events
+
+        // Fetch extra fields for "At Home" logic
+        const { data: offerDetails } = await supabase
+            .from('offers')
+            .select('service_zones, event_start_date')
+            .eq('id', bookingData.offer_id)
+            .single();
+
+        const serviceZones = offerDetails?.service_zones || [];
+        const isAtHome = serviceZones.length > 0;
+
+        // Date Priority: Scheduled (Appt) -> Event Start (Fixed)
+        const eventDate = bookingData.scheduled_at || offerDetails?.event_start_date;
+
+        // --- STRICT DATE LOGIC ---
+        if (eventDate) {
+            const dateObj = new Date(eventDate);
+
+            // [FIX] Force Paris Timezone for formatted strings
+            const frenchDate = new Intl.DateTimeFormat('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                timeZone: 'Europe/Paris'
+            }).format(dateObj);
+
+            const frenchTime = new Intl.DateTimeFormat('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Europe/Paris'
+            }).format(dateObj).replace(':', 'h');
+
+            // Combine for display
+            dateDisplay = `${frenchDate} à ${frenchTime}`;
+        } else if (offer.calendly_url || isAtHome) {
+            // It's a booking requiring scheduling, but no date is set yet (First invoice email)
+            dateDisplay = "À choisir lors de la prise de RDV";
+        }
+
+        // --- STRICT ADDRESS LOGIC ---
+        // --- STRICT ADDRESS LOGIC ---
+        // [FIX] Prioritize Client Meeting Location if provided (Overrides "At Home" check to handle custom locations/legacy offers)
+        console.log("DEBUG ADDRESS LOGIC START");
+        console.log("isAtHome config:", isAtHome);
+        console.log("bookingData.meeting_location:", bookingData.meeting_location);
+        console.log("partnerAddress:", partnerAddress);
+
+        if (bookingData.meeting_location && bookingData.meeting_location.trim().length > 5) {
+            locationDisplay = bookingData.meeting_location;
+            console.log("DECISION: Used Booking Meeting Location");
+        } else if (isAtHome) {
+            // Logic: At Home but no address captured?
+            locationDisplay = "Adresse à définir / À domicile";
+            console.log("DECISION: Used Generic 'At Home' (No input provided)");
+        } else {
+            // Logic: Not At Home (Standard) = Partner's location.
+            locationDisplay = partnerAddress || "Lieu à confirmer par le partenaire";
+            console.log("DECISION: Used Partner Address / Default");
+        }
+        console.log("FINAL LOCATION DISPLAY:", locationDisplay);
+
+
+        if (isOnline) {
+            const bookingType = offer.booking_type || 'event';
+            // ... existing online logic ...
+            logisticsHtml = `
+                    <h3>Accès à votre expérience en ligne</h3>
+                    <p>C'est un événement 100% en ligne.</p>
+                    <p>Vous retrouverez le lien de connexion dans votre espace "Mes Réservations" ou ci-dessous si disponible.</p>
+                    ${offer.calendly_url ? `<p><a href="${offer.calendly_url}">Lien de connexion / Prise de RDV</a></p>` : ''}
+                    
+                    <p style="margin-top: 20px;">
+                        <a href="${Deno.env.get("PUBLIC_SITE_URL")}/mes-reservations" style="background-color: #0F172A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Voir ma réservation</a>
+                    </p>
+                 `;
+        } else {
+            // Offline / Physical
+
+            logisticsHtml = `
+                <h3>Détails du Rendez-vous</h3>
+                
+                <p style="margin-bottom: 5px;"><strong>📅 Date & Heure :</strong> ${dateDisplay}</p>
+                <p style="margin-bottom: 20px;"><strong>📍 Lieu :</strong> ${locationDisplay}</p>
+
+                ${!isAtHome ? `<hr style="border: 0; border-top: 1px dashed #cbd5e1; margin: 15px 0;" />` : ''}
+
+                <p>L'équipe <strong>${partnerName}</strong> a hâte de vous accueillir.</p>
+                <p>Pensez à présenter ce mail ou votre espace client lors de votre arrivée.</p>
+                
+                <p style="margin-top: 30px;">
+                    <a href="${Deno.env.get("PUBLIC_SITE_URL")}/mes-reservations" style="background-color: #0F172A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Voir ma réservation</a>
+                </p>
+             `;
+        }
+
         // 5. Prepare Email Content
         const htmlContent = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
@@ -176,13 +285,7 @@ serve(async (req) => {
             
             <hr style="border: 1px solid #e2e8f0; margin: 20px 0;" />
             
-            <h3>Détails Logistiques</h3>
-            <p>L'équipe <strong>${partnerName}</strong> a hâte de vous accueillir.</p>
-            <p>Pensez à présenter ce mail ou votre espace client lors de votre arrivée.</p>
-            
-            <p style="margin-top: 30px;">
-                <a href="${Deno.env.get("PUBLIC_SITE_URL")}/mes-reservations" style="background-color: #0F172A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Voir ma réservation</a>
-            </p>
+            ${logisticsHtml}
             
             <p style="margin-top: 40px; font-size: 14px;">
                 Vous trouverez votre facture en pièce jointe de ce mail.
@@ -245,16 +348,27 @@ serve(async (req) => {
         if (shouldNotifyPartner && partner.contact_email) {
             console.log(`📧 Notifying partner (${partner.contact_email}) about new booking...`)
 
+            // Recalculate variables for Partner Context if needed (reuse mostly)
+            // Use same date/location logic
+
             // 1. Send Email to Partner
             const partnerHtmlContent = `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                     <h1 style="color: #0F172A;">Nouvelle réservation ! 🎉</h1>
                     <p>Bonne nouvelle, vous avez reçu une nouvelle réservation pour <strong>${fullItemName}</strong>.</p>
                     
-                    <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0;"><strong>Client :</strong> ${buyerName}</p>
-                        <p style="margin: 8px 0;"><strong>Email :</strong> ${user.email}</p>
-                        <p style="margin: 0;"><strong>Montant :</strong> ${price.toFixed(2)} €</p>
+                    <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+                        <h3 style="margin-top: 0; color: #334155; font-size: 16px;">Détails de la réservation</h3>
+                        <p style="margin: 5px 0;"><strong>📅 Date :</strong> ${dateDisplay}</p>
+                        ${isAtHome ? `<p style="margin: 5px 0;"><strong>📍 Lieu :</strong> <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDisplay)}">${locationDisplay}</a></p>` : ''}
+                        ${variantName ? `<p style="margin: 5px 0;"><strong>🔹 Option :</strong> ${variant.name}</p>` : ''}
+                        <p style="margin: 5px 0;"><strong>💰 Montant :</strong> ${price.toFixed(2)} €</p>
+                    </div>
+
+                    <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #dcfce7;">
+                        <h3 style="margin-top: 0; color: #166534; font-size: 16px;">Coordonnées Client</h3>
+                        <p style="margin: 5px 0;"><strong>👤 Nom :</strong> ${buyerName}</p>
+                        <p style="margin: 5px 0;"><strong>📧 Email :</strong> <a href="mailto:${user.email}">${user.email}</a></p>
                     </div>
 
                     <p>Connectez-vous à votre espace partenaire pour voir les détails et gérer cette réservation.</p>

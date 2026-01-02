@@ -62,6 +62,7 @@ const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
 const PartnerOffers = React.lazy(() => import('./pages/partner/Offers'));
 const PartnerBookings = React.lazy(() => import('./pages/partner/Bookings'));
 const PartnerBookingDetail = React.lazy(() => import('./pages/partner/BookingDetail'));
+const PartnerReviews = React.lazy(() => import('./pages/partner/Reviews'));
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
 // Club pages
@@ -130,6 +131,7 @@ function App() {
                     <Route path="offers" element={<PartnerOffers />} />
                     <Route path="bookings" element={<PartnerBookings />} />
                     <Route path="bookings/:id" element={<PartnerBookingDetail />} />
+                    <Route path="reviews" element={<PartnerReviews />} />
                     <Route path="settings" element={<Navigate to="settings/general" replace />} />
                     <Route path="settings/general" element={<SettingsGeneral />} />
                     <Route path="settings/payments" element={<SettingsPayments />} />

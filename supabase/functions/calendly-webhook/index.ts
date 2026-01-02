@@ -37,19 +37,18 @@ serve(async (req) => {
 
         const invitee = payload.payload;
         const email = invitee.email;
-        const eventTypeUri = invitee.event_type; // "https://api.calendly.com/event_types/..."
+
         const eventUri = invitee.event; // "https://api.calendly.com/scheduled_events/..."
-        const calendlyEventId = invitee.uri; // "https://api.calendly.com/scheduled_events/.../invitees/..." (Invitee URI) OR we can use the event URI. 
-        // User requested "Utilise l'ID d'invité de Calendly comme clé unique" -> invitee.uri is unique per invitee.
+        const calendlyEventId = invitee.uri;
         const externalId = invitee.uri;
 
-        // Init Supabase Admin (pour écrire dans bookings sans RLS restrictive et lire partners)
+        // Init Supabase Admin
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
 
-        // 1. Récupérer le token du partenaire pour appeler l'API Calendly
+        // 1. Récupérer le token du partenaire
         const { data: partner, error: partnerError } = await supabaseAdmin
             .from('partners')
             .select('calendly_token, id')
@@ -64,8 +63,47 @@ serve(async (req) => {
             });
         }
 
-        // 2. Fetch Event Type details from Calendly to find the URL/Slug
-        // We need this to match against our 'offers' table 'calendly_url'
+        // 2. Fetch Event Details FIRST (to get event_type URI and Start Time)
+        if (!eventUri) {
+            console.error("Missing event URI in payload");
+            return new Response(JSON.stringify({ error: 'Missing event URI' }), { status: 200, headers: corsHeaders });
+        }
+
+        const eventResp = await fetch(eventUri, {
+            headers: {
+                'Authorization': `Bearer ${partner.calendly_token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!eventResp.ok) {
+            console.error("Failed to fetch event from Calendly", await eventResp.text());
+            return new Response(JSON.stringify({ error: 'Calendly Event API error' }), { status: 200, headers: corsHeaders });
+        }
+
+        const eventData = await eventResp.json();
+        const eventResource = eventData.resource;
+        const eventTypeUri = eventResource.event_type; // Correctly get event_type URI
+        const scheduledAt = eventResource.start_time;
+
+        // Extract Location
+        let meetingLocation = null;
+        const loc = eventResource.location;
+        if (loc) {
+            if (loc.type === 'physical') {
+                meetingLocation = loc.location;
+            } else if (loc.type === 'outbound_call') {
+                meetingLocation = `Appel vers : ${loc.phone_number || 'Numéro client'}`;
+            } else if (loc.join_url) {
+                meetingLocation = loc.join_url;
+            } else if (loc.location) {
+                meetingLocation = loc.location;
+            }
+        }
+
+        console.log("Event Details Fetched. Type URI:", eventTypeUri);
+
+        // 3. Fetch Event Type details to find the Scheduling URL (Slug)
         const calendlyResp = await fetch(eventTypeUri, {
             headers: {
                 'Authorization': `Bearer ${partner.calendly_token}`,
@@ -75,25 +113,21 @@ serve(async (req) => {
 
         if (!calendlyResp.ok) {
             console.error("Failed to fetch event type from Calendly", await calendlyResp.text());
-            return new Response(JSON.stringify({ error: 'Calendly API error' }), { status: 200, headers: corsHeaders });
+            return new Response(JSON.stringify({ error: 'Calendly Event Type API error' }), { status: 200, headers: corsHeaders });
         }
 
         const eventTypeData = await calendlyResp.json();
         const eventType = eventTypeData.resource;
-        // eventType.scheduling_url looks like "https://calendly.com/username/type" or custom
         const schedulingUrl = eventType.scheduling_url;
 
         console.log("Scheduling URL found:", schedulingUrl);
 
         // 3. Find the Offer in DB
-        // On cherche une offre qui A ce calendly_url.
-        // Attention: parfois il peut y avoir des variations (http/https, query params).
-        // On fait un check simple pour commencer.
         const { data: offers, error: offerError } = await supabaseAdmin
             .from('offers')
             .select('id, title')
-            .eq('partner_id', partnerId) // Safety check
-            .ilike('calendly_url', `${schedulingUrl}%`); // Starts with... pour gérer les params url
+            .eq('partner_id', partnerId)
+            .ilike('calendly_url', `${schedulingUrl}%`);
 
         if (offerError) console.error("Error searching offer", offerError);
 
@@ -106,20 +140,11 @@ serve(async (req) => {
         }
 
         if (!offerId) {
-            // Si on ne trouve pas d'offre, on peut quand même logger le booking ou ignorer via instruction user ?
-            // "Insérer la réservation... en liant... le bon offer_id". 
-            // Si pas d'offer_id, l'insert échouera car NOT NULL.
             console.error("Cannot proceed without offer_id");
             return new Response(JSON.stringify({ error: 'Offer not found' }), { status: 200, headers: corsHeaders });
         }
 
         // 4. Find User by Email
-        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.listUsers();
-        // listUsers n'est pas idéal pour chercher par email en masse mais limitation Edge Function ?
-        // Mieux: utiliser RPC ou une table user_profiles si accessible.
-        // Mais on a besoin du `auth.users.id` pour la FK `user_id`.
-        // La table `user_profiles` contient l'email et le `user_id`. C'est plus efficace.
-
         const { data: profile, error: profileError } = await supabaseAdmin
             .from('user_profiles')
             .select('user_id')
@@ -128,80 +153,104 @@ serve(async (req) => {
 
         if (profileError || !profile) {
             console.warn("User not found for email:", email);
-            // On ne peut pas insérer sans user_id valide (FK).
-            // Option: Créer un "Ghost User" ou ignorer?
-            // Le user a dit: "liant le bon user_id (via l'email reçu)".
-            // Si le gars n'est pas inscrit, c'est mort.
             return new Response(JSON.stringify({ error: 'User not found' }), { status: 200, headers: corsHeaders });
         }
 
-        // 5. Insert Booking
-        const { error: insertError } = await supabaseAdmin
+        // 5. Check for Existing Booking
+        const { data: existingBooking, error: searchError } = await supabaseAdmin
             .from('bookings')
-            .insert({
-                user_id: profile.user_id,
-                offer_id: offerId,
-                booking_date: invitee.created_at, // Or event start time? 
-                // Invitee payload has created_at (booking time). 
-                // We probably want the Event Start Time.
-                // Need to fetch Event details for Start Time?
-                // "Payload.event" is the link. invitee payload DOES NOT have start_time usually, checking docs...
-                // Calendly payload for invitee.created DOES NOT include start_time directly in `payload`. It's in the `event` resource.
-                // So we MUST fetch the event resource too.
-                customer_email: email,
-                calendly_event_id: externalId, // storing URI as ID
-                external_id: externalId, // Unique Key
-                source: 'calendly',
-                status: 'confirmed'
-            });
-
-        // Wait, let's fetch event start time to be cleaner
-        const eventResp = await fetch(eventUri, {
-            headers: { 'Authorization': `Bearer ${partner.calendly_token}` }
-        });
-        let bookingDate = invitee.created_at; // Fallback
-        if (eventResp.ok) {
-            const eventData = await eventResp.json();
-            bookingDate = eventData.resource.start_time;
-        }
-
-        // Fetch price from variants (default to first variant found)
-        const { data: variantData } = await supabaseAdmin
-            .from('offer_variants')
-            .select('price, discounted_price')
+            .select('id, status')
+            .eq('user_id', profile.user_id)
             .eq('offer_id', offerId)
+            .is('scheduled_at', null)
+            .neq('status', 'cancelled')
+            .order('created_at', { ascending: false })
             .limit(1)
             .single();
 
-        const bookingAmount = variantData ? (variantData.discounted_price || variantData.price) : 0;
+        if (existingBooking) {
+            console.log("Updating existing booking:", existingBooking.id);
+            const { error: updateError } = await supabaseAdmin
+                .from('bookings')
+                .update({
+                    scheduled_at: scheduledAt,
+                    meeting_location: meetingLocation,
+                    calendly_event_id: externalId
+                    // updated_at removed to bypass stale schema cache error
+                })
+                .eq('id', existingBooking.id);
 
-        // Re-attempt insert with correct date and amount
-        const { error: finalInsertError } = await supabaseAdmin
-            .from('bookings')
-            .insert({
-                user_id: profile.user_id,
-                offer_id: offerId,
-                booking_date: bookingDate,
-                customer_email: email,
-                calendly_event_id: externalId,
-                external_id: externalId,
-                source: 'calendly',
-                status: 'confirmed',
-                amount: bookingAmount,
-                currency: 'EUR',
-                partner_id: partnerId // Ensure partner_id is filled for payout attribution
-            });
-
-        if (finalInsertError) {
-            if (finalInsertError.code === '23505') { // Unique violation
-                console.log("Booking already exists (deduplication)");
-                return new Response(JSON.stringify({ message: 'Duplicate skipped' }), { status: 200, headers: corsHeaders });
+            if (updateError) {
+                console.error("Error updating booking", updateError);
+                return new Response(JSON.stringify({ error: 'Update Failed' }), { status: 500, headers: corsHeaders });
             }
-            console.error("Error inserting booking", finalInsertError);
-            return new Response(JSON.stringify({ error: 'DB Insert Error' }), { status: 200, headers: corsHeaders });
+
+            // Trigger Partner Notification with fresh Date/Location
+            try {
+                console.log("Triggering Partner Notification for updated booking...");
+                supabaseAdmin.functions.invoke('send-partner-notification', {
+                    body: {
+                        partnerId: partnerId,
+                        type: 'new_booking',
+                        data: {
+                            offerTitle: offers[0].title, // We have offers array from search
+                            date: scheduledAt,
+                            meeting_location: meetingLocation || existingBooking.meeting_location, // Use new or existing
+                            booking_id: existingBooking.id,
+                            scheduled_at: scheduledAt // Explicit
+                        }
+                    }
+                });
+            } catch (notifErr) {
+                console.error("Failed to trigger partner notification:", notifErr);
+            }
+
+            // Trigger Client Confirmation Email (Update with Date)
+            try {
+                console.log("Triggering Client Confirmation Email (Update)...");
+                supabaseAdmin.functions.invoke('send-confirmation-email', {
+                    body: { id: existingBooking.id }
+                });
+            } catch (emailErr) {
+                console.error("Failed to trigger client email:", emailErr);
+            }
+        } else {
+            console.log("No existing paid booking found. Creating new PENDING booking (Schedule-then-Pay flow).");
+
+            // Fetch price details as fallback
+            const { data: variantData } = await supabaseAdmin
+                .from('offer_variants')
+                .select('price, discounted_price')
+                .eq('offer_id', offerId)
+                .limit(1)
+                .single();
+            const estimatedAmount = variantData ? (variantData.discounted_price || variantData.price) : 0;
+
+            const { error: insertError } = await supabaseAdmin
+                .from('bookings')
+                .insert({
+                    user_id: profile.user_id,
+                    offer_id: offerId,
+                    booking_date: new Date().toISOString(), // Action date
+                    scheduled_at: scheduledAt, // Event date
+                    meeting_location: meetingLocation,
+                    customer_email: email,
+                    calendly_event_id: externalId,
+                    external_id: externalId,
+                    source: 'calendly',
+                    status: 'pending', // Mark as pending payment
+                    amount: estimatedAmount,
+                    currency: 'EUR',
+                    partner_id: partnerId
+                });
+
+            if (insertError) {
+                console.error("Error inserting pending booking", insertError);
+                return new Response(JSON.stringify({ error: 'Insert Failed' }), { status: 500, headers: corsHeaders });
+            }
         }
 
-        console.log("Booking inserted successfully!");
+        console.log("Webhook processed successfully!");
         return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,

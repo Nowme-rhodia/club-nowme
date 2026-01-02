@@ -59,6 +59,7 @@ export function PartnerCalendlySettings({ partnerId, initialToken, onUpdate }: P
 
             // On récupère l'URI de l'utilisateur depuis la réponse précédente (data.resource.uri)
             const userUri = data.resource.uri;
+            const organizationUri = data.resource.current_organization;
 
             // Création du webhook scopé à l'utilisateur
             const createHook = await fetch('https://api.calendly.com/webhook_subscriptions', {
@@ -69,8 +70,9 @@ export function PartnerCalendlySettings({ partnerId, initialToken, onUpdate }: P
                 },
                 body: JSON.stringify({
                     url: webhookUrl,
-                    events: ['invitee.created'],
-                    scope: 'user',
+                    events: ['invitee.created', 'invitee.canceled'], // Create AND Cancel
+                    organization: organizationUri,
+                    scope: 'organization', // Changed to organization to be safe, or keep user but add org
                     user: userUri
                 })
             });

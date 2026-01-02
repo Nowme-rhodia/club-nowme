@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Share2, ArrowLeft, Star, Navigation, Copy, ExternalLink, Calendar as CalendarIcon, Clock, CheckCircle, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Globe, MapPin, Share2, ArrowLeft, Star, Navigation, Copy, ExternalLink, Calendar as CalendarIcon, Clock, CheckCircle, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { loadStripe } from '@stripe/stripe-js';
 import { MapComponent } from '../components/MapComponent';
@@ -10,6 +10,7 @@ import { getCategoryBackground } from '../utils/categoryBackgrounds';
 import toast from 'react-hot-toast';
 import { useAuth } from '../lib/auth';
 import { SEO } from '../components/SEO';
+import { AddressAutocomplete } from '../components/AddressAutocomplete';
 
 export default function OfferPage() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +49,7 @@ export default function OfferPage() {
           street_address,
           zip_code,
           city,
-          cancellation_conditions,
+          cancellation_policy,
           coordinates,
           calendly_url,
           booking_type,
@@ -59,7 +60,8 @@ export default function OfferPage() {
           image_url,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
           offer_variants(id, name, description, price, discounted_price, stock),
-          offer_media(url, type)
+          offer_media(url, type),
+          service_zones
         `)
         .eq('id', id)
         .single();
@@ -102,6 +104,35 @@ export default function OfferPage() {
     fetchOffer();
   }, [id]);
 
+  // State for Service Zones
+  // State for Service Zones
+  const [selectedZoneCode, setSelectedZoneCode] = useState<string>('');
+  const [meetingAddress, setMeetingAddress] = useState<string>('');
+
+  const handleAddressSelect = (address: string, postcode: string, city: string) => {
+    if (!offer.service_zones || offer.service_zones.length === 0) return;
+
+    const depCode = postcode.substring(0, 2);
+    const zone = offer.service_zones.find((z: any) => z.code === depCode);
+
+    if (zone) {
+      setSelectedZoneCode(depCode);
+      setMeetingAddress(address);
+      toast.success(`Zone ${depCode} validée (+${zone.fee}€)`);
+    } else {
+      setSelectedZoneCode('');
+      setMeetingAddress('');
+      toast.error(`Désolé, le département ${depCode} n'est pas desservi par ce partenaire.`);
+    }
+  };
+
+  // Reset selected zone if offer changes
+  useEffect(() => {
+    if (offer?.service_zones && offer.service_zones.length > 0) {
+      setSelectedZoneCode('');
+    }
+  }, [offer]);
+
   useEffect(() => {
     if (offer?.offer_variants?.length > 0 && !selectedVariant) {
       // Auto-select first available variant
@@ -110,6 +141,9 @@ export default function OfferPage() {
     }
   }, [offer, selectedVariant]);
 
+  const selectedZone = offer?.service_zones?.find((z: any) => z.code === selectedZoneCode);
+  const travelFee = selectedZone ? (Number(selectedZone.fee) || 0) : 0;
+
   const priceInfo = selectedVariant
     ? {
       price: selectedVariant.discounted_price || selectedVariant.price,
@@ -117,6 +151,9 @@ export default function OfferPage() {
       variant_id: selectedVariant.id
     }
     : { price: 0, original_price: null, variant_id: null };
+
+  // Total to Pay (Price + Travel Fee)
+  const totalToPay = (priceInfo.price || 0) + travelFee;
 
   const isOutOfStock = selectedVariant && selectedVariant.stock !== null && selectedVariant.stock <= 0;
 
@@ -199,22 +236,34 @@ export default function OfferPage() {
         return;
       }
 
+      // Validate Zone for At Home
+      if (offer.service_zones && offer.service_zones.length > 0 && !selectedZoneCode) {
+        toast.error("Veuillez sélectionner votre zone géographique.");
+        setBookingLoading(false);
+        return;
+      }
+
       console.log("Initiating Checkout:", {
         offer_id: offer.id,
         variant_id: variantId,
         price,
-        booking_type: bookingType
+        booking_type: bookingType,
+        travel_fee: travelFee,
+        department_code: selectedZoneCode
       });
 
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           offer_id: offer.id,
           variant_id: variantId, // Explicitly passing variant_id
-          price: price,
+          price: price, // Base price
           user_id: user?.id,
           success_url: `${window.location.origin}/booking-success`,
           cancel_url: window.location.href,
-          booking_type: bookingType
+          booking_type: bookingType,
+          travel_fee: travelFee,
+          department_code: selectedZoneCode,
+          meeting_location: meetingAddress // Pass the full address
         }
       });
 
@@ -241,7 +290,24 @@ export default function OfferPage() {
 
   const openCalendly = () => {
     if (offer.calendly_url) {
-      window.open(offer.calendly_url, '_blank');
+      const baseUrl = offer.calendly_url;
+      const params = new URLSearchParams();
+
+      // Prefill User Details
+      if (user?.email) params.append('email', user.email);
+      if (profile?.first_name && profile?.last_name) {
+        params.append('name', `${profile.first_name} ${profile.last_name}`);
+      }
+
+      // Prefill Location (Critical for "At Home")
+      if (meetingAddress) {
+        params.append('location', meetingAddress);
+      }
+
+      // Open properly formatted URL
+      const finalUrl = `${baseUrl}?${params.toString()}`;
+      window.open(finalUrl, '_blank');
+
       toast.success("Redirection vers l'agenda...");
     } else {
       toast.error("Lien Calendly manquant");
@@ -349,7 +415,7 @@ export default function OfferPage() {
         title={offer?.title || 'Détail offre'}
         description={seoDescription}
         image={offer?.image_url}
-        url={window.location.href}
+        canonical={window.location.href}
       />
 
       <div
@@ -429,11 +495,16 @@ export default function OfferPage() {
 
                   <div className="flex items-center gap-6 mb-6 flex-wrap">
                     <div className="flex items-center gap-1.5">
-                      <MapPin className="w-5 h-5 text-gray-400" />
-                      <span className={`text-gray-600 ${!hasAccess ? 'blur-[4px] select-none opacity-60' : ''}`}>
-                        {hasAccess ? (offer.location || "Lieu non précisé") : "Adresse réservée aux membres"}
+                      {offer.is_online ? <Globe className="w-5 h-5 text-primary" /> : <MapPin className="w-5 h-5 text-gray-400" />}
+                      <span className={`text-gray-600 ${!offer.is_online && !hasAccess ? 'blur-[4px] select-none opacity-60' : ''}`}>
+                        {offer.is_online
+                          ? "Expérience en ligne"
+                          : hasAccess
+                            ? (offer.street_address ? `${offer.street_address}, ${offer.zip_code} ${offer.city}` : "Lieu non précisé")
+                            : "Adresse réservée aux membres"
+                        }
                       </span>
-                      {!hasAccess && (
+                      {!offer.is_online && !hasAccess && (
                         <span className="ml-2 text-sm text-gray-500">({offer.city || "Paris"})</span>
                       )}
                     </div>
@@ -456,10 +527,21 @@ export default function OfferPage() {
                     <p className="text-gray-600 leading-relaxed">{offer.description}</p>
                   </div>
 
-                  {offer.cancellation_conditions && (
+                  {offer.cancellation_policy && (
                     <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
                       <h2 className="text-sm font-semibold text-gray-900 mb-1">Conditions d'annulation</h2>
-                      <p className="text-sm text-gray-600">{offer.cancellation_conditions}</p>
+                      <p className="text-sm text-gray-600">
+                        {offer.booking_type === 'purchase'
+                          ? 'Non remboursable'
+                          : offer.booking_type === 'promo'
+                            ? 'Voir conditions sur le site partenaire'
+                            : {
+                              'flexible': 'Flexible (Annulable sans frais jusqu\'à 15 jours avant le Kiff)',
+                              'moderate': 'Modérée (Annulable sans frais jusqu\'à 7 jours avant le Kiff)',
+                              'strict': 'Stricte (Annulable sans frais jusqu\'à 24h avant le Kiff)',
+                              'non_refundable': 'Non remboursable (Pas de remboursement possible)'
+                            }[offer.cancellation_policy as string] || 'Non spécifié'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -580,12 +662,67 @@ export default function OfferPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
-                      <div>
+
+                    <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl flex-col sm:flex-row gap-4 sm:gap-0">
+
+                      {/* --- Zone Selector & Address (At Home Only) --- */}
+                      {offer.service_zones && offer.service_zones.length > 0 && (
+                        <div className="w-full mb-6 border-b border-gray-100 pb-6">
+
+                          {/* Zones Table */}
+                          <div className="mb-4 bg-blue-50/50 rounded-lg p-3 text-sm">
+                            <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                              <MapPin className="w-4 h-4" />
+                              Zones desservies & Tarifs
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {offer.service_zones.map((z: any) => (
+                                <span key={z.code} className="inline-flex items-center px-2 py-1 rounded bg-white border border-blue-100 text-blue-700 text-xs shadow-sm">
+                                  <strong>{z.code}</strong>
+                                  <span className="mx-1 text-gray-300">|</span>
+                                  {z.fee > 0 ? `+${z.fee}€` : 'Gratuit'}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          <label className="block text-sm font-bold text-gray-900 mb-2">
+                            🏠 Adresse du rendez-vous
+                          </label>
+                          <AddressAutocomplete
+                            onSelect={handleAddressSelect}
+                            onChange={(val) => {
+                              setMeetingAddress(val);
+                              setSelectedZoneCode(''); // [CRITICAL] Any manual change/AutoFill invalidates the zone
+                            }}
+                            defaultValue={meetingAddress}
+                          />
+
+                          {/* Validation Status */}
+                          {selectedZoneCode ? (
+                            <div className="mt-2 flex items-center text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              <span>Zone {selectedZoneCode} validée (+{travelFee}€) : {meetingAddress}</span>
+                            </div>
+                          ) : meetingAddress && (
+                            <div className="mt-2 text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                              Zone non desservie. Veuillez vérifier les zones ci-dessus.
+                            </div>
+                          )}
+
+                          {/* DEBUG ADDRESS STATE */}
+                          <div className="mt-2 text-xs text-gray-400 border border-dashed border-gray-300 p-1">
+                            DEBUG - Adresse qui sera envoyée : <strong>{meetingAddress}</strong>
+                          </div>
+                        </div>
+                      )}
+
+
+                      <div className="w-full sm:w-auto text-right">
                         <p className="text-sm text-gray-500 mb-1">Total à payer</p>
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline justify-end gap-2">
                           <span className="text-3xl font-bold text-gray-900">
-                            {priceInfo.price}€
+                            {totalToPay}€
                           </span>
                           {priceInfo.original_price && (
                             <span className="text-lg text-gray-400 line-through">
@@ -593,6 +730,11 @@ export default function OfferPage() {
                             </span>
                           )}
                         </div>
+                        {travelFee > 0 && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Dont frais déplacements : +{travelFee}€
+                          </p>
+                        )}
                       </div>
                       <button
                         onClick={handleShare}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { categories } from '../../data/categories';
-import { Plus, Trash2, Info, Image as ImageIcon, X, Euro } from 'lucide-react';
+import { Plus, Trash2, Info, Image as ImageIcon, X, Euro, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { LocationSearch } from '../../components/LocationSearch';
 import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
@@ -56,18 +56,29 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   });
 
   // Type & Specifics
+  const [locationMode, setLocationMode] = useState<'physical' | 'online' | 'at_home'>('physical');
+  const [serviceZones, setServiceZones] = useState<Array<{ code: string; fee: number }>>([]);
   const [eventType, setEventType] = useState<'calendly' | 'event' | 'promo' | 'purchase'>('calendly');
   const [eventDate, setEventDate] = useState('');
   const [eventEndDate, setEventEndDate] = useState('');
   const [calendlyUrl, setCalendlyUrl] = useState('');
   const [externalLink, setExternalLink] = useState('');
   const [promoCode, setPromoCode] = useState('');
-  const [cancellationConditions, setCancellationConditions] = useState('Non remboursable');
+  const [digitalProductFile, setDigitalProductFile] = useState<string | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [cancellationPolicy, setCancellationPolicy] = useState<'flexible' | 'moderate' | 'strict' | 'non_refundable'>('flexible');
 
   // Variants
   const [variants, setVariants] = useState<Variant[]>([
     { name: 'Tarif Standard', description: '', price: '', stock: '', has_stock: false }
   ]);
+
+  // Auto-set policy for certain types
+  React.useEffect(() => {
+    if (eventType === 'purchase' || eventType === 'promo') {
+      setCancellationPolicy('non_refundable');
+    }
+  }, [eventType]);
 
   // Fetch Partner ID
   React.useEffect(() => {
@@ -131,8 +142,32 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setCalendlyUrl(offer.calendly_url || '');
       setExternalLink(offer.external_link || '');
       setExternalLink(offer.external_link || '');
+      setExternalLink(offer.external_link || '');
       setPromoCode(offer.promo_code || '');
-      setCancellationConditions(offer.cancellation_conditions || 'Non remboursable');
+      setDigitalProductFile(offer.digital_product_file || null);
+      setCancellationPolicy(offer.cancellation_policy || 'flexible');
+
+      setLocationMode(offer.is_online ? 'online' : (offer.street_address === 'Au domicile du client' ? 'at_home' : 'physical'));
+
+      // Load service zones if at_home schema
+      if (offer.service_zones && Array.isArray(offer.service_zones)) {
+        setServiceZones(offer.service_zones);
+      }
+
+      setLocationMode(offer.is_online ? 'online' : (offer.street_address === 'Au domicile du client' ? 'at_home' : 'physical'));
+
+      // Load service zones if at_home schema
+      if (offer.service_zones && Array.isArray(offer.service_zones)) {
+        setServiceZones(offer.service_zones);
+      }
+
+      if (offer.is_online) {
+        setLocationMode('online');
+      } else if (offer.street_address === 'Au domicile du client') {
+        setLocationMode('at_home');
+      } else {
+        setLocationMode('physical');
+      }
 
       if (offer.offer_variants && offer.offer_variants.length > 0) {
         setVariants(offer.offer_variants.map((v: any) => ({
@@ -325,13 +360,18 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         event_end_date: eventType === 'event' ? eventEndDate : null,
         external_link: eventType === 'promo' ? externalLink : null,
         promo_code: eventType === 'promo' ? promoCode : null,
-        street_address: locationState.street_address,
-        zip_code: locationState.zip_code,
-        city: locationState.city,
-        department: locationState.department,
-        coordinates: locationState.coordinates ? `(${locationState.coordinates[0]},${locationState.coordinates[1]})` : null,
+        street_address: locationMode === 'at_home' ? 'Au domicile du client' : (locationMode === 'online' ? 'En ligne' : locationState.street_address),
+        zip_code: locationMode === 'physical' ? locationState.zip_code : '',
+        // For At Home: we set 'city' to a readable summary like "Paris, 92, 94..." for display cards
+        city: locationMode === 'at_home'
+          ? (serviceZones.length > 0 ? serviceZones.map(z => z.code).join(', ') : 'Île-de-France')
+          : (locationMode === 'online' ? 'En ligne' : locationState.city),
+        department: locationMode === 'physical' ? locationState.department : '',
+        coordinates: (locationMode === 'physical' && locationState.coordinates) ? `(${locationState.coordinates[0]},${locationState.coordinates[1]})` : null,
+        is_online: locationMode === 'online',
+        service_zones: locationMode === 'at_home' ? serviceZones : [],
         image_url: uploadedImageUrl,
-        cancellation_conditions: cancellationConditions,
+        cancellation_policy: cancellationPolicy,
         // Status remains mostly unchanged or resets to draft if needed, but let's keep it simple
         status: offer ? offer.status : 'draft'
       };
@@ -584,70 +624,179 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             />
           </div>
 
-          {/* --- Location --- */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Localisation *</label>
-            <LocationSearch
-              onSelect={(loc) => {
-                setLocationState({
-                  street_address: loc.street_address || '',
-                  zip_code: loc.zip_code || '',
-                  city: loc.city || '',
-                  department: loc.department || '',
-                  coordinates: [loc.lat, loc.lng]
-                });
-              }}
-              initialValue={locationState.street_address ? `${locationState.street_address}, ${locationState.city}` : ''}
-            />
-          </div>
+          <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-4">📍 Où se passe l'expérience ?</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationMode('physical');
+                  if (eventType === 'purchase') setEventType('event');
+                }}
+                className={`p-4 rounded-xl border text-left transition-all ${locationMode === 'physical'
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                <div className="font-semibold text-gray-900 mb-1">📍 Sur place</div>
+                <p className="text-sm text-gray-500">Au cabinet, en studio...</p>
+              </button>
 
-          {/* --- Cancellation Conditions --- */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Conditions d'annulation</label>
-            <div className="space-y-3">
-              <textarea
-                value={cancellationConditions}
-                onChange={(e) => setCancellationConditions(e.target.value)}
-                rows={2}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                placeholder="Ex: Toute réservation est ferme et définitive."
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCancellationConditions('Non remboursable')}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700"
-                >
-                  Strict (Non remboursable)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCancellationConditions('Annulation gratuite jusqu\'à 24h avant')}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700"
-                >
-                  Flexible (24h)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCancellationConditions('Annulation gratuite jusqu\'à 7 jours avant')}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded text-gray-700"
-                >
-                  Modérée (7 jours)
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationMode('at_home');
+                  if (eventType === 'purchase') setEventType('calendly');
+                }}
+                className={`p-4 rounded-xl border text-left transition-all ${locationMode === 'at_home'
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                <div className="font-semibold text-gray-900 mb-1">🏠 À domicile</div>
+                <p className="text-sm text-gray-500">Chez le client (déplacement).</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLocationMode('online');
+                }}
+                className={`p-4 rounded-xl border text-left transition-all ${locationMode === 'online'
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                <div className="font-semibold text-gray-900 mb-1">💻 En ligne</div>
+                <p className="text-sm text-gray-500">Visio, PDF, ou lien web.</p>
+              </button>
             </div>
           </div>
 
-          {/* --- Type --- */}
+          {/* --- Location Search (Only if physical) --- */}
+          {locationMode === 'physical' && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Adresse de l'événement *</label>
+              <LocationSearch
+                onSelect={(loc) => {
+                  setLocationState({
+                    street_address: loc.street_address || '',
+                    zip_code: loc.zip_code || '',
+                    city: loc.city || '',
+                    department: loc.department || '',
+                    coordinates: [loc.lat, loc.lng]
+                  });
+                }}
+                initialValue={locationState.street_address ? `${locationState.street_address}, ${locationState.city}` : ''}
+              />
+            </div>
+          )}
+
+          {/* --- Zone Input (Only if At Home) --- */}
+          {locationMode === 'at_home' && (
+            <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6">
+              <div className="flex justify-between items-center mb-4">
+                <label className="block text-sm font-medium text-gray-700">Zones couvertes & Frais de déplacement</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // "Toute l'IDF" shortcut
+                    const allIDF = ['75', '77', '78', '91', '92', '93', '94', '95'];
+                    // Default fee 0 if not set
+                    setServiceZones(allIDF.map(code => ({ code, fee: 0 })));
+                    toast.success("Toute l'Île-de-France sélectionnée !");
+                  }}
+                  className="text-sm text-primary hover:text-primary-dark font-medium hover:underline"
+                >
+                  ⚡ Toute l'Île-de-France
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Multi-select Dropdown (Simplified as a grid of checkboxes for better UX here) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-lg">
+                  {[
+                    { code: '75', name: 'Paris (75)' },
+                    { code: '92', name: 'Hauts-de-Seine (92)' },
+                    { code: '93', name: 'Seine-St-Denis (93)' },
+                    { code: '94', name: 'Val-de-Marne (94)' },
+                    { code: '77', name: 'Seine-et-Marne (77)' },
+                    { code: '78', name: 'Yvelines (78)' },
+                    { code: '91', name: 'Essonne (91)' },
+                    { code: '95', name: "Val-d'Oise (95)" },
+                  ].map((dept) => {
+                    const isSelected = serviceZones.some(z => z.code === dept.code);
+                    return (
+                      <button
+                        key={dept.code}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setServiceZones(prev => prev.filter(z => z.code !== dept.code));
+                          } else {
+                            setServiceZones(prev => [...prev, { code: dept.code, fee: 0 }]);
+                          }
+                        }}
+                        className={`flex items-center justify-center px-3 py-2 rounded-lg border text-sm transition-all ${isSelected
+                          ? 'bg-primary text-white border-primary shadow-sm'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                          }`}
+                      >
+                        {dept.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Fee Inputs for Selected Zones */}
+                {serviceZones.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Frais de déplacement par département (€)</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+                      {serviceZones.map((zone) => (
+                        <div key={zone.code} className="flex items-center space-x-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg">
+                          <span className="text-sm font-semibold text-gray-800 w-12">{zone.code}</span>
+                          <div className="flex-1 text-xs text-gray-500 truncate">
+                            {['75', '92', '93', '94', '77', '78', '91', '95'].find(c => c === zone.code) ?
+                              ({ '75': 'Paris', '92': 'Hauts-de-Seine', '93': 'Seine-St-Denis', '94': 'Val-de-Marne', '77': 'Seine-et-Marne', '78': 'Yvelines', '91': 'Essonne', '95': "Val-d'Oise" } as any)[zone.code]
+                              : ''}
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            value={zone.fee}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setServiceZones(prev => prev.map(z => z.code === zone.code ? { ...z, fee: val } : z));
+                            }}
+                            className="w-20 px-2 py-1 text-right text-sm border-gray-300 rounded focus:ring-primary focus:border-primary"
+                            placeholder="0 €"
+                          />
+                          <span className="text-sm text-gray-600">€</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {serviceZones.length === 0 && (
+                  <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-100">
+                    ⚠️ Veuillez sélectionner au moins un département desservi.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* --- Type de réservation (Moved Up) --- */}
           <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
             <h3 className="font-semibold text-gray-900 mb-4">Type de réservation</h3>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
               {[
-                { id: 'calendly', label: 'Rendez-vous' },
-                { id: 'event', label: 'Événement' },
-                { id: 'promo', label: 'Code Promo' },
-                { id: 'purchase', label: 'Achat Simple' }
-              ].map((type) => (
+                { id: 'calendly', label: locationMode === 'online' ? 'Visio (Calendly)' : 'Rendez-vous', show: true },
+                { id: 'event', label: locationMode === 'online' ? 'Live / Atelier En ligne' : 'Événement', show: true },
+                { id: 'purchase', label: 'Produit Digital (PDF)', show: locationMode === 'online' },
+                { id: 'promo', label: 'Code Promo Web', show: locationMode === 'online' }
+              ].filter(t => t.show).map((type) => (
                 <button
                   key={type.id}
                   type="button"
@@ -674,7 +823,6 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                   placeholder="https://calendly.com/..."
                 />
 
-                {/* Integration Info */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <PartnerCalendlySettings
                     partnerId={partnerId}
@@ -682,6 +830,97 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                     onUpdate={() => toast.success('Config mise à jour')}
                   />
                 </div>
+              </div>
+            )}
+
+            {eventType === 'purchase' && (
+              <div className="mt-4 p-4 bg-white border border-dashed border-gray-300 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fichier à télécharger (PDF, ZIP...)</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Ce fichier sera accessible au client uniquement après l'achat. (Max 50Mo)
+                </p>
+
+                {digitalProductFile ? (
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <div className="p-2 bg-white rounded-full">
+                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-medium text-green-800 truncate" title={digitalProductFile}>
+                        {digitalProductFile.split('/').pop()}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDigitalProductFile(null)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".pdf,.zip,.rar"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!user || !partnerId) {
+                          toast.error("Erreur d'authentification");
+                          return;
+                        }
+
+                        if (file.size > 50 * 1024 * 1024) {
+                          toast.error("Fichier trop volumineux (Max 50Mo)");
+                          return;
+                        }
+
+                        setIsUploadingFile(true);
+                        const toastId = toast.loading('Téléchargement du fichier...');
+
+                        try {
+                          const fileExt = file.name.split('.').pop();
+                          const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+                          const filePath = `${partnerId}/${fileName}`;
+
+                          const { error } = await supabase.storage
+                            .from('offer-attachments')
+                            .upload(filePath, file);
+
+                          if (error) throw error;
+
+                          setDigitalProductFile(filePath);
+                          toast.success('Fichier ajouté !', { id: toastId });
+                        } catch (error: any) {
+                          console.error('Upload Error:', error);
+                          toast.error("Erreur lors de l'envoi", { id: toastId });
+                        } finally {
+                          setIsUploadingFile(false);
+                        }
+                      }}
+                    />
+                    <div className={`w-full py-8 text-center rounded-lg border-2 border-dashed transition-colors ${isUploadingFile ? 'bg-gray-50 border-gray-300' : 'hover:bg-gray-50 border-gray-300 hover:border-primary'}`}>
+                      {isUploadingFile ? (
+                        <div className="flex flex-col items-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-2"></div>
+                          <span className="text-sm text-gray-500">Envoi en cours...</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center text-gray-500">
+                          <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-700">Cliquez pour ajouter un fichier</span>
+                          <span className="text-xs text-gray-400 mt-1">PDF, ZIP (Max 50Mo)</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -732,6 +971,70 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
               </div>
             )}
           </div>
+
+          {/* --- Cancellation Policy --- */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Politique d'annulation *</label>
+            {(eventType === 'purchase' || eventType === 'promo') ? (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+                <p className="text-gray-900 font-medium">
+                  {eventType === 'purchase' ? 'Non remboursable' : 'Voir conditions sur le site du Partenaire'}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {eventType === 'purchase'
+                    ? "Les achats simples (PDF, objets, droits, Bons d'achat) ne sont pas remboursables."
+                    : "La politique d'annulation dépend des conditions générales de votre site."}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  {
+                    value: 'flexible',
+                    label: 'Flexible (15 jours)',
+                    desc: 'Remboursement intégral jusqu\'à 15 jours avant l\'événement.'
+                  },
+                  {
+                    value: 'moderate',
+                    label: 'Modérée (7 jours)',
+                    desc: 'Remboursement intégral jusqu\'à 7 jours avant l\'événement.'
+                  },
+                  {
+                    value: 'strict',
+                    label: 'Stricte (24h)',
+                    desc: 'Remboursement intégral jusqu\'à 24h avant l\'événement.'
+                  },
+                  {
+                    value: 'non_refundable',
+                    label: 'Non remboursable',
+                    desc: 'Aucun remboursement possible, peu importe le délai.'
+                  }
+                ].map((policy) => (
+                  <div
+                    key={policy.value}
+                    onClick={() => setCancellationPolicy(policy.value as any)}
+                    className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${cancellationPolicy === policy.value
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`font-semibold ${cancellationPolicy === policy.value ? 'text-primary' : 'text-gray-900'
+                        }`}>
+                        {policy.label}
+                      </span>
+                      {cancellationPolicy === policy.value && (
+                        <div className="w-4 h-4 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">{policy.desc}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+
 
           {/* --- Variants --- */}
           <div>

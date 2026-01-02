@@ -60,10 +60,23 @@ export default function CGV() {
                             Les conditions d'annulation des prestations sont fixées par chaque Partenaire et précisées lors de la commande. Sauf mention contraire :
                         </p>
                         <ul className="list-disc pl-5 space-y-2 mt-2">
-                            <li>Toute réservation est ferme et définitive.</li>
-                            <li>En cas d'annulation par le Partenaire, l'Utilisateur sera intégralement remboursé.</li>
-                            <li>Le droit de rétractation ne s'applique généralement pas aux prestations de services de loisirs fournis à une date déterminée (art. L221-28 du Code de la consommation).</li>
+                            <li>Toute réservation est ferme et définitive, sauf conditions spécifiques appliquées à l'offre.</li>
+                            <li>Les politiques d'annulation possibles sont :
+                                <ul className="list-disc pl-5 mt-1 space-y-1">
+                                    <li><strong>Flexible :</strong> Annulable sans frais jusqu'à 15 jours avant le début de l'événement.</li>
+                                    <li><strong>Modérée :</strong> Annulable sans frais jusqu'à 7 jours avant le début de l'événement.</li>
+                                    <li><strong>Stricte :</strong> Annulable sans frais jusqu'à 24h avant le début de l'événement.</li>
+                                    <li><strong>Non remboursable :</strong> Aucun remboursement possible après la réservation, peu importe la date d'annulation.</li>
+                                </ul>
+                            </li>
+                            <li>Le remboursement s'effectue sur le moyen de paiement utilisé lors de la commande.</li>
                         </ul>
+
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">4.1. Force Majeure</h3>
+                        <p>
+                            En cas d'annulation hors délais pour un motif de force majeure (décès d'un parent au 1er degré, hospitalisation, accident grave), l'Utilisateur peut adresser une réclamation au service client avec un justificatif officiel (certificat de décès, bulletin d'hospitalisation). NOWME se réserve le droit d'étudier la demande au cas par cas.
+                        </p>
+
                     </section>
 
                     <section className="mb-8">
@@ -91,6 +104,6 @@ export default function CGV() {
                     </section>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
