@@ -1,0 +1,3 @@
+{
+    "query": "ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS ambassador_start_date timestamptz; ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS ambassador_last_reminder_at timestamptz;"
+}

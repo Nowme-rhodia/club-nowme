@@ -9,6 +9,7 @@ import { translateError } from '../../lib/errorTranslations';
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState(searchParams.get('email') || '');
   const [password, setPassword] = useState('');
@@ -95,12 +96,9 @@ export default function SignIn() {
       if (userData?.is_admin) {
         console.log('Utilisateur admin, redirection vers /admin');
         navigate('/admin');
-      } else if (userData?.subscription_status === 'active') {
-        console.log('Utilisateur avec abonnement actif, redirection vers /dashboard');
-        navigate('/dashboard');
       } else {
-        console.log('Utilisateur sans abonnement actif, redirection vers /subscription');
-        navigate('/subscription');
+        console.log('Utilisateur standard, redirection vers /account');
+        navigate('/account');
       }
     } catch (err) {
       console.error('Erreur complète:', err);

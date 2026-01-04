@@ -120,7 +120,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 3️⃣ Emails
+    // 3️⃣ Emails & Notifications
+
+    // Fetch admins for notification
+    const { data: admins, error: adminError } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('is_admin', true);
+
+    if (adminError) {
+      logger.error("Error fetching admins:", adminError);
+    }
+
+    const defaultAdmins = ["rhodia.kw@gmail.com", "admin@admin.fr"];
+    const dynamicAdmins = admins?.map(a => a.email).filter(e => e) || [];
+    const recipientEmails = [...new Set([...defaultAdmins, ...dynamicAdmins])];
+
     const adminHtml = `
       <h2 style="color:#BF2778;">Nouvelle demande de partenariat 🚀</h2>
       <p><strong>Entreprise :</strong> ${business.name}</p>
@@ -150,20 +165,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
       <p style="margin-top:20px;">Cordialement,<br/>💜 L’équipe Nowme Club</p>
     `;
 
-    await supabase.from("emails").insert([
-      {
-        to_address: "admin@nowme.fr",
-        subject: "Nouvelle demande de partenariat",
-        content: adminHtml,
-        status: "pending",
-      },
-      {
-        to_address: business.email,
-        subject: "Bienvenue chez Nowme ! Votre demande est en cours d'examen ✨",
-        content: confirmHtml,
-        status: "pending",
-      },
-    ]);
+    // Prepare email objects
+    const emailInserts = [];
+
+    // 1. Admin emails (one per admin to be safe)
+    for (const adminEmail of recipientEmails) {
+      if (adminEmail) {
+        emailInserts.push({
+          to_address: adminEmail,
+          subject: "Nouvelle demande de partenariat",
+          content: adminHtml,
+          status: "pending",
+        });
+      }
+    }
+
+    // 2. Partner confirmation email
+    emailInserts.push({
+      to_address: business.email,
+      subject: "Bienvenue chez Nowme ! Votre demande est en cours d'examen ✨",
+      content: confirmHtml,
+      status: "pending",
+    });
+
+    await supabase.from("emails").insert(emailInserts);
 
     // ✅ Réponse finale
     return new Response(

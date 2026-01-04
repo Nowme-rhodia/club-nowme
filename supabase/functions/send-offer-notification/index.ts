@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -20,6 +21,29 @@ serve(async (req) => {
       throw new Error("Missing offer details");
     }
 
+    // Initialize Supabase client
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    // Fetch admins
+    const { data: admins, error: adminError } = await supabase
+      .from('user_profiles')
+      .select('email')
+      .eq('is_admin', true);
+
+    if (adminError) {
+      console.error("Error fetching admins:", adminError);
+    }
+
+    // Default admins + dynamic ones
+    const defaultAdmins = ["rhodia.kw@gmail.com", "admin@admin.fr"];
+    const dynamicAdmins = admins?.map(a => a.email).filter(e => e) || [];
+
+    // Merge and deduplicate
+    const recipients = [...new Set([...defaultAdmins, ...dynamicAdmins])];
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -27,9 +51,21 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Nowme <contact@nowme.fr>", // Update if domain is different
-        to: ["rhodia@nowme.fr"],
-        subject: `⚠️ Offre modifiée : ${offerTitle}`,
+        from: "Nowme <contact@nowme.fr>",
+        to: recipients,
+        subject: `Offre modifiée : ${offerTitle}`,
+        text: `
+Une offre active a été modifiée.
+
+Partenaire : ${partnerName || "Inconnu"}
+Offre : ${offerTitle}
+ID : ${offerId}
+
+Cette offre a été passée automatiquement en statut "En validation".
+Merci de vérifier les modifications et de re-valider l'offre si tout est conforme.
+
+Aller au Dashboard Admin: https://club.nowme.fr/admin/offers
+        `,
         html: `
           <h1>Une offre active a été modifiée</h1>
           <p><strong>Partenaire :</strong> ${partnerName || "Inconnu"}</p>
@@ -49,7 +85,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-  } catch (error) {
+  } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,

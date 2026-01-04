@@ -22,6 +22,7 @@ interface UserProfile {
   subscription_type?: string;
   stripe_customer_id?: string;
   is_admin?: boolean;
+  is_ambassador?: boolean;
   sub_auto_recap?: boolean;
   selected_plan?: string;
   sub_newsletter?: boolean;
@@ -29,6 +30,10 @@ interface UserProfile {
   role?: Role;
   created_at?: string;
   updated_at?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  accepted_community_rules_at?: string | null;
+  whatsapp_number?: string | null;
   partner?: {
     id: string;
     user_id: string;
@@ -67,6 +72,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileCache, setProfileCache] = useState<{ userId: string; profile: UserProfile; timestamp: number } | null>(null);
   const [loadingProfile, setLoadingProfile] = useState<string | null>(null); // Pour éviter les appels simultanés
   const navigate = useNavigate();
+
+  // Refs for accessing latest state in closures (callbacks/effects)
+  const profileRef = React.useRef<UserProfile | null>(null);
+  const profileCacheRef = React.useRef<{ userId: string; profile: UserProfile; timestamp: number } | null>(null);
+  const loadingProfileRef = React.useRef<string | null>(null);
+
+  // Update refs when state changes
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  useEffect(() => {
+    profileCacheRef.current = profileCache;
+  }, [profileCache]);
+
+  useEffect(() => {
+    loadingProfileRef.current = loadingProfile;
+  }, [loadingProfile]);
 
   // Durée du cache : 20 minutes
   const CACHE_DURATION = 20 * 60 * 1000;
@@ -112,18 +135,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const timestamp = Date.now();
 
-      // Vérifier si un chargement est déjà en cours pour cet utilisateur
-      if (loadingProfile === userId && !forceRefresh) {
+      // Vérifier si un chargement est déjà en cours pour cet utilisateur (via RED)
+      if (loadingProfileRef.current === userId && !forceRefresh) {
         console.log('⏸️ loadUserProfile - Already loading profile for userId:', userId);
         return;
       }
 
-      // Vérifier le cache mémoire si pas de forceRefresh
-      if (!forceRefresh && profileCache && profileCache.userId === userId) {
-        const cacheAge = timestamp - profileCache.timestamp;
+      // Vérifier le cache mémoire si pas de forceRefresh (via REF)
+      if (!forceRefresh && profileCacheRef.current && profileCacheRef.current.userId === userId) {
+        const cacheAge = timestamp - profileCacheRef.current.timestamp;
         if (cacheAge < CACHE_DURATION) {
           console.log('✅ loadUserProfile - Using memory cached profile (age:', Math.round(cacheAge / 1000), 'seconds)');
-          setProfile(profileCache.profile);
+          setProfile(profileCacheRef.current.profile);
           return;
         } else {
           console.log('⏰ loadUserProfile - Memory cache expired (age:', Math.round(cacheAge / 1000), 'seconds)');
@@ -155,13 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Marquer comme en cours de chargement
       setLoadingProfile(userId);
+      loadingProfileRef.current = userId; // Update ref immediately for race condition protection
 
       console.log('🔍 loadUserProfile - Starting for userId:', userId, 'forceRefresh:', forceRefresh, 'timestamp:', timestamp);
 
       // Lancer les 2 requêtes essentielles en PARALLÈLE
       console.log('🔍 loadUserProfile - Launching queries in parallel...');
 
-      const timeoutDuration = 20000; // Augmenté à 20s pour éviter les timeouts (User Request)
+      const timeoutDuration = 5000; // Réduit à 5s pour un fallback plus rapide vers l'Edge Function
 
       const [
         { data: userData, error: userError },
@@ -171,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         Promise.race([
           supabase
             .from('user_profiles')
-            .select('*, partner_id, is_admin')
+            .select('*, partner_id, is_admin, is_ambassador')
             .eq('user_id', userId)
             .maybeSingle(),
           new Promise((_, reject) =>
@@ -193,11 +217,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ]) as any;
 
       console.log('🔍 loadUserProfile - All queries completed');
-      console.log('  - User data:', userData, 'error:', userError);
-      console.log('  - Subscription data:', subscriptionData, 'error:', subscriptionError);
+      // console.log('  - User data:', userData, 'error:', userError);
+      // console.log('  - Subscription data:', subscriptionData, 'error:', subscriptionError);
 
       if (userError) {
-        console.warn('⚠️ User profile query warning:', userError);
+        // Only warn if it's NOT a timeout (timeouts are handled by fallback below)
+        const isTimeout = userError.message?.includes('timeout');
+        if (!isTimeout) {
+          console.warn('⚠️ User profile query warning:', userError);
+        }
+
         // CRITICAL FIX: Stop if recursion is detected to prevent login loop
         if (typeof userError === 'object' && userError !== null && 'message' in userError) {
           const msg = (userError as any).message || '';
@@ -209,11 +238,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       if (subscriptionError) {
-        console.warn('⚠️ Subscription query warning:', subscriptionError);
+        // Silently handle subscription timeouts too
+        const isTimeout = subscriptionError.message?.includes('timeout');
+        if (!isTimeout) {
+          console.warn('⚠️ Subscription query warning:', subscriptionError);
+        }
       }
 
       // Si aucune donnée n'est trouvée, on définit un profil guest minimal
       if (!userData) {
+        // PROTECTION: Si on a une erreur (timeout, réseau), on ne bascule PAS en guest
+        if (userError) {
+          // Check if it is a timeout -> if so, throw to trigger catch block and Edge Function fallback
+          if (userError.message?.includes('timeout')) {
+            throw userError;
+          }
+
+          console.error('❌ loadUserProfile - Critical error fetching profile. Aborting guest fallback.', userError);
+          throw userError; // On renvoie l'erreur pour ne pas écraser le profil actuel avec un guest
+        }
+
         console.warn('⚠️ loadUserProfile - No profile data found for user:', userId);
         const guestProfile = {
           user_id: userId,
@@ -266,11 +310,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Déverrouiller
       setLoadingProfile(null);
+      loadingProfileRef.current = null;
     } catch (e: any) {
-      console.error('❌ loadUserProfile error:', e);
+      // console.error('❌ loadUserProfile error:', e); // Reduced noise
 
       // Déverrouiller en cas d'erreur
       setLoadingProfile(null);
+      loadingProfileRef.current = null;
 
       // Si timeout ou erreur, essayer avec la fonction Edge comme fallback
       if (e.message?.includes('timeout') || e.message?.includes('Query timeout')) {
@@ -318,7 +364,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      setProfile(null);
+      // PROTECTION: Ne pas écraser le profil avec null en cas d'échec total (garde le cache ou l'état précédent)
+      if (!profileRef.current) {  // Check Ref here too
+        setProfile(null);
+      } else {
+        console.warn('⚠️ loadUserProfile - Keeping existing profile despite error');
+      }
     }
   };
 
@@ -366,6 +417,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           // Détection d'expiration de session (SIGNED_OUT sans action volontaire)
           if (event === 'SIGNED_OUT' && !isSigningOut.current) {
+            // VERIFICATION : Est-on vraiment déconnecté ?
+            const { data: { session: verificationSession } } = await supabase.auth.getSession();
+            if (verificationSession) {
+              console.log('🛡️ Ignored spurious SIGNED_OUT event, session still valid');
+              return;
+            }
+
             console.log('⚠️ Session expired or remote sign out detected');
             toast.error('Votre session a expiré. Veuillez vous reconnecter.', {
               duration: 5000,
@@ -391,10 +449,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           // Special handling for TOKEN_REFRESHED to avoid clearing profile on transient errors
-          if (event === 'TOKEN_REFRESHED' && session?.user && profile) {
+          // Use REF to check if profile exists, to avoid stale closure issue
+          if (event === 'TOKEN_REFRESHED' && session?.user && profileRef.current) {
             console.log('🔄 Token refreshed. Keeping existing profile to prevent flicker/logout.');
-            // Optionally: Background refresh if needed, but safe to skip to rely on cache
-            // await loadUserProfile(session.user.id); 
             setLoading(false);
             return;
           }
@@ -407,7 +464,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (e) {
           console.error('onAuthStateChange error:', e);
           // Only clear profile if we are absolutely sure the session is gone or invalid
-          if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          if (event === 'SIGNED_OUT' || (event as string) === 'USER_DELETED') {
             setProfile(null);
           } else {
             console.warn('⚠️ Keeping previous profile despite error during auth event:', event);
@@ -454,10 +511,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (userData?.is_admin) {
         navigate('/admin');
-      } else if (userData?.subscription_status === 'active' || userData?.subscription_status === 'trialing') {
-        navigate('/account');
       } else {
-        navigate('/subscription');
+        navigate('/account');
       }
     } catch (error) {
       toast.error('Email ou mot de passe incorrect');

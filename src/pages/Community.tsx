@@ -117,11 +117,11 @@ export default function Subscription() {
   const faqItems = [
     {
       question: "Pourquoi 12,99€ puis 39,99€ ?",
-      answer: "Le 1er mois à 12,99€ te permet de découvrir la communauté et les premiers avantages sans risque. Ensuite, 39,99€ te donne accès à TOUT : événements premium, box trimestrielle, apéros mensuels, séjours entre filles, carte interactive... Plus de 120€ de valeur réelle !"
+      answer: "Le 1er mois à 12,99€ te permet de découvrir la communauté et les premiers avantages sans risque. Ensuite, 39,99€ te donne accès à TOUT : événements premium, box trimestrielle, apéros mensuels, séjours entre filles, carte interactive (Bientôt)... Plus de 120€ de valeur réelle !"
     },
     {
       question: "Qu'est-ce que j'ai concrètement chaque mois ?",
-      answer: "Dès le 1er mois : réductions jusqu'à -50% + 1 événement découverte + groupe WhatsApp + newsletter. À partir du 2ème : tout ça PLUS événements premium + box trimestrielle + apéros mensuels + carte interactive + séjours entre filles + service conciergerie !"
+      answer: "Dès le 1er mois : réductions jusqu'à -50% + 1 événement découverte + groupe WhatsApp + newsletter. À partir du 2ème : tout ça PLUS événements premium + box trimestrielle + apéros mensuels + carte interactive (Bientôt) + séjours entre filles + service conciergerie !"
     },
     {
       question: "Je peux annuler quand ?",
@@ -133,7 +133,7 @@ export default function Subscription() {
     },
     {
       question: "Et si je ne connais personne ?",
-      answer: "C'est fait pour ça ! 90% de nos membres ne connaissaient personne au début. Les apéros mensuels et la carte interactive sont parfaits pour rencontrer des femmes qui te ressemblent près de chez toi."
+      answer: "C'est fait pour ça ! 90% de nos membres ne connaissaient personne au début. Les apéros mensuels et la carte interactive (Bientôt) sont parfaits pour rencontrer des femmes qui te ressemblent près de chez toi."
     },
     {
       question: "Les séjours entre filles, comment ça marche ?",
@@ -505,7 +505,7 @@ export default function Subscription() {
                 <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />2-3 événements premium/mois</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Box partenaires trimestrielle</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Apéros mensuels en ligne</li>
-                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Carte interactive membres</li>
+                <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Carte interactive membres (Bientôt)</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Séjours entre filles à prix réduits</li>
                 <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Service conciergerie</li>
               </ul>
@@ -542,7 +542,7 @@ export default function Subscription() {
                 <h3 className="text-lg font-bold text-gray-900">Communauté Active</h3>
               </div>
               <p className="text-gray-600 mb-4 text-sm">
-                Apéros mensuels, carte interactive, séjours entre filles... Trouve ta tribu !
+                Apéros mensuels, carte interactive (Bientôt), séjours entre filles... Trouve ta tribu !
               </p>
               <div className="bg-green-200 rounded-lg p-3">
                 <p className="text-green-800 font-semibold text-sm">
@@ -669,7 +669,7 @@ export default function Subscription() {
                     <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />2-3 événements premium/mois</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Box trimestrielle (30€)</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Apéros mensuels en ligne</li>
-                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Carte interactive</li>
+                    <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Carte interactive (Bientôt)</li>
                     <li className="flex items-center"><Check className="w-4 h-4 text-primary mr-2" />Séjours entre filles</li>
                   </ul>
                 </div>

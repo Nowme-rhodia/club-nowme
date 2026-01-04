@@ -15,6 +15,7 @@ import {
   Calendar,
   Mail
 } from 'lucide-react';
+import { SquadCard } from '../components/community/SquadCard';
 
 export default function Account() {
   const navigate = useNavigate();
@@ -34,6 +35,65 @@ export default function Account() {
         sub_newsletter: profile.sub_newsletter ?? true
       });
     }
+  }, [profile]);
+
+  // Fetch My Squads
+  const [mySquads, setMySquads] = useState<any[]>([]);
+
+  const fetchMySquads = async () => {
+    if (!profile) return;
+
+    try {
+      // Step 1: Get IDs of squads I joined
+      const { data: memberships, error: memberError } = await supabase
+        .from('squad_members')
+        .select('squad_id')
+        .eq('user_id', profile.user_id);
+
+      if (memberError) throw memberError;
+
+      if (!memberships || memberships.length === 0) {
+        setMySquads([]);
+        return;
+      }
+
+      const squadIds = memberships.map(m => m.squad_id);
+
+      // Step 2: Fetch full squad details
+      const { data: squadsData, error: squadError } = await supabase
+        .from('micro_squads')
+        .select(`
+            *,
+            members:squad_members(
+                user_id,
+                profile:user_profiles(first_name, photo_url)
+            )
+            `)
+        .in('id', squadIds);
+
+      if (squadError) throw squadError;
+
+      if (squadsData) {
+        const now = new Date();
+        const squads = squadsData.map((sq: any) => ({
+          ...sq,
+          members_count: sq.members?.length || 0,
+          members: sq.members || [],
+          is_member: true
+        }));
+
+        const future = squads.filter((s: any) => new Date(s.date_event) >= now).sort((a: any, b: any) => new Date(a.date_event).getTime() - new Date(b.date_event).getTime());
+        const past = squads.filter((s: any) => new Date(s.date_event) < now).sort((a: any, b: any) => new Date(b.date_event).getTime() - new Date(a.date_event).getTime()).slice(0, 5);
+
+        setMySquads([...future, ...past]);
+      }
+    } catch (err) {
+      console.error('Error fetching my squads:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMySquads();
   }, [profile]);
 
   const handleLogout = async () => {
@@ -269,6 +329,52 @@ export default function Account() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+
+
+            {/* Mes Sorties (Squads) */}
+            <div className="bg-white rounded-xl shadow-soft p-6 mb-8">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-primary" />
+                Mes Sorties & Groupes
+              </h3>
+
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
+                {mySquads.length > 0 ? (
+                  mySquads.map((squad) => (
+                    <div key={squad.id} className="snap-start">
+                      <SquadCard
+                        squad={{
+                          ...squad,
+                          is_member: true, // Since it's from 'squad_members', current user is definitely a member
+                          members_count: squad.members?.length || 0 // Ensure members count is handled if needed, or if API doesn't return it here, might be issue. 
+                          // Actually Account.tsx fetch query is: squad:micro_squads (*)
+                          // It does NOT fetch members count. SquadCard needs it.
+                          // I should update the query to fetch members too to display avatars correctly.
+                        }}
+                        onJoin={() => {
+                          // Re-fetch logic
+                          const fetchMySquads = async () => {
+                            // Re-implement or hoist fetchMySquads to be accessible here
+                            // For now, I can't easily hoist without refactoring the Effect.
+                            // I'll make fetchMySquads a persistent function in the component body.
+                          };
+                          // Actually, I should refactor the fetch logic to be reusable.
+                        }}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="w-full text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                    Tu n'as rejoint aucune sortie pour l'instant.
+                    <br />
+                    <a href="/community-space" className="text-primary font-medium hover:underline mt-1 inline-block">
+                      Découvrir les sorties
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -32,9 +32,9 @@ export const PRICING_TIERS: PricingTier[] = [
     price: 12.99,
     originalPrice: 39.99,
     period: '1er mois, puis 39,99€/mois',
-    description: 'Premier mois à 12,99€ avec le code KIFFE (-27€)',
+    description: 'Premier mois à 12,99€ (Automatiquement appliqué)',
     stripePriceId: 'price_1RqraiDaQ8XsywAvAAmxoAFW',
-    promoCode: 'KIFFE',
+    promoCode: undefined, // Plus de code promo manuel requis
     features: [
       'Accès complet à tous les services dès le 1er mois',
       '2-3 événements premium et `sorties organisées par mois',
@@ -143,9 +143,9 @@ export const calculateTotalValue = (): number => {
 // Messages marketing
 export const MARKETING_MESSAGES = {
   monthly: {
-    headline: "Économise 13€ avec le code KIFFE !",
-    subheadline: "27€ le premier mois au lieu de 39,99€, puis tarif normal",
-    cta: "J'utilise le code KIFFE"
+    headline: "Profite de ton 1er mois à 12,99€ !",
+    subheadline: "Offre de bienvenue automatiquement appliquée (puis 39,99€/mois)",
+    cta: "Je profite de l'offre"
   },
   yearly: {
     headline: "Presque 2 mois OFFERTS + 100€ de réduction séjours",

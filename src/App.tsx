@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
+import { useLoadScript } from '@react-google-maps/api';
 import { AuthProvider } from './lib/auth';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -26,6 +27,7 @@ const Profile = React.lazy(() => import('./pages/account/Profile'));
 const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
 const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
+const BecomeAmbassador = React.lazy(() => import('./pages/BecomeAmbassador'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 const MyBookings = React.lazy(() => import('./pages/MyBookings'));
 const MentionsLegales = React.lazy(() => import('./pages/legal/MentionsLegales'));
@@ -43,6 +45,7 @@ const AuthCallback = React.lazy(() => import('./pages/auth/AuthCallback'));
 // Admin pages
 const AdminLayout = React.lazy(() => import('./pages/admin/AdminLayout'));
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const AmbassadorApplications = React.lazy(() => import('./pages/admin/AmbassadorApplications'));
 const Partners = React.lazy(() => import('./pages/admin/Partners'));
 const PendingOffers = React.lazy(() => import('./pages/admin/PendingOffers'));
 const AdminOffers = React.lazy(() => import('./pages/admin/Offers'));
@@ -66,7 +69,8 @@ const PartnerReviews = React.lazy(() => import('./pages/partner/Reviews'));
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
 // Club pages
-const ClubDashboard = React.lazy(() => import('./pages/club/ClubDashboard'));
+
+const Agenda = React.lazy(() => import('./pages/Agenda'));
 const Events = React.lazy(() => import('./pages/club/Events'));
 
 // Booking publique (Calendly intégré)
@@ -74,136 +78,161 @@ const Booking = React.lazy(() => import('./pages/Booking'));
 const BookingSuccess = React.lazy(() => import('./pages/BookingSuccess'));
 const CancellationFeedback = React.lazy(() => import('./pages/CancellationFeedback'));
 
+// Wrapper component to load Google Maps Script globally
+function GoogleMapsLoader({ children }: { children: React.ReactNode }) {
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: ["places"],
+    language: "fr",
+    region: "FR"
+  });
+
+  if (!isLoaded) return <LoadingFallback />;
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <HelmetProvider>
       <ErrorBoundary>
         <AuthProvider>
-          <div className="min-h-screen bg-white">
-            <ScrollToTop />
-            <Header />
+          <GoogleMapsLoader>
+            <div className="min-h-screen bg-white">
+              <ScrollToTop />
+              <Header />
 
-            <main className="flex-1">
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<Home />} />
-                  <Route path="/categories" element={<Categories />} />
-                  <Route path="/tous-les-kiffs" element={<TousLesKiffs />} />
-                  <Route path="/offres/:id" element={<OfferPage />} />
-                  <Route path="/subscription" element={<Subscription />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-                  <Route path="/feedback" element={<CancellationFeedback />} />
-                  <Route path="/devenir-partenaire" element={<SubmitOffer />} />
-                  <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
-                  <Route path="/community-space" element={
-                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
-                      <CommunitySpace />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/communaute" element={<Communaute />} />
-                  <Route path="/blog" element={<Blog />} />
-                  <Route path="/blog/:slug" element={<BlogPost />} />
-
-                  {/* Booking publique */}
-                  <Route path="/booking/:id" element={<Booking />} />
-                  <Route path="/booking-success" element={<BookingSuccess />} />
-
-                  {/* Auth routes */}
-                  <Route path="/auth/signin" element={<SignIn />} />
-                  <Route path="/auth/signup" element={<SignUp />} />
-                  <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/auth/update-password" element={<UpdatePassword />} />
-                  <Route path="/auth/callback" element={<AuthCallback />} />
-
-                  {/* Partner routes */}
-                  <Route path="/partner/signin" element={<PartnerSignIn />} />
-                  <Route
-                    path="/partner/*"
-                    element={
-                      <PrivateRoute allowedRoles={['partner']}>
-                        <PartnerLayout />
+              <main className="flex-1">
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/" element={<Home />} />
+                    <Route path="/categories" element={<Categories />} />
+                    <Route path="/tous-les-kiffs" element={<TousLesKiffs />} />
+                    <Route path="/offres/:id" element={<OfferPage />} />
+                    <Route path="/subscription" element={<Subscription />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/subscription-success" element={<SubscriptionSuccess />} />
+                    <Route path="/feedback" element={<CancellationFeedback />} />
+                    <Route path="/devenir-partenaire" element={<SubmitOffer />} />
+                    <Route path="/devenir-ambassadrice" element={
+                      <PrivateRoute allowedRoles={['subscriber']}>
+                        <BecomeAmbassador />
                       </PrivateRoute>
-                    }
-                  >
-                    <Route path="dashboard" element={<PartnerDashboard />} />
-                    <Route path="offers" element={<PartnerOffers />} />
-                    <Route path="bookings" element={<PartnerBookings />} />
-                    <Route path="bookings/:id" element={<PartnerBookingDetail />} />
-                    <Route path="reviews" element={<PartnerReviews />} />
-                    <Route path="settings" element={<Navigate to="settings/general" replace />} />
-                    <Route path="settings/general" element={<SettingsGeneral />} />
-                    <Route path="settings/payments" element={<SettingsPayments />} />
-                  </Route>
+                    } />
+                    <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
+                    <Route path="/community-space" element={
+                      <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                        <CommunitySpace />
+                      </PrivateRoute>
+                    } />
+                    <Route path="/communaute" element={<Communaute />} />
+                    <Route path="/blog" element={<Blog />} />
+                    <Route path="/blog/:slug" element={<BlogPost />} />
 
-                  {/* Protected user routes */}
-                  <Route path="/account/*" element={
-                    <PrivateRoute>
-                      <Account />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/mes-reservations" element={
-                    <PrivateRoute>
-                      <MyBookings />
-                    </PrivateRoute>
-                  } />
-                  {/* Handle legacy/incorrect url */}
-                  <Route path="/my-bookings" element={<Navigate to="/mes-reservations" replace />} />
-                  <Route path="/account/profile" element={
-                    <PrivateRoute allowedRoles={['subscriber']}>
-                      <Profile />
-                    </PrivateRoute>
-                  } />
+                    {/* Booking publique */}
+                    <Route path="/booking/:id" element={<Booking />} />
+                    <Route path="/booking-success" element={<BookingSuccess />} />
 
-                  {/* Club routes */}
-                  <Route path="/club" element={
-                    <PrivateRoute allowedRoles={['subscriber']}>
-                      <ClubDashboard />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/club/events" element={
-                    <PrivateRoute allowedRoles={['subscriber']}>
-                      <Events />
-                    </PrivateRoute>
-                  } />
+                    {/* Auth routes */}
+                    <Route path="/auth/signin" element={<SignIn />} />
+                    <Route path="/auth/signup" element={<SignUp />} />
+                    <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/auth/update-password" element={<UpdatePassword />} />
+                    <Route path="/auth/callback" element={<AuthCallback />} />
 
-                  {/* Admin routes */}
-                  <Route path="/admin/*" element={
-                    <PrivateRoute allowedRoles={['admin']}>
-                      <AdminLayout />
-                    </PrivateRoute>
-                  }>
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="partners" element={<Partners />} />
+                    {/* Partner routes */}
+                    <Route path="/partner/signin" element={<PartnerSignIn />} />
+                    <Route
+                      path="/partner/*"
+                      element={
+                        <PrivateRoute allowedRoles={['partner']}>
+                          <PartnerLayout />
+                        </PrivateRoute>
+                      }
+                    >
+                      <Route path="dashboard" element={<PartnerDashboard />} />
+                      <Route path="offers" element={<PartnerOffers />} />
+                      <Route path="bookings" element={<PartnerBookings />} />
+                      <Route path="bookings/:id" element={<PartnerBookingDetail />} />
+                      <Route path="reviews" element={<PartnerReviews />} />
+                      <Route path="settings" element={<Navigate to="settings/general" replace />} />
+                      <Route path="settings/general" element={<SettingsGeneral />} />
+                      <Route path="settings/payments" element={<SettingsPayments />} />
+                    </Route>
 
-                    <Route path="offers" element={<AdminOffers />} />
-                    <Route path="subscribers" element={<Subscribers />} />
-                    <Route path="newsletter" element={<Newsletter />} />
-                    <Route path="create-users" element={<CreateUsers />} />
-                    <Route path="bookings" element={<AdminBookings />} />
-                    <Route path="payouts" element={<Payouts />} />
-                    <Route path="community" element={<AdminCommunity />} />
-                    <Route path="blog" element={<AdminBlog />} />
-                    <Route path="blog/new" element={<AdminBlogEditor />} />
-                    <Route path="blog/edit/:id" element={<AdminBlogEditor />} />
-                  </Route>
+                    {/* Protected user routes */}
+                    <Route path="/account/*" element={
+                      <PrivateRoute>
+                        <Account />
+                      </PrivateRoute>
+                    } />
+                    <Route path="/mes-reservations" element={
+                      <PrivateRoute>
+                        <MyBookings />
+                      </PrivateRoute>
+                    } />
+                    {/* Handle legacy/incorrect url */}
+                    <Route path="/my-bookings" element={<Navigate to="/mes-reservations" replace />} />
+                    <Route path="/account/profile" element={
+                      <PrivateRoute allowedRoles={['subscriber']}>
+                        <Profile />
+                      </PrivateRoute>
+                    } />
 
-                  {/* Legal routes */}
-                  <Route path="/mentions-legales" element={<MentionsLegales />} />
-                  <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
-                  <Route path="/cgv" element={<CGV />} />
-                  <Route path="/conditions-partenaires" element={<ConditionsPartenaires />} />
+                    {/* Club routes */}
+                    <Route path="/club" element={<Navigate to="/community-space" replace />} /> {/* Redirect legacy club to QG */}
 
-                  {/* 404 */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </main>
+                    <Route path="/agenda" element={
+                      <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                        <Agenda />
+                      </PrivateRoute>
+                    } />
 
-            <Footer />
-            <Toaster position="top-right" />
-          </div>
+                    <Route path="/club/events" element={
+                      <PrivateRoute allowedRoles={['subscriber']}>
+                        <Events />
+                      </PrivateRoute>
+                    } />
+
+                    {/* Admin routes */}
+                    <Route path="/admin/*" element={
+                      <PrivateRoute allowedRoles={['admin']}>
+                        <AdminLayout />
+                      </PrivateRoute>
+                    }>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="partners" element={<Partners />} />
+                      <Route path="ambassadors" element={<AmbassadorApplications />} />
+
+                      <Route path="offers" element={<AdminOffers />} />
+                      <Route path="subscribers" element={<Subscribers />} />
+                      <Route path="newsletter" element={<Newsletter />} />
+                      <Route path="create-users" element={<CreateUsers />} />
+                      <Route path="bookings" element={<AdminBookings />} />
+                      <Route path="payouts" element={<Payouts />} />
+                      <Route path="community" element={<AdminCommunity />} />
+                      <Route path="blog" element={<AdminBlog />} />
+                      <Route path="blog/new" element={<AdminBlogEditor />} />
+                      <Route path="blog/edit/:id" element={<AdminBlogEditor />} />
+                    </Route>
+
+                    {/* Legal routes */}
+                    <Route path="/mentions-legales" element={<MentionsLegales />} />
+                    <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
+                    <Route path="/cgv" element={<CGV />} />
+                    <Route path="/conditions-partenaires" element={<ConditionsPartenaires />} />
+
+                    {/* 404 */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </main>
+
+              <Footer />
+              <Toaster position="top-right" />
+            </div>
+          </GoogleMapsLoader>
         </AuthProvider>
       </ErrorBoundary>
     </HelmetProvider>

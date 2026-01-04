@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Star, Lock } from 'lucide-react';
+import { MapPin, Star, Lock, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
@@ -17,6 +17,7 @@ interface OfferCardProps {
   partnerName?: string;
   promoConditions?: string;
   bookingType?: string;
+  date?: string;
 }
 
 export function OfferCard({
@@ -32,7 +33,8 @@ export function OfferCard({
   badge,
   partnerName,
   promoConditions,
-  bookingType
+  bookingType,
+  date
 }: OfferCardProps) {
   const { user, isSubscriber, isPartner, isAdmin } = useAuth();
   const hasAccess = isSubscriber || isPartner || isAdmin || (user?.email === 'rhodia@nowme.fr');
@@ -42,6 +44,12 @@ export function OfferCard({
   const displayLocation = typeof location === 'string'
     ? location
     : (location.address || 'Paris');
+
+  // Format date if present
+  const formattedDate = date ? new Date(date).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short'
+  }) : null;
 
   return (
     <Link
@@ -55,7 +63,18 @@ export function OfferCard({
           alt={title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+
+        {/* Date Badge (Top Left) */}
+        {formattedDate && (
+          <div className="absolute top-4 left-4 z-10">
+            <div className="bg-white/95 backdrop-blur-sm text-gray-900 px-3 py-1.5 rounded-lg shadow-sm flex flex-col items-center leading-tight min-w-[50px] border border-gray-100">
+              <span className="text-xs font-semibold uppercase text-red-500">{new Date(date!).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</span>
+              <span className="text-xl font-bold">{new Date(date!).getDate()}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end z-10">
           {badge && (
             <div className="bg-white/90 backdrop-blur-sm text-primary px-3 py-1.5 rounded-full font-semibold text-xs shadow-sm uppercase tracking-wider">
               {badge}

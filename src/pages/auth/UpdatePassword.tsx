@@ -5,6 +5,7 @@ import { Lock, AlertCircle, Check, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SEO } from '../../components/SEO';
 import { translateError } from '../../lib/errorTranslations';
+import toast from 'react-hot-toast';
 
 export default function UpdatePassword() {
   const navigate = useNavigate();
@@ -19,21 +20,13 @@ export default function UpdatePassword() {
   const [tokenHash, setTokenHash] = useState('');
   const [type, setType] = useState('');
   const [isValidToken, setIsValidToken] = useState(false);
+  const [isSessionUpdate, setIsSessionUpdate] = useState(false); // New flag to track if updating via existing session
 
   useEffect(() => {
     let mounted = true;
 
     const checkSessionAndToken = async () => {
-      // 1. Check if we're already logged in (Implicit flow handling)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && mounted) {
-        console.log('✅ UpdatePassword - User already authenticated, allowing update');
-        setIsValidToken(true);
-        setChecking(false);
-        return;
-      }
-
-      // 2. Parse URL params for Token
+      // 1. Parse URL params for Token FIRST
       const query = new URLSearchParams(window.location.search);
       const hash = new URLSearchParams(window.location.hash.slice(1));
 
@@ -56,43 +49,50 @@ export default function UpdatePassword() {
       });
 
       if (code) {
-        // If there is a code, we must wait for Supabase to exchange it for a session.
-        // We do nothing here and let the onAuthStateChange listener handle it.
         console.log('🔄 UpdatePassword - PKCE code detected, waiting for session exchange...');
         return;
       }
 
-      if (token && tokenType === 'recovery') {
+      // If we have a recovery token, we prioritize it over any existing session
+      if (token && (tokenType === 'recovery' || !tokenType)) {
         if (mounted) {
+          console.log('✅ UpdatePassword - Valid recovery token detected');
           setTokenHash(token);
-          setType(tokenType);
+          setType(tokenType || 'recovery');
           setIsValidToken(true);
           setChecking(false);
+
+          // Optional: If logged in as someone else, we might want to warn or sign out?
+          // For now, we just rely on verifyOtp to switch session or validate token.
         }
-      } else if (token && !tokenType) {
-        // Fallback
-        if (mounted) {
-          setTokenHash(token);
-          setType('recovery');
-          setIsValidToken(true);
-          setChecking(false);
-        }
-      } else {
-        // Only show error if NOT authenticated and NO code pending
-        if (mounted) {
-          // Double check session one last time before erroring
-          setTimeout(async () => {
-            if (!mounted) return;
-            const { data: { user: retryUser } } = await supabase.auth.getUser();
-            if (retryUser) {
-              setIsValidToken(true);
-              setChecking(false);
-            } else {
-              setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
-              setChecking(false);
-            }
-          }, 2000); // 2s grace period
-        }
+        return;
+      }
+
+      // 2. Only if NO token, check if we're already logged in (Change Password from Settings flow)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && mounted) {
+        console.log('✅ UpdatePassword - User already authenticated, allowing update');
+        setIsSessionUpdate(true);
+        setIsValidToken(true);
+        setChecking(false);
+        return;
+      }
+
+      // 3. Fallback: No token, no user
+      if (mounted) {
+        // Double check session one last time before erroring
+        setTimeout(async () => {
+          if (!mounted) return;
+          const { data: { user: retryUser } } = await supabase.auth.getUser();
+          if (retryUser) {
+            setIsSessionUpdate(true);
+            setIsValidToken(true);
+            setChecking(false);
+          } else {
+            setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
+            setChecking(false);
+          }
+        }, 2000); // 2s grace period
       }
     };
 
@@ -102,9 +102,13 @@ export default function UpdatePassword() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('UpdatePassword - Auth State Change:', event);
       if (session?.user && mounted) {
-        console.log('✅ UpdatePassword - Session established via listener');
-        setIsValidToken(true);
-        setChecking(false);
+        // If we were waiting for session (PKCE), now we have it
+        if (!tokenHash && !isSessionUpdate) {
+          console.log('✅ UpdatePassword - Session established via listener');
+          setIsSessionUpdate(true);
+          setIsValidToken(true);
+          setChecking(false);
+        }
       }
     });
 
@@ -136,50 +140,49 @@ export default function UpdatePassword() {
       return;
     }
 
-    if (!tokenHash || !type) {
-      setError('Lien manquant. Merci de recommencer.');
+    if (!tokenHash && !isSessionUpdate) {
+      setError('Session expirée ou lien manquant. Merci de recommencer.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Essayer d'abord avec verifyOtp
-      let updateError = null;
-
-      try {
+      // 1. If we have a token, verify it first
+      if (tokenHash && type) {
+        console.log('🔐 Verifying OTP token...');
         const { error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: type as any,
         });
 
-        if (verifyError) throw verifyError;
-
-        // Puis mettre à jour le mot de passe
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: password
-        });
-
-        if (passwordError) throw passwordError;
-
-      } catch (verifyErr: any) {
-        console.log('verifyOtp failed, trying direct password update:', verifyErr.message);
-
-        // Fallback : essayer directement updateUser avec le token - DEPRECATED/INVALID in v2
-        // const { error: directError } = await supabase.auth.updateUser(
-        //   { password: password },
-        //   { accessToken: tokenHash }
-        // );
-
-        // if (directError) {
-        //   updateError = directError;
-        // }
-        // For v2, verifyOtp should work. If it fails, there is no direct fallback like this.
-        updateError = verifyErr;
+        if (verifyError) {
+          console.error('❌ verifyOtp failed:', verifyError);
+          throw verifyError;
+        }
       }
 
-      if (updateError) {
-        throw new Error(updateError.message || 'Échec de la réinitialisation.');
+      // 2. Update the password
+      console.log('💾 Updating password...');
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (passwordError) {
+        // Handle "Same Password" error gracefully
+        if (passwordError.message.includes('different from the old password') ||
+          passwordError.message.includes('New password should be different')) {
+          console.log('⚠️ User used same password. Treating as success.');
+          toast.success('Mot de passe confirmé (identique à l\'ancien) !');
+          setSuccess(true);
+          setTimeout(() => {
+            navigate('/auth/signin', {
+              state: { message: 'Vous pouvez vous connecter 🚀' },
+            });
+          }, 2000);
+          return;
+        }
+        throw passwordError;
       }
 
       setSuccess(true);
@@ -188,8 +191,18 @@ export default function UpdatePassword() {
           state: { message: 'Mot de passe mis à jour avec succès 🎉' },
         });
       }, 2000);
+
     } catch (err: any) {
-      setError(translateError(err));
+      console.error('❌ UpdatePassword error:', err);
+      // Detailed error message handling
+      if (err.message?.includes('invalid or has expired')) {
+        setError('Ce lien a expiré. Demandez-en un nouveau.');
+      } else if (err.message?.includes('different from the old')) {
+        // Fallback if not caught above
+        setError('Le nouveau mot de passe doit être différent de l\'ancien.');
+      } else {
+        setError(translateError(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -236,7 +249,7 @@ export default function UpdatePassword() {
                 <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Lien invalide</h3>
-              <p className="text-sm text-gray-500 mb-6">Le lien est invalide ou a expiré.</p>
+              <p className="text-sm text-gray-500 mb-6">{error || "Le lien est invalide ou a expiré."}</p>
               <Link
                 to="/auth/forgot-password"
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-primary hover:bg-primary-dark"

@@ -47,6 +47,7 @@ interface OfferDetails {
   bookingType?: string;
   is_event?: boolean;
   event_end_date?: string;
+  date?: string;
 }
 
 export default function TousLesKiffs() {
@@ -147,7 +148,8 @@ export default function TousLesKiffs() {
               event_end_date: offer.event_end_date,
               badge: isOfficial ? 'Événement Officiel' : undefined,
               promoConditions: offer.promo_conditions,
-              bookingType: offer.booking_type
+              bookingType: offer.booking_type,
+              date: offer.event_start_date
             };
           });
           setOffersWithLocations(formattedOffers);

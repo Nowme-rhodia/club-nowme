@@ -271,8 +271,8 @@ export default function SubscriptionSuccess() {
           </h1>
 
           <p className="text-gray-600 mb-8">
-            🎉 Ton abonnement est validé ! Tu vas recevoir un email avec un lien pour créer ton mot de passe.<br /><br />
-            Clique dessus pour rejoindre l'univers Nowme. À tout de suite !
+            🎉 Ton abonnement est validé ! ton compte est actif.<br /><br />
+            Profite vite de tous tes avantages !
           </p>
 
           <div className="space-y-4">

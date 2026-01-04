@@ -62,6 +62,7 @@ export default function OfferPage() {
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
           offer_variants(id, name, description, price, discounted_price, stock),
           offer_media(url, type),
+          digital_product_file,
 
           service_zones,
           promo_conditions,
@@ -606,6 +607,15 @@ export default function OfferPage() {
                       <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
                       <p className="text-sm font-medium">
                         Votre lien de connexion pour accéder à l'expérience vous sera donné après votre inscription complète.
+                      </p>
+                    </div>
+                  )}
+
+                  {(offer.booking_type === 'purchase' || offer.digital_product_file) && (
+                    <div className="mb-6 p-4 bg-blue-50 text-blue-900 rounded-xl border border-blue-100 flex gap-3">
+                      <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm font-medium">
+                        Votre document vous sera donné après inscription complète.
                       </p>
                     </div>
                   )}

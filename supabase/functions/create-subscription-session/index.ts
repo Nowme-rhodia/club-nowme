@@ -82,22 +82,69 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
+    // --- Helper: Get or Create Welcome Coupon ---
+    const getOrCreateWelcomeCoupon = async () => {
+      const couponId = 'WELCOME_1299';
+      try {
+        // Check if coupon exists
+        await stripe.coupons.retrieve(couponId);
+        console.log("✅ Coupon WELCOME_1299 exists");
+        return couponId;
+      } catch (err) {
+        // If not, create it
+        console.log("⚠️ Coupon WELCOME_1299 not found, creating it...");
+        try {
+          const coupon = await stripe.coupons.create({
+            id: couponId,
+            duration: 'once',
+            amount_off: 2700, // 27.00€ off (39.99 - 27.00 = 12.99)
+            currency: 'eur',
+            name: 'Offre Bienvenue (1er mois à 12,99€)',
+          });
+          console.log("✅ Coupon created:", coupon.id);
+          return coupon.id;
+        } catch (createErr) {
+          console.error("❌ Error creating coupon:", createErr);
+          return null;
+        }
+      }
+    };
+
+    let discounts = undefined;
+
+    // Apply discount ONLY for monthly subscription
+    if (subscription_type === 'monthly') {
+      const welcomeCoupon = await getOrCreateWelcomeCoupon();
+      if (welcomeCoupon) {
+        discounts = [{ coupon: welcomeCoupon }];
+        console.log("🎟️ Applying automatic discount:", welcomeCoupon);
+      }
+    }
+
     // Créer la Checkout Session Stripe
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: any = {
       mode: "subscription",
       payment_method_types: ["card"],
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url,
       cancel_url,
-      allow_promotion_codes: true,
       billing_address_collection: "required",
       metadata: {
         source: "subscription",
         user_id: userId,
         subscription_type: subscription_type ?? "default",
       },
-    });
+    };
+
+    // Fix: Validates that only one of these parameters is present
+    if (discounts) {
+      sessionParams.discounts = discounts;
+    } else {
+      sessionParams.allow_promotion_codes = true;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return new Response(JSON.stringify({ sessionId: session.id }), {
       status: 200,

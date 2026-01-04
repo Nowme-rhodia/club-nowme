@@ -36,12 +36,13 @@ Deno.serve(async (req) => {
         // 1. Fetch Offer
         const { data: offer, error: offerError } = await supabaseClient
             .from('offers')
-            .select('title, image_url, description, service_zones')
+            .select('title, image_url, description, service_zones, is_official') // Added is_official
             .eq('id', offer_id)
             .single();
 
         if (offerError || !offer) throw new Error("Offer not found");
 
+        // ... Variant Logic ...
         let unitAmount = Math.round(price * 100);
         let variantName = '';
 
@@ -56,11 +57,46 @@ Deno.serve(async (req) => {
             const expectedPrice = variant.discounted_price || variant.price;
             unitAmount = Math.round(expectedPrice * 100);
             variantName = ` - ${variant.name}`;
+
+            // Note: If variant logic overrides price passed in body, ensure we use correct base price for discount.
+            // But usually price passed in body is trusted if verified, or we overwrite unitAmount here.
+            // The existing code sets unitAmount. We should also enforce 'price' variable if we use it later?
+            // Existing code used `amount=${price}` in success_url. We should probably use unitAmount/100 or keep consistency.
+            // For now, let's focus on unitAmount modification.
         }
 
-        // 1b. Travel Fee
+        // --- NEW: Ambassador Discount Logic ---
+        console.log(`[DEBUG] Checking Ambassador Status for user_id: ${user_id}`);
+        const { data: userData, error: userError } = await supabaseClient
+            .from('user_profiles')
+            .select('email, is_ambassador')
+            .eq('user_id', user_id)
+            .single();
+
+        if (userError) {
+            console.error(`[DEBUG] Error fetching user profile: ${JSON.stringify(userError)}`);
+        }
+
+        let appliedDiscount = 0;
+        if (userData?.is_ambassador && offer.is_official) {
+            console.log(`[DEBUG] Applying Ambassador Discount for Official Event`);
+            // Rule: Free if < 50€, else -50€
+            const discountThreshold = 5000; // 50.00 EUR in cents
+
+            if (unitAmount <= discountThreshold) {
+                unitAmount = 0;
+                appliedDiscount = price; // Full price discount
+            } else {
+                unitAmount = unitAmount - discountThreshold;
+                appliedDiscount = 50;
+            }
+            console.log(`[DEBUG] New Unit Amount: ${unitAmount}`);
+        }
+
+        // 1b. Travel Fee (Remaining logic unchanged, just ensuring unitAmount is used)
         let travelFeeLineItem = null;
         if (travel_fee && travel_fee > 0) {
+            // ...
             travelFeeLineItem = {
                 price_data: {
                     currency: 'eur',
@@ -97,18 +133,6 @@ Deno.serve(async (req) => {
 
         if (travelFeeLineItem) line_items.push(travelFeeLineItem);
 
-        // --- NEW: Strict Email Consistency (Robust V2) ---
-        console.log(`[DEBUG] Fetching email for user_id: ${user_id}`);
-        const { data: userData, error: userError } = await supabaseClient
-            .from('user_profiles')
-            .select('email')
-            .eq('user_id', user_id)
-            .single();
-
-        if (userError) {
-            console.error(`[DEBUG] Error fetching user profile: ${JSON.stringify(userError)}`);
-        }
-
         // Priority: DB Email -> Payload Email
         let customerEmail = userData?.email;
 
@@ -119,12 +143,15 @@ Deno.serve(async (req) => {
             console.log(`[DEBUG] Using DB email: ${customerEmail}`);
         }
 
+        // Calculate total amount for success URL
+        const finalTotal = (unitAmount + (travelFeeLineItem?.price_data?.unit_amount || 0)) / 100;
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card', 'paypal'],
             line_items: line_items,
             mode: 'payment',
             customer_email: customerEmail, // FORCE EMAIL
-            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${price + (travel_fee || 0)}&status=success&variant_id=${variant_id ? String(variant_id) : 'null'}`,
+            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${finalTotal}&status=success&variant_id=${variant_id ? String(variant_id) : 'null'}`,
             cancel_url: cancel_url,
             client_reference_id: user_id,
             metadata: {
@@ -135,7 +162,8 @@ Deno.serve(async (req) => {
                 variant_id: variant_id ? String(variant_id) : 'null',
                 department_code: department_code || '',
                 travel_fee: travel_fee ? String(travel_fee) : '0',
-                meeting_location: finalMeetingLocation
+                meeting_location: finalMeetingLocation,
+                is_ambassador_discount: userData?.is_ambassador && offer.is_official ? 'true' : 'false'
             },
         })
 

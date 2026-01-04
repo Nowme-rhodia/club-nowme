@@ -10,10 +10,9 @@ export function Header() {
 
   const navigationItems = [
     { name: 'Accueil', path: '/' },
-    { name: 'Catégories', path: '/categories' },
-    { name: 'Tous les kiffs', path: '/tous-les-kiffs' },
-    { name: 'Communauté', path: '/community-space', requiresSubscription: true },
-    { name: 'Club', path: '/club', requiresSubscription: true },
+    { name: 'Tous les kiffs', path: '/tous-les-kiffs' }, // Shop
+    { name: "L'Agenda", path: '/agenda', requiresSubscription: true }, // Events
+    { name: 'Le QG', path: '/community-space', requiresSubscription: true }, // Social
     { name: 'Abonnement', path: '/subscription' }
   ];
 
@@ -66,7 +65,16 @@ export function Header() {
               </Link>
             )}
 
-            {!isPartner && (
+            {!isPartner && isSubscriber && !profile?.is_ambassador && (
+              <Link
+                to="/devenir-ambassadrice"
+                className="text-primary hover:text-primary-dark font-semibold transition-colors duration-200"
+              >
+                Devenir ambassadrice
+              </Link>
+            )}
+
+            {!isPartner && !isSubscriber && (
               <Link
                 to="/devenir-partenaire"
                 className="text-primary hover:text-primary-dark font-semibold transition-colors duration-200"
@@ -144,7 +152,16 @@ export function Header() {
                   Tester à 12,99€
                 </Link>
               )}
-              {!isPartner && (
+              {!isPartner && isSubscriber && !profile?.is_ambassador && (
+                <Link
+                  to="/devenir-ambassadrice"
+                  className="text-primary hover:text-primary-dark font-medium px-2 py-1"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Devenir ambassadrice
+                </Link>
+              )}
+              {!isPartner && !isSubscriber && (
                 <Link
                   to="/devenir-partenaire"
                   className="text-primary hover:text-primary-dark font-medium px-2 py-1"

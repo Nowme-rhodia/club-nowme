@@ -61,8 +61,8 @@ serve(async (req) => {
     }
 
     // 3. Get subscription details
-    const subscriptionId = typeof session.subscription === "string" 
-      ? session.subscription 
+    const subscriptionId = typeof session.subscription === "string"
+      ? session.subscription
       : session.subscription?.id;
 
     if (!subscriptionId) {
@@ -77,13 +77,13 @@ serve(async (req) => {
 
     // 4. Get customer email from Stripe session
     const customerEmail = session.customer_details?.email || session.customer_email;
-    
+
     if (!customerEmail) {
       console.error("❌ No customer email found in session");
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Email client introuvable" 
+        JSON.stringify({
+          success: false,
+          error: "Email client introuvable"
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -101,10 +101,10 @@ serve(async (req) => {
     if (profileError || !userProfile) {
       console.error("❌ User profile not found:", profileError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: "Profil utilisateur introuvable",
-          needsSync: true 
+          needsSync: true
         }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -134,7 +134,7 @@ serve(async (req) => {
     // 8. Upsert subscription in database
     if (stripeSubscription.status === "active" || stripeSubscription.status === "trialing") {
       console.log("🔄 Upserting subscription in database");
-      
+
       const subscriptionData: any = {
         user_id: userProfile.user_id,
         stripe_subscription_id: subscriptionId,
@@ -164,9 +164,9 @@ serve(async (req) => {
         console.error("❌ Failed to upsert subscription:", upsertError);
         console.error("❌ Subscription data:", subscriptionData);
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `Échec de mise à jour de l'abonnement: ${upsertError.message}` 
+          JSON.stringify({
+            success: false,
+            error: `Échec de mise à jour de l'abonnement: ${upsertError.message}`
           }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -176,14 +176,14 @@ serve(async (req) => {
 
       // 9. Update user_profiles with Stripe customer info (subscription_status n'existe plus)
       console.log("🔄 Updating user profile with Stripe customer info for user_id:", userProfile.user_id);
-      
+
       const updateData = {
         stripe_customer_id: session.customer as string,
         updated_at: new Date().toISOString()
       };
-      
+
       console.log("📝 Update data:", updateData);
-      
+
       const { data: updatedProfile, error: profileUpdateError } = await supabase
         .from("user_profiles")
         .update(updateData)
@@ -197,33 +197,12 @@ serve(async (req) => {
         console.log("✅ User profile updated successfully");
         console.log("✅ Updated profile data:", updatedProfile);
       }
-      
+
       console.log("ℹ️ Note: Le statut de l'abonnement est maintenant dans la table 'subscriptions', pas dans 'user_profiles'");
 
-      // 10. Send welcome email if this is a new subscription
+      // 10. Email is now handled by stripe-webhook asynchronously
       if (!existingSubscription || existingSubscription.status !== "active") {
-        console.log(`📧 Sending welcome email to ${customerEmail}`);
-        
-        try {
-          const { error: emailError } = await supabase.functions.invoke(
-            "stripe-user-welcome",
-            {
-              body: {
-                email: customerEmail,
-                firstName: userProfile.first_name || "",
-                redirectTo: "https://club.nowme.fr/update-password"
-              }
-            }
-          );
-
-          if (emailError) {
-            console.error("❌ Failed to send welcome email:", emailError);
-          } else {
-            console.log("✅ Welcome email sent successfully");
-          }
-        } catch (emailErr) {
-          console.error("⚠️ Welcome email error:", emailErr);
-        }
+        console.log(`ℹ️ Welcome email will be handled by stripe-webhook for ${customerEmail}`);
       }
     }
 
@@ -246,9 +225,9 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("🔥 Verification error:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || "Erreur lors de la vérification" 
+      JSON.stringify({
+        success: false,
+        error: error.message || "Erreur lors de la vérification"
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

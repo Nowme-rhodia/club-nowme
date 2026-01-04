@@ -7,6 +7,8 @@ import type { Database } from '../../types/supabase';
 import { useAuth } from '../../lib/auth';
 import toast from 'react-hot-toast';
 import { translateError } from '../../lib/errorTranslations';
+import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
+
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -16,7 +18,17 @@ export default function SignUp() {
   // Générer des données aléatoires pour DEV/LOCAL
   const generateRandomData = () => {
     const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
-    if (!isDev) return { email: '', password: '', firstName: '', lastName: '' };
+    if (!isDev) return {
+      email: '',
+      password: '',
+      firstName: '',
+      lastName: '',
+      phone: '',
+      whatsapp: '',
+      deliveryAddress: '',
+      latitude: null as number | null,
+      longitude: null as number | null
+    };
 
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000);
@@ -25,6 +37,11 @@ export default function SignUp() {
       password: 'DKsijdjhSA*27dusjaTesdsdakio297',
       firstName: `Test${random}`,
       lastName: `User${timestamp}`,
+      phone: '',
+      whatsapp: '',
+      deliveryAddress: '',
+      latitude: null as number | null,
+      longitude: null as number | null
     };
   };
 
@@ -34,6 +51,27 @@ export default function SignUp() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const plan = searchParams.get('plan') || 'monthly';
+
+  // Google Maps loaded globally in App.tsx
+
+  // Places Autocomplete Hook
+  const {
+    ready,
+    value,
+    setValue,
+    suggestions: { status, data },
+    clearSuggestions,
+  } = usePlacesAutocomplete({
+    requestOptions: {
+      types: ['address'],
+      componentRestrictions: { country: 'fr' }
+    },
+    debounce: 300,
+  });
+
+  // Sync manual deliveryAddress changes with autocomplete value if needed, 
+  // but better to rely on autocomplete state for the input.
+  // We'll update formData when user SELECTS an address.
 
   // Rediriger les utilisateurs déjà connectés
   // - Si abonné → vers account
@@ -49,7 +87,7 @@ export default function SignUp() {
     }
   }, [user, isSubscriber, isSigningUp, loading, navigate, plan]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -66,6 +104,10 @@ export default function SignUp() {
       // Validation
       if (formData.password.length < 6) {
         throw new Error('Le mot de passe doit contenir au moins 6 caractères');
+      }
+
+      if (!formData.phone || formData.phone.length < 10) {
+        throw new Error('Veuillez renseigner un numéro de téléphone valide');
       }
 
       console.log('🚀 Étape 1: Création utilisateur auth...');
@@ -123,22 +165,27 @@ export default function SignUp() {
       const profileData = await profileResponse.json();
       console.log('✅ Profil créé:', profileData);
 
-      // Étape 3: Mettre à jour le profil avec prénom/nom
-      console.log('🚀 Étape 3: Mise à jour prénom/nom...');
+      // Étape 3: Mettre à jour le profil avec prénom/nom et téléphones
+      console.log('🚀 Étape 3: Mise à jour profil...');
 
       const { error: updateError } = await (supabase
         .from('user_profiles') as any)
         .update({
           first_name: formData.firstName,
           last_name: formData.lastName,
+          phone: formData.phone,
+          whatsapp_number: formData.whatsapp || formData.phone, // Default to phone if empty
+          delivery_address: formData.deliveryAddress,
+          latitude: formData.latitude,
+          longitude: formData.longitude
         })
         .eq('user_id', authData.user.id);
 
       if (updateError) {
-        console.warn('⚠️ Erreur mise à jour prénom/nom:', updateError);
+        console.warn('⚠️ Erreur mise à jour profil:', updateError);
         // Continue quand même
       } else {
-        console.log('✅ Prénom/nom mis à jour');
+        console.log('✅ Profil mis à jour');
       }
 
       // Étape 4: Connecter l'utilisateur explicitement
@@ -256,6 +303,45 @@ export default function SignUp() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                  Numéro de portable
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={handleChange}
+                    placeholder="06 12 34 56 78"
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">📱</span>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="whatsapp" className="block text-sm font-medium text-gray-700">
+                  Numéro WhatsApp <span className="text-gray-400 text-xs font-normal">(Si différent du portable)</span>
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="whatsapp"
+                    name="whatsapp"
+                    type="tel"
+                    value={formData.whatsapp}
+                    onChange={handleChange}
+                    placeholder="Pour le groupe de la communauté"
+                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">💬</span>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
@@ -273,6 +359,58 @@ export default function SignUp() {
                 />
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="deliveryAddress" className="block text-sm font-medium text-gray-700">
+                Adresse de livraison (pour les cadeaux !)
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="deliveryAddress"
+                  disabled={!ready}
+                  value={value}
+                  onChange={(e) => {
+                    setValue(e.target.value);
+                    // Also update formData text just in case they don't select
+                    setFormData({ ...formData, deliveryAddress: e.target.value });
+                  }}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
+                  placeholder="3 rue de la Paix, 75000 Paris..."
+                />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+
+                {status === "OK" && (
+                  <ul className="absolute z-50 w-full bg-white border border-gray-100 rounded-xl mt-1 shadow-xl max-h-60 overflow-auto">
+                    {data.map(({ place_id, description }) => (
+                      <li
+                        key={place_id}
+                        onClick={async () => {
+                          setValue(description, false);
+                          clearSuggestions();
+                          try {
+                            const results = await getGeocode({ address: description });
+                            const { lat, lng } = await getLatLng(results[0]);
+                            setFormData(prev => ({
+                              ...prev,
+                              deliveryAddress: description,
+                              latitude: lat,
+                              longitude: lng
+                            }));
+                            console.log("📍 Address geocoded:", { lat, lng });
+                          } catch (err) {
+                            console.error("Geocoding error", err);
+                          }
+                        }}
+                        className="p-3 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                      >
+                        {description}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Sélectionnez une adresse pour vous connecter aux membres proches.</p>
             </div>
 
             <div>

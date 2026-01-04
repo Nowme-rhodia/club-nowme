@@ -23,6 +23,8 @@ export type Database = {
           stripe_customer_id: string | null;
           is_admin: boolean | null;
           partner_id: string | null;
+          accepted_community_rules_at: string | null;
+          whatsapp_number: string | null;
         };
         Insert: {
           id?: string;
@@ -37,6 +39,8 @@ export type Database = {
           stripe_customer_id?: string | null;
           is_admin?: boolean | null;
           partner_id?: string | null;
+          accepted_community_rules_at?: string | null;
+          whatsapp_number?: string | null;
         };
         Update: {
           id?: string;
@@ -51,6 +55,8 @@ export type Database = {
           stripe_customer_id?: string | null;
           is_admin?: boolean | null;
           partner_id?: string | null;
+          accepted_community_rules_at?: string | null;
+          whatsapp_number?: string | null;
         };
         Relationships: [
           {
@@ -782,9 +788,148 @@ export type Database = {
           }
         ];
       };
+
+      community_hubs: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          city: string | null;
+          whatsapp_announcement_link: string | null;
+          is_read_only: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          city?: string | null;
+          whatsapp_announcement_link?: string | null;
+          is_read_only?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          city?: string | null;
+          whatsapp_announcement_link?: string | null;
+          is_read_only?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      micro_squads: {
+        Row: {
+          id: string;
+          hub_id: string;
+          creator_id: string;
+          title: string;
+          description: string | null;
+          location: string | null;
+          external_link: string | null;
+          date_event: string;
+          max_participants: number;
+          whatsapp_temp_link: string | null;
+          status: 'open' | 'full' | 'finished' | 'cancelled';
+          reminder_7d_sent_at: string | null;
+          reminder_3d_sent_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          hub_id: string;
+          creator_id: string;
+          title: string;
+          description?: string | null;
+          location?: string | null;
+          external_link?: string | null;
+          date_event: string;
+          max_participants?: number;
+          whatsapp_temp_link?: string | null;
+          status?: 'open' | 'full' | 'finished' | 'cancelled';
+          reminder_7d_sent_at?: string | null;
+          reminder_3d_sent_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          hub_id?: string;
+          creator_id?: string;
+          title?: string;
+          description?: string | null;
+          location?: string | null;
+          external_link?: string | null;
+          date_event?: string;
+          max_participants?: number;
+          whatsapp_temp_link?: string | null;
+          status?: 'open' | 'full' | 'finished' | 'cancelled';
+          reminder_7d_sent_at?: string | null;
+          reminder_3d_sent_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "micro_squads_hub_id_fkey";
+            columns: ["hub_id"];
+            referencedRelation: "community_hubs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "micro_squads_creator_id_fkey";
+            columns: ["creator_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+
+      squad_members: {
+        Row: {
+          id: string;
+          squad_id: string;
+          user_id: string;
+          joined_at: string;
+        };
+        Insert: {
+          id?: string;
+          squad_id: string;
+          user_id: string;
+          joined_at?: string;
+        };
+        Update: {
+          id?: string;
+          squad_id?: string;
+          user_id?: string;
+          joined_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "squad_members_squad_id_fkey";
+            columns: ["squad_id"];
+            referencedRelation: "micro_squads";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "squad_members_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     };
 
     Functions: {
+      get_squad_link: {
+        Args: { squad_id_input: string };
+        Returns: string | null;
+      };
+      get_hub_link: {
+        Args: { hub_id_input: string };
+        Returns: string | null;
+      };
       handle_payment_succeeded: {
         Args: { event_id: string; customer_email: string; customer_id: string; subscription_id: string };
         Returns: void;

@@ -202,63 +202,96 @@ Deno.serve(async (req) => {
       `
 
         if (!user.email) {
-            return new Response(JSON.stringify({ success: false, error: "No email address found." }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 })
-        }
+            console.warn("WARNING: No user email found. Aborting user email send.")
+            // We don't abort the whole function, we just skip user email, but we should probably log this as an issue.
+        } else {
+            // --- USER EMAIL ---
+            console.log(`Attempting to send USER email to: ${user.email}`)
+            try {
+                const emailData = await resend.emails.send({
+                    from: "Nowme <contact@nowme.fr>",
+                    to: [user.email],
+                    subject: `Votre réservation confirmée : ${offerTitle}`,
+                    html: htmlContent,
+                    attachments: [{ filename: `Facture-${bookingData.id.slice(0, 8)}.pdf`, content: pdfBase64 }],
+                })
 
-        const emailData = await resend.emails.send({
-            from: "Nowme <contact@nowme.fr>",
-            to: [user.email],
-            subject: `Votre réservation confirmée : ${offerTitle}`,
-            html: htmlContent,
-            attachments: [{ filename: `Facture-${bookingData.id.slice(0, 8)}.pdf`, content: pdfBase64 }],
-        })
+                if (emailData.error) {
+                    console.error("Resend API Error (User Email):", emailData.error)
+                } else {
+                    console.log("User Email Sent ID:", emailData.data?.id)
+                }
+            } catch (errUser: any) {
+                console.error("CRITICAL ERROR sending USER email:", errUser)
+            }
+        }
 
         // Partner Notification
         const partnerSettings = partner.notification_settings || { new_booking: true }
-        if (partnerSettings.new_booking !== false && partner.contact_email) {
-            const partnerHtmlContent = `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h1 style="color: #0F172A;">Nouvelle réservation ! 🎉</h1>
-                    <p>Bonne nouvelle, vous avez reçu une nouvelle réservation pour <strong>${fullItemName}</strong>.</p>
-                    <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
-                        <h3 style="margin-top: 0; color: #334155; font-size: 16px;">Détails de la réservation</h3>
-                        <p style="margin: 5px 0;"><strong>📅 Date :</strong> ${dateDisplay}</p>
-                        ${isAtHome ? `<p style="margin: 5px 0;"><strong>📍 Lieu :</strong> <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDisplay)}">${locationDisplay}</a></p>` : ''}
-                        ${variantName ? `<p style="margin: 5px 0;"><strong>🔹 Option :</strong> ${variant.name}</p>` : ''}
-                        <p style="margin: 5px 0;"><strong>💰 Montant :</strong> ${price.toFixed(2)} €</p>
-                    </div>
-                    <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #dcfce7;">
-                        <h3 style="margin-top: 0; color: #166534; font-size: 16px;">Coordonnées Client</h3>
-                        <p style="margin: 5px 0;"><strong>👤 Nom :</strong> ${buyerName}</p>
-                        <p style="margin: 5px 0;"><strong>📧 Email :</strong> <a href="mailto:${user.email}">${user.email}</a></p>
-                    </div>
-                    <p>Connectez-vous à votre espace partenaire pour voir les détails et gérer cette réservation.</p>
-                    <p style="margin-top: 30px;"><a href="${Deno.env.get("PUBLIC_SITE_URL")}/partner/bookings" style="background-color: #BE185D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Gérer mes réservations</a></p>
-                </div>
-            `
-            await resend.emails.send({
-                from: "Nowme <contact@nowme.fr>",
-                to: [partner.contact_email],
-                subject: `Nouvelle réservation : ${buyerName} - ${offerTitle}`,
-                html: partnerHtmlContent,
-            })
-            await supabase.from('partner_notifications').insert({
-                partner_id: bookingData.partner_id,
-                type: 'new_booking',
-                title: 'Nouvelle réservation !',
-                content: `${buyerName} a réservé ${fullItemName}.`,
-                data: { booking_id: bookingData.id }
-            })
+        console.log(`Partner Settings: ${JSON.stringify(partnerSettings)}, Contact Email: ${partner.contact_email}`)
+
+        if (partnerSettings.new_booking !== false) {
+            if (partner.contact_email) {
+                // --- PARTNER EMAIL ---
+                console.log(`Attempting to send PARTNER email to: ${partner.contact_email}`)
+                try {
+                    const partnerHtmlContent = `
+                        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h1 style="color: #0F172A;">Nouvelle réservation ! 🎉</h1>
+                            <p>Bonne nouvelle, vous avez reçu une nouvelle réservation pour <strong>${fullItemName}</strong>.</p>
+                            <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+                                <h3 style="margin-top: 0; color: #334155; font-size: 16px;">Détails de la réservation</h3>
+                                <p style="margin: 5px 0;"><strong>📅 Date :</strong> ${dateDisplay}</p>
+                                ${isAtHome ? `<p style="margin: 5px 0;"><strong>📍 Lieu :</strong> <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDisplay)}">${locationDisplay}</a></p>` : ''}
+                                ${variantName ? `<p style="margin: 5px 0;"><strong>🔹 Option :</strong> ${variant.name}</p>` : ''}
+                                <p style="margin: 5px 0;"><strong>💰 Montant :</strong> ${price.toFixed(2)} €</p>
+                            </div>
+                            <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #dcfce7;">
+                                <h3 style="margin-top: 0; color: #166534; font-size: 16px;">Coordonnées Client</h3>
+                                <p style="margin: 5px 0;"><strong>👤 Nom :</strong> ${buyerName}</p>
+                                <p style="margin: 5px 0;"><strong>📧 Email :</strong> <a href="mailto:${user.email}">${user.email}</a></p>
+                            </div>
+                            <p>Connectez-vous à votre espace partenaire pour voir les détails et gérer cette réservation.</p>
+                            <p style="margin-top: 30px;"><a href="${Deno.env.get("PUBLIC_SITE_URL")}/partner/bookings" style="background-color: #BE185D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Gérer mes réservations</a></p>
+                        </div>
+                    `
+                    const partnerEmailData = await resend.emails.send({
+                        from: "Nowme <contact@nowme.fr>",
+                        to: [partner.contact_email],
+                        subject: `Nouvelle réservation : ${buyerName} - ${offerTitle}`,
+                        html: partnerHtmlContent,
+                    })
+                    if (partnerEmailData.error) {
+                        console.error("Resend API Error (Partner Email):", partnerEmailData.error)
+                    } else {
+                        console.log("Partner Email Sent ID:", partnerEmailData.data?.id)
+                    }
+                } catch (errPartner: any) {
+                    console.error("CRITICAL ERROR sending PARTNER email:", errPartner)
+                }
+            } else {
+                console.warn(`WARNING: Skipping Partner Email. No contact_email defined for partner ID: ${bookingData.partner_id}`)
+            }
+
+            // Notification In-App (Fail-safe, always attempt)
+            try {
+                await supabase.from('partner_notifications').insert({
+                    partner_id: bookingData.partner_id,
+                    type: 'new_booking',
+                    title: 'Nouvelle réservation !',
+                    content: `${buyerName} a réservé ${fullItemName}.`,
+                    data: { booking_id: bookingData.id }
+                })
+                console.log("Partner In-App Notification inserted.")
+            } catch (errNotif) {
+                console.error("Error inserting partner notification:", errNotif)
+            }
         }
 
-        if (emailData.error) {
-            return new Response(JSON.stringify({ success: false, error: emailData.error }), { headers: corsHeaders, status: 200 })
-        }
-
-        return new Response(JSON.stringify(emailData), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 })
+        return new Response(JSON.stringify({ success: true, message: "Email process completed (check logs for details)" }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 })
 
     } catch (error: any) {
-        console.error("Error in send-confirmation-email:", error)
+        console.error("FATAL Error in send-confirmation-email:", error)
         return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 })
     }
 })
