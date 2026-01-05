@@ -13,6 +13,7 @@ import { LoadingFallback } from './components/LoadingFallback';
 
 // Lazy load pages
 const Home = React.lazy(() => import('./pages/Home'));
+const Guide = React.lazy(() => import('./pages/Guide').then(module => ({ default: module.Guide })));
 const Categories = React.lazy(() => import('./pages/Categories'));
 const TousLesKiffs = React.lazy(() => import('./pages/TousLesKiffs'));
 const OfferPage = React.lazy(() => import('./pages/OfferPage'));
@@ -107,6 +108,7 @@ function App() {
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Home />} />
+                    <Route path="/guide" element={<Guide />} />
                     <Route path="/categories" element={<Categories />} />
                     <Route path="/tous-les-kiffs" element={<TousLesKiffs />} />
                     <Route path="/offres/:id" element={<OfferPage />} />

@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
         const [userResponse, offerResponse, partnerResponse, variantResponse] = await Promise.all([
             supabase.from('user_profiles').select('first_name, last_name, email').eq('user_id', bookingData.user_id).single(),
-            supabase.from('offers').select('title, is_online, booking_type, calendly_url, external_link').eq('id', bookingData.offer_id).single(),
+            supabase.from('offers').select('title, is_online, booking_type, calendly_url, external_link, digital_product_file').eq('id', bookingData.offer_id).single(),
             supabase.from('partners').select('business_name, description, website, address, contact_email, notification_settings, siret, tva_intra').eq('id', bookingData.partner_id).single(),
             bookingData.variant_id ? supabase.from('offer_variants').select('name, price').eq('id', bookingData.variant_id).single() : Promise.resolve({ data: null, error: null })
         ])
@@ -163,7 +163,20 @@ Deno.serve(async (req) => {
             locationDisplay = partnerAddress || "Lieu à confirmer par le partenaire";
         }
 
-        if (isOnline) {
+        if (offer.digital_product_file) {
+            // DIGITAL PRODUCT
+            logisticsHtml = `
+                <h3>Votre contenu est prêt !</h3>
+                <p>Merci pour votre commande. Vous pouvez télécharger votre fichier dès maintenant :</p>
+                <p style="margin: 20px 0;">
+                    <a href="${offer.digital_product_file}" 
+                       style="background-color: #D946EF; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                       📥 Télécharger mon E-Book / Fichier
+                    </a>
+                </p>
+                <p style="font-size: 14px; color: #64748b;">(Ce lien est également disponible dans votre espace Mes Achats)</p>
+             `;
+        } else if (isOnline) {
             logisticsHtml = `
                     <h3>Accès à votre expérience en ligne</h3>
                     <p>C'est un événement 100% en ligne.</p>

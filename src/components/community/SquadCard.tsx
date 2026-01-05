@@ -126,22 +126,95 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
 
     return (
         <div className="flex flex-col bg-white rounded-xl shadow-md border border-gray-100 min-w-[300px] w-[300px] p-5 hover:shadow-lg transition-shadow relative group">
+            {/* ADMIN DELETE BUTTON */}
+            {profile?.is_admin && (
+                <button
+                    onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!window.confirm("🚨 ADMIN: Supprimer DÉFINITIVEMENT cette sortie ?\n\nCette action enverra un email à la créatrice pour la prévenir.")) return;
+
+                        setLoading(true);
+                        try {
+                            const { error } = await supabase.functions.invoke('admin-delete-squad', {
+                                body: { squadId: squad.id }
+                            });
+
+                            if (error) throw error;
+
+                            toast.success("Sortie supprimée & Créatrice notifiée");
+                            onJoin(); // Refresh list
+                        } catch (err) {
+                            console.error("Admin delete error:", err);
+                            toast.error("Erreur suppression: " + (err as any).message);
+                        } finally {
+                            setLoading(false);
+                        }
+                    }}
+                    className="absolute top-2 right-2 p-1.5 bg-white text-red-500 rounded-full shadow-sm border border-gray-200 hover:bg-red-50 hover:border-red-200 transition-all z-20 opacity-0 group-hover:opacity-100"
+                    title="Supprimer (Admin)"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
+            )}
+
             {/* Header: Date & Status */}
-            <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center text-primary font-semibold text-sm bg-primary/10 px-2 py-1 rounded-md">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    {formattedDate}
+            <div className="flex flex-col gap-2 mb-3">
+                <div className="flex justify-between items-start">
+                    <div className="flex items-center text-primary font-semibold text-sm bg-primary/10 px-2 py-1 rounded-md">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {formattedDate}
+                    </div>
+                    {isFull && !isMember && (
+                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-full ml-auto">
+                            COMPLET
+                        </span>
+                    )}
                 </div>
-                {squad.is_official && (
-                    <span className="text-[10px] font-bold text-white bg-gradient-to-r from-pink-500 to-purple-500 px-2 py-0.5 rounded-full shadow-sm ml-2 self-center">
-                        👑 Host Officielle
-                    </span>
-                )}
-                {isFull && !isMember && (
-                    <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded-full ml-auto">
-                        COMPLET
-                    </span>
-                )}
+
+                {/* Badges: Theme & Dept */}
+                <div className="flex flex-wrap gap-2">
+                    {/* Theme Badge (Hub Name) */}
+                    {(squad as any).hub?.name && (
+                        <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            🏷️ {(squad as any).hub.name.split(' - ')[0]}
+                        </span>
+                    )}
+
+                    {/* Department Badge (Extracted) */}
+                    {(() => {
+                        const loc = (squad.location || '').toLowerCase();
+                        const zipMatch = squad.location?.match(/\b(97\d|2A|2B|[0-9]{2})[0-9]{3}\b/);
+                        let dept = zipMatch ? zipMatch[1] : null;
+
+                        if (!dept) {
+                            if (loc.includes('paris')) dept = '75';
+                            else if (loc.includes('lyon')) dept = '69';
+                            else if (loc.includes('marseille')) dept = '13';
+                            else if (loc.includes('bordeaux')) dept = '33';
+                            else if (loc.includes('lille')) dept = '59';
+                            else if (loc.includes('toulouse')) dept = '31';
+                            else if (loc.includes('nice')) dept = '06';
+                            else if (loc.includes('nantes')) dept = '44';
+                            else if (loc.includes('strasbourg')) dept = '67';
+                            else if (loc.includes('montpellier')) dept = '34';
+                        }
+
+                        if (dept) {
+                            return (
+                                <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+                                    📍 {dept}
+                                </span>
+                            );
+                        }
+                        return null;
+                    })()}
+
+                    {squad.is_official && (
+                        <span className="text-[10px] font-bold text-white bg-gradient-to-r from-pink-500 to-purple-500 px-2 py-0.5 rounded-full shadow-sm">
+                            👑 Officiel
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Title */}

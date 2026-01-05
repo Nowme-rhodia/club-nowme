@@ -73,10 +73,22 @@ export default function Agenda() {
                         const displayPrice = firstVariant ? Number(firstVariant.price) : 0;
                         const displayPromo = firstVariant && firstVariant.discounted_price ? Number(firstVariant.discounted_price) : undefined;
 
-                        // Extract Department from Zip Code
+                        // Extract Department from Zip Code or Address
                         let dept = 'Unknown';
+                        // Try strict zip_code field first
                         if (offer.zip_code && offer.zip_code.length >= 2) {
                             dept = offer.zip_code.substring(0, 2);
+                        }
+                        // Fallback: Regex on address/city
+                        else {
+                            const fullAddr = [offer.street_address, offer.city].join(' ');
+                            const match = fullAddr.match(/\b(97|2A|2B|[0-9]{2})[0-9]{3}\b/);
+                            if (match) {
+                                dept = match[1];
+                            }
+                        }
+
+                        if (dept !== 'Unknown') {
                             uniqueDepts.add(dept);
                         }
 
@@ -101,12 +113,22 @@ export default function Agenda() {
                         };
                     });
 
-                    // Sort events: Dated events first (sorted by date), then non-dated (sorted by creation)
-                    const sortedEvents = formattedEvents.sort((a, b) => {
+                    // Filter out past events (keep today and future, and keep non-dated perks)
+                    // Use yesterday to be safe and include today's events
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+
+                    const upcomingEvents = formattedEvents.filter(e => {
+                        if (!e.date) return true; // Keep perks/undated
+                        return new Date(e.date) > yesterday;
+                    });
+
+                    // Sort events: Dated events first (sorted by date asc), then non-dated
+                    const sortedEvents = upcomingEvents.sort((a, b) => {
                         if (a.date && b.date) return new Date(a.date).getTime() - new Date(b.date).getTime();
-                        if (a.date) return -1; // a comes first
-                        if (b.date) return 1;  // b comes first
-                        return 0; // Keep original order (created_at desc)
+                        if (a.date) return -1; // Dated comes first
+                        if (b.date) return 1;
+                        return 0;
                     });
 
                     setOfficialEvents(sortedEvents);
@@ -226,7 +248,7 @@ export default function Agenda() {
                         </div>
                     </div>
 
-                    <MicroSquadList />
+                    <MicroSquadList showFilter={true} />
 
                 </div>
 

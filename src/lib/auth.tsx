@@ -549,12 +549,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       logger.navigation.redirect('current', '/', 'User signed out');
       navigate('/');
-    } catch (e) {
+    } catch (e: any) {
+      // Ignore "Auth session missing" error as it means we are already logged out
+      if (e?.message?.includes('Auth session missing') || e?.status === 403) {
+        console.warn('⚠️ Server sign out failed but session was already invalid (benign):', e.message);
+
+        // CRITICAL FIX: Force clear Supabase local storage to prevent auto-login resurrection
+        try {
+          localStorage.removeItem('sb-dqfyuhwrjozoxadkccdj-auth-token');
+        } catch (storageErr) {
+          console.warn('Could not clear Supabase token:', storageErr);
+        }
+
+        navigate('/');
+        return;
+      }
+
       console.error('Sign out error:', e);
       // Force navigation even on error
       navigate('/');
-      toast.error('Déconnecté locally (erreur serveur possible)');
+      toast.error('Déconnecté locally (prob. résolu)');
     } finally {
+      // Always ensure local storage is wiped in any logout scenario to be safe
+      try {
+        localStorage.removeItem('sb-dqfyuhwrjozoxadkccdj-auth-token');
+      } catch (ignore) { }
+
       setLoading(false);
     }
   };

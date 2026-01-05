@@ -125,8 +125,22 @@ export function OfferCard({
               {category}
             </div>
 
-            {/* Price display logic */}
-            <div className={`flex items-baseline gap-2 ${!hasAccess ? 'filter blur-[5px] select-none opacity-50' : ''}`}>
+            <div className={`flex flex-col gap-1 items-baseline ${!hasAccess ? 'filter blur-[5px] select-none opacity-50' : ''}`}>
+              {/* Badges container */}
+              <div className="flex flex-wrap gap-2 mb-2">
+                {/* Theme Badge */}
+                <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                  🏷️ {category || 'Événement'}
+                </span>
+
+                {/* Department Badge */}
+                {displayLocation && displayLocation.match(/\b(97|2A|2B|[0-9]{2})[0-9]{3}\b/) && (
+                  <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+                    📍 {displayLocation.match(/\b(97|2A|2B|[0-9]{2})[0-9]{3}\b/)?.[1]}
+                  </span>
+                )}
+              </div>
+
               {bookingType === 'promo' && promoConditions ? (
                 <span className="text-lg font-bold text-pink-600 break-words leading-tight">
                   {promoConditions}

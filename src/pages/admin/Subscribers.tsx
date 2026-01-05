@@ -8,11 +8,19 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import DeletionReasonModal from '../../components/admin/DeletionReasonModal';
 
-const statusConfig = {
+interface StatusConfigItem {
+  label: string;
+  icon: any;
+  className: string;
+}
+
+const statusConfig: Record<string, StatusConfigItem> = {
   active: {
     label: 'Actif',
     icon: CheckCircle2,
@@ -27,17 +35,39 @@ const statusConfig = {
     label: 'Annulé',
     icon: XCircle,
     className: 'bg-red-100 text-red-700'
+  },
+  archived: {
+    label: 'Archivé',
+    icon: Trash2,
+    className: 'bg-gray-100 text-gray-700'
   }
 };
 
+// Define Interfaces
+interface Subscriber {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  photo_url?: string;
+  created_at: string;
+  is_admin?: boolean;
+  partner_id?: string;
+  subscription_status: string;
+  selected_plan?: string;
+}
+
 export default function Subscribers() {
-  const [subscribers, setSubscribers] = useState([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [selectedSubscriber, setSelectedSubscriber] = useState(null);
+  const [selectedSubscriber, setSelectedSubscriber] = useState<Subscriber | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     loadSubscribers();
@@ -61,7 +91,7 @@ export default function Subscribers() {
 
       // Create a map of usage subscriptions by user_id
       const subMap = new Map();
-      subscriptionsRes.data.forEach(sub => {
+      subscriptionsRes.data.forEach((sub: any) => {
         if (sub.status === 'active') { // Prioritize active status if duplicates exist
           subMap.set(sub.user_id, sub.status);
         } else if (!subMap.has(sub.user_id)) {
@@ -70,12 +100,12 @@ export default function Subscribers() {
       });
 
       // Merge status into profiles and filter out admins/partners
-      const mergedData = profilesRes.data
-        .filter(profile => !profile.is_admin && !profile.partner_id)
-        .map(profile => ({
+      const mergedData = (profilesRes.data || [])
+        .filter((profile: any) => !profile.is_admin && !profile.partner_id)
+        .map((profile: any) => ({
           ...profile,
           subscription_status: subMap.get(profile.user_id) || 'pending' // Default to pending if no sub found
-        }));
+        })) as Subscriber[];
 
       setSubscribers(mergedData);
     } catch (error) {
@@ -85,19 +115,51 @@ export default function Subscribers() {
     }
   };
 
+  const handleArchive = async (reason: string) => {
+    if (!confirmArchive) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          userId: confirmArchive.id,
+          role: 'subscriber',
+          action: 'archive',
+          reason: reason
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Erreur lors de l'archivage");
+      }
+
+      alert('✅ Abonnée archivée avec succès.');
+      loadSubscribers();
+    } catch (err: any) {
+      console.error('Archive error:', err);
+      alert('❌ Erreur : ' + err.message);
+    } finally {
+      setConfirmArchive(null);
+    }
+  };
+
   const filteredSubscribers = subscribers
     .filter(subscriber => {
       const matchesSearch =
-        subscriber.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subscriber.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subscriber.email.toLowerCase().includes(searchTerm.toLowerCase());
+        subscriber.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subscriber.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subscriber.email?.toLowerCase().includes(searchTerm.toLowerCase());
       const safeStatus = subscriber.subscription_status || 'pending';
       const matchesStatus = statusFilter === 'all' || safeStatus === statusFilter;
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      // Sort logic remains the same, assuming filteredSubscribers have the properties
-      // ...
       if (sortBy === 'date') {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -112,7 +174,6 @@ export default function Subscribers() {
     });
 
   if (loading) {
-    // ... loading skeleton ... (keep existing)
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
@@ -130,7 +191,14 @@ export default function Subscribers() {
 
   return (
     <div className="p-8">
-      {/* ... Header and Filters ... */}
+      <DeletionReasonModal
+        isOpen={!!confirmArchive}
+        onClose={() => setConfirmArchive(null)}
+        onConfirm={handleArchive}
+        userName={confirmArchive?.name || ''}
+        userType="subscriber"
+      />
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Abonnées</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -138,7 +206,6 @@ export default function Subscribers() {
         </p>
       </div>
 
-      {/* Filters code (lines 112-157) remains roughly the same, verify closure */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <input
@@ -186,9 +253,48 @@ export default function Subscribers() {
         </div>
       </div>
 
-
-      {/* Liste des abonnées */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 px-6">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`${statusFilter === 'all'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Tous
+            </button>
+            <button
+              onClick={() => setStatusFilter('active')}
+              className={`${statusFilter === 'active'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Actifs
+            </button>
+            <button
+              onClick={() => setStatusFilter('cancelled')}
+              className={`${statusFilter === 'cancelled'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Annulés
+            </button>
+            <button
+              onClick={() => setStatusFilter('archived')}
+              className={`${statusFilter === 'archived'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Corbeille
+            </button>
+          </nav>
+        </div>
+
         <ul className="divide-y divide-gray-200">
           {filteredSubscribers.map((subscriber) => {
             const statusKey = subscriber.subscription_status || 'pending';
@@ -242,9 +348,22 @@ export default function Subscribers() {
                       <button
                         onClick={() => setSelectedSubscriber(subscriber)}
                         className="p-2 text-gray-400 hover:text-primary rounded-full hover:bg-gray-100 transition-colors duration-200"
+                        title="Voir détails"
                       >
                         <Eye className="w-5 h-5" />
                       </button>
+                      {subscriber.subscription_status !== 'archived' && (
+                        <button
+                          onClick={() => setConfirmArchive({
+                            id: subscriber.user_id,
+                            name: `${subscriber.first_name || ''} ${subscriber.last_name || ''}`
+                          })}
+                          className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors duration-200"
+                          title="Archiver (Ban + Soft Delete)"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -256,7 +375,7 @@ export default function Subscribers() {
 
       {/* Modal de détails */}
       {selectedSubscriber && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-40">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">

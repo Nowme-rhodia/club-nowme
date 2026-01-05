@@ -20,18 +20,20 @@ interface Booking {
   id: string;
   created_at: string;
   booking_date: string;
-  meeting_location?: string; // New field
+  meeting_location?: string;
   status: 'paid' | 'confirmed' | 'cancelled' | 'pending';
   source: 'calendly' | 'event' | 'promo' | 'purchase';
   amount: number;
   currency: string;
-  user: {
+  user?: {
     first_name: string;
     last_name: string;
     email: string;
     phone: string | null;
+    subscription_status: string | null;
+    is_ambassador: boolean | null;
   };
-  offer: {
+  offer?: {
     title: string;
   };
   variant?: {
@@ -40,66 +42,46 @@ interface Booking {
 }
 
 const statusConfig = {
-  paid: {
-    label: 'Payé',
-    icon: CheckCircle,
-    className: 'bg-green-100 text-green-700 border-green-200'
-  },
-  confirmed: {
-    label: 'Confirmé',
-    icon: CheckCircle,
-    className: 'bg-blue-100 text-blue-700 border-blue-200'
-  },
-  pending: {
-    label: 'En attente',
-    icon: Clock,
-    className: 'bg-yellow-100 text-yellow-700 border-yellow-200'
-  },
-  cancelled: {
-    label: 'Annulé',
-    icon: XCircle,
-    className: 'bg-red-100 text-red-700 border-red-200'
-  }
+  paid: { label: 'Payé', className: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle },
+  confirmed: { label: 'Confirmé', className: 'bg-blue-100 text-blue-800 border-blue-200', icon: CheckCircle },
+  pending: { label: 'En attente', className: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Clock },
+  cancelled: { label: 'Annulé', className: 'bg-red-100 text-red-800 border-red-200', icon: XCircle },
 };
 
 const typeConfig = {
-  calendly: { label: 'Rendez-vous', className: 'bg-purple-100 text-purple-700 border-purple-200' },
-  event: { label: 'Événement', className: 'bg-pink-100 text-pink-700 border-pink-200' },
-  promo: { label: 'Code Promo', className: 'bg-orange-100 text-orange-700 border-orange-200' },
-  purchase: { label: 'Achat Simple', className: 'bg-indigo-100 text-indigo-700 border-indigo-200' }
+  event: { label: 'Événement', className: 'bg-purple-100 text-purple-800 border-purple-200' },
+  calendly: { label: 'Rendez-vous', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  purchase: { label: 'Achat', className: 'bg-pink-100 text-pink-800 border-pink-200' },
+  promo: { label: 'Promo', className: 'bg-orange-100 text-orange-800 border-orange-200' },
 };
 
-export default function Bookings() {
+export default function PartnerBookings() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+
   useEffect(() => {
     if (user) {
-      loadPartnerBookings();
+      fetchBookings();
     }
   }, [user]);
 
-  const loadPartnerBookings = async () => {
+  const fetchBookings = async () => {
     try {
-      if (!user) return;
+      setLoading(true);
 
-      // 1. Get Partner ID
-      const { data: profileData, error: profileError } = await (supabase
-        .from('user_profiles') as any)
+      // Get partner profile
+      const { data: profileData } = await supabase
+        .from('user_profiles')
         .select('partner_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .eq('user_id', user?.id)
+        .single();
 
-      if (profileError || !profileData?.partner_id) {
-        setLoading(false);
-        return;
+      if (!profileData?.partner_id) {
+        throw new Error('Partner profile not found');
       }
 
-      // 2. Fetch Bookings with complete user details and offer title
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -110,378 +92,212 @@ export default function Bookings() {
             source,
             amount,
             currency,
-            user:user_profiles!user_id(first_name, last_name, email, phone),
+            user:user_profiles!user_id(first_name, last_name, email, phone, subscription_status, is_ambassador),
             offer:offers(title),
             variant:offer_variants(name)
         `)
         .eq('partner_id', profileData.partner_id)
-        // Order by booking_date descending by default
         .order('booking_date', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching bookings:", error);
-        toast.error("Impossible de charger les réservations");
-      } else {
-        setBookings(data as any);
-      }
-    } catch (err) {
-      console.error("Unexpected error:", err);
+      if (error) throw error;
+      setBookings(data as any || []);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      toast.error('Erreur lors du chargement des réservations');
     } finally {
       setLoading(false);
     }
   };
 
-  // Enhanced search function
   const filteredBookings = bookings.filter(booking => {
-    const searchLower = searchTerm.toLowerCase();
-
-    // Construct searchable strings
-    const fullName = `${booking.user?.first_name || ''} ${booking.user?.last_name || ''}`.toLowerCase();
-    const email = booking.user?.email?.toLowerCase() || '';
-    const phone = booking.user?.phone?.toLowerCase() || '';
+    const searchString = searchTerm.toLowerCase();
+    const userName = `${booking.user?.first_name} ${booking.user?.last_name}`.toLowerCase();
     const offerTitle = booking.offer?.title?.toLowerCase() || '';
-
-    // Check if any field matches the search term
-    const matchesSearch =
-      fullName.includes(searchLower) ||
-      email.includes(searchLower) ||
-      phone.includes(searchLower) ||
-      offerTitle.includes(searchLower);
-
-    const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
-
-    // Date Filter
-    let matchesDate = true;
-    if (startDate || endDate) {
-      const dateToCheck = booking.booking_date || booking.created_at || '';
-
-      if (!dateToCheck) {
-        matchesDate = false;
-      } else {
-        if (startDate) {
-          if (dateToCheck < startDate) matchesDate = false;
-        }
-        if (endDate) {
-          // Compare dates (YYYY-MM-DD part)
-          if (dateToCheck.split('T')[0] > endDate) matchesDate = false;
-        }
-      }
-    }
-
-    return matchesSearch && matchesStatus && matchesDate;
+    return userName.includes(searchString) || offerTitle.includes(searchString);
   });
 
-  const handleExport = () => {
-    if (filteredBookings.length === 0) {
-      toast.error("Aucune donnée à exporter");
-      return;
-    }
-
-    // Define CSV headers
-    const headers = [
-      "Client",
-      "Email",
-      "Téléphone",
-      "Offre",
-      "Option (Variante)",
-      "Date de Réservation",
-      "Statut",
-      "Montant",
-      "Devise",
-      "Source"
-    ];
-
-    // Helper to escape CSV fields
-    const escapeCsv = (str: string | null | undefined) => {
-      if (!str) return '""';
-      const safeStr = String(str).replace(/"/g, '""');
-      return `"${safeStr}"`;
-    };
-
-    // Map data to rows
-    const rows = filteredBookings.map(b => [
-      escapeCsv(`${b.user?.first_name || ''} ${b.user?.last_name || ''}`),
-      escapeCsv(b.user?.email),
-      escapeCsv(b.user?.phone),
-      escapeCsv(b.offer?.title),
-      escapeCsv(b.variant?.name || '-'),
-      escapeCsv(b.booking_date || b.created_at),
-      escapeCsv(statusConfig[b.status]?.label || b.status),
-      escapeCsv(b.amount?.toString()),
-      escapeCsv(b.currency),
-      escapeCsv(typeConfig[b.source]?.label || b.source)
-    ]);
-
-    // Build CSV content with BOM for Excel UTF-8
-    const csvContent = [
-      headers.join(';'), // Excel in Europe often expects semicolon
-      ...rows.map(r => r.join(';'))
-    ].join('\n');
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `reservations_nowme_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Gestion des Réservations
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Suivez vos clients, validez les achats et consultez vos revenus.
-          </p>
-        </div>
+    <div className="p-6">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Mes Réservations</h1>
+        <p className="text-gray-500 mt-1">Suivez les inscriptions et commandes de vos clients.</p>
+      </div>
 
-        {/* --- Toolbar: Search & Filter --- */}
-        <div className="mb-6 bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="relative w-full md:w-96">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Header / Search */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-4 justify-between items-center">
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher (Nom, Email, Offre)..."
+              placeholder="Rechercher un client, une offre..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative w-full md:w-auto">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full md:w-48 appearance-none pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium text-gray-700"
-              >
-                <option value="all">Tous les statuts</option>
-                {Object.entries(statusConfig).map(([value, { label }]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-              <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
-
-            {/* Date Range Inputs */}
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent border-none text-sm focus:ring-0 p-1.5 text-gray-600 w-32"
-                placeholder="Du"
-              />
-              <span className="text-gray-400">-</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent border-none text-sm focus:ring-0 p-1.5 text-gray-600 w-32"
-                placeholder="Au"
-              />
-            </div>
-
-
-            {/* Export Button */}
-            <div className="w-full md:w-auto">
-              <button
-                onClick={handleExport}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
-              >
-                <Download className="w-4 h-4" />
-                <span>Exporter (Excel)</span>
-              </button>
-            </div>
-
-          </div>
+          <button
+            onClick={fetchBookings}
+            className="p-2 text-gray-500 hover:text-primary transition-colors"
+            title="Actualiser"
+          >
+            <Clock className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* --- Data Table --- */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {filteredBookings.length === 0 ? (
-            <div className="text-center py-20 px-6">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-200">
-                <Calendar className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Aucune réservation trouvée</h3>
-              <p className="text-gray-500 max-w-sm mx-auto mb-6">
-                {searchTerm || statusFilter !== 'all'
-                  ? "Essayez de modifier vos filtres ou votre recherche."
-                  : "Vos futurs clients apparaîtront ici dès qu'ils auront réservé une de vos offres !"}
-              </p>
-              {(searchTerm || statusFilter !== 'all') && (
-                <button
-                  onClick={() => { setSearchTerm(''); setStatusFilter('all'); }}
-                  className="text-primary hover:text-primary-dark font-medium text-sm"
-                >
-                  Réinitialiser les filtres
-                </button>
-              )}
+        {/* Table */}
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="p-12 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : filteredBookings.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">
+              Aucune réservation trouvée.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50/50">
-                  <tr>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Offre
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Article / Option
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Statut
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Montant
-                    </th>
-                    <th scope="col" className="relative px-6 py-4">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {filteredBookings.map((booking) => {
-                    const status = statusConfig[booking.status] || statusConfig.pending;
-                    const type = typeConfig[booking.source] || { label: booking.source, className: 'bg-gray-100' };
+            <table className="w-full">
+              <thead className="bg-gray-50 text-xs text-gray-500 uppercase font-medium tracking-wider text-left">
+                <tr>
+                  <th className="px-6 py-3">Client</th>
+                  <th className="px-6 py-3">Contact</th>
+                  <th className="px-6 py-3">Offre</th>
+                  <th className="px-6 py-3">Option</th>
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3 text-center">Source</th>
+                  <th className="px-6 py-3 text-center">Statut</th>
+                  <th className="px-6 py-3 text-right">Montant</th>
+                  <th className="px-6 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 text-sm">
+                {filteredBookings.map((booking) => {
+                  const status = statusConfig[booking.status] || statusConfig.pending;
+                  const type = typeConfig[booking.source] || typeConfig.event;
 
-                    return (
-                      <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors group">
-                        {/* Client */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary to-primary-dark text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white">
-                              {booking.user?.first_name?.[0]?.toUpperCase() || 'U'}
+                  return (
+                    <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                      {/* Client */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-primary to-primary-dark text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white">
+                            {booking.user?.first_name?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-bold text-gray-900">
+                              {booking.user?.first_name} {booking.user?.last_name}
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-bold text-gray-900">
-                                {booking.user?.first_name} {booking.user?.last_name}
-                              </div>
+                            {/* STATUS BADGES */}
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {booking.user?.is_ambassador && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800">
+                                  Ambassadrice
+                                </span>
+                              )}
+                              {booking.user?.subscription_status === 'active' && !booking.user?.is_ambassador && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-100 text-pink-800">
+                                  Kiffeuse Active
+                                </span>
+                              )}
                             </div>
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Contact */}
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1">
-                            {booking.user?.email && (
-                              <a href={`mailto:${booking.user.email}`} className="text-sm text-gray-600 hover:text-primary flex items-center gap-1.5 transition-colors">
-                                <Mail className="w-3.5 h-3.5" />
-                                {booking.user.email}
-                              </a>
-                            )}
-                            {booking.user?.phone ? (
-                              <a href={`tel:${booking.user.phone}`} className="text-sm text-gray-600 hover:text-primary flex items-center gap-1.5 transition-colors">
-                                <Phone className="w-3.5 h-3.5" />
-                                {booking.user.phone}
-                              </a>
-                            ) : (
-                              <span className="text-xs text-gray-400 italic pl-5">Non renseigné</span>
-                            )}
-                          </div>
-                        </td>
+                      {/* Contact */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          {booking.user?.email && (
+                            <a href={`mailto:${booking.user.email}`} className="text-sm text-gray-600 hover:text-primary flex items-center gap-1.5 transition-colors">
+                              <Mail className="w-3.5 h-3.5" />
+                              {booking.user.email}
+                            </a>
+                          )}
+                          {booking.user?.phone ? (
+                            <a href={`tel:${booking.user.phone}`} className="text-sm text-gray-600 hover:text-primary flex items-center gap-1.5 transition-colors">
+                              <Phone className="w-3.5 h-3.5" />
+                              {booking.user.phone}
+                            </a>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic pl-5">Non renseigné</span>
+                          )}
+                        </div>
+                      </td>
 
-                        {/* Offer */}
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]" title={booking.offer?.title}>
-                              {booking.offer?.title || 'Offre inconnue'}
-                            </p>
-                          </div>
-                        </td>
+                      {/* Offer */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]" title={booking.offer?.title}>
+                            {booking.offer?.title || 'Offre inconnue'}
+                          </p>
+                        </div>
+                      </td>
 
-                        {/* Variant / Option (New Column) */}
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${booking.variant?.name ? 'bg-gray-100 text-gray-800' : 'text-gray-400 italic'}`}>
-                            {booking.variant?.name || '-'}
+                      {/* Variant */}
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${booking.variant?.name ? 'bg-gray-100 text-gray-800' : 'text-gray-400 italic'}`}>
+                          {booking.variant?.name || '-'}
+                        </span>
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900">
+                            {new Date(booking.booking_date).toLocaleDateString('fr-FR', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
                           </span>
-                        </td>
-
-                        {/* Date */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-gray-900">
-                              {new Date(booking.booking_date).toLocaleDateString('fr-FR', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric'
-                              })}
+                          <span className="text-xs text-gray-500">
+                            à {new Date(booking.booking_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <div className="flex items-center gap-1 mt-1 text-xs text-blue-600" title={booking.meeting_location || "Lieu de l'offre (Cabinet/Partenaire)"}>
+                            <MapPin className="w-3 h-3 shrink-0" />
+                            <span className="truncate max-w-[150px]">
+                              {booking.meeting_location || "Lieu: Cabinet / Standard"}
                             </span>
-                            <span className="text-xs text-gray-500">
-                              à {new Date(booking.booking_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <div className="flex items-center gap-1 mt-1 text-xs text-blue-600" title={booking.meeting_location || "Lieu de l'offre (Cabinet/Partenaire)"}>
-                              <MapPin className="w-3 h-3 shrink-0" />
-                              <span className="truncate max-w-[150px]">
-                                {booking.meeting_location || "Lieu: Cabinet / Standard"}
-                              </span>
-                            </div>
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Type */}
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${type.className}`}>
-                            {type.label}
-                          </span>
-                        </td>
+                      {/* Type */}
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${type.className}`}>
+                          {type.label}
+                        </span>
+                      </td>
 
-                        {/* Status */}
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${status.className}`}>
-                            <status.icon className="w-3 h-3 mr-1.5" />
-                            {status.label}
-                          </span>
-                        </td>
+                      {/* Status */}
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${status.className}`}>
+                          <status.icon className="w-3 h-3 mr-1.5" />
+                          {status.label}
+                        </span>
+                      </td>
 
-                        {/* Amount */}
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <span className="text-sm font-bold text-gray-900 font-mono tracking-tight">
-                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: booking.currency || 'EUR' }).format(booking.amount || 0)}
-                          </span>
-                        </td>
+                      {/* Amount */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <span className="text-sm font-bold text-gray-900 font-mono tracking-tight">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: booking.currency || 'EUR' }).format(booking.amount || 0)}
+                        </span>
+                      </td>
 
-                        {/* Actions */}
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <a
-                            href={`/partner/bookings/${booking.id}`}
-                            className="text-primary hover:text-primary-dark font-semibold hover:underline"
-                          >
-                            Voir détails
-                          </a>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      {/* Actions */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <a
+                          href={`/partner/bookings/${booking.id}`}
+                          className="text-primary hover:text-primary-dark font-semibold hover:underline"
+                        >
+                          Voir détails
+                        </a>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </div>
       </div>

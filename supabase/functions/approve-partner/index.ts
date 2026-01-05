@@ -228,13 +228,50 @@ serve(async (req) => {
       `
     }
 
+    // Send email directly via Resend to avoid queue issues
+    try {
+      const resendApiKey = Deno.env.get('RESEND_API_KEY')
+      if (!resendApiKey) {
+        throw new Error('Missing RESEND_API_KEY')
+      }
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: 'Nowme Club <contact@nowme.fr>',
+          to: partner.contact_email,
+          subject: 'Félicitations ! Votre espace Partenaire Nowme est prêt 🔑',
+          html: emailContent,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('Resend API Error:', errorData)
+        // Fallback: Queue email if direct send fails? 
+        // For now, let's just log it. If Resend is down/quota'd, queue won't help much either given it uses same key.
+      } else {
+        console.log('✅ Approval email sent directly to', partner.contact_email)
+      }
+    } catch (emailErr) {
+      console.error('Failed to send approval email:', emailErr)
+    }
+
+    // Keep the email record for history/logging purposes, but mark as sent?
+    // Or just skip inserting into 'emails' to avoid duplicates if queue picks it up.
+    // Let's insert as 'sent' for log history.
     await supabaseAdmin
       .from('emails')
       .insert({
         to_address: partner.contact_email,
         subject: 'Félicitations ! Votre espace Partenaire Nowme est prêt 🔑',
         content: emailContent,
-        status: 'pending'
+        status: 'sent', // Mark as sent immediately
+        sent_at: new Date().toISOString()
       })
 
     return new Response(

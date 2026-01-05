@@ -177,10 +177,19 @@ serve(async (req) => {
       // 9. Update user_profiles with Stripe customer info (subscription_status n'existe plus)
       console.log("🔄 Updating user profile with Stripe customer info for user_id:", userProfile.user_id);
 
-      const updateData = {
+      const customerPhone = session.customer_details?.phone || session.customer?.phone;
+
+      const updateData: any = {
         stripe_customer_id: session.customer as string,
         updated_at: new Date().toISOString()
       };
+
+      if (customerPhone) {
+        console.log("📱 Found phone in Stripe session, updating profile...");
+        updateData.phone = customerPhone;
+      }
+
+      console.log("📝 Update data:", updateData);
 
       console.log("📝 Update data:", updateData);
 

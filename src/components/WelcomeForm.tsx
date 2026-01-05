@@ -19,6 +19,19 @@ export function WelcomeForm({ onComplete }: WelcomeFormProps) {
         signup_goal: '',
     });
 
+    // Sync state with profile (in case it loads after mount)
+    React.useEffect(() => {
+        if (profile) {
+            setFormData(prev => ({
+                ...prev,
+                phone: prev.phone || profile.phone || '',
+                birth_date: prev.birth_date || profile.birth_date || '',
+                acquisition_source: prev.acquisition_source || profile.acquisition_source || '',
+                signup_goal: prev.signup_goal || profile.signup_goal || '',
+            }));
+        }
+    }, [profile]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!profile?.user_id) return;

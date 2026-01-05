@@ -338,56 +338,7 @@ export default function CommunitySpace() {
           )}
         </section>
 
-        {/* SECTION 1.5: CARTE COMMUNAUTAIRE */}
-        <section>
-          <div className="flex items-center gap-3 mb-6">
-            <MapPin className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-gray-900">Le Quartier Nowme</h2>
-          </div>
 
-          {loadError && <div className="text-red-500 bg-red-50 p-4 rounded-xl">Erreur de chargement de la carte</div>}
-
-          {!isLoaded ? (
-            <div className="h-[400px] flex items-center justify-center bg-gray-50 rounded-2xl">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <>
-              {/* 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                    <CommunityMap key={mapRefreshKey} />
-                </div>
-                <div>
-                    <LocationPicker
-                    userId={profile?.user_id || ''}
-                    onLocationSaved={() => setMapRefreshKey(prev => prev + 1)}
-                    currentHasLocation={!!(profile as any)?.latitude}
-                    />
-                    <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 mt-6">
-                    <h3 className="font-bold text-purple-900 mb-2">Pourquoi ma ville ?</h3>
-                    <p className="text-sm text-purple-800">
-                        Pour te connecter avec des membres proches de chez toi !
-                        On organise régulièrement des rencontres par quartier.
-                    </p>
-                    </div>
-                </div>
-                </div>
-                */}
-              {/* Placeholder temporarily replacing the map */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 text-center">
-                <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
-                  <MapPin className="w-8 h-8 text-purple-500" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Le Quartier arrive bientôt !</h3>
-                <p className="text-gray-500 max-w-lg mx-auto">
-                  Nous peaufinons la carte pour vous offrir la meilleure expérience possible.
-                  Vous pourrez bientôt découvrir les membres de votre quartier.
-                </p>
-              </div>
-            </>
-          )}
-        </section>
 
         {/* SECTION 2: LE HUB DES CERCLES */}
         <section>
@@ -398,86 +349,7 @@ export default function CommunitySpace() {
 
           <CommunitySection profile={profile} />
 
-          <div className="mt-12 pt-12 border-t border-gray-100">
-            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span className="bg-purple-100 text-purple-600 p-1.5 rounded-lg">
-                <MessageCircle className="w-5 h-5" />
-              </span>
-              Vos cercles historiques
-            </h3>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Colonne GEO */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Par Quartier
-                </h3>
-                <div className="space-y-4">
-                  <CircleCard
-                    icon={MapPin}
-                    title="Paris & Proche Banlieue"
-                    description="75, 92, 93, 94 - City Life 🍸"
-                    color="bg-purple-500"
-                  />
-                  <CircleCard
-                    icon={MapPin}
-                    title="Team Est Francilien"
-                    description="77, 91 - Nature & Détente 🌿"
-                    color="bg-teal-500"
-                  />
-                  <CircleCard
-                    icon={MapPin}
-                    title="Team Ouest & Nord"
-                    description="78, 95 - Chic & Chill 🏰"
-                    color="bg-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Colonne THEMES */}
-              <div>
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Heart className="w-4 h-4" />
-                  Par Passion
-                </h3>
-                <div className="space-y-4">
-                  <CircleCard
-                    icon={Palette}
-                    title="Culture & Sorties"
-                    description="Expos, théâtres et concerts entre copines 🎭"
-                    color="bg-pink-500"
-                  />
-                  <CircleCard
-                    icon={Coffee}
-                    title="Équilibre & Carrière"
-                    description="Ambition, bien-être et entraide pro 💼"
-                    color="bg-orange-500"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <CircleCard
-                      icon={BookOpen}
-                      title="Book Club"
-                      description="Lectures & Débats 📚"
-                      color="bg-indigo-500"
-                    />
-                    <CircleCard
-                      icon={Smile}
-                      title="Délires & Fun"
-                      description="Juste pour rire 😂"
-                      color="bg-yellow-500"
-                    />
-                  </div>
-                  <CircleCard
-                    icon={Plane}
-                    title="Voyages & Escapades"
-                    description="Bons plans week-end et aventures 🌍"
-                    color="bg-cyan-500"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* SECTION 4: LA BOITE A IDÉES */}
@@ -507,6 +379,35 @@ export default function CommunitySpace() {
               </div>
             </form>
           </div>
+        </section>
+
+        {/* SECTION 1.5: CARTE COMMUNAUTAIRE (Moved to bottom) */}
+        <section>
+          <div className="flex items-center gap-3 mb-6">
+            <MapPin className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold text-gray-900">Le Quartier Nowme</h2>
+          </div>
+
+          {loadError && <div className="text-red-500 bg-red-50 p-4 rounded-xl">Erreur de chargement de la carte</div>}
+
+          {!isLoaded ? (
+            <div className="h-[400px] flex items-center justify-center bg-gray-50 rounded-2xl">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <>
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 text-center">
+                <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+                  <MapPin className="w-8 h-8 text-purple-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Le Quartier arrive bientôt !</h3>
+                <p className="text-gray-500 max-w-lg mx-auto">
+                  Nous peaufinons la carte pour vous offrir la meilleure expérience possible.
+                  Vous pourrez bientôt découvrir les membres de votre quartier.
+                </p>
+              </div>
+            </>
+          )}
         </section>
 
       </div>

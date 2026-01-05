@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { X } from 'lucide-react';
+import { X, MapPin } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import toast from 'react-hot-toast';
+import usePlacesAutocomplete, {
+    getGeocode,
+    getLatLng,
+} from 'use-places-autocomplete';
 
 interface CreateSquadModalProps {
     hubId: string;
@@ -25,8 +29,28 @@ interface SquadForm {
 }
 
 export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpen, onClose, onCreated }) => {
-    const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<SquadForm>();
+    const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue: setFormValue } = useForm<SquadForm>();
     const { profile } = useAuth();
+
+    // Places Autocomplete
+    const {
+        ready,
+        value,
+        suggestions: { status, data },
+        setValue,
+        clearSuggestions,
+    } = usePlacesAutocomplete({
+        requestOptions: {
+            componentRestrictions: { country: 'fr' }
+        },
+        debounce: 300,
+    });
+
+    const handleSelect = async (address: string) => {
+        setValue(address, false);
+        setFormValue('location', address); // Update React Hook Form
+        clearSuggestions();
+    };
 
     if (!isOpen) return null;
 
@@ -43,11 +67,9 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpe
                     creator_id: profile.user_id,
                     title: data.title,
                     description: data.description,
-                    location: data.location,
+                    location: data.location, // React Hook Form should have this
                     external_link: data.external_link,
                     date_event: eventDate.toISOString(),
-                    max_participants: data.max_participants,
-                    whatsapp_temp_link: data.whatsapp_temp_link,
                     max_participants: data.max_participants,
                     whatsapp_temp_link: data.whatsapp_temp_link,
                     status: 'open',
@@ -58,16 +80,19 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpe
 
             if (error) throw error;
 
-            // Auto-join the creator
+            // Auto-join
             if (squadData) {
-                await supabase.from('squad_members').insert({
-                    squad_id: squadData.id,
-                    user_id: profile.user_id
-                });
+                await (supabase
+                    .from('squad_members') as any)
+                    .insert({
+                        squad_id: squadData.id,
+                        user_id: profile.user_id
+                    });
             }
 
             toast.success("Sortie créée avec succès !");
             reset();
+            setValue("");
             onCreated();
             onClose();
         } catch (err) {
@@ -78,134 +103,158 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpe
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center p-6 border-b border-gray-100 flex-shrink-0 bg-white">
                     <h3 className="text-xl font-bold text-gray-900">Proposer une sortie</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="w-6 h-6" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Titre de la sortie</label>
-                        <input
-                            {...register('title', { required: 'Le titre est requis' })}
-                            type="text"
-                            placeholder="Ex: Brunch chez Kozy, Footing aux Tuileries..."
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        />
-                        {errors.title && <span className="text-red-500 text-xs">{errors.title.message}</span>}
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea
-                            {...register('description')}
-                            placeholder="Dis-nous en plus sur le programme..."
-                            rows={3}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary resize-none"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Lieu / Adresse</label>
-                        <input
-                            {...register('location', { required: 'Le lieu est requis' })}
-                            type="text"
-                            placeholder="Ex: 79 Avenue Bosquet, 75007 Paris"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        />
-                        {errors.location && <span className="text-red-500 text-xs">{errors.location.message}</span>}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                <div className="overflow-y-auto p-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Titre de la sortie</label>
                             <input
-                                {...register('date_event', { required: true })}
-                                type="date"
-                                min={new Date().toISOString().split('T')[0]}
+                                {...register('title', { required: 'Le titre est requis' })}
+                                type="text"
+                                placeholder="Ex: Brunch chez Kozy, Footing aux Tuileries..."
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            />
+                            {errors.title && <span className="text-red-500 text-xs">{errors.title.message}</span>}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea
+                                {...register('description')}
+                                placeholder="Dis-nous en plus sur le programme..."
+                                rows={3}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary resize-none"
+                            />
+                        </div>
+
+                        <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Lieu / Adresse</label>
+                            <input
+                                value={value}
+                                onChange={(e) => {
+                                    setValue(e.target.value);
+                                    setFormValue('location', e.target.value);
+                                }}
+                                disabled={!ready}
+                                placeholder="Ex: 79 Avenue Bosquet, 75007 Paris"
+                                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                            />
+                            <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-9" />
+
+                            {/* Hidden real input for validation */}
+                            <input type="hidden" {...register('location', { required: 'Le lieu est requis' })} />
+
+                            {status === "OK" && (
+                                <ul className="absolute z-50 w-full bg-white border border-gray-100 rounded-xl mt-1 shadow-xl max-h-60 overflow-auto">
+                                    {data.map(({ place_id, description }) => (
+                                        <li
+                                            key={place_id}
+                                            onClick={() => handleSelect(description)}
+                                            className="p-3 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                                        >
+                                            {description}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                            {errors.location && <span className="text-red-500 text-xs">{errors.location.message}</span>}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <input
+                                    {...register('date_event', { required: true })}
+                                    type="date"
+                                    min={new Date().toISOString().split('T')[0]}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Heure</label>
+                                <input
+                                    {...register('time_event', { required: true })}
+                                    type="time"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Lien de l'événement (optionnel)</label>
+                            <input
+                                {...register('external_link')}
+                                type="url"
+                                placeholder="https://menu-restaurant.com, https://billetterie..."
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                             />
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Heure</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de places</label>
                             <input
-                                {...register('time_event', { required: true })}
-                                type="time"
+                                {...register('max_participants', { required: true, min: 2, max: 20 })}
+                                type="number"
+                                defaultValue={8}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                             />
                         </div>
-                    </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Lien de l'événement (optionnel)</label>
-                        <input
-                            {...register('external_link')}
-                            type="url"
-                            placeholder="https://menu-restaurant.com, https://billetterie..."
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de places</label>
-                        <input
-                            {...register('max_participants', { required: true, min: 2, max: 20 })}
-                            type="number"
-                            defaultValue={8}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Lien du groupe WhatsApp (Créé par toi)</label>
-                        <input
-                            {...register('whatsapp_temp_link', {
-                                required: 'Le lien WhatsApp est requis',
-                                pattern: {
-                                    value: /^https:\/\/(chat\.whatsapp\.com|wa\.me)\/.+/,
-                                    message: "Format de lien invalide (doit commencer par https://chat.whatsapp.com/)"
-                                }
-                            })}
-                            type="url"
-                            placeholder="https://chat.whatsapp.com/..."
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-green-50"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            Crée un groupe WhatsApp temporaire et colle le lien d'invitation ici. Il ne sera visible qu'aux participantes validées.
-                        </p>
-                        {errors.whatsapp_temp_link && <span className="text-red-500 text-xs">{errors.whatsapp_temp_link.message}</span>}
-                    </div>
-
-                    {profile?.is_ambassador && (
-                        <div className="flex items-center space-x-2 bg-pink-50 p-4 rounded-xl border border-pink-100">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Lien du groupe WhatsApp (Créé par toi)</label>
                             <input
-                                {...register('is_official')}
-                                type="checkbox"
-                                id="is_official"
-                                className="h-5 w-5 text-primary focus:ring-primary border-gray-300 rounded"
+                                {...register('whatsapp_temp_link', {
+                                    required: 'Le lien WhatsApp est requis',
+                                    pattern: {
+                                        value: /^https:\/\/(chat\.whatsapp\.com|wa\.me)\/.+/,
+                                        message: "Format de lien invalide (doit commencer par https://chat.whatsapp.com/)"
+                                    }
+                                })}
+                                type="url"
+                                placeholder="https://chat.whatsapp.com/..."
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-green-50"
                             />
-                            <label htmlFor="is_official" className="text-sm font-medium text-gray-900">
-                                Demander le statut "Événement Officiel" 👑
-                                <span className="block text-xs font-normal text-gray-500 mt-0.5">
-                                    Ton événement sera mis en avant et gratuit pour les participantes (inclus dans l'abo).
-                                </span>
-                            </label>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Crée un groupe WhatsApp temporaire et colle le lien d'invitation ici. Il ne sera visible qu'aux participantes validées.
+                            </p>
+                            {errors.whatsapp_temp_link && <span className="text-red-500 text-xs">{errors.whatsapp_temp_link.message}</span>}
                         </div>
-                    )}
 
-                    <div className="pt-4">
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors"
-                        >
-                            {isSubmitting ? 'Publication...' : 'Publier la sortie'}
-                        </button>
-                    </div>
-                </form>
+                        {profile?.is_ambassador && (
+                            <div className="flex items-center space-x-2 bg-pink-50 p-4 rounded-xl border border-pink-100">
+                                <input
+                                    {...register('is_official')}
+                                    type="checkbox"
+                                    id="is_official"
+                                    className="h-5 w-5 text-primary focus:ring-primary border-gray-300 rounded"
+                                />
+                                <label htmlFor="is_official" className="text-sm font-medium text-gray-900">
+                                    Demander le statut "Événement Officiel" 👑
+                                    <span className="block text-xs font-normal text-gray-500 mt-0.5">
+                                        Ton événement sera mis en avant et gratuit pour les participantes (inclus dans l'abo).
+                                    </span>
+                                </label>
+                            </div>
+                        )}
+
+                        <div className="pt-4">
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-dark transition-colors"
+                            >
+                                {isSubmitting ? 'Publication...' : 'Publier la sortie'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

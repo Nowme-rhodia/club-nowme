@@ -9,11 +9,13 @@ import {
   ChevronDown,
   Mail,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Trash2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { approvePartner, rejectPartner } from '../../lib/partner';
 import type { Database } from '../../types/supabase';
+import DeletionReasonModal from '../../components/admin/DeletionReasonModal';
 
 type Partner = Database['public']['Tables']['partners']['Row'];
 
@@ -35,8 +37,20 @@ const statusConfig: Record<
     label: 'Refusé',
     icon: XCircle,
     className: 'bg-red-100 text-red-700'
+  },
+  archived: {
+    label: 'Archivé',
+    icon: Trash2,
+    className: 'bg-gray-100 text-gray-700'
   }
 };
+
+const tabs = [
+  { id: 'pending', label: 'En attente' },
+  { id: 'approved', label: 'Approuvés' },
+  { id: 'rejected', label: 'Refusés' },
+  { id: 'archived', label: 'Corbeille' }
+];
 
 export default function Partners() {
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -48,6 +62,7 @@ export default function Partners() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     loadPartners();
@@ -57,7 +72,7 @@ export default function Partners() {
   const loadPartners = async () => {
     try {
       console.log('🔍 [Partners] Loading partners with filter:', statusFilter);
-      
+
       let query = supabase
         .from('partners')
         .select('*')
@@ -68,14 +83,14 @@ export default function Partners() {
       }
 
       const { data, error } = await query;
-      
+
       console.log('📊 [Partners] Query result:', { data, error, count: data?.length });
-      
+
       if (error) {
         console.error('❌ [Partners] Error from Supabase:', error);
         throw error;
       }
-      
+
       console.log('✅ [Partners] Partners loaded:', data);
       setPartners((data || []) as Partner[]);
     } catch (error) {
@@ -91,7 +106,7 @@ export default function Partners() {
       console.log('🔄 Approbation du partenaire:', partnerId);
       const result = await approvePartner(partnerId);
       console.log('📦 Résultat de l\'approbation:', result);
-      
+
       // Afficher le mot de passe temporaire à l'admin
       if (result && (result as any).tempPassword) {
         const tempPassword = (result as any).tempPassword;
@@ -101,7 +116,7 @@ export default function Partners() {
         console.log('⚠️ Pas de mot de passe dans la réponse:', result);
         alert('✅ Partenaire approuvé ! Un email avec les identifiants a été envoyé.');
       }
-      
+
       await loadPartners();
     } catch (error: any) {
       console.error('❌ Error approving partner:', error);
@@ -162,8 +177,51 @@ export default function Partners() {
     );
   }
 
+  const handleArchive = async (reason: string) => {
+    if (!confirmArchive) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
+        },
+        body: JSON.stringify({
+          userId: confirmArchive.id, // Partner ID (which is userId for partners usually, or handled by backend)
+          partnerId: confirmArchive.id,
+          role: 'partner',
+          action: 'archive',
+          reason: reason
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Erreur lors de l'archivage");
+      }
+
+      alert('✅ Partenaire archivé avec succès.');
+      loadPartners();
+    } catch (err: any) {
+      console.error('Archive error:', err);
+      alert('❌ Erreur : ' + err.message);
+    } finally {
+      setConfirmArchive(null);
+    }
+  };
+
   return (
     <div className="p-8">
+      <DeletionReasonModal
+        isOpen={!!confirmArchive}
+        onClose={() => setConfirmArchive(null)}
+        onConfirm={handleArchive}
+        userName={confirmArchive?.name || ''}
+        userType="partner"
+      />
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Vérification des partenaires</h1>
@@ -254,8 +312,8 @@ export default function Partners() {
                         <span className="text-sm text-gray-500">
                           {partner.created_at
                             ? format(new Date(partner.created_at), 'dd MMMM yyyy', {
-                                locale: fr
-                              })
+                              locale: fr
+                            })
                             : '-'}
                         </span>
                       </div>
@@ -301,6 +359,18 @@ export default function Partners() {
                       >
                         <Eye className="w-5 h-5" />
                       </button>
+                      {partner.status !== 'archived' && (
+                        <button
+                          onClick={() => setConfirmArchive({
+                            id: partner.id,
+                            name: partner.business_name
+                          })}
+                          className="p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors duration-200"
+                          title="Archiver (Soft Delete)"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

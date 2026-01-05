@@ -41,9 +41,27 @@ export const CommunitySection: React.FC<CommunitySectionProps> = ({ profile }) =
     // For now, let's show ALL because we don't know the exact address format vs city column match.
     // We'll Sort them instead: Matching city first.
 
-    const sortedHubs = [...hubs].sort((a, b) => {
-        // Placeholder for sorting logic based on profile.city if relevant
-        return 0;
+    const excludedNames = ["Nature & Détente", "Chic & Chill", "City Life"];
+    const filteredHubs = hubs.filter(h => !excludedNames.some(name => h.name.includes(name)));
+
+    const sortedHubs = [...filteredHubs].sort((a, b) => {
+        // Priority 1: Geo Groups (Match typical names or IDs if stable, using names for flexibility)
+        const geoNames = ["Team Est Francilien", "Team Ouest & Nord", "Paris & Proche Banlieue", "92", "93", "94", "75", "77", "91", "78", "95"];
+        const isAGeo = geoNames.some(name => a.name.includes(name));
+        const isBGeo = geoNames.some(name => b.name.includes(name));
+
+        if (isAGeo && !isBGeo) return -1;
+        if (!isAGeo && isBGeo) return 1;
+
+        // Priority 3: "Le quartier" (Last)
+        const isALast = a.name.toLowerCase().includes("quartier");
+        const isBLast = b.name.toLowerCase().includes("quartier");
+
+        if (isALast && !isBLast) return 1;
+        if (!isALast && isBLast) return -1;
+
+        // Priority 2: Everything else (Thematic) - Alphabetical or created_at
+        return a.name.localeCompare(b.name);
     });
 
     if (sortedHubs.length === 0) {
@@ -59,7 +77,13 @@ export const CommunitySection: React.FC<CommunitySectionProps> = ({ profile }) =
             {sortedHubs.map(hub => (
                 <div key={hub.id}>
                     <CommunityHubCard hub={hub} />
-                    <MicroSquadList hubId={hub.id} />
+                    <div className="mt-6">
+                        <MicroSquadList
+                            hubId={hub.id}
+                            hubName={hub.name}
+                            hubCity={hub.city}
+                        />
+                    </div>
                 </div>
             ))}
         </div>

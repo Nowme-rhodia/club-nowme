@@ -405,6 +405,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         external_link: (eventType === 'promo' || (eventType === 'event' && locationMode === 'online')) ? externalLink : null,
         promo_code: eventType === 'promo' ? promoCode : null,
         promo_conditions: eventType === 'promo' ? promoConditions : null,
+        digital_product_file: eventType === 'purchase' ? digitalProductFile : null,
         duration_type: durationType,
         validity_start_date: durationType === 'fixed' ? validityStartDate : null,
         validity_end_date: durationType === 'fixed' ? validityEndDate : null,
@@ -1018,7 +1019,11 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
                           if (error) throw error;
 
-                          setDigitalProductFile(filePath);
+                          const { data: { publicUrl } } = supabase.storage
+                            .from('offer-attachments')
+                            .getPublicUrl(filePath);
+
+                          setDigitalProductFile(publicUrl);
                           toast.success('Fichier ajouté !', { id: toastId });
                         } catch (error: any) {
                           console.error('Upload Error:', error);

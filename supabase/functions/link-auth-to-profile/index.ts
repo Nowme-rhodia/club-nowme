@@ -83,35 +83,104 @@ Deno.serve(async (req) => {
 
     // --- CAS 2 : PARTNER ---
     if (role === 'partner') {
-      const { data: existingPartner } = await supabase
-        .from('partners')
-        .select('id, status, email')
-        .eq('user_id', authUserId)
-        .maybeSingle()
+      const { businessName, contactName, phone } = await req.json()
 
-      const { data: partner, error: upsertError } = await supabase
-        .from('partners')
+      // 1. Upsert du profil utilisateur pour s'assurer qu'il existe
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
         .upsert(
           {
-            email,
             user_id: authUserId,
-            business_name: null,
-            contact_name: null,
-            phone: null,
-            contact_email: email,
-            status: existingPartner?.status || 'pending',
+            email,
             updated_at: now,
           },
           { onConflict: 'user_id' }
         )
-        .select('id, user_id, status, email, contact_name')
+        .select()
         .single()
 
-      if (upsertError) throw upsertError
-      const wasCreated = !existingPartner
+      if (profileError) throw profileError
 
-      // 🔔 Nouvel enregistrement → email automatique
-      if (wasCreated && partner?.email) {
+      let partnerId = profile.partner_id
+      let wasCreated = false
+      let partnerData = null
+
+      if (partnerId) {
+        console.info('✅ User already linked to partner:', partnerId)
+        // Retrieve partner data for response
+        const { data } = await supabase.from('partners').select('*').eq('id', partnerId).maybeSingle()
+        partnerData = data
+      } else {
+        // 2. Chercher candidature existante par email
+        const { data: existingByEmail } = await supabase
+          .from('partners')
+          .select('*')
+          .eq('contact_email', email)
+          .maybeSingle()
+
+        let targetPartnerId = null
+
+        if (existingByEmail) {
+          // Vérifier si ce partenaire est déjà lié à un AUTRE profil
+          const { data: linkedProfile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('partner_id', existingByEmail.id)
+            .neq('user_id', authUserId)
+            .maybeSingle()
+
+          if (!linkedProfile) {
+            console.info('🔗 Linking existing partner application:', existingByEmail.id)
+            targetPartnerId = existingByEmail.id
+
+            // Update partner details
+            await supabase.from('partners').update({
+              business_name: businessName || existingByEmail.business_name,
+              contact_name: contactName || existingByEmail.contact_name,
+              phone: phone || existingByEmail.phone,
+              updated_at: now
+            }).eq('id', targetPartnerId)
+
+            partnerData = existingByEmail
+          }
+        }
+
+        if (!targetPartnerId) {
+          console.info('✨ Creating new partner')
+          const { data: newPartner, error: insertError } = await supabase
+            .from('partners')
+            .insert({
+              contact_email: email,
+              email: email,
+              business_name: businessName,
+              contact_name: contactName,
+              phone: phone,
+              status: 'pending',
+              updated_at: now,
+            })
+            .select()
+            .single()
+
+          if (insertError) throw insertError
+          targetPartnerId = newPartner.id
+          partnerData = newPartner
+          wasCreated = true
+        }
+
+        // 3. Link user_profile to partner
+        const { error: linkError } = await supabase
+          .from('user_profiles')
+          .update({ partner_id: targetPartnerId })
+          .eq('user_id', authUserId)
+
+        if (linkError) throw linkError
+        partnerId = targetPartnerId
+      }
+
+      if (!partnerId) throw new Error('Failed to create or link partner')
+
+      // 🔔 Nouvel enregistrement (création pure) → email automatique
+      if (wasCreated && partnerData?.contact_email) {
         try {
           await fetch(`${Deno.env.get('RESEND_API_URL')}/send`, {
             method: 'POST',
@@ -120,21 +189,19 @@ Deno.serve(async (req) => {
               Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
             },
             body: JSON.stringify({
-              to: partner.email,
-              subject: 'Votre demande de partenariat a bien été reçue',
+              to: partnerData.contact_email,
+              subject: 'Votre compte partenaire est créé ! 🚀',
               content: `
-                Bonjour ${partner.contact_name ?? ''},
+                Bonjour ${partnerData.contact_name ?? ''},
 
-                Merci d’avoir soumis votre demande de partenariat à Nowme Club 💫
-
-                Votre demande est en cours de vérification par notre équipe.
-                Vous recevrez un email dès qu’elle sera validée ou si nous avons besoin d’informations complémentaires.
+                Votre compte partenaire a bien été créé. 
+                Vous pouvez désormais vous connecter à votre espace partenaire.
 
                 L’équipe Nowme Club
               `,
             }),
           })
-          console.info('📧 Email de confirmation envoyé à', partner.email)
+          console.info('📧 Email de confirmation envoyé à', partnerData.contact_email)
         } catch (err) {
           console.error('❌ Erreur envoi email confirmation partner:', err)
         }
@@ -144,12 +211,12 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           type: 'partner',
-          partnerId: partner.id,
-          authUserId: partner.user_id,
-          status: partner.status,
+          partnerId: partnerId,
+          authUserId: profile.user_id,
+          status: partnerData?.status || 'pending',
         }),
         {
-          status: wasCreated ? 201 : 200,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       )

@@ -263,8 +263,44 @@ export default function Account() {
                   : 'récemment'
                 }
               </p>
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                {profile?.subscription_status === 'active' ? 'Premium actif' : 'Compte actif'}
+
+              <div className="flex flex-wrap gap-2">
+                {/* 1. Ambassadrice Badge */}
+                {profile?.is_ambassador && (
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-bold border border-purple-200">
+                    👑 Ambassadrice
+                  </div>
+                )}
+
+                {/* 2. VIP Badge */}
+                {profile?.is_vip && (
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-bold border border-yellow-200">
+                    ✨ VIP
+                  </div>
+                )}
+
+                {/* 3. Active Subscription Badge (Only show if NOT ambassador/vip to avoid clutter, OR show alongside? User request implies replacement of 'Premium' status) 
+                    Decision: Show "Kiffeuse Active" if subscription is active. 
+                    If user is Ambassador, she is likely active too. 
+                    Let's display "Kiffeuse Active" generally, or distinct badges? 
+                    The Dashboard logic was: Show specific badge if property is true.
+                    Here we are replacing "Premium actif/Compte actif".
+                    Let's use the same logic: Display the most prestigious one or all applicable? 
+                    User asked to "change like in dashboard". In dashboard I showed all applicable.
+                    Let's show all applicable here too.
+                 */}
+                {profile?.subscription_status === 'active' && !profile.is_ambassador && !profile.is_vip && (
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-pink-100 text-pink-700 text-sm font-bold border border-pink-200">
+                    Kiffeuse Active
+                  </div>
+                )}
+
+                {/* Fallback for non-active */}
+                {profile?.subscription_status !== 'active' && !profile?.is_admin && (
+                  <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium">
+                    Compte gratuit
+                  </div>
+                )}
               </div>
             </div>
           </div>

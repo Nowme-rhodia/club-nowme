@@ -44,15 +44,15 @@ export const CommunityHubCard: React.FC<CommunityHubCardProps> = ({ hub }) => {
         <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
             <div className="mb-4 md:mb-0">
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                    {hub.name}
+                    {hub.name.split(' - ')[0]}
                     {hub.city && (
                         <span className="ml-3 text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                            {hub.city}
+                            {hub.city.split(' - ')[0]}
                         </span>
                     )}
                 </h2>
                 <p className="text-gray-600 mt-1 max-w-2xl">
-                    {hub.description || "Rejoins le groupe WhatsApp pour échanger avec les membres et ne rien rater des actus !"}
+                    {(hub.description || "").split(' - ')[0] || "Rejoins le groupe WhatsApp pour échanger avec les membres et ne rien rater des actus !"}
                 </p>
             </div>
 

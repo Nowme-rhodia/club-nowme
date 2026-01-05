@@ -34,20 +34,22 @@ export default function SignUp() {
       // Créer le compte utilisateur
       await signUp(formData.email, formData.password);
 
-      // Créer le profil partenaire
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Erreur lors de la création du compte');
 
-      const { error: partnerError } = await supabase
-        .from('partners')
-        .insert({
-          user_id: userData.user.id,
-          business_name: formData.businessName,
-          contact_name: formData.contactName,
+      // Lier le compte auth au profil partenaire (via Edge Function sécurisée)
+      const { error: linkError } = await supabase.functions.invoke('link-auth-to-profile', {
+        body: {
+          email: formData.email,
+          authUserId: userData.user.id,
+          role: 'partner',
+          businessName: formData.businessName,
+          contactName: formData.contactName,
           phone: formData.phone,
-        });
+        },
+      });
 
-      if (partnerError) throw partnerError;
+      if (linkError) throw linkError;
 
       navigate('/partner/dashboard');
     } catch (err) {
