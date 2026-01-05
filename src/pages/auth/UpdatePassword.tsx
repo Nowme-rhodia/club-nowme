@@ -31,20 +31,22 @@ export default function UpdatePassword() {
       const query = new URLSearchParams(window.location.search);
       const hash = new URLSearchParams(window.location.hash.slice(1));
 
-      const tokenFromQuery = query.get('token_hash') || query.get('token') || query.get('access_token');
+      const tokenFromQuery = query.get('token_hash') || query.get('token');
+      const accessToken = hash.get('access_token'); // Implicit flow
       const typeFromQuery = query.get('type');
       const code = query.get('code'); // PKCE code
 
-      const tokenFromHash = hash.get('token_hash') || hash.get('token') || hash.get('access_token');
+      const tokenFromHash = hash.get('token_hash') || hash.get('token');
       const typeFromHash = hash.get('type');
 
-      const token = tokenFromQuery || tokenFromHash;
+      const token = tokenFromQuery || tokenFromHash; // This is the OTP token (PKCE)
       const tokenType = typeFromQuery || typeFromHash;
 
       console.log('UpdatePassword - URL params:', {
         search: window.location.search,
         hash: window.location.hash,
         token: !!token,
+        accessToken: !!accessToken,
         type: tokenType,
         code: !!code
       });
@@ -54,15 +56,25 @@ export default function UpdatePassword() {
         return;
       }
 
-      // If we have a recovery token, we prioritize it over any existing session
+      // Case A: Implicit Flow (access_token in hash)
+      // Supabase automatically handles the session establishment for Implicit flow before we get here
+      if (accessToken) {
+        console.log('✅ UpdatePassword - Implicit access_token detected. Verifying session...');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          console.log('✅ UpdatePassword - Session valid (Implicit).');
+          setIsSessionUpdate(true);
+          setUserEmail(user.email || 'Utilisateur inconnu');
+          setIsValidToken(true);
+          setChecking(false);
+          return;
+        }
+      }
+
+      // Case B: PKCE Flow (token_hash in URL)
       if (token && (tokenType === 'recovery' || !tokenType)) {
         if (mounted) {
-          console.log('✅ UpdatePassword - Valid recovery token detected');
-
-          // We can't easily get the email from the token directly without exchanging it, 
-          // but if we are here, we are about to exchange it or have it. 
-          // For now, valid token implies we proceed.
-
+          console.log('✅ UpdatePassword - Valid recovery token detected (PKCE)');
           setTokenHash(token);
           setType(tokenType || 'recovery');
           setIsValidToken(true);
@@ -109,8 +121,10 @@ export default function UpdatePassword() {
       if (session?.user && mounted) {
         // If we were waiting for session (PKCE), now we have it
         if (!tokenHash && !isSessionUpdate) {
+          // Only update if we didn't already have a valid flow
           console.log('✅ UpdatePassword - Session established via listener');
           setIsSessionUpdate(true);
+          setUserEmail(session.user.email || 'Utilisateur inconnu');
           setIsValidToken(true);
           setChecking(false);
         }
@@ -153,8 +167,8 @@ export default function UpdatePassword() {
     setLoading(true);
 
     try {
-      // 1. If we have a token, verify it first
-      if (tokenHash && type) {
+      // 1. If we have a PKCE token, verify it first
+      if (tokenHash && type && !isSessionUpdate) {
         console.log('🔐 Verifying OTP token...', { type, hashLength: tokenHash.length });
         const { error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
@@ -190,10 +204,13 @@ export default function UpdatePassword() {
         throw passwordError;
       }
 
+      console.log('✅ Password updated successfully');
       setSuccess(true);
+      toast.success('Mot de passe mis à jour avec succès 🎉');
+
       setTimeout(() => {
         navigate('/auth/signin', {
-          state: { message: 'Mot de passe mis à jour avec succès 🎉' },
+          state: { message: 'Connectez-vous avec votre nouveau mot de passe' },
         });
       }, 2000);
 

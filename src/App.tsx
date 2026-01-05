@@ -60,7 +60,7 @@ const AdminBlog = React.lazy(() => import('./pages/admin/Blog'));
 const AdminBlogEditor = React.lazy(() => import('./pages/admin/BlogEditor'));
 
 // Partner pages
-const PartnerSignIn = React.lazy(() => import('./pages/partner/SignIn'));
+
 const PartnerLayout = React.lazy(() => import('./pages/partner/PartnerLayout'));
 const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
 const PartnerOffers = React.lazy(() => import('./pages/partner/Offers'));
@@ -79,11 +79,13 @@ const Booking = React.lazy(() => import('./pages/Booking'));
 const BookingSuccess = React.lazy(() => import('./pages/BookingSuccess'));
 const CancellationFeedback = React.lazy(() => import('./pages/CancellationFeedback'));
 
+const libraries: ("places")[] = ["places"];
+
 // Wrapper component to load Google Maps Script globally
 function GoogleMapsLoader({ children }: { children: React.ReactNode }) {
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries: ["places"],
+    libraries,
     language: "fr",
     region: "FR"
   });
@@ -144,7 +146,7 @@ function App() {
                     <Route path="/auth/callback" element={<AuthCallback />} />
 
                     {/* Partner routes */}
-                    <Route path="/partner/signin" element={<PartnerSignIn />} />
+
                     <Route
                       path="/partner/*"
                       element={

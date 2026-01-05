@@ -93,6 +93,19 @@ export default function SignIn() {
         return;
       }
 
+      // Check partners table explicitly as fallback
+      const { data: partnerData } = await supabase
+        .from('partners')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (partnerData) {
+        console.log('Partenaire trouvé (via table partners), redirection vers le dashboard partenaire');
+        navigate('/partner/dashboard');
+        return;
+      }
+
       if (userData?.is_admin) {
         console.log('Utilisateur admin, redirection vers /admin');
         navigate('/admin');
@@ -196,23 +209,6 @@ export default function SignIn() {
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">Vous êtes partenaire ?</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <Link to="/partner/signin" className="flex w-full items-center justify-center rounded-full border-2 border-primary px-4 py-3 text-base font-medium text-primary hover:bg-primary/5 transition-colors">
-                Accéder à l'espace partenaire
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
     </div>
