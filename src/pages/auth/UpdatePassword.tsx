@@ -155,7 +155,7 @@ export default function UpdatePassword() {
     try {
       // 1. If we have a token, verify it first
       if (tokenHash && type) {
-        console.log('🔐 Verifying OTP token...');
+        console.log('🔐 Verifying OTP token...', { type, hashLength: tokenHash.length });
         const { error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: type as any,
@@ -202,6 +202,7 @@ export default function UpdatePassword() {
       // Detailed error message handling
       if (err.message?.includes('invalid or has expired')) {
         setError('Ce lien a expiré. Demandez-en un nouveau.');
+        setIsValidToken(false);
       } else if (err.message?.includes('different from the old')) {
         // Fallback if not caught above
         setError('Le nouveau mot de passe doit être différent de l\'ancien.');
