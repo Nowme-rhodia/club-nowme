@@ -195,17 +195,23 @@ return (
           {/* SIRET */}
           <div>
             <label htmlFor="siret" className="block text-sm font-medium text-gray-700 mb-1">
-              Numéro SIRET <span className="text-gray-400 font-normal">(Optionnel pour la demande)</span>
+              Numéro SIRET <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               id="siret"
               name="siret"
-              value={formData.siret || ''}
+              value={formData.siret}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.siret ? 'border-red-500' : 'border-gray-300'}`}
               placeholder="123 456 789 00012"
             />
+            {errors.siret && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.siret}
+              </p>
+            )}
           </div>
 
           {/* Adresse légale */}
