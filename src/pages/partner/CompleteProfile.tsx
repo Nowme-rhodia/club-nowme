@@ -340,30 +340,30 @@ export default function CompleteProfile() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       <Instagram className="w-4 h-4 inline mr-1" />
-                      Instagram
+                      Instagram <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
                     </label>
                     <input
-                      type="text"
+                      type="url"
                       name="instagram"
                       value={formData.instagram}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="@votre_compte"
+                      placeholder="https://instagram.com/votre_compte"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       <Facebook className="w-4 h-4 inline mr-1" />
-                      Facebook
+                      Facebook <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
                     </label>
                     <input
-                      type="text"
+                      type="url"
                       name="facebook"
                       value={formData.facebook}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="VotrePage"
+                      placeholder="https://facebook.com/VotrePage"
                     />
                   </div>
                 </div>

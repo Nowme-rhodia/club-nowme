@@ -303,7 +303,7 @@ return (
           {/* Facebook */}
           <div>
             <label htmlFor="facebook" className="block text-sm font-medium text-gray-700 mb-1">
-              Lien Facebook <span className="text-gray-400 font-normal">(Optionnel)</span>
+              Lien Facebook <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
             </label>
             <input
               type="url"
@@ -325,7 +325,7 @@ return (
           {/* Instagram */}
           <div>
             <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
-              Lien Instagram <span className="text-gray-400 font-normal">(Optionnel)</span>
+              Lien Instagram <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
             </label>
             <input
               type="url"

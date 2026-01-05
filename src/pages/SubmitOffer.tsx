@@ -366,7 +366,7 @@ export default function SubmitOffer() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
-                  Instagram
+                  Instagram <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
                 </label>
                 <input
                   type="text"
@@ -375,13 +375,13 @@ export default function SubmitOffer() {
                   value={formData.instagram}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="@votre_compte"
+                  placeholder="https://instagram.com/votre_compte"
                 />
               </div>
 
               <div>
                 <label htmlFor="facebook" className="block text-sm font-medium text-gray-700 mb-1">
-                  Facebook
+                  Facebook <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
                 </label>
                 <input
                   type="text"
@@ -390,7 +390,7 @@ export default function SubmitOffer() {
                   value={formData.facebook}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="VotrePage"
+                  placeholder="https://facebook.com/VotrePage"
                 />
               </div>
             </div>
