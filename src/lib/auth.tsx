@@ -189,7 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const [
         { data: userData, error: userError },
-        { data: subscriptionData, error: subscriptionError }
+        { data: subscriptionData, error: subscriptionError },
+        { data: isAdminRpc, error: adminRpcError }
       ] = await Promise.all([
         // User profiles - Explicitly selecting needed fields for role detection
         Promise.race([
@@ -213,7 +214,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Subscription query timeout')), timeoutDuration)
           )
-        ]).catch(err => ({ data: null, error: err }))
+        ]).catch(err => ({ data: null, error: err })),
+
+        // Secure RPC Admin Check (Failsafe)
+        supabase.rpc('am_i_admin').catch(err => ({ data: false, error: err }))
       ]) as any;
 
       console.log('🔍 loadUserProfile - All queries completed');
@@ -270,11 +274,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('🔍 loadUserProfile - Deriving role from data...');
-      const role = deriveRole(userData, null, subscriptionData);
-      console.log('🔍 loadUserProfile - Role derived:', role, 'subscription status:', subscriptionData?.status);
+
+      // Merge RPC result
+      const finalIsAdmin = userData?.is_admin || isAdminRpc === true;
+      const userDataWithRpc = { ...userData, is_admin: finalIsAdmin };
+
+      const role = deriveRole(userDataWithRpc, null, subscriptionData);
+      console.log('🔍 loadUserProfile - Role derived:', role, 'rpc_admin:', isAdminRpc);
 
       const merged = {
-        ...(userData ?? {}),
+        ...(userDataWithRpc ?? {}),
         // CRITICAL FIX: Ensure subscription_status is DRIVEN by the subscriptions table
         // If no subscription data found, status MUST be undefined/null, regardless of what userData says
         subscription: subscriptionData || null,

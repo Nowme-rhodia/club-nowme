@@ -26,113 +26,81 @@ export default function UpdatePassword() {
   useEffect(() => {
     let mounted = true;
 
-    const checkSessionAndToken = async () => {
-      // 1. Parse URL params for Token FIRST
+    // Timeout de sécurité : Si au bout de 8s rien ne s'est passé, on arrête de charger
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && checking) {
+        console.warn('⚠️ Safety timeout reached in UpdatePassword.');
+        setChecking(false);
+        // Si on n'a toujours rien trouvé, on affiche une erreur générique
+        if (!isValidToken && !isSessionUpdate) {
+          setError('La vérification prend trop de temps. Le lien semble invalide.');
+        }
+      }
+    }, 8000);
+
+    const checkState = async () => {
+      // 1. Check Params
       const query = new URLSearchParams(window.location.search);
-      const hash = new URLSearchParams(window.location.hash.slice(1));
+      const hash = new URLSearchParams(window.location.hash.includes('#') ? window.location.hash.split('#')[1] : window.location.hash);
 
-      const tokenFromQuery = query.get('token_hash') || query.get('token');
-      const accessToken = hash.get('access_token'); // Implicit flow
-      const typeFromQuery = query.get('type');
-      const code = query.get('code'); // PKCE code
+      // Supporte les deux formats (Implicit & PKCE)
+      const token = query.get('token_hash') || hash.get('token_hash') || query.get('access_token') || hash.get('access_token');
+      const type = query.get('type') || hash.get('type');
 
-      const tokenFromHash = hash.get('token_hash') || hash.get('token');
-      const typeFromHash = hash.get('type');
+      console.log('🔍 UpdatePassword Check:', { token: !!token, type });
 
-      const token = tokenFromQuery || tokenFromHash; // This is the OTP token (PKCE)
-      const tokenType = typeFromQuery || typeFromHash;
-
-      console.log('UpdatePassword - URL params:', {
-        search: window.location.search,
-        hash: window.location.hash,
-        token: !!token,
-        accessToken: !!accessToken,
-        type: tokenType,
-        code: !!code
-      });
-
-      if (code) {
-        console.log('🔄 UpdatePassword - PKCE code detected, waiting for session exchange...');
-        return;
-      }
-
-      // Case A: Implicit Flow (access_token in hash)
-      // Supabase automatically handles the session establishment for Implicit flow before we get here
-      if (accessToken) {
-        console.log('✅ UpdatePassword - Implicit access_token detected. Verifying session...');
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          console.log('✅ UpdatePassword - Session valid (Implicit).');
-          setIsSessionUpdate(true);
-          setUserEmail(user.email || 'Utilisateur inconnu');
-          setIsValidToken(true);
-          setChecking(false);
-          return;
-        }
-      }
-
-      // Case B: PKCE Flow (token_hash in URL)
-      if (token && (tokenType === 'recovery' || !tokenType)) {
+      if (token) {
         if (mounted) {
-          console.log('✅ UpdatePassword - Valid recovery token detected (PKCE)');
           setTokenHash(token);
-          setType(tokenType || 'recovery');
+          setType(type || 'recovery');
           setIsValidToken(true);
-          setChecking(false);
         }
-        return;
       }
 
-      // 2. Only if NO token, check if we're already logged in (Change Password from Settings flow)
+      // 2. Check Session (Supabase sometimes auto-logs in via the link)
       const { data: { user } } = await supabase.auth.getUser();
       if (user && mounted) {
-        console.log('✅ UpdatePassword - User already authenticated, allowing update');
+        console.log('✅ User already authenticated via link/session');
         setIsSessionUpdate(true);
         setUserEmail(user.email || 'Utilisateur inconnu');
-        setIsValidToken(true);
         setChecking(false);
+        setIsValidToken(true);
         return;
       }
 
-
-      // 3. Fallback: No token, no user
-      if (mounted) {
-        // Double check session one last time before erroring
-        setTimeout(async () => {
-          if (!mounted) return;
-          const { data: { user: retryUser } } = await supabase.auth.getUser();
-          if (retryUser) {
-            setIsSessionUpdate(true);
-            setIsValidToken(true);
-            setChecking(false);
-          } else {
-            setError("Lien invalide ou expiré. Veuillez demander un nouveau lien.");
-            setChecking(false);
-          }
-        }, 2000); // 2s grace period
+      // 3. Fallback: If we found a token but no session yet, we wait for onAuthStateChange or user interaction
+      // If we found NOTHING (no token, no session), we error out immediately
+      if (!token && !user) {
+        if (mounted) {
+          setError('Lien invalide ou manquant.');
+          setChecking(false);
+        }
+      } else {
+        // We have a token, we stop checking UI and let the user type their password
+        // The actual verification happens on Submit
+        if (mounted) setChecking(false);
       }
     };
 
-    checkSessionAndToken();
+    checkState();
 
-    // Listen for auth state changes (crucial for PKCE)
+    // Listen to Supabase State
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('UpdatePassword - Auth State Change:', event);
-      if (session?.user && mounted) {
-        // If we were waiting for session (PKCE), now we have it
-        if (!tokenHash && !isSessionUpdate) {
-          // Only update if we didn't already have a valid flow
-          console.log('✅ UpdatePassword - Session established via listener');
+      console.log('🔔 Auth Event:', event);
+      if (mounted) {
+        if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+          console.log('✅ Session recovered via event');
           setIsSessionUpdate(true);
-          setUserEmail(session.user.email || 'Utilisateur inconnu');
           setIsValidToken(true);
           setChecking(false);
+          if (session?.user?.email) setUserEmail(session.user.email);
         }
       }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);

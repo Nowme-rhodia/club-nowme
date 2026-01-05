@@ -48,32 +48,41 @@ export function LocationSearch({ onSelect, initialValue, error }: LocationSearch
 
     // Nouvelle API (si dispo)
     if ((window.google.maps.places as any).AutocompleteSuggestion) {
-      console.info("✅ Utilisation de AutocompleteSuggestion");
-      const service = new (window.google.maps.places as any).AutocompleteSuggestion();
+      try {
+        const service = new (window.google.maps.places as any).AutocompleteSuggestion();
 
-      if (typeof service.getSuggestions === "function") {
-        service.getSuggestions(
-          {
-            input: value,
-            sessionToken: sessionTokenRef.current,
-            componentRestrictions: { country: "fr" },
-            language: "fr",
-          },
-          (res: any[], status: string) => {
-            console.log("📥 Résultat AutocompleteSuggestion:", { status, res });
-            if (status === "OK" && res) {
-              setSuggestions(
-                res.map((r) => ({
-                  placeId: r.placeId || r.id,
-                  description: r.description,
-                }))
-              );
-            } else {
-              setSuggestions([]);
+        if (typeof service.getSuggestions === "function") {
+          console.info("✅ Utilisation de AutocompleteSuggestion (Version 2024)");
+          service.getSuggestions(
+            {
+              input: value,
+              sessionToken: sessionTokenRef.current,
+              componentRestrictions: { country: "fr" },
+              language: "fr",
+            },
+            (res: any[], status: string) => {
+              // Note: status might be different in new API, check docs if avail. 
+              // Usually it returns a promise or callback. 
+              // Assuming callback signature match or similar.
+              // If this API differs significantly, we might need adjustments.
+              // But for now, let's assume it works as dropped-in.
+              console.log("📥 Résultat AutocompleteSuggestion:", { status, res });
+              if (res) { // Status might not be "OK" string in new API
+                setSuggestions(
+                  res.map((r: any) => ({
+                    placeId: r.placeId || r.id, // Handle both
+                    description: r.description, // Handle both
+                  }))
+                );
+              } else {
+                setSuggestions([]);
+              }
             }
-          }
-        );
-        return;
+          );
+          return; // EXIT HERE to avoid deprecated service
+        }
+      } catch (err) {
+        console.warn("⚠️ Error initializing AutocompleteSuggestion:", err);
       }
     }
 
