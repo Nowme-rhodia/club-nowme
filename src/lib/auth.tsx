@@ -217,7 +217,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ]).catch(err => ({ data: null, error: err })),
 
         // Secure RPC Admin Check (Failsafe)
-        supabase.rpc('am_i_admin').then(res => res).catch(err => ({ data: false, error: err }))
+        Promise.race([
+          supabase.rpc('am_i_admin'),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('RPC query timeout')), timeoutDuration)
+          )
+        ]).then(res => {
+          // Promise.race returns the RPC response object { data, error } or throws
+          return res;
+        }).catch(err => {
+          console.warn('⚠️ RPC logic error or timeout:', err);
+          return { data: false, error: err };
+        })
       ]) as any;
 
       console.log('🔍 loadUserProfile - All queries completed');
