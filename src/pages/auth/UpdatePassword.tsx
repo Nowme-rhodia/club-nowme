@@ -268,7 +268,10 @@ export default function UpdatePassword() {
     } catch (err: any) {
       console.error('❌ UpdatePassword error:', err);
       // Detailed error message handling
-      if (err.message?.includes('invalid or has expired')) {
+      if (err?.name === 'AuthWeakPasswordError' || /weak/i.test(err?.message)) {
+        setError('Mot de passe trop faible ou compromis. Utilisez au moins 12 caractères, avec majuscules, minuscules, chiffres et symbole.');
+      }
+      else if (err.message?.includes('invalid or has expired')) {
         setError('Ce lien a expiré. Demandez-en un nouveau.');
         setIsValidToken(false);
       } else if (err.message?.includes('different from the old')) {
@@ -373,17 +376,19 @@ export default function UpdatePassword() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     required
+                    disabled={loading}
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 pr-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 pr-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
                     placeholder="Ton nouveau mot de passe"
                   />
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none disabled:opacity-50"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -400,9 +405,17 @@ export default function UpdatePassword() {
                     {/[A-Z]/.test(password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
                     1 majuscule
                   </div>
+                  <div className={`flex items-center text-xs ${/[a-z]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    {/[a-z]/.test(password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                    1 minuscule
+                  </div>
                   <div className={`flex items-center text-xs ${/[0-9]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
                     {/[0-9]/.test(password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
                     1 chiffre
+                  </div>
+                  <div className={`flex items-center text-xs ${/[^A-Za-z0-9]/.test(password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    {/[^A-Za-z0-9]/.test(password) ? <Check className="w-3 h-3 mr-1.5" /> : <div className="w-3 h-3 mr-1.5 rounded-full border border-gray-300" />}
+                    1 caractère spécial
                   </div>
                 </div>
               </div>
@@ -417,17 +430,19 @@ export default function UpdatePassword() {
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     required
+                    disabled={loading}
                     autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 pr-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                    className="block w-full rounded-lg border-gray-300 px-3 py-3 pl-10 pr-10 shadow-sm focus:border-primary focus:ring-primary sm:text-sm disabled:bg-gray-100 disabled:text-gray-500"
                     placeholder="Encore une fois pour être sûre"
                   />
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <button
                     type="button"
+                    disabled={loading}
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none disabled:opacity-50"
                   >
                     {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
