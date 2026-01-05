@@ -2,7 +2,7 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
-import { useLoadScript } from '@react-google-maps/api';
+import { useGoogleMapsScript } from './hooks/useGoogleMapsScript';
 import { AuthProvider } from './lib/auth';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -79,16 +79,9 @@ const Booking = React.lazy(() => import('./pages/Booking'));
 const BookingSuccess = React.lazy(() => import('./pages/BookingSuccess'));
 const CancellationFeedback = React.lazy(() => import('./pages/CancellationFeedback'));
 
-const libraries: ("places")[] = ["places"];
-
 // Wrapper component to load Google Maps Script globally
 function GoogleMapsLoader({ children }: { children: React.ReactNode }) {
-  const { isLoaded } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries,
-    language: "fr",
-    region: "FR"
-  });
+  const { isLoaded } = useGoogleMapsScript();
 
   if (!isLoaded) return <LoadingFallback />;
 

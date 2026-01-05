@@ -84,7 +84,15 @@ export default function SubmitOffer() {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('send-partner-submission', {
+      console.log('🚀 Sending partner submission to Edge Function...');
+
+      // Create a timeout promise (45 seconds)
+      const timeoutPromise = new Promise<{ data: null; error: any }>((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: Le serveur met trop de temps à répondre.')), 45000);
+      });
+
+      // Invoke Supabase Function
+      const invokePromise = supabase.functions.invoke('send-partner-submission', {
         body: {
           business: {
             name: formData.businessName,
@@ -92,7 +100,7 @@ export default function SubmitOffer() {
             contactName: formData.contactName,
             email: formData.email,
             phone: formData.phone,
-            address: formData.address, // [NEW] Send address
+            address: formData.address,
             message: formData.message,
             website: formData.website || undefined,
             instagram: formData.instagram || undefined,
@@ -101,28 +109,28 @@ export default function SubmitOffer() {
         },
       });
 
+      // Race them
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]) as any;
+
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('❌ Supabase invoke error:', error);
         throw error;
       }
 
-      console.log('✅ Full response:', { data, error });
-      console.log('✅ data type:', typeof data);
-      console.log('✅ data.success:', data?.success);
-      console.log('✅ !data?.success:', !data?.success);
+      console.log('✅ Edge Function response:', data);
 
       if (!data || data.success === false) {
         const errorMsg = data?.error || data?.debug?.message || "Erreur lors de l'envoi";
-        console.error('❌ Function returned error:', data);
+        console.error('❌ Function returned logical error:', data);
         throw new Error(errorMsg);
       }
 
       console.log('✅ Demande envoyée avec succès!');
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (error) {
-      console.error('Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue. Veuillez réessayer.';
+    } catch (error: any) {
+      console.error('❌ Submission Error:', error);
+      const errorMessage = error.message || 'Une erreur est survenue. Veuillez réessayer.';
       setErrors((prev) => ({
         ...prev,
         message: errorMessage,
