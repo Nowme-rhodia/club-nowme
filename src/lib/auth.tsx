@@ -383,7 +383,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // CRITICAL FIX: Handle 'type=recovery' manually if Supabase redirects to root
     if (window.location.hash && window.location.hash.includes('type=recovery')) {
       console.log('🔗 Recovery hash detected, forcing redirect to update-password');
-      navigate('/auth/update-password');
+      // Fix: Preserve the hash/search so the token is passed to the page
+      navigate({
+        pathname: '/auth/update-password',
+        hash: window.location.hash,
+        search: window.location.search
+      });
     }
 
     const init = async () => {
