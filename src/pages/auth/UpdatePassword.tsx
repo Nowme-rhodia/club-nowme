@@ -21,6 +21,7 @@ export default function UpdatePassword() {
   const [type, setType] = useState('');
   const [isValidToken, setIsValidToken] = useState(false);
   const [isSessionUpdate, setIsSessionUpdate] = useState(false); // New flag to track if updating via existing session
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -58,13 +59,9 @@ export default function UpdatePassword() {
         if (mounted) {
           console.log('✅ UpdatePassword - Valid recovery token detected');
 
-          // CRITICAL FIX: If user is logged in (e.g. as Admin), log them out first!
-          // Otherwise Supabase will update the Admin's password instead of the User from the token.
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          if (currentUser) {
-            console.warn('⚠️ Active session detected during recovery. Forcing sign out to avoid conflict.');
-            await supabase.auth.signOut();
-          }
+          // We can't easily get the email from the token directly without exchanging it, 
+          // but if we are here, we are about to exchange it or have it. 
+          // For now, valid token implies we proceed.
 
           setTokenHash(token);
           setType(tokenType || 'recovery');
@@ -79,10 +76,12 @@ export default function UpdatePassword() {
       if (user && mounted) {
         console.log('✅ UpdatePassword - User already authenticated, allowing update');
         setIsSessionUpdate(true);
+        setUserEmail(user.email || 'Utilisateur inconnu');
         setIsValidToken(true);
         setChecking(false);
         return;
       }
+
 
       // 3. Fallback: No token, no user
       if (mounted) {
@@ -230,6 +229,25 @@ export default function UpdatePassword() {
         <img src="https://i.imgur.com/or3q8gE.png" alt="Logo Nowme" className="mx-auto h-16 w-auto" />
         <h2 className="mt-6 text-2xl font-bold text-gray-900">Nouveau mot de passe</h2>
         <p className="mt-2 text-sm text-gray-600">Choisissez un mot de passe sécurisé pour continuer à kiffer 🌈</p>
+
+        {/* Identity Confirmation */}
+        {userEmail && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 inline-block text-left w-full">
+            <p className="text-xs text-blue-600 uppercase font-semibold tracking-wider mb-1">Compte concerné</p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-blue-900">{userEmail}</span>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.href = '/auth/signin';
+                }}
+                className="text-xs text-blue-500 hover:text-blue-700 underline ml-2"
+              >
+                Ce n'est pas vous ?
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
