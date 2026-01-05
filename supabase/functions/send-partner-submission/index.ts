@@ -120,7 +120,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // 3️⃣ Emails & Notifications
+    // 3️⃣ Emails & Notifications (Direct Send via Resend)
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      logger.error("❌ Missing RESEND_API_KEY");
+    }
 
     // Fetch admins for notification
     const { data: admins, error: adminError } = await supabase
@@ -165,45 +169,88 @@ Deno.serve(async (req: Request): Promise<Response> => {
       <p style="margin-top:20px;">Cordialement,<br/>💜 L’équipe Nowme Club</p>
     `;
 
-    // Prepare email objects
+    // Helper to send email with detailed result
+    const sendDirectEmail = async (to: string, subject: string, html: string) => {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`,
+          },
+          body: JSON.stringify({
+            from: 'Nowme Club <contact@nowme.fr>',
+            to,
+            subject,
+            html,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          console.error(`Failed to send email to ${to}:`, errData);
+          return { success: false, error: errData };
+        }
+        return { success: true, error: null };
+      } catch (e: any) {
+        console.error(`Exception sending email to ${to}:`, e);
+        return { success: false, error: e.message };
+      }
+    };
+
+    // Helper to sleep (prevent rate limiting)
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
     const emailInserts = [];
 
-    // 1. Admin emails (one per admin to be safe)
+    // 1. Send to Admins
     for (const adminEmail of recipientEmails) {
       if (adminEmail) {
+        const res = await sendDirectEmail(adminEmail, "Nouvelle demande de partenariat", adminHtml);
         emailInserts.push({
           to_address: adminEmail,
           subject: "Nouvelle demande de partenariat",
           content: adminHtml,
-          status: "pending",
+          status: res.success ? 'sent' : 'failed',
+          sent_at: res.success ? new Date().toISOString() : null
         });
+        // Wait 1s between emails to respect Resend Test Limit (2 req/sec)
+        await sleep(1000);
       }
     }
 
-    // 2. Partner confirmation email
+    // 2. Send to Partner
+    const partnerRes = await sendDirectEmail(business.email, "Bienvenue chez Nowme ! Votre demande est en cours d'examen ✨", confirmHtml);
     emailInserts.push({
       to_address: business.email,
       subject: "Bienvenue chez Nowme ! Votre demande est en cours d'examen ✨",
       content: confirmHtml,
-      status: "pending",
+      status: partnerRes.success ? 'sent' : 'failed',
+      sent_at: partnerRes.success ? new Date().toISOString() : null
     });
 
+    // Write history to DB
     await supabase.from("emails").insert(emailInserts);
 
-    // ✅ Réponse finale
+    // ✅ Réponse finale avec debug email
     return new Response(
       JSON.stringify({
         success: true,
         partnerId: partner.id,
         offerId,
-        message: "✅ Partenaire et offre enregistrés, emails en attente d’envoi",
+        message: "✅ Partenaire enregistré.",
+        emailDebug: {
+          partnerEmail: business.email,
+          sent: partnerRes.success,
+          error: partnerRes.error
+        }
       }),
       { status: 200, headers: corsHeaders }
     );
   } catch (err: any) {
     logger.error("❌ Erreur globale:", err);
     return new Response(
-      JSON.stringify({ success: false, error: "Erreur inattendue" }),
+      JSON.stringify({ success: false, error: "Erreur inattendue", details: err.message }),
       { status: 500, headers: corsHeaders }
     );
   }

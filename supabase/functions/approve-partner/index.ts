@@ -229,6 +229,8 @@ serve(async (req) => {
     }
 
     // Send email directly via Resend to avoid queue issues
+    let emailResult = { success: false, error: null };
+
     try {
       const resendApiKey = Deno.env.get('RESEND_API_KEY')
       if (!resendApiKey) {
@@ -252,32 +254,36 @@ serve(async (req) => {
       if (!res.ok) {
         const errorData = await res.json()
         console.error('Resend API Error:', errorData)
-        // Fallback: Queue email if direct send fails? 
-        // For now, let's just log it. If Resend is down/quota'd, queue won't help much either given it uses same key.
+        emailResult = { success: false, error: errorData }
       } else {
         console.log('✅ Approval email sent directly to', partner.contact_email)
+        emailResult = { success: true, error: null }
       }
-    } catch (emailErr) {
+    } catch (emailErr: any) {
       console.error('Failed to send approval email:', emailErr)
+      emailResult = { success: false, error: emailErr.message }
     }
 
     // Keep the email record for history/logging purposes, but mark as sent?
-    // Or just skip inserting into 'emails' to avoid duplicates if queue picks it up.
-    // Let's insert as 'sent' for log history.
     await supabaseAdmin
       .from('emails')
       .insert({
         to_address: partner.contact_email,
         subject: 'Félicitations ! Votre espace Partenaire Nowme est prêt 🔑',
         content: emailContent,
-        status: 'sent', // Mark as sent immediately
-        sent_at: new Date().toISOString()
+        status: emailResult.success ? 'sent' : 'failed',
+        sent_at: emailResult.success ? new Date().toISOString() : null
       })
 
     return new Response(
       JSON.stringify({
         success: true,
-        partner: updatedPartner
+        partner: updatedPartner,
+        emailDebug: {
+          partnerEmail: partner.contact_email,
+          sent: emailResult.success,
+          error: emailResult.error
+        }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
