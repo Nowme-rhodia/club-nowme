@@ -13,6 +13,8 @@ type BusinessPayload = {
   website?: string;
   siret?: string;
   address?: string;
+  facebook?: string;
+  instagram?: string;
   termsAccepted?: boolean;
 };
 
@@ -58,11 +60,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         contact_email: business.email,
         phone: business.phone,
         description: business.message, // Utilise 'description' au lieu de 'message'
-        // Champs optionnels pour compatibilité
+
+        // Champs optionnels
         website: business.website ?? null,
         siret: business.siret ?? null,
-
         address: business.address ?? null,
+        facebook: business.facebook ?? null,
+        instagram: business.instagram ?? null,
+
         terms_accepted_at: business.termsAccepted ? new Date() : null,
         status: "pending",
       })
@@ -147,6 +152,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       <p><strong>Email :</strong> ${business.email}</p>
       ${business.phone ? `<p><strong>Téléphone :</strong> ${business.phone}</p>` : ""}
       ${business.website ? `<p><strong>Site web :</strong> ${business.website}</p>` : ""}
+      ${business.facebook ? `<p><strong>Facebook :</strong> <a href="${business.facebook}">${business.facebook}</a></p>` : ""}
+      ${business.instagram ? `<p><strong>Instagram :</strong> <a href="${business.instagram}">${business.instagram}</a></p>` : ""}
       ${business.siret ? `<p><strong>SIRET :</strong> ${business.siret}</p>` : ""}
       ${business.address ? `<p><strong>Adresse :</strong> ${business.address}</p>` : ""}
       ${business.message ? `<p><strong>Message :</strong><br/>${business.message.replace(/\n/g, "<br/>")}</p>` : ""}

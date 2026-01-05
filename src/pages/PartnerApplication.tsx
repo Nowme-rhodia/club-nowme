@@ -11,6 +11,8 @@ interface FormData {
   email: string;
   phone: string;
   address: string;
+  facebook?: string;
+  instagram?: string;
   message: string;
 }
 
@@ -21,6 +23,8 @@ const [formData, setFormData] = useState<FormData>({
   email: '',
   phone: '',
   address: '',
+  facebook: '',
+  instagram: '',
   message: '',
 });
 const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -45,6 +49,16 @@ const validateForm = (): boolean => {
   if (!formData.address.trim()) {
     newErrors.address = "L'adresse légale est requise";
   }
+
+  // Social Media Validation (URL format)
+  const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+  if (formData.facebook && !urlRegex.test(formData.facebook)) {
+    newErrors.facebook = "Le lien Facebook doit être une URL valide (ex: https://facebook.com/...)";
+  }
+  if (formData.instagram && !urlRegex.test(formData.instagram)) {
+    newErrors.instagram = "Le lien Instagram doit être une URL valide (ex: https://instagram.com/...)";
+  }
+
   if (!formData.message.trim() || formData.message.trim().length < 20) {
     newErrors.message = 'Veuillez décrire votre activité (minimum 20 caractères)';
   }
@@ -78,7 +92,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           email: formData.email,
           phone: formData.phone,
           address: formData.address,
-          address: formData.address,
+          facebook: formData.facebook,
+          instagram: formData.instagram,
           message: formData.message,
           termsAccepted: true,
         },
@@ -281,6 +296,50 @@ return (
               <p className="mt-1 text-sm text-red-600 flex items-center">
                 <AlertCircle className="w-4 h-4 mr-1" />
                 {errors.phone}
+              </p>
+            )}
+          </div>
+
+          {/* Facebook */}
+          <div>
+            <label htmlFor="facebook" className="block text-sm font-medium text-gray-700 mb-1">
+              Lien Facebook <span className="text-gray-400 font-normal">(Optionnel)</span>
+            </label>
+            <input
+              type="url"
+              id="facebook"
+              name="facebook"
+              value={formData.facebook || ''}
+              onChange={handleChange}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.facebook ? 'border-red-500' : 'border-gray-300'}`}
+              placeholder="https://facebook.com/votrepage"
+            />
+            {errors.facebook && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.facebook}
+              </p>
+            )}
+          </div>
+
+          {/* Instagram */}
+          <div>
+            <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
+              Lien Instagram <span className="text-gray-400 font-normal">(Optionnel)</span>
+            </label>
+            <input
+              type="url"
+              id="instagram"
+              name="instagram"
+              value={formData.instagram || ''}
+              onChange={handleChange}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.instagram ? 'border-red-500' : 'border-gray-300'}`}
+              placeholder="https://instagram.com/votrecompte"
+            />
+            {errors.instagram && (
+              <p className="mt-1 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.instagram}
               </p>
             )}
           </div>

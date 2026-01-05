@@ -57,13 +57,19 @@ export default function UpdatePassword() {
       if (token && (tokenType === 'recovery' || !tokenType)) {
         if (mounted) {
           console.log('✅ UpdatePassword - Valid recovery token detected');
+
+          // CRITICAL FIX: If user is logged in (e.g. as Admin), log them out first!
+          // Otherwise Supabase will update the Admin's password instead of the User from the token.
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          if (currentUser) {
+            console.warn('⚠️ Active session detected during recovery. Forcing sign out to avoid conflict.');
+            await supabase.auth.signOut();
+          }
+
           setTokenHash(token);
           setType(tokenType || 'recovery');
           setIsValidToken(true);
           setChecking(false);
-
-          // Optional: If logged in as someone else, we might want to warn or sign out?
-          // For now, we just rely on verifyOtp to switch session or validate token.
         }
         return;
       }
