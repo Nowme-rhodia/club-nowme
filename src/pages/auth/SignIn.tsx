@@ -17,6 +17,11 @@ export default function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const isMounted = React.useRef(true);
+
+  useEffect(() => {
+    return () => { isMounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (location.state?.message) {
@@ -43,38 +48,35 @@ export default function SignIn() {
         throw new Error(signInError.message);
       }
 
-      // Étape 2: Récupérer l'utilisateur immédiatement après la connexion
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Étape 2: Récupérer la session immédiatement après la connexion
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (userError) {
-        console.error('Erreur lors de la récupération de l\'utilisateur:', userError);
-        throw new Error("Impossible de récupérer l'utilisateur connecté");
+      if (sessionError || !session?.user) {
+        console.error('Erreur session:', sessionError);
+        throw new Error("Session introuvable après connexion");
       }
 
-      if (!user) {
-        console.error('Utilisateur non trouvé après connexion');
-        throw new Error("Utilisateur non trouvé après connexion");
-      }
-
+      const user = session.user;
       console.log('Utilisateur connecté avec succès:', user.id);
 
       // Étape 3: Vérifier le profil utilisateur (pour admin, partenaire, ou abonné)
+      // Optimisation: maybeSingle + sélection ciblée des colonnes
       const { data: userDataObtained, error: userDataError } = await supabase
         .from('user_profiles')
-        .select('*')
+        .select('is_admin, partner_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       const userData = userDataObtained as any;
 
-      if (userDataError && userDataError.code !== 'PGRST116') {
-        console.error('Erreur lors de la récupération du profil utilisateur:', userDataError);
+      if (userDataError) {
+        console.warn('Note: Erreur non-bloquante récupération profil:', userDataError.message);
       }
 
       // Étape 4: Rediriger en fonction du profil
       // Priorité 1: Redirection explicite via 'next' ou 'redirectTo' param
       const nextParam = searchParams.get('next') || searchParams.get('redirectTo');
-      if (nextParam) {
+      if (nextParam && nextParam.startsWith('/')) {
         console.log('Redirection demandée via URL vers:', nextParam);
         navigate(nextParam);
         return;
@@ -117,7 +119,7 @@ export default function SignIn() {
       console.error('Erreur complète:', err);
       setError(translateError(err));
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   };
 

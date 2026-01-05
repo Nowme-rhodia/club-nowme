@@ -40,19 +40,29 @@ export default function UpdatePassword() {
 
     const checkState = async () => {
       // 1. Check Params
-      const query = new URLSearchParams(window.location.search);
-      const hash = new URLSearchParams(window.location.hash.includes('#') ? window.location.hash.split('#')[1] : window.location.hash);
+      // Robust hash parsing as recommended
+      const url = new URL(window.location.href);
+      const query = url.searchParams;
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
 
-      // Supporte les deux formats (Implicit & PKCE)
-      const token = query.get('token_hash') || hash.get('token_hash') || query.get('access_token') || hash.get('access_token');
-      const type = query.get('type') || hash.get('type');
+      const tokenHashParam = query.get('token_hash') || hashParams.get('token_hash');
+      const accessTokenParam = query.get('access_token') || hashParams.get('access_token');
+      const rawType = query.get('type') || hashParams.get('type');
 
-      console.log('🔍 UpdatePassword Check:', { token: !!token, type });
+      // Strict type validation
+      const resolvedType = rawType === 'recovery' ? 'recovery' : (tokenHashParam ? 'recovery' : '');
 
-      if (token) {
+      console.log('🔍 UpdatePassword Check:', { tokenHashParam: !!tokenHashParam, accessTokenParam: !!accessTokenParam, resolvedType });
+
+      if (tokenHashParam) {
         if (mounted) {
-          setTokenHash(token);
-          setType(type || 'recovery');
+          setTokenHash(tokenHashParam);
+          setType(resolvedType);
+          setIsValidToken(true);
+        }
+      } else if (accessTokenParam) {
+        // Implicit flow already handled by Supabase client usually, but good to note
+        if (mounted) {
           setIsValidToken(true);
         }
       }
@@ -70,7 +80,7 @@ export default function UpdatePassword() {
 
       // 3. Fallback: If we found a token but no session yet, we wait for onAuthStateChange or user interaction
       // If we found NOTHING (no token, no session), we error out immediately
-      if (!token && !user) {
+      if (!tokenHashParam && !accessTokenParam && !user) {
         if (mounted) {
           setError('Lien invalide ou manquant.');
           setChecking(false);
@@ -88,8 +98,14 @@ export default function UpdatePassword() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🔔 Auth Event:', event);
       if (mounted) {
-        if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-          console.log('✅ Session recovered via event');
+        const isRecovery = event === 'PASSWORD_RECOVERY';
+        const isSignedIn = event === 'SIGNED_IN' || event === 'INITIAL_SESSION';
+
+        // If we get a session AND we have a recovery type in URL, we assume it worked
+        const hasRecoveryKey = window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery');
+
+        if (isRecovery || (isSignedIn && session && (hasRecoveryKey || isSessionUpdate))) {
+          console.log('✅ Session recovered via event:', event);
           setIsSessionUpdate(true);
           setIsValidToken(true);
           setChecking(false);
@@ -135,21 +151,39 @@ export default function UpdatePassword() {
     setLoading(true);
 
     try {
-      // 1. If we have a PKCE token, verify it first
-      if (tokenHash && type && !isSessionUpdate) {
+      // 1. If we have a PKCE token, verify it first ONLY if not already in a session
+      if (tokenHash && type === 'recovery' && !isSessionUpdate) {
         console.log('🔐 Verifying OTP token...', { type, hashLength: tokenHash.length });
+
+        // Extract email if available to strengthen verification
+        const url = new URL(window.location.href);
+        const emailParam = url.searchParams.get('email') || new URLSearchParams(url.hash.replace(/^#/, '')).get('email') || undefined;
+
         const { error: verifyError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: type as any,
+          type: 'recovery',
+          email: emailParam
         });
 
         if (verifyError) {
           console.error('❌ verifyOtp failed:', verifyError);
           throw verifyError;
         }
+
+        // Clean URL immediately after verification to prevent reuse/confusion
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
       }
 
-      // 2. Update the password
+      // 2. Ensure we have a session before updateUser
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Votre session a expiré. Cliquez de nouveau sur le lien reçu par email.');
+        setLoading(false);
+        return;
+      }
+
+      // 3. Update the password
       console.log('💾 Updating password...');
       const { error: passwordError } = await supabase.auth.updateUser({
         password: password
@@ -162,6 +196,10 @@ export default function UpdatePassword() {
           console.log('⚠️ User used same password. Treating as success.');
           toast.success('Mot de passe confirmé (identique à l\'ancien) !');
           setSuccess(true);
+
+          // Force sign out to ensure clean state
+          try { await supabase.auth.signOut(); } catch (_) { }
+
           setTimeout(() => {
             navigate('/auth/signin', {
               state: { message: 'Vous pouvez vous connecter 🚀' },
@@ -173,6 +211,10 @@ export default function UpdatePassword() {
       }
 
       console.log('✅ Password updated successfully');
+
+      // Force sign out to ensure clean state
+      try { await supabase.auth.signOut(); } catch (_) { }
+
       setSuccess(true);
       toast.success('Mot de passe mis à jour avec succès 🎉');
 

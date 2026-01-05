@@ -217,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ]).catch(err => ({ data: null, error: err })),
 
         // Secure RPC Admin Check (Failsafe)
-        supabase.rpc('am_i_admin').catch(err => ({ data: false, error: err }))
+        supabase.rpc('am_i_admin').then(res => res).catch(err => ({ data: false, error: err }))
       ]) as any;
 
       console.log('🔍 loadUserProfile - All queries completed');
