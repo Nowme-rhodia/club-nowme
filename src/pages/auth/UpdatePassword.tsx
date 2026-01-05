@@ -58,17 +58,19 @@ export default function UpdatePassword() {
         if (mounted) {
           setTokenHash(tokenHashParam);
           setType(resolvedType);
-          setIsValidToken(true);
+          // Don't set isValidToken yet - wait for verifyOtp or session
         }
       } else if (accessTokenParam) {
         // Implicit flow already handled by Supabase client usually, but good to note
         if (mounted) {
-          setIsValidToken(true);
+          // Don't set isValidToken yet - wait for session
         }
       }
 
       // 2. Check Session (Supabase sometimes auto-logs in via the link)
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('getUser()', { hasUser: !!user });
+
       if (user && mounted) {
         console.log('✅ User already authenticated via link/session');
         setIsSessionUpdate(true);
@@ -78,16 +80,45 @@ export default function UpdatePassword() {
         return;
       }
 
-      // 3. Fallback: If we found a token but no session yet, we wait for onAuthStateChange or user interaction
-      // If we found NOTHING (no token, no session), we error out immediately
-      if (!tokenHashParam && !accessTokenParam && !user) {
+      // 3. Fallback: If we found a token but no session yet, attempt verification immediately
+      // This prevents waiting for an event that might not come or waiting for the user to type password first.
+      if (!user && tokenHashParam) {
+        console.log('⚡ Attempting immediate verification of token...');
+        try {
+          const emailParam = query.get('email') || hashParams.get('email') || undefined;
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHashParam,
+            type: 'recovery',
+            email: emailParam,
+          });
+
+          if (verifyError) {
+            console.warn('❌ Immediate verification failed:', verifyError.message);
+            if (mounted) {
+              // Don't error out hard yet, maybe the user wants to retry?
+              // But effectively the token is bad.
+              setError('Ce lien semble invalide ou a expiré.');
+              setChecking(false);
+            }
+          } else {
+            console.log('✅ Immediate verification success');
+            if (mounted) {
+              setIsValidToken(true);
+              // Session should arrive via onAuthStateChange, but we can stop checking UI
+              setChecking(false);
+            }
+          }
+        } catch (err) {
+          console.error('Unexpected error in immediate verify:', err);
+          if (mounted) setChecking(false);
+        }
+      } else if (!tokenHashParam && !accessTokenParam && !user) {
         if (mounted) {
           setError('Lien invalide ou manquant.');
           setChecking(false);
         }
       } else {
-        // We have a token, we stop checking UI and let the user type their password
-        // The actual verification happens on Submit
+        // Valid case (maybe implicit access token or user found above), stop checking
         if (mounted) setChecking(false);
       }
     };
@@ -96,20 +127,24 @@ export default function UpdatePassword() {
 
     // Listen to Supabase State
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 Auth Event:', event);
+      console.log('🔔 Auth Event:', event, { hasSession: !!session, hasUser: !!session?.user });
+
       if (mounted) {
-        const isRecovery = event === 'PASSWORD_RECOVERY';
-        const isSignedIn = event === 'SIGNED_IN' || event === 'INITIAL_SESSION';
-
-        // If we get a session AND we have a recovery type in URL, we assume it worked
-        const hasRecoveryKey = window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery');
-
-        if (isRecovery || (isSignedIn && session && (hasRecoveryKey || isSessionUpdate))) {
-          console.log('✅ Session recovered via event:', event);
+        if (session?.user) {
+          console.log('✅ Session confirmed via event');
           setIsSessionUpdate(true);
           setIsValidToken(true);
           setChecking(false);
           if (session?.user?.email) setUserEmail(session.user.email);
+
+          // Clean URL immediately if consistent
+          if (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')) {
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
+        }
+        else if (event === 'SIGNED_OUT') {
+          // Explicitly signed out
         }
       }
     });
@@ -173,6 +208,12 @@ export default function UpdatePassword() {
         // Clean URL immediately after verification to prevent reuse/confusion
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
+
+        // After successful OTP, we usually get a session. Let's wait a tiny bit or re-check
+        const { data: { session: newSession } } = await supabase.auth.getSession();
+        if (newSession) {
+          setIsSessionUpdate(true);
+        }
       }
 
       // 2. Ensure we have a session before updateUser
