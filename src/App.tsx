@@ -14,6 +14,7 @@ import { LoadingFallback } from './components/LoadingFallback';
 // Lazy load pages
 const Home = React.lazy(() => import('./pages/Home'));
 const Guide = React.lazy(() => import('./pages/Guide').then(module => ({ default: module.Guide })));
+const PublicGuide = React.lazy(() => import('./pages/PublicGuide').then(module => ({ default: module.PublicGuide })));
 const Categories = React.lazy(() => import('./pages/Categories'));
 const TousLesKiffs = React.lazy(() => import('./pages/TousLesKiffs'));
 const OfferPage = React.lazy(() => import('./pages/OfferPage'));
@@ -100,7 +101,12 @@ function App() {
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Home />} />
-                  <Route path="/guide" element={<Guide />} />
+                  <Route path="/guide" element={
+                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <Guide />
+                    </PrivateRoute>
+                  } />
+                  <Route path="/guidenonabonnee" element={<PublicGuide />} />
                   <Route path="/categories" element={
                     <GoogleMapsLoader>
                       <Categories />

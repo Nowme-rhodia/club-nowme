@@ -30,9 +30,10 @@ import {
 import { SEO } from '../components/SEO';
 import { submitRegionRequest } from '../lib/regions';
 import toast from 'react-hot-toast';
-import { useAuth } from '../lib/auth'; // Imported from original Subscription.tsx
-// Importing pricing data to keep source of truth, even if used physically in the layout
+import { useAuth } from '../lib/auth';
 import { PRICING_TIERS, YEARLY_SAVINGS } from '../data/pricing';
+import { EventGallery } from '../components/EventGallery';
+import { VideoTestimonials } from '../components/VideoTestimonials';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -42,14 +43,12 @@ const fadeInUp = {
 };
 
 export default function Subscription() {
-  // Logic from original Subscription.tsx
   const { isAuthenticated, isSubscriber } = useAuth();
 
   const [regionForm, setRegionForm] = useState({ email: '', region: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [scrollY, setScrollY] = useState(0);
-  const [selectedTestimonial, setSelectedTestimonial] = useState<number | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -75,7 +74,6 @@ export default function Subscription() {
     }
   };
 
-  // Helper from original Subscription.tsx
   const getActionLink = (plan: 'monthly' | 'yearly' = 'monthly') => {
     if (isSubscriber) {
       return '/account';
@@ -110,33 +108,6 @@ export default function Subscription() {
     { value: 'autre', label: 'Autre région' },
   ];
 
-  const testimonials = [
-    {
-      name: "Sophie, 32 ans",
-      role: "Maman entrepreneur",
-      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
-      quote: "Grâce à Nowme, j'ai découvert un spa incroyable à -40% et rencontré 3 super copines lors de l'apéro mensuel ! Maintenant on se fait des sorties ensemble chaque semaine.",
-      highlight: "3 nouvelles amitiés + 150€ économisés",
-      fullStory: "J'étais nouvelle sur Paris et je ne connaissais personne. En 3 mois avec Nowme, j'ai trouvé ma tribu ! Les apéros mensuels sont géniaux pour rencontrer du monde, et les réductions m'ont fait découvrir des endroits que je n'aurais jamais osé essayer. La box du dernier trimestre était dingue avec des produits locaux que j'adore maintenant."
-    },
-    {
-      name: "Emma, 28 ans",
-      role: "Cadre en reconversion",
-      image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150",
-      quote: "Les événements Nowme sont toujours au top ! Atelier poterie, dégustation de vins, soirée salsa... J'ai enfin un agenda qui me fait vibrer !",
-      highlight: "Agenda qui pétille",
-      fullStory: "Avant Nowme, mes weekends c'était Netflix et canapé. Maintenant j'ai découvert la poterie (ma nouvelle passion !), j'ai appris la salsa, et je teste un nouveau resto chaque mois grâce aux réductions. Ma vie sociale a explosé et je me sens tellement plus épanouie !"
-    },
-    {
-      name: "Julie, 35 ans",
-      role: "Maman active",
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150",
-      quote: "12,99€ pour tester, puis j'ai vu la valeur : 39,99€ c'est donné pour tout ça ! Les séjours entre filles, un rêve devenu réalité.",
-      highlight: "Séjours de rêve",
-      fullStory: "Le premier séjour Nowme en Normandie était magique ! 3 jours entre filles, activités incluses, hébergement de qualité, et tout ça à un prix défiant toute concurrence. J'ai rencontré des femmes extraordinaires de toute la France. On a créé un groupe WhatsApp et on se revoit régulièrement !"
-    }
-  ];
-
   const faqItems = [
     {
       question: "Pourquoi 12,99€ puis 39,99€ ?",
@@ -164,81 +135,11 @@ export default function Subscription() {
     }
   ];
 
-  const TestimonialModal = ({ testimonial, onClose }: { testimonial: typeof testimonials[0]; onClose: () => void }) => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="relative">
-          <div className="bg-gradient-to-r from-primary to-secondary p-8 text-white">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-4">
-              <img
-                src={testimonial.image}
-                alt={testimonial.name}
-                className="w-20 h-20 rounded-full object-cover border-4 border-white/20"
-              />
-              <div>
-                <h3 className="text-2xl font-bold">{testimonial.name}</h3>
-                <p className="text-white/90">{testimonial.role}</p>
-                <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-semibold mt-2">
-                  {testimonial.highlight}
-                </span>
-              </div>
-            </div>
-
-            {/* Early CTA */}
-            <div className="mt-8 flex justify-center md:justify-start gap-4">
-              <button
-                onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-primary text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-              >
-                Je rejoins le club
-              </button>
-            </div>
-          </div>
-
-          <div className="p-8">
-            <div className="flex items-center gap-1 mb-4">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-              ))}
-            </div>
-            <p className="text-gray-700 text-lg leading-relaxed mb-6">
-              "{testimonial.fullStory}"
-            </p>
-            <Link
-              to={getActionLink('monthly')}
-              className="block w-full text-center px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-dark transition-colors"
-            >
-              {getActionText('Moi aussi je veux cette vie ! (12,99€)')}
-            </Link>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Sticky Top Banner */}
       <div className="sticky top-0 z-50 bg-red-50 border-b border-red-100 text-red-800 text-center py-4 px-6 text-base md:text-lg font-bold shadow-sm">
-        📍 ATTENTION : Disponible uniquement en Île-de-France pour l'instant (bientôt chez toi !)
+        📍 ATTENTION : Disponible uniquement en Île-de-France pour l'instant (bientôt chez toi ! Dis-nous où tu veux qu'on soit en bas de page)
       </div>
       <SEO
         title="Sorties entre filles & Club Privé - Nowme"
@@ -360,6 +261,9 @@ export default function Subscription() {
           </div>
         </div>
       </motion.section>
+
+      {/* Event Gallery */}
+      <EventGallery />
 
       {/* Section "Avant/Après" - Design en zigzag */}
       <motion.section className="py-20 bg-gray-50" {...fadeInUp}>
@@ -652,61 +556,8 @@ export default function Subscription() {
         </div>
       </motion.section>
 
-      {/* Témoignages - Mosaïque cliquable (MOVED UP) */}
-      <motion.section className="py-20 bg-gradient-to-br from-primary/5 to-secondary/5" {...fadeInUp}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Elles ont osé franchir le pas...
-            </motion.h2>
-            <motion.p className="text-xl text-gray-600">
-              Et maintenant, elles kiffent leur vie ! Clique pour lire leur histoire complète.
-            </motion.p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <motion.div
-                key={index}
-                className={`
-                  bg-white p-6 rounded-2xl shadow-lg cursor-pointer relative
-                  ${index === 1 ? 'md:transform md:translate-y-8' : ''}
-                  ${index === 2 ? 'lg:transform lg:-translate-y-4' : ''}
-                `}
-                {...fadeInUp}
-                transition={{ delay: index * 0.2 }}
-                whileHover={{ scale: 1.02, rotate: index % 2 === 0 ? 1 : -1 }}
-                onClick={() => setSelectedTestimonial(index)}
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-md"
-                  />
-                  <div>
-                    <h3 className="font-bold text-gray-900">{testimonial.name}</h3>
-                    <p className="text-sm text-gray-600">{testimonial.role}</p>
-                    <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full mt-1">
-                      {testimonial.highlight}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-700 italic leading-relaxed">"{testimonial.quote}"</p>
-                <div className="absolute top-4 right-4 text-4xl text-primary/20">"</div>
-                <div className="mt-4 text-center">
-                  <span className="text-primary text-sm font-medium">Cliquer pour lire l'histoire complète →</span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
+      {/* Video Testimonials */}
+      <VideoTestimonials />
 
       {/* Section "Founding Member" (New) */}
       <motion.section className="py-16 bg-gradient-to-r from-pink-50 to-white" {...fadeInUp}>
@@ -861,10 +712,10 @@ export default function Subscription() {
 
 
         </div>
-      </motion.section>
+      </motion.section >
 
       {/* FAQ Section */}
-      <motion.section className="py-20 bg-gray-50" {...fadeInUp}>
+      < motion.section className="py-20 bg-gray-50" {...fadeInUp}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <motion.h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
@@ -905,7 +756,7 @@ export default function Subscription() {
             ))}
           </div>
         </div>
-      </motion.section>
+      </motion.section >
 
 
 
@@ -990,15 +841,6 @@ export default function Subscription() {
         </div>
       </motion.section>
 
-      {/* Testimonial Modal */}
-      <AnimatePresence>
-        {selectedTestimonial !== null && (
-          <TestimonialModal
-            testimonial={testimonials[selectedTestimonial]}
-            onClose={() => setSelectedTestimonial(null)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

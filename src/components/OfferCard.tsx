@@ -103,8 +103,8 @@ export function OfferCard({
       <div className="p-4 flex flex-col flex-1">
         <div className="mb-2">
           {partnerName && (
-            <div className={`text-xs font-semibold text-primary uppercase tracking-wide mb-1 transition-all duration-300 ${!hasAccess ? 'filter blur-[5px] select-none opacity-50 contrast-125' : ''}`}>
-              {hasAccess ? partnerName : 'Partenaire Secret A'}
+            <div className="text-xs font-semibold text-primary uppercase tracking-wide mb-1 transition-all duration-300">
+              {partnerName}
             </div>
           )}
           <h3 className="font-bold text-lg text-gray-900 line-clamp-2 leading-tight">{title}</h3>
@@ -114,7 +114,7 @@ export function OfferCard({
 
         <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
           <MapPin className="w-4 h-4 shrink-0" />
-          <span className={`truncate ${!hasAccess ? 'filter blur-[5px] select-none opacity-40' : ''}`}>
+          <span className="truncate">
             {displayLocation}
           </span>
         </div>
@@ -125,7 +125,7 @@ export function OfferCard({
               {category}
             </div>
 
-            <div className={`flex flex-col gap-1 items-baseline ${!hasAccess ? 'filter blur-[5px] select-none opacity-50' : ''}`}>
+            <div className="flex flex-col gap-1 items-baseline">
               {/* Badges container */}
               <div className="flex flex-wrap gap-2 mb-2">
                 {/* Theme Badge */}
@@ -153,14 +153,23 @@ export function OfferCard({
                   {promoConditions}
                 </span>
               ) : promoPrice ? (
-                <>
-                  <span className="text-xl font-bold text-primary">
-                    {promoPrice}€
-                  </span>
-                  <span className="text-sm text-gray-400 line-through">
-                    {price}€
-                  </span>
-                </>
+                <div className="flex flex-col items-start gap-0.5">
+                  {/* Prix Public */}
+                  <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
+                    <span>Public :</span>
+                    <span className="line-through decoration-red-400 decoration-2 font-medium">{price}€</span>
+                  </div>
+
+                  {/* Prix Club */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs sm:text-sm bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                      Club
+                    </span>
+                    <span className="text-xl sm:text-2xl font-black text-primary drop-shadow-sm">
+                      {promoPrice}€
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <span className="text-xl font-bold text-gray-900">{price}€</span>
               )}
