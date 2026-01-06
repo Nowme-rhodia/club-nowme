@@ -85,6 +85,12 @@ export default function AdminLayout() {
       icon: CreditCard,
       current: location.pathname === '/admin/payouts'
     },
+    {
+      name: 'Remboursements',
+      href: '/admin/refunds',
+      icon: Clock,
+      current: location.pathname === '/admin/refunds'
+    },
     // ➕ NOUVEAU : Communauté
     {
       name: 'Communauté',

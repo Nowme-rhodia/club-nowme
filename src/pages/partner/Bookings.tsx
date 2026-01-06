@@ -75,7 +75,7 @@ export default function PartnerBookings() {
       const { data: profileData } = await supabase
         .from('user_profiles')
         .select('partner_id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id || '')
         .single();
 
       if (!profileData?.partner_id) {
@@ -92,11 +92,12 @@ export default function PartnerBookings() {
             source,
             amount,
             currency,
-            user:user_profiles!user_id(first_name, last_name, email, phone, subscription_status, is_ambassador),
+            user:user_profiles!bookings_user_id_fkey_profiles(first_name, last_name, email, phone, subscription_status, is_ambassador),
             offer:offers(title),
             variant:offer_variants(name)
         `)
-        .eq('partner_id', profileData.partner_id)
+        // Cast profileData to any to avoid 'never' type error
+        .eq('partner_id', (profileData as any).partner_id)
         .order('booking_date', { ascending: false });
 
       if (error) throw error;

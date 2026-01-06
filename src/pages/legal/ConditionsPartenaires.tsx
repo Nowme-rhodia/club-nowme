@@ -11,48 +11,103 @@ export default function ConditionsPartenaires() {
 
                 <div className="prose prose-pink max-w-none text-gray-600">
                     <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 text-sm">
-                        <strong>Objet :</strong> Ce document régit les relations entre NOWME SAS ("Le Mandataire") et le Partenaire ("Le Mandant") souhaitant proposer ses offres sur la plateforme Club Nowme.
+                        <strong>Objet :</strong> Les présentes conditions régissent la relation contractuelle entre <strong>NOWME SAS</strong> (ci-après "la Plateforme" ou "le Mandataire"), société par actions simplifiée au capital de 1 000 euros, immatriculée au RCS de Nanterre sous le numéro 933 108 011, et tout professionnel (ci-après "le Partenaire" ou "le Mandant") proposant ses services via la plateforme Club Nowme.
                     </div>
 
+                    <p className="text-sm text-gray-500 mb-8 italic">Dernière mise à jour : 05 Janvier 2026</p>
+
                     <section className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">1. Mandat de Facturation et d'Encaissement</h2>
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">1. Acceptation et Objet</h2>
                         <p>
-                            Par l'acceptation des présentes conditions lors de son inscription, le Partenaire donne expressément <strong>MANDAT</strong> à la société NOWME SAS (SIREN 933 108 011) pour :
-                        </p>
-                        <ul className="list-disc pl-5 space-y-2 mt-2">
-                            <li><strong>Émettre des factures</strong> en son nom et pour son compte auprès des clients finaux (les "Abonnées").</li>
-                            <li><strong>Encaisser les sommes</strong> relatives à la vente de ses prestations via le prestataire de paiement sécurisé Stripe.</li>
-                        </ul>
-                        <p className="mt-2 text-sm italic">
-                            Conformément à l'article 289 I du Code Général des Impôts, le Partenaire (Mandant) conserve l'entière responsabilité de ses obligations en matière de facturation et de TVA. Il s'engage à verser au Trésor la taxe mentionnée sur les factures émises en son nom.
+                            L'inscription sur la Plateforme en tant que Partenaire vaut acceptation pleine et entière des présentes Conditions Générales de Partenariat (CGP).
+                            Le Partenaire autorise NOWME SAS à commercialiser ses offres auprès de sa communauté d'abonnés et à agir en tant qu'intermédiaire technique et financier.
                         </p>
                     </section>
 
                     <section className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">2. Obligations du Partenaire</h2>
-                        <p>Le Partenaire s'engage à :</p>
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">2. Mandat de Facturation (Auto-billing)</h2>
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <p className="mb-2"><strong>DÉCLARATION DE MANDAT</strong></p>
+                            <p>
+                                Le Partenaire (Mandant) accepte expressément de confier à NOWME SAS (Mandataire) l'établissement de ses factures.
+                                En conséquence, le Partenaire donne mandat à NOWME SAS d'émettre en son nom et pour son compte les factures originales relatives aux ventes réalisées via la Plateforme.
+                            </p>
+                        </div>
+                        <p className="mt-4"><strong>Obligations du Partenaire (Mandant) :</strong></p>
+                        <ul className="list-disc pl-5 space-y-2 mt-2">
+                            <li>Fournir toutes les informations complètes et exactes nécessaires à la facturation (Identité, SIREN, Adresse, Numéro de TVA Intracommunautaire si assujetti).</li>
+                            <li>Signaler immédiatement tout changement de statut (cessation d'activité, changement de régime fiscal).</li>
+                            <li><strong>Verser au Trésor Public la TVA</strong> mentionnée sur les factures émises en son nom (si applicable à son régime).</li>
+                            <li>Reconnaître que le mandat ne l'exonère pas de ses obligations fiscales personnelles.</li>
+                            <li>Conserver un double de toutes les factures émises par la Plateforme.</li>
+                        </ul>
+                        <p className="mt-4"><strong>Obligations de NOWME SAS (Mandataire) :</strong></p>
+                        <ul className="list-disc pl-5 space-y-2 mt-2">
+                            <li>Émettre des factures conformes aux mentions légales en vigueur (Article 242 nonies A du CGI).</li>
+                            <li>Indiquer sur les factures la mention : <em>"Facture émise par NOWME SAS au nom et pour le compte de [Nom du Partenaire]"</em>.</li>
+                        </ul>
+                    </section>
+
+                    <section className="mb-8">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">3. Conditions Financières</h2>
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">3.1. Commission</h3>
+                        <p>
+                            En rémunération de ses services (mise en relation, hébergement technique, frais de transaction), NOWME SAS prélève une commission sur chaque transaction.
+                            Le taux de commission est indiqué lors de la création de l'offre et est accepté par le Partenaire avant publication.
+                        </p>
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">3.2. Modalités de paiement</h3>
+                        <p>
+                            Les fonds sont encaissés par le prestataire de paiement sécurisé <strong>Stripe</strong>.
+                            Le "Montant Net" (Prix de vente - Commission Plateforme) est reversé automatiquement sur le compte bancaire du Partenaire selon les délais standards de Stripe (généralement J+3 à J+7 ouvrés après la transaction).
+                        </p>
+
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">3.3. Cas Spécifique : Packs "Mon Ardoise"</h3>
+                        <p>
+                            Pour les offres de type "Pack Crédit" ou "Ardoise", les fonds sont cantonnés par NOWME SAS.
+                        </p>
+                        <ul className="list-disc pl-5 space-y-1 mt-2">
+                            <li><strong>Déclenchement du paiement :</strong> Le versement au Partenaire est déclenché par l'action de "Débit" (Consommation) effectuée par l'Abonnée dans l'application.</li>
+                            <li><strong>Montant versé :</strong> Le montant versé correspond à la valeur réelle de la consommation validée.</li>
+                            <li><strong>Expiration :</strong> Les crédits non consommés expirent au bout de 6 mois. Les fonds expirés restent acquis à la Plateforme au titre des frais de gestion et de marketing, sauf accord spécifique contraire.</li>
+                        </ul>
+                    </section>
+
+                    <section className="mb-8">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">4. Engagements Qualité</h2>
                         <ul className="list-disc pl-5 space-y-2">
-                            <li>Fournir toutes les informations légales nécessaires à l'établissement des factures (SIREN, Adresse, n° TVA si applicable).</li>
-                            <li>Honorer les prestations réservées par les Abonnées aux conditions tarifaires indiquées sur la Plateforme.</li>
-                            <li>Informer NOWME sans délai de toute modification de son statut juridique ou fiscal.</li>
+                            <li>Le Partenaire s'engage à accueillir les abonnées Club Nowme avec bienveillance et professionnalisme.</li>
+                            <li>Les prestations fournies doivent être conformes à la description faite sur l'offre.</li>
+                            <li>Le Partenaire s'engage à ne pas annuler de prestations confirmées sauf cas de force majeure avéré.</li>
                         </ul>
                     </section>
 
                     <section className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">3. Commission et Reversement</h2>
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">5. Annulation et Litiges</h2>
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">5.1. Annulation par le Partenaire</h3>
                         <p>
-                            En contrepartie de la mise en relation et de la gestion technique :
+                            Toute annulation par le Partenaire doit être exceptionnelle. Le Partenaire doit en informer l'Abonnée et la Plateforme immédiatement.
+                            En cas d'annulations abusives ou répétées, NOWME se réserve le droit de suspendre ou résilier le compte du Partenaire.
                         </p>
-                        <ul className="list-disc pl-5 space-y-2 mt-2">
-                            <li>NOWME prélève une commission de <strong>[X]% HT</strong> sur le montant total de chaque transaction réalisée via la plateforme.</li>
-                            <li>Le solde est reversé au Partenaire selon les délais de virement du prestataire de paiement Stripe (généralement J+3 à J+7).</li>
-                        </ul>
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">5.2. Annulation par l'Abonnée</h3>
+                        <p>
+                            Les conditions d'annulation définies par le Partenaire sur son offre s'appliquent. Si l'annulation est éligible à un remboursement, la Plateforme procédera au remboursement via Stripe (débitant le compte du Partenaire du montant perçu).
+                        </p>
                     </section>
 
                     <section className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">4. Durée et Résiliation</h2>
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">6. Résiliation</h2>
                         <p>
-                            Le présent mandat est conclu pour une durée indéterminée. Il peut être dénoncé à tout moment par l'une ou l'autre des parties par écrit (email ou courrier), entraînant la fermeture du compte Partenaire.
+                            Chaque partie peut mettre fin au partenariat à tout moment par notification écrite.
+                            La résiliation entraîne la désactivation immédiate des offres. Cependant, les réservations déjà confirmées devront être honorées par le Partenaire, et les commissions dues resteront acquises à la Plateforme.
+                        </p>
+                    </section>
+
+                    <section className="mb-8 bg-gray-50 p-6 rounded-lg">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Besoin d'aide ?</h2>
+                        <p>
+                            Pour toute question relative à ces conditions ou à votre facturation, contactez notre service administratif :
+                            <br />
+                            <a href="mailto:compta@nowme.fr" className="text-primary font-bold hover:underline">compta@nowme.fr</a>
                         </p>
                     </section>
                 </div>

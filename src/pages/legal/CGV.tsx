@@ -80,7 +80,25 @@ export default function CGV() {
                     </section>
 
                     <section className="mb-8">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">5. Responsabilité</h2>
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">5. Les Packs "Mon Ardoise"</h2>
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">5.1. Définition et Usage</h3>
+                        <p>
+                            NOWME propose l'achat de crédits prépayés dits "Packs Ardoise" valables auprès de Partenaires spécifiques. Ces crédits permettent de régler des consommations directement sur le lieu du Partenaire via l'application.
+                        </p>
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">5.2. Validité</h3>
+                        <p>
+                            Sauf mention contraire explicite, les crédits Ardoise ont une durée de validité de <strong>6 mois (180 jours)</strong> à compter de la date d'achat. Passé ce délai, le solde non utilisé expire définitivement et ne peut faire l'objet d'aucun remboursement.
+                        </p>
+                        <h3 className="font-bold text-gray-800 mt-4 mb-2">5.3. Conditions d'utilisation</h3>
+                        <ul className="list-disc pl-5 space-y-1 mt-1">
+                            <li>Les crédits sont utilisables uniquement auprès du Partenaire désigné lors de l'achat.</li>
+                            <li>Ils ne sont ni échangeables, ni remboursables une fois la première utilisation (même partielle) entamée.</li>
+                            <li>En cas de fermeture définitive du Partenaire, NOWME s'efforcera de proposer une solution commerciale mais ne saurait être tenue pour responsable de la perte des crédits.</li>
+                        </ul>
+                    </section>
+
+                    <section className="mb-8">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">6. Responsabilité</h2>
                         <p>
                             NOWME ne saurait être tenu responsable de l'inexécution ou de la mauvaise exécution des prestations fournies par les Partenaires, ces derniers agissant sous leur seule responsabilité professionnelle.
                         </p>

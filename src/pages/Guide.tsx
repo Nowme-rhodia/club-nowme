@@ -14,7 +14,8 @@ import {
     HelpCircle,
     Settings,
     LogOut,
-    ShieldCheck
+    ShieldCheck,
+    CreditCard
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -190,7 +191,7 @@ export function Guide() {
                             <Gift className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                            4. Les Achats & Offres ("Kiffs")
+                            4. Les Achats & Kiffs
                         </h2>
                     </div>
 
@@ -202,21 +203,66 @@ export function Guide() {
                                     Sur la page <Link to="/tous-les-kiffs" className="text-primary underline">Tous les Kiffs</Link>, tu verras plein d'avantages.
                                 </p>
                                 <ul className="list-disc list-inside text-sm space-y-1">
-                                    <li><strong>Code Promo :</strong> Copie le code (ex: NOWME20) et colle-le sur le site du partenaire lors de ton achat.</li>
-                                    <li><strong>Lien secret :</strong> Clique simplement sur le bouton pour accéder à une vente privée.</li>
-                                    <li><strong>Produit Digital :</strong> Si tu achètes un E-book, tu recevras le lien par email ET il sera dispo dans "<Link to="/mes-reservations" className="underline">Mes Réservations</Link>".</li>
+                                    <li><strong>Code Promo :</strong> Copie le code et colle-le sur le site du partenaire.</li>
+                                    <li><strong>Lien secret :</strong> Clique pour accéder à une vente privée.</li>
+                                    <li><strong>Produit Digital :</strong> E-books et guides dispo dans "Mes Réservations".</li>
                                 </ul>
                             </div>
                             <div>
                                 <h3 className="font-bold text-gray-900 mb-2">🛡️ Conditions & Sécurité</h3>
                                 <p className="text-base mb-2">
-                                    Tous les paiements sur le site sont 100% sécurisés par Stripe (comme sur Amazon).
+                                    Tous les paiements sur le site sont 100% sécurisés par Stripe.
                                 </p>
                                 <p className="text-sm">
-                                    Pour les événements payants : l'annulation est généralement possible jusqu'à 48h avant (voir conditions sur chaque fiche offre). En cas de souci, contacte-nous !
+                                    Annulation jusqu'à 48h avant pour la plupart des événements (voir fiche offre).
                                 </p>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                {/* 5. MON ARDOISE */}
+                <section className="bg-white rounded-3xl shadow-lg p-6 md:p-10 border border-gray-100">
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="p-4 bg-indigo-100 rounded-2xl text-indigo-600">
+                            <CreditCard className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                            5. Payer avec "Mon Ardoise"
+                        </h2>
+                    </div>
+
+                    <div className="pl-0 md:pl-4 space-y-6 text-lg leading-relaxed text-gray-600">
+                        <p>
+                            Certains partenaires proposent des <strong>Packs Ardoise</strong> (ex: achète 40€, dépense 50€). C'est le moyen le plus malin de payer ta consommation !
+                        </p>
+
+                        <div className="space-y-4 bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                            <div className="flex gap-4">
+                                <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">1</span>
+                                <div>
+                                    <h4 className="font-bold text-gray-900">Achète un Pack</h4>
+                                    <p className="text-sm">Prends le Pack Ardoise de ton lieu préféré sur l'appli. Ton solde (crédité du bonus) apparaît immédiatement dans "Mon Compte &gt; Mon Ardoise".</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">2</span>
+                                <div>
+                                    <h4 className="font-bold text-gray-900">Savoure l'instant</h4>
+                                    <p className="text-sm">Profite de ton moment, sans te soucier de l'addition pour l'instant.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <span className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold">3</span>
+                                <div>
+                                    <h4 className="font-bold text-gray-900">Valide sur place</h4>
+                                    <p className="text-sm">Au moment de partir, ouvre ton appli, va dans <strong>Mon Ardoise</strong>, clique sur le lieu et entre le montant exact à payer. Montre <strong>l'Écran Vert ✅</strong> au serveur. C'est réglé !</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-sm italic text-gray-500">
+                            * Les crédits Ardoise sont valables <strong>6 mois</strong> à partir de la date d'achat.
+                        </p>
                     </div>
                 </section>
 

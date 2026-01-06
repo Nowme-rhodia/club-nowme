@@ -79,26 +79,28 @@ export default function CompleteProfile() {
       if (error) throw error;
 
       if (data) {
-        setPartnerStatus(data.status || 'pending');
+        // Cast data to any or specific interface to avoid TS errors
+        const partnerData = data as any;
+        setPartnerStatus(partnerData.status || 'pending');
 
         // Si le partenaire n'est pas approuvé, rediriger
-        if (data.status !== 'approved') {
+        if (partnerData.status !== 'approved') {
           navigate('/partner/dashboard');
           return;
         }
 
         // Charger les données existantes
         setFormData({
-          businessName: data.business_name || '',
-          description: data.description || '',
-          siret: data.siret || '',
-          address: data.address || '',
-          coordinates: data.coordinates ? { lat: data.coordinates[0], lng: data.coordinates[1] } : undefined,
-          website: data.website || '',
-          instagram: data.instagram || '',
-          facebook: data.facebook || '',
-          logoUrl: data.logo_url || '',
-          openingHours: data.opening_hours || formData.openingHours,
+          businessName: partnerData.business_name || '',
+          description: partnerData.description || '',
+          siret: partnerData.siret || '',
+          address: partnerData.address || '',
+          coordinates: partnerData.coordinates ? { lat: partnerData.coordinates[0], lng: partnerData.coordinates[1] } : undefined,
+          website: partnerData.website || '',
+          instagram: partnerData.instagram || '',
+          facebook: partnerData.facebook || '',
+          logoUrl: partnerData.logo_url || '',
+          openingHours: partnerData.opening_hours || formData.openingHours,
         });
       }
     } catch (err) {

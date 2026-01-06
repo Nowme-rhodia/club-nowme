@@ -25,6 +25,7 @@ export type Database = {
           partner_id: string | null;
           accepted_community_rules_at: string | null;
           whatsapp_number: string | null;
+          is_ambassador: boolean | null;
         };
         Insert: {
           id?: string;
@@ -41,6 +42,7 @@ export type Database = {
           partner_id?: string | null;
           accepted_community_rules_at?: string | null;
           whatsapp_number?: string | null;
+          is_ambassador?: boolean | null;
         };
         Update: {
           id?: string;
@@ -57,6 +59,7 @@ export type Database = {
           partner_id?: string | null;
           accepted_community_rules_at?: string | null;
           whatsapp_number?: string | null;
+          is_ambassador?: boolean | null;
         };
         Relationships: [
           {
@@ -100,6 +103,7 @@ export type Database = {
           payout_method: 'manual' | 'stripe';
           settlement_day: number;
           message: string | null;
+          is_official: boolean | null;
           created_at: string;
           updated_at: string;
         };
@@ -128,6 +132,7 @@ export type Database = {
           payout_method?: 'manual' | 'stripe';
           settlement_day?: number;
           message?: string | null;
+          is_official?: boolean | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -156,6 +161,7 @@ export type Database = {
           payout_method?: 'manual' | 'stripe';
           settlement_day?: number;
           message?: string | null;
+          is_official?: boolean | null;
           created_at?: string;
           updated_at?: string;
         };

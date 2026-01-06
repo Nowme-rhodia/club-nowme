@@ -185,22 +185,32 @@ export default function Dashboard() {
           .from('bookings') as any)
           .select(`
             *,
-            offer:offers(title),
+            offer:offers(title, booking_type),
             user:user_profiles(first_name, last_name, email)
           `)
           .eq('partner_id', partnerId)
           .order('created_at', { ascending: false });
         setBookings((bookingsData || []) as Booking[]);
 
+        // 👉 Wallet Transactions (Debits only = Revenue)
+        const { data: walletTxData } = await (supabase
+          .from('wallet_transactions') as any)
+          .select(`
+            *,
+            wallet:wallets!inner(partner_id)
+          `)
+          .eq('wallet.partner_id', partnerId)
+          .eq('type', 'debit')
+          .order('created_at', { ascending: false });
+
 
         // Calculate monthly history
         const monthlyStats = new Map<string, PartnerReport>();
         const commissionRate = partnerData.commission_rate ? partnerData.commission_rate / 100 : 0.15;
 
-        (bookingsData || []).forEach((booking: any) => {
-          const date = new Date(booking.created_at);
-          const monthKey = format(date, 'yyyy-MM'); // Group by Year-Month
-
+        // Helper to init month
+        const getOrInitMonth = (date: Date) => {
+          const monthKey = format(date, 'yyyy-MM');
           if (!monthlyStats.has(monthKey)) {
             monthlyStats.set(monthKey, {
               total_bookings: 0,
@@ -212,49 +222,64 @@ export default function Dashboard() {
               period_label: format(date, 'MMMM yyyy', { locale: fr })
             });
           }
+          return monthlyStats.get(monthKey)!;
+        };
 
-          const stats = monthlyStats.get(monthKey)!;
+        // 1. Process Bookings
+        (bookingsData || []).forEach((booking: any) => {
+          const date = new Date(booking.created_at);
+          const stats = getOrInitMonth(date);
+
+          // Exclude Wallet Pack purchases from Revenue (Money held by NowMe)
+          // Robust check: if title contains "Pack" or booking_type is explicitly 'wallet_pack'
+          const isWalletPack =
+            booking.offer?.booking_type === 'wallet_pack' ||
+            (booking.offer?.title && booking.offer.title.toLowerCase().includes('pack'));
 
           // Add Revenue & Commission for valid sales
           if (booking.status === 'confirmed' || booking.status === 'paid') {
-            const amount = parseFloat(booking.amount) || 0;
-            const comm = amount * commissionRate;
-            const tvaOnComm = comm * 0.20;
+            if (!isWalletPack) {
+              const amount = parseFloat(booking.amount) || 0;
+              const comm = amount * commissionRate;
+              const tvaOnComm = comm * 0.20;
 
+              stats.gross_total += amount;
+              stats.commission += (comm + tvaOnComm);
+              stats.net_total += (amount - (comm + tvaOnComm));
+            } else {
+              // Log excluded
+              console.log(`Excluded Wallet Pack from Revenue: ${booking.id} - ${booking.offer?.title}`);
+            }
+
+            // We still count them as bookings/sales activity? 
+            // Yes, keep count.
             stats.count! += 1;
             stats.total_bookings += 1;
-            stats.gross_total += amount;
-            stats.commission += (comm + tvaOnComm);
-            stats.net_total += (amount - (comm + tvaOnComm));
           }
 
-          // Add Penalties for cancellations in this month
-          // Check if it was cancelled by partner and has a penalty amount
-          // If legacy cancellation (no penalty_amount stored), allow fallback if we know the date
+          // Add Penalties
           if (booking.status === 'cancelled' && booking.cancelled_by_partner && booking.cancelled_at) {
-            const cancelDate = new Date(booking.cancelled_at);
-            // Ensure we attribute penalty to the month of CANCELLATION, not booking creation? 
-            // Accounting-wise, usually debt is recognized when incurred.
-            // The user asked for "History month by month". 
-            // If I cancel in Feb a Jan booking, the penalty belongs to Feb.
-            // My loop is iterating bookings by *created_at*. This is tricky.
-            // To be precise, I should iterate cancellation events. 
-            // But simpler approach: Attribute to month of the event.
-            // Since I'm looping bookings, I need to check if cancellation month matches this group? 
-            // No, I should initialize months based on range and put events in them.
-
-            // SIMPLIFICATION: Display stats based on Booking Date (Revenue) 
-            // AND display Penalties based on Booking Date for now, unless valid 'cancelled_at' shifts it.
-            // Actually, sticking to Booking Date is safer for "Sales Report".
-            // Let's attribute penalty to the Booking's month for simplicity of "Projected Net" for that batch of sales.
-            // Valid logic: "For bookings made in Jan, X were cancelled, costing Y".
-
             const penalty = booking.penalty_amount ? parseFloat(booking.penalty_amount) : 0;
-            // Fallback for legacy if needed: 5.00 + (booking.amount * 0.015 + 0.25)
             const estimatedPenalty = penalty > 0 ? penalty : (5.00 + (parseFloat(booking.amount || 0) * 0.015 + 0.25));
-
             stats.pending_penalties = (stats.pending_penalties || 0) + estimatedPenalty;
           }
+        });
+
+        // 2. Process Wallet Intakes (Debits) -> Considered as Revenue
+        (walletTxData || []).forEach((tx: any) => {
+          const date = new Date(tx.created_at);
+          const stats = getOrInitMonth(date);
+
+          const amount = parseFloat(tx.amount_final) || 0;
+          const comm = amount * commissionRate;
+          const tvaOnComm = comm * 0.20;
+
+          // It counts as a "sale" (consumption)
+          stats.count! += 1;
+          stats.total_bookings += 1;
+          stats.gross_total += amount;
+          stats.commission += (comm + tvaOnComm);
+          stats.net_total += (amount - (comm + tvaOnComm));
         });
 
         // Convert Map to Array and Sort

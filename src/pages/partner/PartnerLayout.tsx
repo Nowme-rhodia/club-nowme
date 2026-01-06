@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Briefcase, Calendar, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Briefcase, Calendar, Settings, LogOut, HelpCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
 import MissingInfoBanner from "../../components/partner/MissingInfoBanner";
@@ -14,25 +14,24 @@ export default function PartnerLayout() {
   useEffect(() => {
     if (!user) return;
     const loadPartner = async () => {
-      console.log('PartnerLayout: Loading partner for user', user.id);
-      console.log('PartnerLayout: Full profile:', profile);
+
 
       // Utiliser partner_id depuis le profil si disponible
       const partnerId = profile?.partner_id;
-      console.log('PartnerLayout: partner_id from profile:', partnerId);
+
 
       if (!partnerId) {
         // Fallback: récupérer depuis user_profiles
-        const { data: profileData, error: profileError } = await supabase
-          .from("user_profiles")
+        const { data: profileData, error: profileError } = await (supabase
+          .from("user_profiles") as any)
           .select("partner_id")
           .eq("user_id", user.id)
           .single();
 
-        console.log('PartnerLayout: profileData:', profileData, 'error:', profileError);
 
-        if (!profileData?.partner_id) {
-          console.log('PartnerLayout: No partner_id found, using default');
+
+        if (!profileData || !profileData.partner_id) {
+
           setBusinessName("Mon entreprise");
           return;
         }
@@ -44,26 +43,26 @@ export default function PartnerLayout() {
           .eq("id", profileData.partner_id)
           .maybeSingle();
 
-        console.log('PartnerLayout: Partner data:', data, 'error:', error);
+
 
         if (!error && data) {
-          console.log('PartnerLayout: Setting business name to:', data.business_name);
+
           setBusinessName(data.business_name || "Mon entreprise");
         } else {
           setBusinessName("Mon entreprise");
         }
       } else {
         // Récupérer directement avec le partner_id du profil
-        const { data, error } = await supabase
-          .from("partners")
+        const { data, error } = await (supabase
+          .from("partners") as any)
           .select("business_name")
           .eq("id", partnerId)
           .maybeSingle();
 
-        console.log('PartnerLayout: Partner data (from profile):', data, 'error:', error);
+
 
         if (!error && data) {
-          console.log('PartnerLayout: Setting business name to:', data.business_name);
+
           setBusinessName(data.business_name || "Mon entreprise");
         } else {
           // Utiliser le nom du profil si disponible
@@ -119,6 +118,16 @@ export default function PartnerLayout() {
             >
               <LayoutDashboard className="w-5 h-5" />
               Dashboard
+            </NavLink>
+            <NavLink
+              to="/partner/guide-partenaire"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                }`
+              }
+            >
+              <HelpCircle className="w-5 h-5" />
+              Guide
             </NavLink>
             <NavLink
               to="/partner/offers"

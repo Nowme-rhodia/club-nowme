@@ -160,7 +160,7 @@ export default function Profile() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4] py-12">
+    <div className="p-6 md:p-8">
       <SEO
         title="Mes informations"
         description="Gérez vos informations personnelles"

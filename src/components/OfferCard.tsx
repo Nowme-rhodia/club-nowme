@@ -139,6 +139,13 @@ export function OfferCard({
                     📍 {displayLocation.match(/\b(97|2A|2B|[0-9]{2})[0-9]{3}\b/)?.[1]}
                   </span>
                 )}
+
+                {/* Wallet Pack Badge */}
+                {bookingType === 'wallet_pack' && (
+                  <span className="text-[10px] uppercase font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 flex items-center gap-1">
+                    💳 Pack Ardoise
+                  </span>
+                )}
               </div>
 
               {bookingType === 'promo' && promoConditions ? (

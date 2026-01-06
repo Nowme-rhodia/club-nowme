@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Shield, AlertCircle, CheckCircle, X, Eye, EyeOff, Lock, User, MapPin, Phone, Globe, FileText, Building } from 'lucide-react';
+import { Save, User, Building, Phone, MapPin, Globe, Instagram, Mail, Lock, Upload, X, CheckCircle, AlertCircle, Eye, EyeOff, FileText, Shield } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
+import toast from 'react-hot-toast';
 
 interface PartnerProfile {
   id: string;
@@ -12,7 +13,9 @@ interface PartnerProfile {
   phone: string;
   address: string;
   website: string;
-  website: string;
+
+  instagram: string;
+  cover_image_url: string;
   description: string;
   siret: string;
   tva_intra: string;
@@ -39,7 +42,9 @@ export default function SettingsGeneral() {
     phone: '',
     address: '',
     website: '',
-    website: '',
+
+    instagram: '',
+    cover_image_url: '',
     description: '',
     siret: '',
     tva_intra: '',
@@ -59,9 +64,45 @@ export default function SettingsGeneral() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      if (!profile?.partner_id) {
+        toast.error("Identifiant partenaire manquant");
+        return;
+      }
+
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.partner_id}/cover-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('partner-assets')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('partner-assets')
+        .getPublicUrl(fileName);
+
+      setProfileForm(prev => ({ ...prev, cover_image_url: publicUrl }));
+      toast.success("Image téléchargée avec succès");
+
+    } catch (err: any) {
+      console.error('Error uploading image:', err);
+      toast.error("Erreur lors du téléchargement de l'image");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -99,11 +140,13 @@ export default function SettingsGeneral() {
       }
 
       // 2. Fetch Partner Data using the Partner ID (NOT user_id)
-      const { data: partner, error: partnerError } = await supabase
+      const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
-        .select('id, business_name, contact_name, contact_email, phone, address, website, description, siret, tva_intra, notification_settings')
+        .select('id, business_name, contact_name, contact_email, phone, address, website, instagram, cover_image_url, description, siret, tva_intra, notification_settings')
         .eq('id', currentPartnerId)
         .single();
+
+      const partner = partnerData as any;
 
       if (partnerError) throw partnerError;
 
@@ -117,7 +160,8 @@ export default function SettingsGeneral() {
           phone: partner.phone || '',
           address: partner.address || '',
           website: partner.website || '',
-          website: partner.website || '',
+          instagram: partner.instagram || '',
+          cover_image_url: partner.cover_image_url || '',
           description: partner.description || '',
           siret: partner.siret || '',
           tva_intra: partner.tva_intra || '',
@@ -131,8 +175,7 @@ export default function SettingsGeneral() {
       }
     } catch (err: any) {
       console.error("Error fetching partner data:", err);
-      // User friendly error only if it's a real fetch error, not just missing profile logic
-      if (user) setError("Impossible de charger les informations du profil.");
+      setError("Impossible de charger les données du profil. Veuillez rafraîchir la page.");
     } finally {
       setLoading(false);
     }
@@ -159,6 +202,11 @@ export default function SettingsGeneral() {
 
       if (!partnerId) return;
 
+      // Prevent saving if there was a fetch error to avoid overwriting with empty data
+      if (error && error.includes('charger les données')) {
+        return;
+      }
+
       const { error: updateError } = await supabase
         .from('partners')
         .update({
@@ -166,8 +214,9 @@ export default function SettingsGeneral() {
           contact_name: profileForm.contact_name,
           phone: profileForm.phone,
           address: profileForm.address,
-          address: profileForm.address,
           website: profileForm.website,
+          instagram: profileForm.instagram,
+          cover_image_url: profileForm.cover_image_url,
           description: profileForm.description,
           siret: profileForm.siret,
           tva_intra: profileForm.tva_intra,
@@ -237,7 +286,19 @@ export default function SettingsGeneral() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 relative">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Paramètres</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
+          {partnerId && (
+            <Link
+              to={`/partenaire/${partnerId}`}
+              target="_blank"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+            >
+              <Globe className="w-4 h-4 mr-2" />
+              Voir mon profil public
+            </Link>
+          )}
+        </div>
 
         {/* Navigation Tabs */}
         <div className="flex border-b border-gray-200 mb-8 bg-white rounded-t-lg px-4 pt-2 shadow-sm">
@@ -390,7 +451,74 @@ export default function SettingsGeneral() {
               </div>
 
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Instagram</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400">@</span>
+                  <input
+                    type="text"
+                    value={profileForm.instagram}
+                    onChange={(e) => handleProfileChange('instagram', e.target.value)}
+                    className="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm h-11 transition-shadow"
+                    placeholder="mon_institut_paris"
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                {/* Cover Image Upload */}
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Image de couverture
+                  </label>
+                  <div className="flex items-center gap-6">
+                    {profileForm.cover_image_url && (
+                      <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-gray-200">
+                        <img
+                          src={profileForm.cover_image_url}
+                          alt="Cover preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setProfileForm(prev => ({ ...prev, cover_image_url: '' }))}
+                          className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-primary transition-colors cursor-pointer relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          disabled={uploading}
+                        />
+                        <div className="space-y-1 text-center pointer-events-none">
+                          <div className="mx-auto h-12 w-12 text-gray-400">
+                            {uploading ? (
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mt-2"></div>
+                            ) : (
+                              <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                            )}
+                          </div>
+                          <div className="flex text-sm text-gray-600 justify-center">
+                            <span className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary-dark">
+                              {uploading ? 'Téléchargement...' : 'Télécharger une image'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">PNG, JPG, GIF jusqu'à 5MB</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>    <p className="text-xs text-gray-500 mt-1">Cette image sera affichée en haut de votre profil public.</p>
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pourquoi elles vont kiffer (Description)</label>
                 <div className="relative">
                   <FileText className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <textarea
@@ -398,7 +526,7 @@ export default function SettingsGeneral() {
                     value={profileForm.description}
                     onChange={(e) => handleProfileChange('description', e.target.value)}
                     className="pl-10 py-3 block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm transition-shadow"
-                    placeholder="Décrivez votre établissement et vos services..."
+                    placeholder="Racontez votre histoire, votre passion, ce qui rend votre expérience unique..."
                   />
                 </div>
               </div>

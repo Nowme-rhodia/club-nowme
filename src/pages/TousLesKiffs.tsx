@@ -4,6 +4,7 @@ import { PriceRangeSlider } from '../components/PriceRangeSlider';
 import { Link } from 'react-router-dom';
 import { categories } from '../data/categories';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
 import { OfferCard } from '../components/OfferCard';
 import { LocationSearch } from '../components/LocationSearch';
 import { SEO } from '../components/SEO';
@@ -51,6 +52,7 @@ interface OfferDetails {
 }
 
 export default function TousLesKiffs() {
+  const { user, isAdmin, isSubscriber, isPartner } = useAuth();
   const [selectedOffer, setSelectedOffer] = useState<OfferDetails | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
@@ -65,6 +67,7 @@ export default function TousLesKiffs() {
     zip_code?: string;
   } | null>(null);
   const [isOnlineFilter, setIsOnlineFilter] = useState(false);
+  const [isWalletFilter, setIsWalletFilter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
@@ -104,6 +107,12 @@ export default function TousLesKiffs() {
               v.discounted_price ? Number(v.discounted_price) : Number(v.price)
             ) || [];
             const minFilterPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0;
+
+            // Logic to restrict access:
+            // - Admin: Full access
+            // - Subscriber: Full access
+            // - Partner (without subscription) or Guest: Restricted access
+            const isRestricted = !isAdmin && !isSubscriber;
 
             const displayPrice = firstVariant ? Number(firstVariant.price) : 0;
             const displayPromo = firstVariant && firstVariant.discounted_price ? Number(firstVariant.discounted_price) : undefined;
@@ -180,6 +189,10 @@ export default function TousLesKiffs() {
       filtered = filtered.filter(offer => offer.is_online === true);
     }
 
+    if (isWalletFilter) {
+      filtered = filtered.filter(offer => offer.bookingType === 'wallet_pack');
+    }
+
     if (activeCategory !== 'all') {
       filtered = filtered.filter(offer => offer.categorySlug === activeCategory);
       if (activeSubcategory) {
@@ -237,7 +250,7 @@ export default function TousLesKiffs() {
     });
 
     return filtered;
-  }, [searchTerm, activeCategory, activeSubcategory, selectedLocation, priceRange, ratingFilter, offersWithLocations, isOnlineFilter]);
+  }, [searchTerm, activeCategory, activeSubcategory, selectedLocation, priceRange, ratingFilter, offersWithLocations, isOnlineFilter, isWalletFilter]);
 
   const paginatedOffers = useMemo(() => {
     return filteredOffers.slice(0, page * itemsPerPage);
@@ -379,8 +392,8 @@ export default function TousLesKiffs() {
                     </div>
                   </div>
 
-                  {/* Filtre Flemme de bouger */}
-                  <div className="flex items-center pt-2">
+                  {/* Filtre Flemme de bouger & Pack Ardoise */}
+                  <div className="flex flex-wrap items-center pt-2 gap-3">
                     <button
                       onClick={() => setIsOnlineFilter(!isOnlineFilter)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isOnlineFilter
@@ -390,6 +403,17 @@ export default function TousLesKiffs() {
                     >
                       <span className="text-xl">🛋️</span>
                       <span className="font-medium">Flemme de bouger de chez moi</span>
+                    </button>
+
+                    <button
+                      onClick={() => setIsWalletFilter(!isWalletFilter)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isWalletFilter
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-blue-600 hover:text-blue-600'
+                        }`}
+                    >
+                      <span className="text-xl">💳</span>
+                      <span className="font-medium">Pack Ardoise</span>
                     </button>
                   </div>
                 </div>

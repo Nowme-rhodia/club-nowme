@@ -112,6 +112,108 @@ Deno.serve(async (req) => {
                     else console.log("FORCE_UPDATE_SUCCESS: Address saved directly.");
                 }
 
+                // 5. [NEW] WALLET PACK FULFILLMENT
+                const bookingType = session.metadata.booking_type;
+                if (bookingType === 'wallet_pack' && data?.booking_id && variant_id) {
+                    console.log(`[WALLET_PACK] Processing fulfillment for Booking ${data.booking_id}`);
+
+                    // Fetch Variant to get Credit Amount
+                    const { data: variantData, error: varError } = await supabaseClient
+                        .from('offer_variants')
+                        .select('price, credit_amount, offer_id')
+                        .eq('id', variant_id)
+                        .single();
+
+                    if (varError || !variantData) {
+                        console.error("[WALLET_PACK] Failed to fetch variant data:", varError);
+                    } else {
+                        // Determine Credit Value (Fallback to price if credit_amount is null)
+                        const creditValue = variantData.credit_amount || variantData.price;
+
+                        // Get Partner ID from Offer
+                        const { data: offerData } = await supabaseClient
+                            .from('offers')
+                            .select('partner_id')
+                            .eq('id', variantData.offer_id)
+                            .single();
+
+                        if (offerData?.partner_id) {
+                            const { data: walletResult, error: walletError } = await supabaseClient.rpc('credit_wallet', {
+                                p_user_id: user_id,
+                                p_partner_id: offerData.partner_id,
+                                p_amount: creditValue,
+                                p_description: `Achat Pack (Ref: ${data.booking_id})`
+                            });
+
+                            if (walletError) {
+                                console.error("[WALLET_PACK] RPC credit_wallet Failed:", walletError);
+                            } else {
+                                console.log("[WALLET_PACK] Success! Wallet credited:", walletResult);
+
+                                // --- 6. Notify Partner (Email) ---
+                                // Fetch Partner Email
+                                const { data: partnerData, error: partnerError } = await supabaseClient
+                                    .from('partners')
+                                    .select('email, business_name')
+                                    .eq('id', offerData.partner_id)
+                                    .single();
+
+                                if (partnerData?.email) {
+                                    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+                                    if (RESEND_API_KEY) {
+                                        const subject = `💰 Nouvelle vente de Pack - ${partnerData.business_name}`;
+                                        const htmlContent = `
+                                            <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+                                                <h1 style="color: #2563EB;">Un client a acheté un Pack Ardoise !</h1>
+                                                <p>Bonjour ${partnerData.business_name},</p>
+                                                <p>Bonne nouvelle ! Un utilisateur de NowMe vient de créditer une cagnotte valable dans votre établissement.</p>
+                                                
+                                                <div style="background-color: #EFF6FF; border: 1px solid #BFDBFE; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                                                    <p style="margin: 0; font-weight: bold; color: #1E40AF;">Montant crédité : ${creditValue}€</p>
+                                                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #1E3A8A;">(Ce montant est disponible pour le client)</p>
+                                                </div>
+
+                                                <h3>🚨 Important - Procédure d'encaissement</h3>
+                                                <p>L'argent de cet achat a été encaissé par NowMe. <strong>Vous n'avez rien à faire pour le moment.</strong></p>
+                                                <p>Le paiement réel vers votre compte se fera <strong>au moment de la consommation</strong>.</p>
+
+                                                <h3>Comment ça marche ?</h3>
+                                                <ol>
+                                                    <li>Le client viendra dans votre établissement.</li>
+                                                    <li>Au moment de l'addition, il paiera via l'application NowMe (sa cagnotte).</li>
+                                                    <li>Vous verrez un <strong>Ecran Vert</strong> de validation sur son téléphone.</li>
+                                                    <li>C'est à ce moment-là que la somme consommée s'ajoutera à votre solde à vous reverser.</li>
+                                                </ol>
+
+                                                <p>Merci pour votre confiance !</p>
+                                                <p>L'équipe NowMe</p>
+                                            </div>
+                                        `;
+
+                                        await fetch('https://api.resend.com/emails', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Authorization': `Bearer ${RESEND_API_KEY}`
+                                            },
+                                            body: JSON.stringify({
+                                                from: 'Nowme Partners <partenaires@nowme.fr>',
+                                                to: [partnerData.email],
+                                                subject: subject,
+                                                html: htmlContent
+                                            })
+                                        }).catch(e => console.error("[WALLET_PACK] Partner Email Failed:", e));
+                                    } else {
+                                        console.warn("[WALLET_PACK] RESEND_API_KEY missing, skipping partner email.");
+                                    }
+                                } else {
+                                    console.warn("[WALLET_PACK] Partner email not found or fetch error:", partnerError);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // 5. Trigger Email
                 const emailPayload = { id: data.booking_id };
                 console.log("EMAIL_VARIABLES_FINAL:", JSON.stringify(emailPayload))

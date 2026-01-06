@@ -4,10 +4,13 @@ import {
   Building2,
   AlertCircle,
   CheckCircle,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
-import { LocationSearch } from '../components/LocationSearch'; // [NEW] Correctly imported
+import { LocationSearch } from '../components/LocationSearch';
 
 interface FormData {
   businessName: string;
@@ -19,7 +22,9 @@ interface FormData {
   website: string;
   instagram: string;
   facebook: string;
-  address: string; // [NEW] - Address field
+  address: string;
+  password?: string;
+  confirmPassword?: string;
 }
 
 export default function SubmitOffer() {
@@ -30,17 +35,21 @@ export default function SubmitOffer() {
     businessName: isDev ? 'Spa Zen & Bien-être' : '',
     siret: isDev ? '12345678900012' : '',
     contactName: isDev ? 'Marie Dupont' : '',
-    email: isDev ? 'marie.dupont@spa-zen.fr' : '',
+    email: isDev ? `marie.dupont.${Date.now()}@spa-zen.fr` : '', // Unique email for dev
     phone: isDev ? '0612345678' : '',
-    address: isDev ? '12 rue de la Paix, 75001 Paris' : '', // [NEW] Default value
+    address: isDev ? '12 rue de la Paix, 75001 Paris' : '',
     message: isDev ? 'Nous sommes un spa spécialisé dans les massages bien-être, la relaxation et les soins du corps. Nous proposons une gamme complète de services incluant massages, soins du visage, hammam et sauna. Notre équipe de professionnels qualifiés offre une expérience unique de détente et de bien-être.' : '',
     website: isDev ? 'https://spa-zen.fr' : '',
     instagram: isDev ? '@spa_zen_bienetre' : '',
     facebook: isDev ? 'SpaZenBienEtre' : '',
+    password: '',
+    confirmPassword: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
@@ -58,10 +67,23 @@ export default function SubmitOffer() {
       newErrors.phone = 'Un numéro de téléphone à 10 chiffres est requis';
     }
     if (!formData.address.trim()) {
-      newErrors.address = "L'adresse légale est requise"; // [NEW] Validation
+      newErrors.address = "L'adresse légale est requise";
     }
     if (!formData.message.trim() || formData.message.trim().length < 20) {
       newErrors.message = 'Veuillez décrire votre activité (minimum 20 caractères)';
+    }
+
+    // Password validation
+    if (!formData.password || formData.password.length < 8) {
+      newErrors.password = 'Le mot de passe doit contenir au moins 8 caractères';
+    } else {
+      // Optional: Stricter checks if desired
+      if (!/[A-Z]/.test(formData.password)) newErrors.password = 'Le mot de passe doit contenir 1 majuscule';
+      else if (!/[0-9]/.test(formData.password)) newErrors.password = 'Le mot de passe doit contenir 1 chiffre';
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
     }
 
     setErrors(newErrors);
@@ -84,7 +106,7 @@ export default function SubmitOffer() {
     setIsSubmitting(true);
 
     try {
-      console.log('🚀 Sending partner submission to Edge Function...');
+
 
       // Create a timeout promise (45 seconds)
       const timeoutPromise = new Promise<{ data: null; error: any }>((_, reject) => {
@@ -105,6 +127,7 @@ export default function SubmitOffer() {
             website: formData.website || undefined,
             instagram: formData.instagram || undefined,
             facebook: formData.facebook || undefined,
+            password: formData.password, // [NEW] Sending password
           },
         },
       });
@@ -117,24 +140,31 @@ export default function SubmitOffer() {
         throw error;
       }
 
-      console.log('✅ Edge Function response:', data);
+
 
       if (!data || data.success === false) {
         const errorMsg = data?.error || data?.debug?.message || "Erreur lors de l'envoi";
         console.error('❌ Function returned logical error:', data);
+        if (errorMsg.includes('User already registered') || errorMsg.includes('already exists')) {
+          setErrors(prev => ({ ...prev, email: 'Cet email est déjà enregistré.' }));
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          throw new Error('Cet email est déjà enregistré.');
+        }
         throw new Error(errorMsg);
       }
 
-      console.log('✅ Demande envoyée avec succès!');
+
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error: any) {
       console.error('❌ Submission Error:', error);
       const errorMessage = error.message || 'Une erreur est survenue. Veuillez réessayer.';
-      setErrors((prev) => ({
-        ...prev,
-        message: errorMessage,
-      }));
+      if (!errors.email) { // Don't overwrite if it's the email error handled above
+        setErrors((prev) => ({
+          ...prev,
+          message: errorMessage,
+        }));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -151,15 +181,14 @@ export default function SubmitOffer() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Demande envoyée avec succès !</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Compte créé avec succès !</h2>
           <p className="mt-2 text-gray-600">
-            Nous avons bien reçu votre demande de partenariat. Notre équipe va l'étudier et vous
-            recontactera dans les plus brefs délais.
+            Votre demande de partenariat a été enregistrée et votre compte est créé.
           </p>
-          <p className="text-sm text-gray-500">
-            Une fois votre demande approuvée, vous pourrez compléter votre profil et publier vos
-            offres.
-          </p>
+          <div className="mt-4 bg-blue-50 p-4 rounded-lg text-sm text-blue-800">
+            <p className="font-semibold">Vérifiez vos emails 📧</p>
+            <p>Vous allez recevoir une confirmation. Une fois votre dossier approuvé par notre équipe (48h max), vous pourrez vous connecter avec le mot de passe que vous venez de définir.</p>
+          </div>
           <div className="mt-6">
             <Link
               to="/"
@@ -187,8 +216,7 @@ export default function SubmitOffer() {
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Devenir partenaire</h1>
             <p className="text-gray-600">
-              Remplissez ce formulaire rapide pour rejoindre Nowme Club. Après validation, vous
-              pourrez compléter votre profil et publier vos offres.
+              Créez votre compte partenaire dès maintenant. Une fois votre dossier validé, vous pourrez publier vos offres.
             </p>
           </div>
 
@@ -239,7 +267,7 @@ export default function SubmitOffer() {
               )}
             </div>
 
-            {/* Adresse légale - [NEW] */}
+            {/* Adresse légale */}
             <div className="relative">
               <label htmlFor="address-search" className="block text-sm font-medium text-gray-700 mb-1">
                 Adresse légale de l'entreprise <span className="text-red-500">*</span>
@@ -302,6 +330,72 @@ export default function SubmitOffer() {
               )}
             </div>
 
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Mot de passe souhaité <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="8 caractères minimum, 1 majuscule, 1 chiffre"
+                  autoComplete="new-password"
+                />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.password}
+                </p>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                Confirmation du mot de passe <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="Répétez le mot de passe"
+                  autoComplete="new-password"
+                />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.confirmPassword}
+                </p>
+              )}
+            </div>
+
             {/* Téléphone */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
@@ -324,6 +418,7 @@ export default function SubmitOffer() {
                 </p>
               )}
             </div>
+
 
             {/* Message */}
             <div>

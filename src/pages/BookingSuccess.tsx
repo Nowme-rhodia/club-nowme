@@ -20,7 +20,8 @@ export default function BookingSuccess() {
     // Get parameters from Stripe Redirect
     const sessionId = searchParams.get('session_id');
     const offerIdParam = searchParams.get('offer_id');
-    const type = searchParams.get('type') as 'calendly' | 'event' | 'purchase';
+    // @ts-ignore
+    const type = searchParams.get('type') as 'calendly' | 'event' | 'purchase' | 'wallet_pack';
     const amountParam = searchParams.get('amount');
 
     const variantIdParam = searchParams.get('variant_id');
@@ -272,6 +273,37 @@ export default function BookingSuccess() {
                             Voir mes réservations
                             <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
                         </Link>
+                    </div>
+                )}
+
+                {/* Wallet Pack Info */}
+                {/* @ts-ignore */}
+                {type === 'wallet_pack' && (
+                    <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-2xl">💰</span>
+                        </div>
+                        <h2 className="text-xl font-bold mb-4">Ardoise créditée !</h2>
+                        <div className="text-left bg-blue-50 border border-blue-100 p-6 rounded-xl mb-8">
+                            <h3 className="font-bold text-blue-900 mb-3">Comment l'utiliser ?</h3>
+                            <ol className="list-decimal pl-5 space-y-2 text-sm text-blue-800">
+                                <li>Rendez-vous dans l'établissement partenaire.</li>
+                                <li>Au moment de payer, ouvrez l'application NowMe.</li>
+                                <li>Allez dans <strong>Mon Compte {'>'} Mon Ardoise</strong>.</li>
+                                <li>Cliquez sur l'ardoise et saisissez le montant de l'addition.</li>
+                                <li>Une fois l'écran vert affiché, montrez-le au personnel.</li>
+                            </ol>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Link to="/account/wallet" className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors shadow-lg shadow-primary/20">
+                                Accéder à mon ardoise
+                                <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                            </Link>
+                            <Link to="/" className="inline-flex items-center justify-center px-6 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                                Retour à l'accueil
+                            </Link>
+                        </div>
                     </div>
                 )}
 

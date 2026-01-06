@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../lib/auth';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/auth';
 import { Calendar, MapPin, Mail, ArrowRight, Sparkles, Copy, Ticket, AlertTriangle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -41,7 +41,7 @@ interface Booking {
     };
 }
 
-export default function MyBookings() {
+export default function Bookings() {
     const { user } = useAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'cancelled' | 'purchases'>('upcoming');
@@ -66,6 +66,8 @@ export default function MyBookings() {
     }, [user]);
 
     const fetchBookings = async () => {
+        if (!user) return;
+
         try {
             setLoading(true);
             const { data, error } = await supabase
@@ -101,7 +103,7 @@ export default function MyBookings() {
                         )
                     )
                 `)
-                .eq('user_id', user?.id)
+                .eq('user_id', user.id)
                 .order('booking_date', { ascending: false });
 
             if (error) throw error;
@@ -120,7 +122,7 @@ export default function MyBookings() {
         if (isCancelled) return false;
 
         const type = booking.offer?.booking_type || 'event';
-        const isPurchaseOrPromo = type === 'purchase' || type === 'promo';
+        const isPurchaseOrPromo = type === 'purchase' || type === 'promo' || type === 'wallet_pack';
 
         if (activeTab === 'purchases') {
             return isPurchaseOrPromo;
@@ -240,15 +242,15 @@ export default function MyBookings() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="flex items-center justify-center p-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
+        <div className="p-6 md:p-8">
+            <div className="max-w-5xl mx-auto">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-3">
                     <Calendar className="w-8 h-8 text-primary" />
                     Mes Réservations
@@ -673,3 +675,4 @@ export default function MyBookings() {
         </div >
     );
 }
+

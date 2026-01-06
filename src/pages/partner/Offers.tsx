@@ -117,7 +117,7 @@ export default function Offers() {
       .select('partner_id')
       .eq('user_id', user.id)
       .single();
-    if (data) setPartnerId(data.partner_id);
+    if (data) setPartnerId((data as any).partner_id);
   };
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
@@ -909,8 +909,8 @@ export default function Offers() {
                           <Edit3 className="w-5 h-5" />
                         </button>
 
-                        {/* Voir en ligne (Seulement si active/approuvée) */}
-                        {(offer.status === 'approved' || offer.status === 'active') && (
+                        {/* Voir en ligne (Seulement si approuvée) */}
+                        {offer.status === 'approved' && (
                           <button
                             type="button"
                             onClick={(e) => {

@@ -34,17 +34,23 @@ export default function PartnerReviews() {
     const fetchReviews = async () => {
         try {
             // First get partner ID
-            const { data: partnerData } = await supabase
-                .from('partners')
-                .select('id')
-                .eq('id', user?.id) // Assuming partner_id matches user_id for now or link via join
+            // 1. Get partner_id from user_profiles
+            const { data: profileData } = await supabase
+                .from('user_profiles')
+                .select('partner_id')
+                .eq('user_id', user?.id || '')
                 .single();
 
-            // Actually, reviews are linked to offers. logic:
-            // Select reviews where offer.partner_id = user.id (if partner is the user)
-            // Or if we use the 'partners' table, we need to join.
-            // Simplified: Fetch reviews for offers created by this user
+            if (!profileData?.partner_id) {
+                console.error('Partner ID not found');
+                setLoading(false);
+                return;
+            }
 
+            const partnerId = profileData.partner_id;
+
+            // 2. Fetch reviews for this partner's offers
+            // We use !inner join to filter reviews that belong to offers of this partner
             const { data, error } = await supabase
                 .from('reviews')
                 .select(`
@@ -52,28 +58,22 @@ export default function PartnerReviews() {
                     rating,
                     comment,
                     created_at,
-                    offer:offers (
+                    offer:offers!inner (
                         title,
                         partner_id
                     ),
-                    user:user_id (
-                        first_name
-                        
+                    user:user_profiles!reviews_user_id_fkey_profiles (
+                        first_name,
+                        last_name
                     )
                 `)
-                // Filter manually or via RLS ideally. 
-                // For now, let's filter client side or ensure RLS allows partners to see THEIR reviews.
+                .eq('offer.partner_id', partnerId)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            // Filter for this partner (since RLS 'public' view might return all if not carefully scoped)
-            // We need to only show reviews for offers belonging to this partner
-            // In the data, offer.partner_id should match user.id (if user is the partner)
-            // Note: user.id in 'partners' is the auth id.
-            const myReviews = data?.filter((r: any) => r.offer?.partner_id === user?.id) || [];
-
-            setReviews(myReviews);
+            // data is already filtered correctly
+            setReviews(data as any);
 
             // Calculate stats
             if (myReviews.length > 0) {

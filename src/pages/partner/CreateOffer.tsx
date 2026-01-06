@@ -64,7 +64,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   // Type & Specifics
   const [locationMode, setLocationMode] = useState<'physical' | 'online' | 'at_home'>('physical');
   const [serviceZones, setServiceZones] = useState<Array<{ code: string; fee: number }>>([]);
-  const [eventType, setEventType] = useState<'calendly' | 'event' | 'promo' | 'purchase'>('calendly');
+  const [eventType, setEventType] = useState<'calendly' | 'event' | 'promo' | 'purchase' | 'wallet_pack'>('calendly');
   const [eventDate, setEventDate] = useState('');
   const [eventEndDate, setEventEndDate] = useState('');
   const [calendlyUrl, setCalendlyUrl] = useState('');
@@ -450,7 +450,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       }
 
       // 4.5 Secure Offer Editing Logic - AFTER Creation/Update
-      if (offer && (offer.status === 'approved' || offer.status === 'active' || offer.is_approved)) {
+      if (offer && (offer.status === 'approved' || offer.status === 'active')) {
         // Reset status to pending
         const { error: resetError } = await (supabase
           .from('offers') as any)
@@ -491,7 +491,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             description: v.description,
             price: parseFloat(v.price),
             discounted_price: v.discounted_price ? parseFloat(v.discounted_price) : null,
-            stock: v.has_stock && v.stock ? parseInt(v.stock) : null
+            stock: v.has_stock && v.stock ? parseInt(v.stock) : null,
+            // For Wallet Pack, credit amount = price (1:1 per user requirement)
+            credit_amount: eventType === 'wallet_pack' ? parseFloat(v.price) : null
           };
           // Only include ID if it's a real Update (not a new variant)
           if (v.id) {
@@ -919,6 +921,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                 { id: 'calendly', label: locationMode === 'online' ? 'Visio (Calendly)' : 'Rendez-vous', show: true },
                 { id: 'event', label: locationMode === 'online' ? 'Live / Atelier En ligne' : 'Événement', show: true },
                 { id: 'purchase', label: 'Produit Digital (PDF)', show: locationMode === 'online' },
+                { id: 'wallet_pack', label: 'Pack Ardoise', show: true },
                 { id: 'promo', label: 'Code Promo Web', show: locationMode === 'online' }
               ].filter(t => t.show).map((type) => (
                 <button
@@ -1129,7 +1132,15 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           {/* --- Cancellation Policy --- */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Politique d'annulation *</label>
-            {(eventType === 'purchase' || eventType === 'promo') ? (
+            {eventType === 'wallet_pack' ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                <p className="text-blue-900 font-medium">Validité : 6 mois</p>
+                <p className="text-sm text-blue-600 mt-1">
+                  Le pack est valable 6 mois à compter de la date d'achat. Remboursable sur demande si non consommé.
+                </p>
+                {/* Auto-set policy hiddenly */}
+              </div>
+            ) : (eventType === 'purchase' || eventType === 'promo') ? (
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
                 <p className="text-gray-900 font-medium">
                   {eventType === 'purchase' ? 'Non remboursable' : 'Voir conditions sur le site du Partenaire'}
@@ -1195,94 +1206,100 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           {eventType !== 'promo' && (
             <div>
               <div className="flex justify-between items-center mb-4">
-                <label className="block text-sm font-medium text-gray-700">Tarifs & Options</label>
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  className="text-sm text-primary font-medium hover:text-primary-dark flex items-center"
-                >
-                  <Plus className="w-4 h-4 mr-1" /> Ajouter une option
-                </button>
+                <h3 className="font-semibold text-gray-900">
+                  {eventType === 'wallet_pack' ? 'Configuration du Pack' : 'Tarifs & Options'}
+                </h3>
+                {eventType !== 'promo' && (
+                  <button type="button" onClick={addVariant} className="text-sm text-primary font-medium hover:text-primary-dark">
+                    + Ajouter une option
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4">
                 {variants.map((variant, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <label className="text-xs text-gray-500">Nom de l'option (ex: Solo, Duo)</label>
+                  <div key={index} className="flex gap-4 items-start bg-gray-50 p-4 rounded-lg group">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="col-span-1 md:col-span-2">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Nom de l'option</label>
                         <input
                           type="text"
                           value={variant.name}
                           onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="Standard"
+                          placeholder={eventType === 'wallet_pack' ? "Ex: Pack Découverte 50€" : "Ex: Tarif Solo"}
+                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                         />
                       </div>
-                      <div>
-                        <label className="text-xs text-gray-500">Prix (€)</label>
-                        <input
-                          type="number"
-                          value={variant.price}
-                          onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="0.00"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500">Prix Promo (€)</label>
-                        <input
-                          type="number"
-                          value={variant.discounted_price || ''}
-                          onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
-                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
 
-                    <div className="mb-3">
-                      <label className="text-xs text-gray-500">Description courte (optionnel)</label>
-                      <input
-                        type="text"
-                        value={variant.description || ''}
-                        onChange={(e) => updateVariant(index, 'description', e.target.value)}
-                        className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="Donne accès à..."
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          {eventType === 'wallet_pack' ? 'Prix du Pack (€)' : 'Prix (€)'}
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={variant.price}
+                            onChange={(e) => updateVariant(index, 'price', e.target.value)}
+                            className="w-full pl-3 pr-8 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                          <span className="absolute right-3 top-2 text-gray-400">€</span>
+                        </div>
+                      </div>
 
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={variant.has_stock}
-                          onChange={(e) => updateVariant(index, 'has_stock', e.target.checked)}
-                          className="rounded text-primary focus:ring-primary"
-                        />
-                        <span className="text-sm text-gray-700">Limiter les places</span>
-                      </label>
+                      {/* For Wallet Pack, we treat Price as Credit Amount for now (1:1), 
+                            but we could add a separate field `credit_amount` later if needed.
+                            For now, user said 50€ = 50€. 
+                        */}
+
+                      {eventType !== 'wallet_pack' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Prix barré (Optionnel)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={variant.discounted_price}
+                              onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
+                              className="w-full pl-3 pr-8 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                            />
+                            <span className="absolute right-3 top-2 text-gray-400">€</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {eventType !== 'purchase' && eventType !== 'wallet_pack' && (
+                        <div className="flex items-center gap-2 mt-6">
+                          <input
+                            type="checkbox"
+                            checked={variant.has_stock}
+                            onChange={(e) => updateVariant(index, 'has_stock', e.target.checked)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm text-gray-600">Limiter les places ?</span>
+                        </div>
+                      )}
 
                       {variant.has_stock && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">Qté:</span>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Quantité dispo</label>
                           <input
                             type="number"
                             value={variant.stock}
                             onChange={(e) => updateVariant(index, 'stock', e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                           />
                         </div>
                       )}
                     </div>
 
                     {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(index)}
-                        className="absolute top-2 right-2 text-gray-400 hover:text-red-500 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
+                      <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-gray-400 hover:text-red-500">
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     )}
                   </div>

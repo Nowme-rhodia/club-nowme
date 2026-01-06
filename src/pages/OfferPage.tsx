@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Globe, MapPin, Share2, ArrowLeft, Star, Navigation, Copy, ExternalLink, Calendar as CalendarIcon, Clock, CheckCircle, ChevronLeft, ChevronRight, Lock, Info } from 'lucide-react';
+import { MapPin, Calendar, Clock, Euro, Gift, ShoppingBag, X, Check, ArrowRight, Star, Heart, Share2, Info, Youtube, Video, Building, ArrowLeft, Globe, CheckCircle, ChevronLeft, ChevronRight, Lock, Copy, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 import { stripePromise } from '../lib/stripe';
@@ -43,33 +44,34 @@ export default function OfferPage() {
       const { data, error } = await (supabase
         .from('offers') as any)
         .select(`
-          id,
-          title,
-          description,
-          street_address,
-          is_online,
-          zip_code,
-          city,
-          cancellation_policy,
-          coordinates,
-          calendly_url,
-          booking_type,
-          external_link,
-          promo_code,
-          event_start_date,
-          event_end_date,
-          image_url,
-          category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
-          offer_variants(id, name, description, price, discounted_price, stock),
-          offer_media(url, type),
-          digital_product_file,
+id,
+  title,
+  description,
+  street_address,
+  is_online,
+  zip_code,
+  city,
+  cancellation_policy,
+  coordinates,
+  calendly_url,
+  booking_type,
+  external_link,
+  promo_code,
+  event_start_date,
+  event_end_date,
+  image_url,
+  category: offer_categories!offers_category_id_fkey(name, slug, parent_slug),
+    offer_variants(id, name, description, price, discounted_price, stock),
+    offer_media(url, type),
+    digital_product_file,
 
-          service_zones,
-          promo_conditions,
-          duration_type,
-          validity_start_date,
-          validity_end_date
-        `)
+    service_zones,
+    promo_conditions,
+    duration_type,
+    validity_start_date,
+    validity_end_date,
+    partner:partners(id, business_name)
+      `)
         .eq('id', id)
         .single();
 
@@ -125,7 +127,7 @@ export default function OfferPage() {
     if (zone) {
       setSelectedZoneCode(depCode);
       setMeetingAddress(address);
-      toast.success(`Zone ${depCode} validée (+${zone.fee}€)`);
+      toast.success(`Zone ${depCode} validée(+${zone.fee}€)`);
     } else {
       setSelectedZoneCode('');
       setMeetingAddress('');
@@ -250,9 +252,7 @@ export default function OfferPage() {
         return;
       }
 
-      console.log("-----------------------------------------");
-      console.log("🚀 [DEBUG] Initiating Stripe Checkout");
-      console.log("-----------------------------------------");
+
 
       // Validate User Email for Checkout
       if (!user?.email) {
@@ -273,8 +273,7 @@ export default function OfferPage() {
         meeting_location: meetingAddress
       };
 
-      console.log("📦 Payload being sent to 'create-checkout-session':", payload);
-      console.log("📍 Exact Address from State:", meetingAddress);
+
 
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: {
@@ -311,10 +310,7 @@ export default function OfferPage() {
       const baseUrl = offer.calendly_url;
       const params = new URLSearchParams();
 
-      console.log('📅 [DEBUG] OpenCalendly Called');
-      console.log('👤 [DEBUG] User Object:', user);
-      console.log('👤 [DEBUG] Profile Object:', profile);
-      console.log('📧 [DEBUG] Email from user.email:', user?.email);
+
 
       // Prefill User Details (Strict Consistency)
       if (user?.email) {
@@ -577,7 +573,7 @@ export default function OfferPage() {
 
                     {offer.booking_type === 'event' && offer.event_start_date && (
                       <div className="flex items-center gap-1.5 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
-                        <CalendarIcon className="w-4 h-4 text-primary" />
+                        <Calendar className="h-5 w-5 text-gray-400 mr-2" />
                         <span className="text-primary font-medium text-sm">
                           {new Date(offer.event_start_date).toLocaleString('fr-FR', {
                             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -595,7 +591,34 @@ export default function OfferPage() {
                         </span>
                       </div>
                     )}
+
+                    {/* WALLET PACK DISCLAIMER */}
+                    {offer.booking_type === 'wallet_pack' && (
+                      <div className="w-full mt-2 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-start gap-3">
+                        <Clock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">Validité : 6 mois</p>
+                          <p className="text-xs text-blue-700 mt-1">
+                            Utilisable uniquement chez ce partenaire.
+                            Remboursable sur demande (hors frais) si non consommé.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {offer.partner && offer.partner.business_name && (
+                    <Link
+                      to={`/partenaire/${offer.partner.id}`}
+                      className="inline-flex items-center gap-2 mb-6 text-gray-600 hover:text-primary transition-colors group"
+                    >
+                      <Building className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      <span className="font-semibold text-lg border-b border-transparent group-hover:border-primary">
+                        {offer.partner.business_name}
+                      </span>
+                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                    </Link>
+                  )}
 
                   <div className="mb-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-2">Description</h2>
@@ -936,9 +959,21 @@ export default function OfferPage() {
                               <Clock className="w-4 h-4" />
                               <span>{getEventDate()}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-600 text-sm mt-1">
-                              <MapPin className="w-4 h-4" />
-                              <span>{offer.location || offer.city}</span>
+                            <div className="flex items-center text-gray-600 mb-4">
+                              <MapPin className="w-5 h-5 mr-2" />
+                              <span className="mr-4">{offer.city}</span>
+                              <Building className="w-5 h-5 mr-2" />
+                              <Link to={`/partenaire/${offer.partner_id}`} className="hover:text-primary hover:underline transition-colors font-medium">
+                                {offer.partner?.business_name}
+                              </Link>
+                            </div>
+                            <div className="flex items-center text-gray-600 mb-4">
+                              <MapPin className="w-5 h-5 mr-2" />
+                              <span className="mr-4">{offer.city}</span>
+                              <Building className="w-5 h-5 mr-2" />
+                              <Link to={`/partenaire/${offer.partner_id}`} className="hover:text-primary hover:underline transition-colors font-medium">
+                                {offer.partner?.business_name}
+                              </Link>
                             </div>
                           </div>
 

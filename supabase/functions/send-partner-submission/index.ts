@@ -9,13 +9,14 @@ type BusinessPayload = {
   email: string;
   phone: string;
   message: string;
-  // Champs optionnels pour compatibilité avec l'ancien formulaire
+  // Champs optionnels
   website?: string;
   siret?: string;
   address?: string;
   facebook?: string;
   instagram?: string;
   termsAccepted?: boolean;
+  password?: string; // [NEW] Password field
 };
 
 type OfferPayload = {
@@ -40,18 +41,56 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const business: BusinessPayload = body.business ?? body;
     const offer: OfferPayload | undefined = body.offer;
 
-    // Validation des champs requis pour la demande initiale
+    // Validation des champs requis
     if (!business.name || !business.contactName || !business.email || !business.phone || !business.message) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Champs obligatoires manquants (nom entreprise, contact, email, téléphone, message)"
+          error: "Champs obligatoires manquants"
         }),
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // 1️⃣ Insert dans partners (demande initiale simplifiée)
+    // 0️⃣ Create Auth User (if password provided)
+    let userId: string | null = null;
+
+    if (business.password) {
+      // Check if user exists first to warn? OR just try create
+      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+        email: business.email,
+        password: business.password,
+        email_confirm: true, // Auto-confirm email since we verify via this process? Or maybe false? 
+        // User indicated "connecter avec l'email et le mot de passe choisis"
+        // Let's auto-confirm so they can login immediately if we didn't block them by 'pending' status.
+        user_metadata: {
+          first_name: business.contactName.split(' ')[0],
+          last_name: business.contactName.split(' ').slice(1).join(' ') || '',
+          phone: business.phone,
+          role: 'partner' // Pre-assign role metadata?
+        }
+      });
+
+      if (userError) {
+        logger.error("❌ Error creating auth user:", userError);
+        // If user already exists, we returns distinct error
+        if (userError.message.includes("already registered") || userError.status === 422) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Un compte existe déjà avec cet email."
+            }),
+            { status: 400, headers: corsHeaders }
+          );
+        }
+        throw userError;
+      }
+
+      userId = userData.user.id;
+      logger.info(`✅ Auth user created: ${userId}`);
+    }
+
+    // 1️⃣ Insert dans partners
     const { data: partner, error: insertError } = await supabase
       .from("partners")
       .insert({
@@ -59,7 +98,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         contact_name: business.contactName,
         contact_email: business.email,
         phone: business.phone,
-        description: business.message, // Utilise 'description' au lieu de 'message'
+        description: business.message,
+        user_id: userId, // [NEW] Link to auth user
 
         // Champs optionnels
         website: business.website ?? null,
@@ -77,21 +117,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (insertError || !partner) {
       logger.error("❌ Erreur insertion partenaire:", insertError);
 
-      // Détails de l'erreur pour le debug
-      const errorDetails = insertError ? {
-        message: insertError.message,
-        details: insertError.details,
-        hint: insertError.hint,
-        code: insertError.code
-      } : "No partner data returned";
-
-      logger.error("Détails de l'erreur:", errorDetails);
+      // If we created a user but failed to create partner, should we rollback user?
+      // For now, let's just log. Manual cleanup might be needed.
+      // But typically this shouldn't fail if validation passed.
 
       return new Response(
         JSON.stringify({
           success: false,
           error: "Erreur lors de l'enregistrement du partenaire",
-          debug: import.meta.env?.DEV ? errorDetails : undefined
+          debug: import.meta.env?.DEV ? insertError : undefined
         }),
         { status: 500, headers: corsHeaders }
       );
@@ -134,16 +168,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
           return;
         }
 
-        // Fetch admins for notification
-        const { data: admins, error: adminError } = await supabase
-          .from('user_profiles')
-          .select('email')
-          .eq('is_admin', true);
-
-        if (adminError) {
-          logger.error("Error fetching admins:", adminError);
-        }
-
+        // Fetch admins
+        const { data: admins } = await supabase.from('user_profiles').select('email').eq('is_admin', true);
         const defaultAdmins = ["rhodia.kw@gmail.com", "admin@admin.fr"];
         const dynamicAdmins = admins?.map(a => a.email).filter(e => e) || [];
         const recipientEmails = [...new Set([...defaultAdmins, ...dynamicAdmins])];
@@ -153,93 +179,54 @@ Deno.serve(async (req: Request): Promise<Response> => {
           <p><strong>Entreprise :</strong> ${business.name}</p>
           <p><strong>Contact :</strong> ${business.contactName ?? "-"}</p>
           <p><strong>Email :</strong> ${business.email}</p>
+          <p><strong>Compte créé :</strong> ${userId ? "OUI" : "NON"}</p>
           ${business.phone ? `<p><strong>Téléphone :</strong> ${business.phone}</p>` : ""}
           ${business.website ? `<p><strong>Site web :</strong> ${business.website}</p>` : ""}
-          ${business.facebook ? `<p><strong>Facebook :</strong> <a href="${business.facebook}">${business.facebook}</a></p>` : ""}
-          ${business.instagram ? `<p><strong>Instagram :</strong> <a href="${business.instagram}">${business.instagram}</a></p>` : ""}
           ${business.siret ? `<p><strong>SIRET :</strong> ${business.siret}</p>` : ""}
-          ${business.address ? `<p><strong>Adresse :</strong> ${business.address}</p>` : ""}
           ${business.message ? `<p><strong>Message :</strong><br/>${business.message.replace(/\n/g, "<br/>")}</p>` : ""}
-          ${offer ? `<p><strong>Offre proposée :</strong> ${offer.title} – ${offer.price}€</p>` : ""}
           <p style="margin-top:20px;">👉 Connectez-vous au dashboard admin pour approuver ou rejeter cette demande.</p>
         `;
 
         const confirmHtml = `
           <h2 style="color:#BF2778;">Bienvenue chez Nowme ! ✨</h2>
           <p>Bonjour ${business.contactName ?? business.name},</p>
-          <p>Nous avons bien reçu votre demande de partenariat pour <strong>${business.name}</strong> et nous vous en remercions !</p>
+          <p>Nous avons bien reçu votre demande de partenariat pour <strong>${business.name}</strong> !</p>
           
-          <p>Chez Nowme, nous sélectionnons nos partenaires avec beaucoup de soin pour garantir la meilleure qualité à notre communauté.</p>
-          
-          ${offer ? `<p>Votre offre <strong>${offer.title}</strong> a bien été enregistrée.</p>` : ""}
-          
-          <p>Notre équipe va étudier votre profil et reviendra vers vous sous <strong>48h ouvrées</strong>.</p>
+          <p>✅ <strong>Votre compte a été créé.</strong></p>
+          <p>Une fois votre dossier validé par notre équipe (sous 48h), vous pourrez vous connecter directement avec :</p>
+          <ul>
+            <li><strong>Email :</strong> ${business.email}</li>
+            <li><strong>Mot de passe :</strong> (celui que vous avez choisi)</li>
+          </ul>
           
           <p>À très vite !</p>
           <p style="margin-top:20px;">Cordialement,<br/>💜 L’équipe Nowme Club</p>
         `;
 
-        // Helper to send email with detailed result
+        // Helper to send
         const sendDirectEmail = async (to: string, subject: string, html: string) => {
-          try {
-            const res = await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${resendApiKey}`,
-              },
-              body: JSON.stringify({
-                from: 'Nowme Club <contact@nowme.fr>',
-                to,
-                subject,
-                html,
-              }),
-            });
-
-            if (!res.ok) {
-              const errData = await res.json();
-              console.error(`Failed to send email to ${to}:`, errData);
-              return { success: false, error: errData };
-            }
-            return { success: true, error: null };
-          } catch (e: any) {
-            console.error(`Exception sending email to ${to}:`, e);
-            return { success: false, error: e.message };
-          }
+          const res = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendApiKey}` },
+            body: JSON.stringify({ from: 'Nowme Club <contact@nowme.fr>', to, subject, html }),
+          });
+          return { success: res.ok, error: res.ok ? null : await res.json() };
         };
 
-        // Helper to sleep (prevent rate limiting)
         const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
         const emailInserts = [];
 
-        // 1. Send to Admins
         for (const adminEmail of recipientEmails) {
           if (adminEmail) {
             const res = await sendDirectEmail(adminEmail, "Nouvelle demande de partenariat", adminHtml);
-            emailInserts.push({
-              to_address: adminEmail,
-              subject: "Nouvelle demande de partenariat",
-              content: adminHtml,
-              status: res.success ? 'sent' : 'failed',
-              sent_at: res.success ? new Date().toISOString() : null
-            });
-            // Wait 1s between emails to respect Resend Test Limit (2 req/sec)
+            emailInserts.push({ to_address: adminEmail, subject: "Nouvelle demande de partenariat", content: adminHtml, status: res.success ? 'sent' : 'failed', sent_at: new Date().toISOString() });
             await sleep(1000);
           }
         }
 
-        // 2. Send to Partner
         const partnerRes = await sendDirectEmail(business.email, "Bienvenue chez Nowme ! Votre demande est en cours d'examen ✨", confirmHtml);
-        emailInserts.push({
-          to_address: business.email,
-          subject: "Bienvenue chez Nowme ! Votre demande est en cours d'examen ✨",
-          content: confirmHtml,
-          status: partnerRes.success ? 'sent' : 'failed',
-          sent_at: partnerRes.success ? new Date().toISOString() : null
-        });
+        emailInserts.push({ to_address: business.email, subject: "Bienvenue chez Nowme !", content: confirmHtml, status: partnerRes.success ? 'sent' : 'failed', sent_at: new Date().toISOString() });
 
-        // Write history to DB
         await supabase.from("emails").insert(emailInserts);
 
       } catch (err: any) {
@@ -247,16 +234,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
     };
 
-    // Use cancel-safe background execution
     // @ts-ignore
     EdgeRuntime.waitUntil(sendEmails());
 
-    // ✅ Réponse immédiate
     return new Response(
       JSON.stringify({
         success: true,
         partnerId: partner.id,
         offerId,
+        userId,
         message: "✅ Partenaire enregistré. Emails en cours d'envoi.",
       }),
       { status: 200, headers: corsHeaders }

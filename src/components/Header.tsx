@@ -42,7 +42,7 @@ export function Header() {
           <nav className="hidden md:flex items-center space-x-8">
             {Array.isArray(navigationItems) &&
               navigationItems.map((item) =>
-                (item.requiresSubscription && !isSubscriber && !isAdmin && user?.email !== 'rhodia@nowme.fr') || (isPartner && !isAdmin && user?.email !== 'rhodia@nowme.fr' && (item.path === '/community-space' || item.path === '/club')) ? null : (
+                (item.requiresSubscription && !isSubscriber && !isAdmin && user?.email !== 'rhodia@nowme.fr') || (isPartner && !isAdmin && user?.email !== 'rhodia@nowme.fr' && (item.path === '/community-space' || item.path === '/club' || item.path === '/guide')) ? null : (
                   <Link
                     key={item.name}
                     to={item.path}
@@ -133,7 +133,7 @@ export function Header() {
             <nav className="flex flex-col space-y-4">
               {Array.isArray(navigationItems) &&
                 navigationItems.map((item) =>
-                  (item.requiresSubscription && !isSubscriber && !isAdmin && user?.email !== 'rhodia@nowme.fr') || (isPartner && !isAdmin && user?.email !== 'rhodia@nowme.fr' && (item.path === '/community-space' || item.path === '/club')) ? null : (
+                  (item.requiresSubscription && !isSubscriber && !isAdmin && user?.email !== 'rhodia@nowme.fr') || (isPartner && !isAdmin && user?.email !== 'rhodia@nowme.fr' && (item.path === '/community-space' || item.path === '/club' || item.path === '/guide')) ? null : (
                     <Link
                       key={item.name}
                       to={item.path}
