@@ -130,9 +130,15 @@ export default function Bookings() {
 
         if (isPurchaseOrPromo) return false;
 
+        // ✅ Fix: If date to define (no scheduled_at and no event date), always show in Upcoming
+        if (!booking.scheduled_at && !booking.offer?.event_start_date) {
+            return activeTab === 'upcoming';
+        }
+
         const dateToCheck = booking.scheduled_at
             ? new Date(booking.scheduled_at)
             : (booking.offer?.event_start_date ? new Date(booking.offer.event_start_date) : new Date(booking.booking_date));
+
         const now = new Date();
 
         if (activeTab === 'past') {

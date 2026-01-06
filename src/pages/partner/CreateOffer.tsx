@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { categories } from '../../data/categories';
-import { Plus, Trash2, Info, Image as ImageIcon, X, Euro, Upload, Link } from 'lucide-react';
+import { Plus, Trash2, Info, X, Euro, Upload, Save, ArrowLeft, Image as ImageIcon, Link } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { AddressAutocomplete } from '../../components/AddressAutocomplete';
 import { LocationSearch } from '../../components/LocationSearch';
 import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
 import { translateError } from '../../lib/errorTranslations';
+
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify'; // Imported safely
 
 interface CreateOfferProps {
   offer?: any;
@@ -29,6 +35,24 @@ interface Variant {
   stock: string;
   has_stock: boolean;
 }
+
+const modules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    ['link', 'clean']
+  ],
+};
+
+const formats = [
+  'header',
+  'bold', 'italic', 'underline', 'strike',
+  'color', 'background',
+  'list', 'bullet',
+  'link'
+];
 
 export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferProps) {
   const { user } = useAuth();
@@ -82,8 +106,10 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
   // Variants
   const [variants, setVariants] = useState<Variant[]>([
-    { name: 'Tarif Standard', description: '', price: '', stock: '', has_stock: false }
+    { name: 'Tarif Standard', description: '', price: '', discounted_price: '', stock: '', has_stock: false }
   ]);
+
+  const [installmentOptions, setInstallmentOptions] = useState<string[]>([]);
 
   // Auto-set policy for certain types
   React.useEffect(() => {
@@ -152,32 +178,26 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setEventDate(offer.event_start_date ? formatDateTimeForInput(offer.event_start_date) : '');
       setEventEndDate(offer.event_end_date ? formatDateTimeForInput(offer.event_end_date) : '');
       setCalendlyUrl(offer.calendly_url || '');
-      setExternalLink(offer.external_link || '');
-      setExternalLink(offer.external_link || '');
-      setExternalLink(offer.external_link || '');
       setPromoCode(offer.promo_code || '');
       setPromoConditions(offer.promo_conditions || '');
       setDigitalProductFile(offer.digital_product_file || null);
       setCancellationPolicy(offer.cancellation_policy || 'flexible');
 
+      setInstallmentOptions(offer.installment_options || []);
+
       setDurationType(offer.duration_type || 'lifetime');
       setValidityStartDate(offer.validity_start_date ? formatDateTimeForInput(offer.validity_start_date) : '');
       setValidityEndDate(offer.validity_end_date ? formatDateTimeForInput(offer.validity_end_date) : '');
 
-      setLocationMode(offer.is_online ? 'online' : (offer.street_address === 'Au domicile du client' ? 'at_home' : 'physical'));
-
       // Load service zones if at_home schema
       if (offer.service_zones && Array.isArray(offer.service_zones)) {
-        setServiceZones(offer.service_zones);
+        setServiceZones(offer.service_zones.map((z: any) => ({
+          code: z.code,
+          fee: z.fee ?? 0
+        })));
       }
 
-      setLocationMode(offer.is_online ? 'online' : (offer.street_address === 'Au domicile du client' ? 'at_home' : 'physical'));
-
-      // Load service zones if at_home schema
-      if (offer.service_zones && Array.isArray(offer.service_zones)) {
-        setServiceZones(offer.service_zones);
-      }
-
+      // Determine Location Mode
       if (offer.is_online) {
         setLocationMode('online');
       } else if (offer.street_address === 'Au domicile du client') {
@@ -189,10 +209,10 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       if (offer.offer_variants && offer.offer_variants.length > 0) {
         setVariants(offer.offer_variants.map((v: any) => ({
           id: v.id,
-          name: v.name,
+          name: v.name || '',
           description: v.description || '',
-          price: v.price.toString(),
-          discounted_price: v.discounted_price?.toString() || '',
+          price: v.price != null ? v.price.toString() : '',
+          discounted_price: v.discounted_price != null ? v.discounted_price.toString() : '',
           stock: v.stock !== null ? v.stock.toString() : '',
           has_stock: v.stock !== null
         })));
@@ -200,10 +220,10 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         // Fallback for when variants are passed via offers query alias
         setVariants(offer.variants.map((v: any) => ({
           id: v.id, // Ensure ID is preserved for updates
-          name: v.name,
+          name: v.name || '',
           description: v.description || '',
-          price: v.price.toString(),
-          discounted_price: v.discounted_price?.toString() || '',
+          price: v.price != null ? v.price.toString() : '',
+          discounted_price: v.discounted_price != null ? v.discounted_price.toString() : '',
           stock: v.stock !== null ? v.stock.toString() : '',
           has_stock: v.stock !== null
         })));
@@ -268,7 +288,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   };
 
   const addVariant = () => {
-    setVariants([...variants, { name: '', description: '', price: '', stock: '', has_stock: false }]);
+    setVariants([...variants, { name: '', description: '', price: '', discounted_price: '', stock: '', has_stock: false }]);
   };
 
   const removeVariant = (index: number) => {
@@ -421,6 +441,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         service_zones: locationMode === 'at_home' ? serviceZones : [],
         image_url: uploadedImageUrl,
         cancellation_policy: cancellationPolicy,
+        installment_options: installmentOptions,
         // Status remains mostly unchanged or resets to draft if needed, but let's keep it simple
         status: offer ? offer.status : 'draft'
       };
@@ -740,14 +761,22 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description détaillée</label>
+            <div className="bg-white">
+              <ReactQuill
+                theme="snow"
+                value={description}
+                onChange={setDescription}
+                modules={modules}
+                formats={formats}
+                className="h-64 mb-12" // mb-12 to account for toolbar height
+                placeholder="Décrivez votre offre en détail..."
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Décrivez l'expérience, le déroulement, ce qui est inclus, etc.
+              Utilisez la barre d'outils pour mettre en forme votre texte.
+            </p>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6">
@@ -1202,7 +1231,6 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
 
           {/* --- Variants --- */}
-          {/* --- Variants --- */}
           {eventType !== 'promo' && (
             <div>
               <div className="flex justify-between items-center mb-4">
@@ -1220,6 +1248,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                 {variants.map((variant, index) => (
                   <div key={index} className="flex gap-4 items-start bg-gray-50 p-4 rounded-lg group">
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+
                       <div className="col-span-1 md:col-span-2">
                         <label className="block text-xs font-medium text-gray-500 mb-1">Nom de l'option</label>
                         <input
@@ -1248,11 +1277,6 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                           <span className="absolute right-3 top-2 text-gray-400">€</span>
                         </div>
                       </div>
-
-                      {/* For Wallet Pack, we treat Price as Credit Amount for now (1:1), 
-                            but we could add a separate field `credit_amount` later if needed.
-                            For now, user said 50€ = 50€. 
-                        */}
 
                       {eventType !== 'wallet_pack' && (
                         <div>
@@ -1304,6 +1328,47 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* --- Payment Options (Installments) --- */}
+          {(eventType === 'event' || eventType === 'wallet_pack') && (
+            <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-white rounded-lg text-indigo-600">
+                  <Euro className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-indigo-900">Facilités de paiement</h3>
+                  <p className="text-sm text-indigo-700 mb-4">
+                    Autorisez vos clients à payer en plusieurs fois sans frais.
+                    Nous gérons automatiquement les prélèvements.
+                  </p>
+
+                  <div className="flex flex-wrap gap-4">
+                    {['2x', '3x', '4x'].map((plan) => (
+                      <label key={plan} className="flex items-center bg-white px-4 py-2 rounded-lg border border-indigo-200 cursor-pointer hover:border-indigo-400 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={installmentOptions.includes(plan)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setInstallmentOptions([...installmentOptions, plan]);
+                            } else {
+                              setInstallmentOptions(installmentOptions.filter(Op => Op !== plan));
+                            }
+                          }}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mr-2"
+                        />
+                        <span className="font-medium text-gray-700">Paiement en {plan}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-indigo-600 mt-2">
+                    * Le paiement en plusieurs fois n'est proposé que si l'événement commence dans plus de 7 jours.
+                  </p>
+                </div>
               </div>
             </div>
           )}

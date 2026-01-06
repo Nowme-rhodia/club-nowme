@@ -21,10 +21,12 @@ CREATE TABLE IF NOT EXISTS public.refund_requests (
 ALTER TABLE public.refund_requests ENABLE ROW LEVEL SECURITY;
 
 -- Users can view and create their own requests
+DROP POLICY IF EXISTS "Users can view own refund requests" ON public.refund_requests;
 CREATE POLICY "Users can view own refund requests" 
 ON public.refund_requests FOR SELECT 
 USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create own refund requests" ON public.refund_requests;
 CREATE POLICY "Users can create own refund requests" 
 ON public.refund_requests FOR INSERT 
 WITH CHECK (user_id = auth.uid());
@@ -32,6 +34,7 @@ WITH CHECK (user_id = auth.uid());
 -- Admins can view and update all requests
 -- (Assuming admin policies are handled generically or implicitly via service role for now, 
 -- but explicit policy is good practice if admin uses client)
+DROP POLICY IF EXISTS "Admins can view all refund requests" ON public.refund_requests;
 CREATE POLICY "Admins can view all refund requests" 
 ON public.refund_requests FOR ALL 
 USING (

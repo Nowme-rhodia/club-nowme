@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
 
     try {
         const reqBody = await req.json()
-        const { offer_id, price, user_id, user_email, success_url, cancel_url, booking_type, variant_id, travel_fee, department_code } = reqBody
+        const { offer_id, price, user_id, user_email, success_url, cancel_url, booking_type, variant_id, travel_fee, department_code, scheduled_at } = reqBody
 
         // Initialisation propre sans adaptateur inutile qui fait crasher Deno
         const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
@@ -93,6 +93,44 @@ Deno.serve(async (req) => {
             console.log(`[DEBUG] New Unit Amount: ${unitAmount}`);
         }
 
+
+
+        // ... Ambassador Logic ...
+
+        // --- NEW: Installment Logic (2x, 3x, 4x) ---
+        const installment_plan = reqBody.installment_plan; // '2x', '3x', '4x'
+        let planType = '1x';
+
+        if (installment_plan && ['2x', '3x', '4x'].includes(installment_plan)) {
+            console.log(`[DEBUG] Processing Installment Plan: ${installment_plan}`);
+            const parts = parseInt(installment_plan[0]);
+
+            // 1. Check Eligibility (Deadline Rule)
+            if (offer.event_start_date) {
+                const eventDate = new Date(offer.event_start_date);
+                const deadline = new Date(eventDate);
+                deadline.setDate(deadline.getDate() - 7); // 7 days before
+
+                const now = new Date();
+                const monthsToFinish = parts - 1; // 3x means Now + 1mo + 2mo (duration 2mo)
+
+                const finishDate = new Date(now);
+                finishDate.setMonth(finishDate.getMonth() + monthsToFinish);
+
+                if (finishDate > deadline) {
+                    throw new Error(`Le paiement en ${installment_plan} n'est pas disponible pour cet événement (soldes 7 jours avant le début).`);
+                }
+            }
+
+            // 2. Adjust Price
+            // Simple split for now. We assume the remaining payments will be scheduled for same amount.
+            // Note: Stripe Subscription/Schedule should handle standard amount.
+            // We use Math.floor to ensure we don't overcharge, but ideally we handle the remainder on first payment.
+            // Let's do: Amount = Total / Parts.
+            unitAmount = Math.round(unitAmount / parts);
+            planType = installment_plan;
+        }
+
         // 1b. Travel Fee (Remaining logic unchanged, just ensuring unitAmount is used)
         let travelFeeLineItem = null;
         if (travel_fee && travel_fee > 0) {
@@ -121,8 +159,8 @@ Deno.serve(async (req) => {
                 price_data: {
                     currency: 'eur',
                     product_data: {
-                        name: `${offer.title}${variantName}`,
-                        description: offer.description ? offer.description.substring(0, 100) : undefined,
+                        name: `${offer.title}${variantName} (${planType === '1x' ? 'Comptant' : 'Paiement ' + planType})`,
+                        description: offer.description ? offer.description.replace(/<[^>]*>?/gm, '').substring(0, 400) : undefined,
                         images: offer.image_url ? [offer.image_url] : [],
                     },
                     unit_amount: unitAmount,
@@ -131,7 +169,15 @@ Deno.serve(async (req) => {
             },
         ];
 
-        if (travelFeeLineItem) line_items.push(travelFeeLineItem);
+        if (travelFeeLineItem) {
+            // NOTE: Travel fee is usually paid UPFRONT fully. 
+            // If we are in installment mode, should we split travel fee? 
+            // Usually, fees are paid immediately. 
+            // For simplicity in this iteration, we leave it as is (added to first payment).
+            // But if we want total split, we should have added it to unitAmount before splitting.
+            // Current behavior: Product split in N, Fee paid 100% now.
+            line_items.push(travelFeeLineItem);
+        }
 
         // Priority: DB Email -> Payload Email
         let customerEmail = userData?.email;
@@ -143,15 +189,16 @@ Deno.serve(async (req) => {
             console.log(`[DEBUG] Using DB email: ${customerEmail}`);
         }
 
-        // Calculate total amount for success URL
+        // Calculate final total (First Payment)
         const finalTotal = (unitAmount + (travelFeeLineItem?.price_data?.unit_amount || 0)) / 100;
 
-        const session = await stripe.checkout.sessions.create({
+        // Session Config
+        const sessionConfig: any = {
             payment_method_types: ['card', 'paypal'],
             line_items: line_items,
             mode: 'payment',
-            customer_email: customerEmail, // FORCE EMAIL
-            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${finalTotal}&status=success&variant_id=${variant_id ? String(variant_id) : 'null'}`,
+            customer_email: customerEmail,
+            success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${finalTotal}&status=success&variant_id=${variant_id ? String(variant_id) : 'null'}&scheduled_at=${scheduled_at || ''}`,
             cancel_url: cancel_url,
             client_reference_id: user_id,
             metadata: {
@@ -163,9 +210,21 @@ Deno.serve(async (req) => {
                 department_code: department_code || '',
                 travel_fee: travel_fee ? String(travel_fee) : '0',
                 meeting_location: finalMeetingLocation,
-                is_ambassador_discount: userData?.is_ambassador && offer.is_official ? 'true' : 'false'
+                is_ambassador_discount: userData?.is_ambassador && offer.is_official ? 'true' : 'false',
+                plan_type: planType, // '2x', '3x', '4x' or '1x'
+                installment_amount: planType !== '1x' ? String(unitAmount) : '0',
+                scheduled_at: scheduled_at || '' // NEW: Pass scheduled date to webhook
             },
-        })
+        };
+
+        // If Installment -> Save Card for Future Usage
+        if (planType !== '1x') {
+            sessionConfig.payment_intent_data = {
+                setup_future_usage: 'off_session',
+            };
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionConfig)
 
         return new Response(
             JSON.stringify({ sessionId: session.id, url: session.url }),

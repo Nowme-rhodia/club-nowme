@@ -13,8 +13,7 @@ export function Header() {
     { name: 'Tous les kiffs', path: '/tous-les-kiffs' }, // Shop
     { name: "L'Agenda", path: '/agenda', requiresSubscription: true }, // Events
     { name: 'Le QG', path: '/community-space', requiresSubscription: true }, // Social
-    { name: "Mode d'emploi", path: '/guide' },
-    { name: 'Abonnement', path: '/subscription' }
+    { name: "Mode d'emploi", path: (isSubscriber || isAdmin || user?.email === 'rhodia@nowme.fr') ? '/guide' : '/guidenonabonnee' }
   ];
 
   const getAccountPath = () => {

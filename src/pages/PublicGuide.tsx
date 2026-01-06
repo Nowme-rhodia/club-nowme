@@ -42,67 +42,105 @@ export function PublicGuide() {
                 </div>
             </div>
 
-            {/* The 4 Pillars */}
-            <div className="py-20 px-4 max-w-7xl mx-auto">
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* New Use Cases Section */}
+            <div className="py-20 px-4 max-w-7xl mx-auto space-y-24">
 
-                    {/* Card 1 */}
-                    <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-xl shadow-gray-100/50 hover:border-green-100 transition-all group">
-                        <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform">
-                            <MessageCircle className="w-7 h-7" />
+                {/* Use Case 1: Creator */}
+                <div className="flex flex-col md:flex-row items-center gap-12">
+                    <div className="flex-1 order-2 md:order-1">
+                        <div className="w-16 h-16 bg-pink-100 rounded-2xl flex items-center justify-center text-pink-600 mb-6">
+                            <Users className="w-8 h-8" />
                         </div>
-                        <h3 className="text-xl font-bold mb-3">1. Ta nouvelle "Team"</h3>
-                        <p className="text-gray-600 mb-4">
-                            Dès ton arrivée, tu rejoins nos communautés WhatsApp privées. C'est là que la magie opère.
+                        <h3 className="text-3xl font-bold mb-4 text-gray-900">Tu es l'organisatrice (si tu veux)</h3>
+                        <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                            Tu es la seule de tes amies à aimer le Jazz ? Ou à vouloir tester ce nouveau resto coréen ? <br />
+                            <strong className="text-pink-600">Ici, tu ne seras plus jamais seule.</strong><br />
+                            Crée ta sortie en 2 clics, et trouve instantanément des copines motivées pour t'accompagner.
                         </p>
-                        <div className="bg-green-50 rounded-xl p-4 text-sm text-green-800 font-medium">
-                            Use Case : "Qui est chaud pour un resto ce soir ?" -&gt; 5 réponses en 10 min.
+                    </div>
+                    <div className="flex-1 order-1 md:order-2">
+                        <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:rotate-2 transition-transform duration-500">
+                            <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&q=80" alt="Sortie entre filles" className="w-full h-auto" />
                         </div>
                     </div>
+                </div>
 
-                    {/* Card 2 */}
-                    <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-xl shadow-gray-100/50 hover:border-purple-100 transition-all group">
-                        <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 transition-transform">
-                            <Calendar className="w-7 h-7" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-3">2. Sorties illimitées</h3>
-                        <p className="text-gray-600 mb-4">
-                            Accès complet à l'agenda : Afterworks, Ateliers, Sport, Dîners...
-                        </p>
-                        <div className="bg-purple-50 rounded-xl p-4 text-sm text-purple-800 font-medium flex items-center gap-2">
-                            <Lock className="w-4 h-4" />
-                            <span>Agenda "Secret" réservé aux membres.</span>
+                {/* Use Case 2: Daily Perks */}
+                <div className="flex flex-col md:flex-row items-center gap-12">
+                    <div className="flex-1">
+                        <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:-rotate-2 transition-transform duration-500">
+                            <img src="https://images.unsplash.com/photo-1540497077202-7c8a33801524?auto=format&fit=crop&q=80" alt="Spa et détente" className="w-full h-auto" />
                         </div>
                     </div>
-
-                    {/* Card 3 */}
-                    <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-xl shadow-gray-100/50 hover:border-indigo-100 transition-all group">
-                        <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mb-6 group-hover:scale-110 transition-transform">
-                            <CreditCard className="w-7 h-7" />
+                    <div className="flex-1">
+                        <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 mb-6">
+                            <Gift className="w-8 h-8" />
                         </div>
-                        <h3 className="text-xl font-bold mb-3">3. Mon Ardoise</h3>
-                        <p className="text-gray-600 mb-4">
-                            Notre monnaie interne qui booste ton pouvoir d'achat. Paye 40€, reçois 50€ de crédit.
+                        <h3 className="text-3xl font-bold mb-4 text-gray-900">Ton quotidien, en mieux</h3>
+                        <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                            Ce n'est pas que pour les grandes occasions.<br />
+                            C'est l'Happy Hour prolongé le mardi soir, le Spa à -30% le dimanche, ou juste le café offert dans ton spot préféré.<br />
+                            <strong className="text-purple-600">Rentabilise ton abonnement juste en vivant ta vie.</strong>
                         </p>
-                        <div className="bg-indigo-50 rounded-xl p-4 text-sm text-indigo-800 font-medium">
-                            Résultat : Tes verres et repas te coûtent -20% toute l'année.
+                    </div>
+                </div>
+
+                {/* Use Case 3: Thematic & Local */}
+                <div className="flex flex-col md:flex-row items-center gap-12">
+                    <div className="flex-1 order-2 md:order-1">
+                        <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                            <Heart className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-3xl font-bold mb-4 text-gray-900">Partout & Pour Tout</h3>
+                        <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                            Que tu habites à Versailles, Cergy ou Paris centre, il y a des événements à côté de chez toi.<br />
+                            Et pour tes passions ? Rejoins nos <strong className="text-indigo-600">Clubs Thématiques</strong> :<br />
+                            <span className="inline-flex flex-wrap gap-2 mt-3">
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">📚 Book Club</span>
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">🎨 Art Club</span>
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">👟 Sport</span>
+                                <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">🍷 Œnologie</span>
+                            </span>
+                        </p>
+                    </div>
+                    <div className="flex-1 order-1 md:order-2">
+                        <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:rotate-1 transition-transform duration-500">
+                            <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80" alt="Groupe d'amies" className="w-full h-auto" />
                         </div>
                     </div>
+                </div>
 
-                    {/* Card 4 */}
-                    <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-xl shadow-gray-100/50 hover:border-yellow-100 transition-all group">
-                        <div className="w-14 h-14 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-500 mb-6 group-hover:scale-110 transition-transform">
-                            <Gift className="w-7 h-7" />
-                        </div>
-                        <h3 className="text-xl font-bold mb-3">4. Cadeaux & Ventes Privées</h3>
-                        <p className="text-gray-600 mb-4">
-                            Codes promo exclusifs, produits offerts, et accès aux ventes flash.
-                        </p>
-                        <div className="bg-yellow-50 rounded-xl p-4 text-sm text-yellow-800 font-medium">
-                            Moyenne économisée par membre : 150€ / an.
-                        </div>
+            </div>
+
+            {/* Checklist Section ("What's in the box") */}
+            <div className="bg-gray-900 text-white py-24 my-12">
+                <div className="max-w-4xl mx-auto px-4">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl md:text-5xl font-extrabold mb-6">Tout ce qui est inclus.</h2>
+                        <p className="text-xl text-gray-300">Pas de frais cachés. Une tonne de valeur.</p>
                     </div>
 
+                    <div className="grid md:grid-cols-2 gap-x-12 gap-y-6">
+                        {[
+                            "Ventes Privées (-20% à -50%)",
+                            "WhatsApp Privé (Groupes quartiers & thèmes)",
+                            "L'Agenda Secret (Accès prioritaire)",
+                            "Traitement de Reine (Service inclus)",
+                            "Sorties Gratuites incluses",
+                            "Mon Ardoise (Paiement fluide)",
+                            "Safe & Bienveillant (Modéré)",
+                            "Masterclass & Coaching (Grandir)",
+                            "100% Digital (Apéros Visio)",
+                            "Partout en IDF & Clubs Thématiques"
+                        ].map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-4 bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                                <span className="font-bold text-lg">{item}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 

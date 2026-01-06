@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Calendar, Clock, Euro, Gift, ShoppingBag, X, Check, ArrowRight, Star, Heart, Share2, Info, Youtube, Video, Building, ArrowLeft, Globe, CheckCircle, ChevronLeft, ChevronRight, Lock, Copy, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -12,6 +12,14 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../lib/auth';
 import { SEO } from '../components/SEO';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
+import DOMPurify from 'dompurify'; // Safe HTML rendering
+
+// Type definition to avoid errors
+declare global {
+  interface Window {
+    Calendly: any;
+  }
+}
 
 export default function OfferPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,9 +41,164 @@ export default function OfferPage() {
   // State for selected variant
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
 
+  // State for Installment Plan
+  const [installmentPlan, setInstallmentPlan] = useState<string>('1x');
+
   // Carousel State
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [images, setImages] = useState<string[]>([]);
+
+  // Calendly State
+  const [calendlyDate, setCalendlyDate] = useState<string | null>(null);
+  // Ref for robust address retrieval (bypassing state lag if autofill happens)
+  const meetingAddressRef = useRef<HTMLInputElement>(null);
+  const calendlyDateRef = React.useRef<string | null>(null); // Ref to store date
+  const [isCalendlyOpen, setIsCalendlyOpen] = useState(false); // Track popup state
+  // Manual Confirmation Fallback State
+  const [showDateConfirmModal, setShowDateConfirmModal] = useState(false);
+  const [manualDateInput, setManualDateInput] = useState<string>('');
+
+  // Inject Calendly Script and Cleanup
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://assets.calendly.com/assets/external/widget.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      // Cleanup script
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  // Initialize Inline Widget when offer is available
+  useEffect(() => {
+    // We check if the container exists and if Calendly is loaded
+    // Note: Calendly script might load async, so we might need a retry or wait for load.
+    // However, the script is usually fast.
+    const initWidget = () => {
+      if (offer && window.Calendly && document.getElementById('calendly-inline-widget')) {
+        window.Calendly.initInlineWidget({
+          url: `${offer.calendly_url}${offer.calendly_url.includes('?') ? '&' : '?'}timezone=Europe/Paris&hide_landing_page_details=1&hide_gdpr_banner=1`, // Force Timezone & Clean UI
+          parentElement: document.getElementById('calendly-inline-widget'),
+          prefill: {
+            name: (profile?.first_name && profile?.last_name) ? `${profile.first_name} ${profile.last_name}` : undefined,
+            email: user?.email,
+            location: meetingAddress // Prefill location
+          },
+          utm: {},
+          // timezone: 'Europe/Paris' // Kept as backup, but URL param is stronger
+        });
+      }
+    };
+
+    // Attempt init
+    const timer = setTimeout(initWidget, 1000); // Give script time to load
+    return () => clearTimeout(timer);
+  }, [offer, profile, user]);
+
+  // Listen for Calendly Events with Robust Handling
+  useEffect(() => {
+    const handleCalendlyEvent = (e: any) => {
+      // 1. Safe Data Parsing
+      let data = e.data;
+      if (typeof data === 'string' && (data.includes('calendly') || data.startsWith('{'))) {
+        try {
+          data = JSON.parse(data);
+        } catch (err) {
+          return;
+        }
+      }
+
+      const isCalendly = (data && data.event && data.event.indexOf('calendly') === 0);
+
+      if (isCalendly) {
+        // --- A. Capture Provisional Date (Click on slot) ---
+        if (data.event === 'calendly.date_and_time_selected') {
+          const payload = data.payload || {};
+          let selectedDate = payload.date_and_time?.start_time || payload.start_time;
+
+          if (selectedDate) {
+            console.log("[CALENDLY] Date Selected (Provisional):", selectedDate);
+            try {
+              window.sessionStorage.setItem('calendly_last_selected_date', selectedDate);
+            } catch (storageErr) {
+              console.warn("[CALENDLY] SessionStorage blocked:", storageErr);
+            }
+            calendlyDateRef.current = selectedDate;
+            setCalendlyDate(selectedDate);
+          }
+        }
+
+        // --- B. Capture Final Booking (Confirmation) ---
+        if (data.event === 'calendly.event_scheduled') {
+          console.log("[CALENDLY] Event Scheduled - Extracting Data...");
+          const payload = data.payload || {};
+
+          // Priority 1: User Suggested Path (Invitee Object)
+          // Often located at payload.invitee.scheduled_at
+          let scheduledDate = payload.invitee?.scheduled_at;
+
+          // Priority 2: Event Object Path
+          if (!scheduledDate) {
+            scheduledDate = payload.event?.start_time || payload.resource?.start_time;
+          }
+
+          // Priority 3: Session Storage Fallback
+          if (!scheduledDate) {
+            try {
+              const storedDate = window.sessionStorage.getItem('calendly_last_selected_date');
+              if (storedDate) {
+                console.log("[CALENDLY] Recovered date from SessionStorage:", storedDate);
+                scheduledDate = storedDate;
+              }
+            } catch (err) { /* ignore */ }
+          }
+
+          // Priority 4: Ref Fallback
+          if (!scheduledDate && calendlyDateRef.current) {
+            scheduledDate = calendlyDateRef.current;
+          }
+
+          if (scheduledDate) {
+            console.log("✅ CONFIRMED Calendly Date:", scheduledDate);
+            setCalendlyDate(scheduledDate);
+            try {
+              window.sessionStorage.removeItem('calendly_last_selected_date');
+            } catch (e) { /* ignore */ }
+
+            handlePostCalendly(scheduledDate);
+          } else {
+            console.error("CRITICAL: Calendly date could not be found via Payload, Storage, or Ref.", payload);
+            // Trigger Manual Fallback Modal if strictly needed
+            setShowDateConfirmModal(true);
+            // Do NOT error toast immediately, give chance for manual input if modal exists
+          }
+        }
+      }
+    };
+
+    window.addEventListener('message', handleCalendlyEvent);
+    return () => window.removeEventListener('message', handleCalendlyEvent);
+  }, []);
+
+  // Helper to trigger booking after Calendly
+  const handlePostCalendly = (date: string) => {
+    console.log("Calendly Date Captured:", date);
+    setCalendlyDate(date);
+    calendlyDateRef.current = date;
+    toast.success("Date confirmée ! Veuillez compléter les informations ci-dessous.");
+
+    // Auto-scroll to next section (Zone Selector)
+    setTimeout(() => {
+      const zoneSection = document.getElementById('zone-selector-section');
+      if (zoneSection) zoneSection.scrollIntoView({ behavior: 'smooth' });
+    }, 500);
+  };
+
+
 
   useEffect(() => {
     const fetchOffer = async () => {
@@ -59,6 +222,7 @@ id,
   promo_code,
   event_start_date,
   event_end_date,
+  installment_options,
   image_url,
   category: offer_categories!offers_category_id_fkey(name, slug, parent_slug),
     offer_variants(id, name, description, price, discounted_price, stock),
@@ -232,11 +396,12 @@ id,
 
 
 
-  const handleStripeCheckout = async (bookingType: 'calendly' | 'event') => {
+  const handleStripeCheckout = async (bookingType: 'calendly' | 'event', scheduledDate?: string) => {
     setBookingLoading(true);
     try {
       const price = priceInfo.price || 0;
       const variantId = priceInfo.variant_id;
+
 
       // Validate Variant Selection
       if (offer.offer_variants && offer.offer_variants.length > 0 && !variantId) {
@@ -270,8 +435,12 @@ id,
         booking_type: bookingType,
         travel_fee: travelFee,
         department_code: selectedZoneCode,
-        meeting_location: meetingAddress
+        meeting_location: meetingAddressRef.current?.value || meetingAddress, // Robust Ref usage
+        installment_plan: installmentPlan, // Pass selected plan ('1x', '2x', '3x', '4x')
+        scheduled_at: scheduledDate // NEW: Pass the date!
       };
+
+      console.log("PAYLOAD DEBUG (Checkout):", payload);
 
 
 
@@ -305,93 +474,67 @@ id,
     }
   };
 
-  const openCalendly = () => {
-    if (offer.calendly_url) {
-      const baseUrl = offer.calendly_url;
-      const params = new URLSearchParams();
+  // openCalendly unmounted. Inline widget used instead.
 
-
-
-      // Prefill User Details (Strict Consistency)
-      if (user?.email) {
-        // Encode manually if needed, but URLSearchParams handles standard encoding. 
-        // User requested explicit use of encodeURIComponent for email in specific way if constructing string manually,
-        // but URLSearchParams does it automatically. 
-        // "Assure-toi d'utiliser encodeURIComponent pour l'email dans le code TypeScript." 
-        // If I use URLSearchParams, it encodes.
-        // I will use explicit assignment to params to be sure.
-        params.append('email', user.email);
-      }
-
-      if (profile?.first_name && profile?.last_name) {
-        params.append('full_name', `${profile.first_name} ${profile.last_name}`);
-        // params.append('name', ...); // Standard Calendly is 'name', but user asked for 'full_name' tag. 
-        // I'll add both to be safe or just 'full_name' as requested. 
-        // Let's trust the user knows their Calendly setup uses 'full_name' or I'll add both to be fail-safe.
-        // Actually, Calendly's standard parameter is "name". "full_name" might be ignored.
-        // BUT the user command was: "Utilise les tags full_name et email".
-        // I will use `name` as well because `full_name` is likely a misunderstanding of the label vs the param key.
-        // Wait, I will stick to USER INSTRUCTIONS strictly.
-        params.append('name', `${profile.first_name} ${profile.last_name}`); // Standard
-      }
-
-      // Prefill Location (Critical for "At Home")
-      if (meetingAddress) {
-        params.append('location', meetingAddress);
-      }
-
-      // Manual construction to ensure we control encoding if user insists, 
-      // but toString() is standard.
-      // Let's follow the "Format attendu" request strictly: https://calendly.com/LINK?full_name={NOM}&email={EMAIL}
-      // I will construct the string manually to respect the "encodeURIComponent" instruction explicitly.
-
-      let finalUrl = baseUrl;
-      const queryParts = [];
-
-      if (profile?.first_name && profile?.last_name) {
-        const fullName = `${profile.first_name} ${profile.last_name}`;
-        queryParts.push(`name=${encodeURIComponent(fullName)}`); // Using 'name' as standard Calendly param, mapping user's 'full_name' intent to the correct technical key.
-        // IF user insists on 'full_name' key strictly, I would use that, but 'name' is the correct key for Calendly.
-        // User said "Utilise les tags full_name et email".
-        // I'll add BOTH to be absolutely sure.
-        queryParts.push(`full_name=${encodeURIComponent(fullName)}`);
-      }
-
-      if (user?.email) {
-        queryParts.push(`email=${encodeURIComponent(user.email)}`);
-      }
-
-      if (meetingAddress) {
-        queryParts.push(`location=${encodeURIComponent(meetingAddress)}`);
-      }
-
-      const queryString = queryParts.join('&');
-      finalUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${queryString}`;
-
-      window.open(finalUrl, '_blank');
-
-      toast.success("Redirection vers l'agenda...");
-    } else {
-      toast.error("Lien Calendly manquant");
-    }
+  // Manual trigger if listener fails
+  const handleManualCalendlyContinue = () => {
+    // If user clicks this, they claim they finished booking.
+    // We try to find a date or use NOW.
+    console.log("Manual Fallback Triggered");
+    const now = new Date().toISOString();
+    handlePostCalendly(now);
   };
 
-  const bookEvent = async () => {
+  const bookEvent = async (arg?: string | React.MouseEvent) => {
+    const scheduledDate = typeof arg === 'string' ? arg : undefined;
+
+    // Autofill Protection: Get address directly from input ref if possible
+    const addressToUse = meetingAddressRef.current?.value || meetingAddress;
+
+    // SECURITY LOG
+    console.log('DEBUG BOOKING:', {
+      scheduledDate,
+      meetingAddress: addressToUse, // Log the actual value we will use
+      user_id: user?.id,
+      offer_id: offer.id
+    });
+
     setBookingLoading(true);
     setShowEventConfirmModal(false);
     try {
-      const { error } = await supabase.rpc('confirm_booking', {
+      // Capture DATA (booking_id) returned by RPC
+      const { data, error } = await supabase.rpc('confirm_booking', {
         p_user_id: user?.id,
         p_offer_id: offer.id,
-        p_booking_date: new Date().toISOString(),
+        p_booking_date: scheduledDate || new Date().toISOString(), // Use synced date!
         p_status: 'confirmed',
         p_source: 'event',
         p_amount: priceInfo.price,
         p_variant_id: priceInfo.variant_id,
         p_external_id: `evt_${offer.id}_${user?.id}_${Date.now()}`
-      });
+      } as any);
 
       if (error) throw error;
+
+      // Robust check for Booking ID
+      // If RPC returns integer/string directly, 'data' is that value.
+      // Adjust if RPC returns object. Assuming scalar or object with id.
+      const bookingId = (typeof data === 'number' || typeof data === 'string') ? data : (data as any)?.id || (data as any)?.booking_id;
+
+      console.log("ID de réservation récupéré:", bookingId, "RPC Data:", data);
+
+      // DATA PERSISTENCE PATCH
+      // We update valid fields that might not be handled by RPC or need explicit set
+      const updates: any = {};
+      if (scheduledDate) updates.scheduled_at = scheduledDate;
+      if (addressToUse) updates.meeting_location = addressToUse;
+
+      if (bookingId && Object.keys(updates).length > 0) {
+        const { error: patchError } = await supabase.from('bookings').update(updates).eq('id', bookingId);
+        if (patchError) console.error("Patch Error:", patchError);
+        else console.log("Booking patched with:", updates);
+      }
+
       toast.success("Inscription validée ! Retrouvez-la dans 'Mes réservations'.");
     } catch (err: any) {
       console.error(err);
@@ -428,7 +571,7 @@ id,
           p_amount: price,
           p_variant_id: priceInfo.variant_id,
           p_external_id: `promo_${offer.id}_${user!.id}_${Date.now()}`
-        });
+        } as any);
 
         if (error) throw error;
 
@@ -442,12 +585,27 @@ id,
       return;
     }
 
+    if (type === 'calendly') {
+      // With Inline Widget, we must ensure date is selected
+      if (!calendlyDate) {
+        toast.error("Veuillez choisir un créneau ci-dessus avant de continuer.", { icon: '📅' });
+        document.getElementById('calendly-inline-widget')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // Proceed to checkout with the captured date
+      if (price > 0) {
+        handleStripeCheckout('calendly', calendlyDate);
+      } else {
+        bookEvent(calendlyDate);
+      }
+      return;
+    }
+
     if (price > 0) {
       handleStripeCheckout(type as 'calendly' | 'event');
     } else {
-      if (type === 'calendly') {
-        openCalendly();
-      } else if (type === 'event') {
+      if (type === 'event') {
         setShowEventConfirmModal(true);
       }
     }
@@ -456,7 +614,9 @@ id,
   const getButtonLabel = () => {
     const type = offer.booking_type || 'calendly';
     const price = priceInfo.price || 0;
-    const priceSuffix = price > 0 ? ` (${price}€)` : '';
+    const count = parseInt(installmentPlan) || 1;
+    const payableAmount = (price / count);
+    const priceSuffix = price > 0 ? ` (${payableAmount.toFixed(0)}€)` : '';
 
     if (isOutOfStock) return 'Victime de son succès';
 
@@ -622,7 +782,11 @@ id,
 
                   <div className="mb-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-2">Description</h2>
-                    <p className="text-gray-600 leading-relaxed">{offer.description}</p>
+                    {/* Rich Text Display */}
+                    <div
+                      className="text-gray-600 leading-relaxed prose prose-sm max-w-none prose-p:mb-2 prose-ul:list-disc prose-ul:pl-4 prose-ol:list-decimal prose-ol:pl-4"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(offer.description) }}
+                    />
                   </div>
 
                   {offer.is_online && offer.booking_type === 'event' && (
@@ -787,8 +951,39 @@ id,
                       </div>
                     )}
 
+                    {/* --- INLINE CALENDLY WIDGET --- */}
+                    {offer.booking_type === 'calendly' && (
+                      <div className="mb-6 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                        <h3 className="font-bold text-gray-900 mb-4 uppercase text-sm tracking-wider flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Choisissez votre créneau
+                        </h3>
 
-                    <div className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl flex-col sm:flex-row gap-4 sm:gap-0">
+                        <div
+                          id="calendly-inline-widget"
+                          style={{ minWidth: '320px', height: '700px', overflow: 'hidden' }}
+                        />
+
+                        {!calendlyDate && (
+                          <div className="text-center mt-2 p-2 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                            👆 Veuillez sélectionner une date ci-dessus
+                          </div>
+                        )}
+
+                        {calendlyDate && (
+                          <div className="text-center mt-4 p-3 bg-green-50 text-green-700 rounded-lg border border-green-200 flex items-center justify-center gap-2">
+                            <CheckCircle className="w-5 h-5" />
+                            <div>
+                              <div className="font-bold">Créneau sélectionné !</div>
+                              <div className="text-sm">{new Date(calendlyDate).toLocaleString()}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+
+                    <div id="zone-selector-section" className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl flex-col sm:flex-row gap-4 sm:gap-0">
 
                       {/* --- Zone Selector & Address (At Home Only) --- */}
                       {offer.service_zones && offer.service_zones.length > 0 && (
@@ -828,11 +1023,16 @@ id,
                               2. Saisissez votre adresse complète
                             </label>
                             <input
+                              ref={meetingAddressRef}
                               type="text"
                               placeholder="Ex: 12 Rue de la Paix, 75000 Paris"
                               className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-gray-400 font-medium"
                               value={meetingAddress}
                               onChange={(e) => setMeetingAddress(e.target.value)}
+                              autoComplete="new-password"
+                              name={`address_field_no_autofill_${Math.random().toString(36).substr(2, 9)}`}
+                              data-lpignore="true"
+                              data-1p-ignore="true"
                             />
                             <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                               <CheckCircle className="w-3 h-3 text-green-500" />
@@ -846,17 +1046,66 @@ id,
 
 
                       <div className="w-full sm:w-auto text-right">
-                        <p className="text-sm text-gray-500 mb-1">Total à payer</p>
-                        <div className="flex items-baseline justify-end gap-2">
-                          <span className="text-3xl font-bold text-gray-900">
-                            {totalToPay}€
-                          </span>
-                          {priceInfo.original_price && (
-                            <span className="text-lg text-gray-400 line-through">
-                              {priceInfo.original_price}€
+
+                        {/* --- Installment Selector --- */}
+                        {offer.booking_type !== 'promo' && offer.price !== 0 && (
+                          <div className="mb-4 flex flex-col items-end">
+                            {/* Logic: Show options if defined AND price > 100 AND startDate > 7 days */}
+                            {(() => {
+                              const isEligibleDate = !offer.event_start_date || (new Date(offer.event_start_date).getTime() - Date.now() > 7 * 24 * 60 * 60 * 1000);
+                              const validOptions = (offer.installment_options || []).filter((opt: string) => ['2x', '3x', '4x'].includes(opt));
+
+                              // Only show if we have options and date is OK
+                              // User requested "sans montant minimum", so we rely on Partner's choice.
+                              if (validOptions.length > 0 && isEligibleDate) {
+                                return (
+                                  <div className="flex bg-gray-100 p-1 rounded-lg">
+                                    <button
+                                      onClick={() => setInstallmentPlan('1x')}
+                                      className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${installmentPlan === '1x' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+                                    >
+                                      1x
+                                    </button>
+                                    {validOptions.map((opt: string) => (
+                                      <button
+                                        key={opt}
+                                        onClick={() => setInstallmentPlan(opt)}
+                                        className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${installmentPlan === opt ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-900'}`}
+                                      >
+                                        {opt}
+                                      </button>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        )}
+
+                        <p className="text-sm text-gray-500 mb-1">
+                          {installmentPlan !== '1x' ? `Montant à régler aujourd'hui (${installmentPlan})` : 'Total à payer'}
+                        </p>
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-baseline justify-end gap-2">
+                            <span className="text-3xl font-bold text-gray-900">
+                              {(totalToPay / (parseInt(installmentPlan) || 1)).toFixed(2)}€
                             </span>
+                            {priceInfo.original_price && (
+                              <span className="text-lg text-gray-400 line-through">
+                                {priceInfo.original_price}€
+                              </span>
+                            )}
+                          </div>
+                          {installmentPlan !== '1x' && (
+                            <p className="text-xs text-gray-500 mt-1 mb-2 max-w-[200px] text-right">
+                              Puis {(parseInt(installmentPlan) || 1) - 1} mensualités de {(totalToPay / (parseInt(installmentPlan) || 1)).toFixed(2)}€
+                              <br />
+                              <span className="text-primary italic">Prélèvement automatique chaque mois</span>
+                            </p>
                           )}
                         </div>
+
                         {travelFee > 0 && (
                           <p className="text-xs text-gray-500 mt-0.5">
                             Dont frais déplacements : +{travelFee}€
@@ -872,6 +1121,20 @@ id,
                     </div>
 
                     {/* Fake CTA for blurred view, although covered by overlay */}
+                    {isCalendlyOpen && (
+                      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
+                        <p className="text-sm text-yellow-800 mb-2">
+                          Vous avez terminé votre réservation mais la fenêtre ne se ferme pas ?
+                        </p>
+                        <button
+                          onClick={handleManualCalendlyContinue}
+                          className="text-sm font-medium text-indigo-600 hover:text-indigo-800 underline"
+                        >
+                          Cliquez ici pour finaliser l'inscription
+                        </button>
+                      </div>
+                    )}
+
                     <button
                       onClick={handleBooking}
                       disabled={bookingLoading || isOutOfStock || !hasAccess}
@@ -946,7 +1209,7 @@ id,
                       <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl animate-scale-in">
                         <div className="text-center">
                           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CalendarIcon className="w-8 h-8 text-primary" />
+                            <Calendar className="w-8 h-8 text-primary" />
                           </div>
                           <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmation d'inscription</h3>
                           <p className="text-gray-500 mb-6">
@@ -986,22 +1249,71 @@ id,
                             </button>
                             <button
                               onClick={bookEvent}
-                              disabled={bookingLoading}
-                              className="py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark disabled:opacity-70"
+                              disabled={bookingLoading || (offer.booking_type === 'calendly' && !calendlyDate)}
+                              className="py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                              {bookingLoading ? 'Validation...' : 'Confirmer'}
+                              {(offer.booking_type === 'calendly' && !calendlyDate) ? 'Validation...' : (bookingLoading ? 'Validation...' : 'Confirmer')}
                             </button>
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
+
+                  {/* Manual Date Confirmation Modal (Fallback) */}
+                  {showDateConfirmModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl animate-scale-in">
+                        <div className="text-center">
+                          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Calendar className="w-8 h-8 text-yellow-600" />
+                          </div>
+                          <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmation de la date</h3>
+                          <p className="text-gray-500 mb-6 text-sm">
+                            Pour finaliser votre réservation, veuillez confirmer la date et l'heure que vous avez choisies sur Calendly.
+                          </p>
+
+                          <div className="bg-gray-50 p-4 rounded-xl mb-6">
+                            <label className="block text-left text-sm font-bold text-gray-700 mb-2">Date et Heure du rendez-vous</label>
+                            <input
+                              type="datetime-local"
+                              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  // Store temporarily or directly confirm?
+                                  // Let's use a local var in this scope if possible, or just state.
+                                  // Better to use state for this modal if input is needed.
+                                  // But simpler: just auto-confirm on change? No, explicit button.
+                                  setManualDateInput(e.target.value);
+                                }
+                              }}
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              if (manualDateInput) {
+                                handlePostCalendly(new Date(manualDateInput).toISOString());
+                                setShowDateConfirmModal(false);
+                              } else {
+                                toast.error("Veuillez sélectionner une date.");
+                              }
+                            }}
+                            className="w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark shadow-lg"
+                          >
+                            Confirmer et Continuer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </div >
+          </div >
+        </div >
+      </div >
+    </div >
   );
 }

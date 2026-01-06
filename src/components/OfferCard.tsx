@@ -110,7 +110,7 @@ export function OfferCard({
           <h3 className="font-bold text-lg text-gray-900 line-clamp-2 leading-tight">{title}</h3>
         </div>
 
-        <p className="text-gray-600 text-sm line-clamp-2 mb-3 flex-1">{description}</p>
+        <p className="text-gray-600 text-sm line-clamp-2 mb-3 flex-1">{description.replace(/<[^>]+>/g, '')}</p>
 
         <div className="flex items-center gap-2 text-gray-500 text-sm mb-4">
           <MapPin className="w-4 h-4 shrink-0" />

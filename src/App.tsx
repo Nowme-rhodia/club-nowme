@@ -29,6 +29,7 @@ const Profile = React.lazy(() => import('./pages/account/Profile'));
 const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
 const WalletPay = React.lazy(() => import('./pages/account/WalletPay'));
 const Bookings = React.lazy(() => import('./pages/account/Bookings'));
+const PaymentPlans = React.lazy(() => import('./pages/account/PaymentPlans'));
 const SubscriberLayout = React.lazy(() => import('./layouts/SubscriberLayout'));
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
 const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
@@ -165,6 +166,7 @@ function App() {
                   } />
                   <Route path="/auth/forgot-password" element={<ForgotPassword />} />
                   <Route path="/auth/update-password" element={<UpdatePassword />} />
+                  <Route path="/update-password" element={<Navigate to="/auth/update-password" replace />} /> {/* Fix for old links */}
                   <Route path="/auth/callback" element={<AuthCallback />} />
 
                   {/* Partner routes */}
@@ -203,6 +205,7 @@ function App() {
                   }>
                     <Route index element={<DashboardOverview />} />
                     <Route path="bookings" element={<Bookings />} />
+                    <Route path="payment-plans" element={<PaymentPlans />} />
                     <Route path="wallet" element={<WalletPay />} />
                     <Route path="profile" element={
                       <GoogleMapsLoader>

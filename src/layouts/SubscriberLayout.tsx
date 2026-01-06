@@ -10,7 +10,8 @@ import {
     LogOut,
     Menu,
     X,
-    Sparkles
+    Sparkles,
+    CreditCard
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 
@@ -28,6 +29,7 @@ export default function SubscriberLayout() {
     const navItems = [
         { icon: LayoutDashboard, label: 'Tableau de bord', to: '/account', end: true },
         { icon: Calendar, label: 'Mes Réservations', to: '/account/bookings' },
+        { icon: CreditCard, label: 'Mes Echéanciers', to: '/account/payment-plans' },
         { icon: Wallet, label: 'Mon Ardoise', to: '/account/wallet' },
         { icon: User, label: 'Mon Profil', to: '/account/profile' },
         // { icon: Settings, label: 'Paramètres', to: '/account/settings' }, // Future
@@ -104,35 +106,37 @@ export default function SubscriberLayout() {
                         </div>
                     </div>
 
-                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-                        {navItems.map((item) => (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.end}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className={({ isActive }) => `
+                    <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
+                        <nav className="space-y-1">
+                            {navItems.map((item) => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    end={item.end}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className={({ isActive }) => `
                   flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium
                   ${isActive
-                                        ? 'bg-primary text-white shadow-md shadow-primary/25'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                    }
+                                            ? 'bg-primary text-white shadow-md shadow-primary/25'
+                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                        }
                 `}
-                            >
-                                <item.icon className="w-5 h-5" />
-                                {item.label}
-                            </NavLink>
-                        ))}
-                    </nav>
+                                >
+                                    <item.icon className="w-5 h-5" />
+                                    {item.label}
+                                </NavLink>
+                            ))}
+                        </nav>
 
-                    <div className="p-4 mt-auto border-t border-gray-100">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            Déconnexion
-                        </button>
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                Déconnexion
+                            </button>
+                        </div>
                     </div>
                 </aside>
 

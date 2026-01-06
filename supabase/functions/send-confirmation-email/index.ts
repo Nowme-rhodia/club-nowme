@@ -55,6 +55,17 @@ Deno.serve(async (req) => {
         const partner = partnerResponse.data || { business_name: 'Partenaire', address: '', siret: '', tva_intra: '', contact_email: '' }
         const variant = variantResponse.data
 
+        // Fetch Installment Plan if exists
+        const { data: paymentPlan } = await supabase
+            .from('payment_plans')
+            .select('*')
+            .eq('booking_id', bookingData.id)
+            .single();
+
+        const isInstallment = !!paymentPlan;
+        const planType = paymentPlan?.plan_type || '1x';
+        const installmentNote = isInstallment ? ` (Paiement en ${planType})` : '';
+
         // Email Fallback
         if (!user.email) {
             const { data: authUser } = await supabase.auth.admin.getUserById(bookingData.user_id)
@@ -64,7 +75,7 @@ Deno.serve(async (req) => {
         const buyerName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Client'
         const offerTitle = offer.title
         const variantName = variant?.name ? ` - Option ${variant.name}` : ''
-        const fullItemName = `${offerTitle}${variantName}`
+        const fullItemName = `${offerTitle}${variantName}${installmentNote}`
         const price = bookingData.amount || variant?.price || 0
 
         const partnerName = partner?.business_name || 'Nowme Partner'
@@ -72,6 +83,15 @@ Deno.serve(async (req) => {
         const partnerSiret = partner?.siret || ''
         const partnerTva = partner?.tva_intra || ''
         const partnerEmail = partner?.contact_email || 'Pas d\'email de contact'
+
+        // ... PDF Logic omitted for brevity, variable scope preservation required ...
+        // To avoid replacing the whole PDF block which is huge, I will use a smaller replace block if possible.
+        // But the variables `fullItemName` and `installmentNote` are needed inside PDF block logic?
+        // Actually PDF block uses `fullItemName`. So updating `fullItemName` definition is good.
+        // But I need to preserve lines 76-199 (PDF generation).
+
+        // RE-GENERATING PDF CONTENT W/ FULL ITEM NAME
+        // ... (PDF code assumed unchanged as it uses fullItemName)
 
         // Generate PDF
         const pdfDoc = await PDFDocument.create()
@@ -111,8 +131,12 @@ Deno.serve(async (req) => {
         page.drawLine({ start: { x: 50, y: height - 250 }, end: { x: width - 50, y: height - 250 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) })
         drawText("Description", 50, height - 270, 10, boldFont)
         drawText("Montant", 450, height - 270, 10, boldFont)
-        drawText(fullItemName, 50, height - 300, 10)
+        drawText(fullItemName.substring(0, 50), 50, height - 300, 10) // Truncate PDF title if too long
         drawText(`${price.toFixed(2)} €`, 450, height - 300, 10)
+
+        if (isInstallment) {
+            drawText(`(1ère échéance sur ${planType})`, 50, height - 315, 9, font)
+        }
 
         page.drawLine({ start: { x: 50, y: height - 330 }, end: { x: width - 50, y: height - 330 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) })
         drawText("TOTAL PAYÉ", 350, height - 360, 12, boldFont)
@@ -144,10 +168,20 @@ Deno.serve(async (req) => {
 
         const serviceZones = offerDetails?.service_zones || [];
         const isAtHome = serviceZones.length > 0;
-        const eventDate = bookingData.scheduled_at || offerDetails?.event_start_date;
+        const eventDate = bookingData.scheduled_at || bookingData.booking_date || offerDetails?.event_start_date;
 
-        if (eventDate) {
-            const dateObj = new Date(eventDate);
+        // Helper to check if date is "valid" (not just Today/Now if it was purchase time)
+        // With new flow, scheduled_at holds the real date. booking_date holds transaction date usually.
+        // But for Event bookings, booking_date IS the event date.
+        // So we prioritize scheduled_at. If null, check if type is 'event' or 'calendly'.
+
+        let validDateToDisplay = null;
+        if (bookingData.scheduled_at) validDateToDisplay = bookingData.scheduled_at;
+        else if (offer.booking_type === 'event' && bookingData.booking_date) validDateToDisplay = bookingData.booking_date;
+        else if (offerDetails?.event_start_date) validDateToDisplay = offerDetails.event_start_date;
+
+        if (validDateToDisplay) {
+            const dateObj = new Date(validDateToDisplay);
             const frenchDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(dateObj);
             const frenchTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(dateObj).replace(':', 'h');
             dateDisplay = `${frenchDate} à ${frenchTime}`;
@@ -197,11 +231,25 @@ Deno.serve(async (req) => {
              `;
         }
 
+        // Calculate Remaining Balance for Installments
+        const parts = isInstallment ? parseInt(planType[0]) : 1;
+        const remainingParts = parts - 1;
+        const remainingAmount = isInstallment ? (price * remainingParts) : 0;
+
         const htmlContent = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #334155;">
             <h1 style="color: #0F172A;">Félicitations ${user.first_name || ''} ! 🎉</h1>
             <p>Votre réservation pour <strong>${fullItemName}</strong> est bien confirmée.</p>
-            <p><strong>Montant payé :</strong> ${price.toFixed(2)} €</p>
+            <p><strong>Montant payé (aujourd'hui) :</strong> ${price.toFixed(2)} €</p>
+             ${isInstallment ? `
+            <div style="background-color: #e0f2fe; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #bae6fd;">
+                <p style="margin: 0; color: #0369a1; font-weight: bold;">ℹ️ Paiement en ${planType}</p>
+                 <p style="margin: 5px 0 0 0; color: #0c4a6e; font-size: 14px;">
+                    Vous avez réglé la 1ère échéance. <br/>
+                    <strong>Reste à payer : ${remainingAmount.toFixed(2)} €</strong> (en ${remainingParts} mensualités).
+                 </p>
+            </div>
+            ` : ''}
             <hr style="border: 1px solid #e2e8f0; margin: 20px 0;" />
             ${logisticsHtml}
             <p style="margin-top: 40px; font-size: 14px;">Vous trouverez votre facture en pièce jointe de ce mail.</p>
@@ -257,7 +305,8 @@ Deno.serve(async (req) => {
                                 <p style="margin: 5px 0;"><strong>📅 Date :</strong> ${dateDisplay}</p>
                                 ${isAtHome ? `<p style="margin: 5px 0;"><strong>📍 Lieu :</strong> <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDisplay)}">${locationDisplay}</a></p>` : ''}
                                 ${variantName ? `<p style="margin: 5px 0;"><strong>🔹 Option :</strong> ${variant.name}</p>` : ''}
-                                <p style="margin: 5px 0;"><strong>💰 Montant :</strong> ${price.toFixed(2)} €</p>
+                                <p style="margin: 5px 0;"><strong>💰 Montant réglé (par le client) :</strong> ${price.toFixed(2)} € ${isInstallment ? '(1ère échéance sur ' + planType + ')' : ''}</p>
+                                ${isInstallment ? `<p style="margin: 5px 0; color: #0369a1;"><strong>ℹ️ Reste à payer (en auto) :</strong> ${remainingAmount.toFixed(2)} €</p>` : ''}
                             </div>
                             <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #dcfce7;">
                                 <h3 style="margin-top: 0; color: #166534; font-size: 16px;">Coordonnées Client</h3>

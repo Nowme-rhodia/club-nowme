@@ -52,12 +52,21 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  to="/communaute"
+                  to="/categories"
                   className="text-gray-600 hover:text-primary transition-colors duration-200"
                 >
-                  Communauté
+                  Catégories
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/tous-les-kiffs"
+                  className="text-gray-600 hover:text-primary transition-colors duration-200"
+                >
+                  Tous les kiffs
+                </Link>
+              </li>
+
             </ul>
           </div>
 

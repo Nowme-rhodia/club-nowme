@@ -179,41 +179,7 @@ export default function BookingSuccess() {
                     </p>
                 </div>
 
-                {/* Calendly Embed */}
-                {type === 'calendly' && offer?.calendly_url && (
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden animate-slide-up">
-                        <div className="p-6 bg-primary text-white text-center">
-                            <h2 className="text-xl font-bold flex items-center justify-center gap-2">
-                                <Calendar className="w-6 h-6" />
-                                Choisissez votre créneau
-                            </h2>
-                            <p className="text-primary-100 mt-2">
-                                Sélectionnez la date et l'heure de votre séance ci-dessous pour finaliser l'agenda.
-                            </p>
-                        </div>
-                        <div
-                            className="calendly-inline-widget"
-                            data-url={(() => {
-                                const baseUrl = offer.calendly_url;
-                                const queryParts: string[] = [];
-
-                                if (user?.email) {
-                                    queryParts.push(`email=${encodeURIComponent(user.email)}`);
-                                }
-
-                                if (profile?.first_name && profile?.last_name) {
-                                    const fullName = `${profile.first_name} ${profile.last_name}`;
-                                    queryParts.push(`name=${encodeURIComponent(fullName)}`);
-                                    queryParts.push(`full_name=${encodeURIComponent(fullName)}`);
-                                }
-
-                                if (queryParts.length === 0) return baseUrl;
-                                return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${queryParts.join('&')}`;
-                            })()}
-                            style={{ minWidth: '320px', height: '700px' }}
-                        />
-                    </div>
-                )}
+                {/* Calendly logic merged above */}
 
                 {/* Event Info */}
                 {type === 'event' && (
@@ -262,12 +228,18 @@ export default function BookingSuccess() {
                     </div>
                 )}
 
-                {/* Simple Purchase Info */}
-                {(type === 'purchase' || !type) && (
+                {/* Calendly / Event / Purchase Success Combined */}
+                {(type === 'purchase' || type === 'calendly' || !type) && (
                     <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
-                        <h2 className="text-xl font-bold mb-4">Commande confirmée</h2>
+                        <h2 className="text-xl font-bold mb-4">Réservation confirmée</h2>
                         <p className="text-gray-600 mb-6">
-                            Votre achat a été validé avec succès. Vous pouvez retrouver les détails dans vos réservations.
+                            Votre commande a été validée avec succès.
+                            {/* Display date if available in params */}
+                            {searchParams.get('scheduled_at') && (
+                                <span className="block mt-2 font-medium text-primary">
+                                    📅 Rendez-vous le : {new Date(searchParams.get('scheduled_at')!).toLocaleString()}
+                                </span>
+                            )}
                         </p>
                         <Link to="/mes-reservations" className="inline-flex items-center px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors">
                             Voir mes réservations
@@ -307,13 +279,7 @@ export default function BookingSuccess() {
                     </div>
                 )}
 
-                {type === 'calendly' && (
-                    <div className="text-center">
-                        <Link to="/mes-reservations" className="text-gray-500 hover:text-gray-900 font-medium">
-                            Je choisirai mon créneau plus tard
-                        </Link>
-                    </div>
-                )}
+
 
             </div>
         </div>

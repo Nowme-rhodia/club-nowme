@@ -120,31 +120,51 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const features: { icon: IconName; title: string; description: string }[] = [
-    {
-      icon: 'Users',
-      title: 'Validé par 2000+ membres',
-      description: 'Chaque événement, chaque partenaire : testé et approuvé par notre communauté.'
-    },
-    {
-      icon: 'Star',
-      title: 'Rentable dès la 1ère sortie',
-      description: 'Une seule soirée suffit souvent à rembourser ton abonnement. Le reste ? C\'est du bonus.'
-    },
-    {
-      icon: 'Shield',
-      title: 'Zéro stress, 100% liberté',
-      description: 'Teste à 12,99€, résilie en 1 clic quand tu veux. Aucun engagement.'
-    },
-    {
-      icon: 'Search',
-      title: 'Ta nouvelle tribu',
-      description: 'Masterclass, événements exclusifs, groupe privé : ne reste plus jamais seule.'
-    }
-  ];
+  // Bento Grid Card Component
+  // Bento Grid Card Component
+  const BenefitCard = ({
+    icon, color, bg, title, desc, className = "", large = false, tags = []
+  }: {
+    icon: IconName; color: string; bg: string; title: string; desc: string; className?: string; large?: boolean; tags?: string[]
+  }) => {
+    const Icon = LucideIcons[icon] as React.ComponentType<{ className?: string }>;
+    return (
+      <div className={`relative overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:shadow-xl group ${large ? 'bg-gradient-to-br from-gray-50 to-white border border-gray-100' : 'bg-white border border-gray-100 hover:border-pink-100'} ${className}`}>
+
+        {/* Background Decorative Blob for Large Cards */}
+        {large && (
+          <div className={`absolute -right-10 -bottom-10 w-40 h-40 ${bg} rounded-full opacity-20 blur-2xl group-hover:opacity-40 transition-opacity`}></div>
+        )}
+
+        <div className={`relative z-10 flex ${large ? 'flex-col sm:flex-row items-start sm:items-center gap-6' : 'flex-col items-start gap-4'}`}>
+          <div className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
+            {Icon && <Icon className={`w-7 h-7 ${color}`} />}
+          </div>
+          <div className="flex-1">
+            <h3 className={`font-bold text-gray-900 mb-2 ${large ? 'text-2xl' : 'text-lg'}`}>{title}</h3>
+            <p className={`text-gray-600 leading-relaxed ${large ? 'text-base' : 'text-sm'}`}>{desc}</p>
+
+            {/* Visual Tags */}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {tags.map((tag, i) => (
+                  <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-white">
+      {/* ... (previous sections) ... */}
+
+      {/* ... keeping Hero & EventGallery ... */}
       <SEO
         title="Nowme - Le Club Privé des Femmes qui Kiffent"
         description="Rejoins le club n°1 des sorties entre filles en Île-de-France. Événements, amitié et bons plans !"
@@ -152,6 +172,7 @@ export default function Home() {
 
       {/* Hero Section */}
       <div className="relative min-h-[90vh] bg-white flex items-center overflow-hidden border-b-4 border-pink-500">
+        {/* ... Hero Content (unchanged) ... */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1571388208497-71bedc66e932?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10 animate-subtle-zoom" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center max-w-4xl mx-auto">
@@ -196,33 +217,158 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Real Photos Section (Sales Boost) */}
       <EventGallery />
 
-      {/* Avantages */}
+      {/* Avantages Bento Grid */}
       <div className="py-24 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-16">
-            Pourquoi tu vas adorer
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const Icon = LucideIcons[feature.icon] as React.ComponentType<{ className?: string }>;
-              return (
-                <div
-                  key={index}
-                  className="bg-white rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-all animate-slide-up"
-                  style={{ animationDelay: `${index * 0.2}s` }}
-                >
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-100 mb-6">
-                    {Icon && <Icon className="w-8 h-8 text-pink-500" />}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
-                </div>
-              );
-            })}
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
+              Tout ce que tu vas <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">kiffer</span>.
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              On a mis le paquet. Un seul abonnement, une infinité de possibilités.
+            </p>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-[minmax(180px,auto)]">
+
+            {/* HERO ITEM: Agenda Secret (Large) */}
+            <BenefitCard
+              large={true}
+              className="md:col-span-2 lg:col-span-2 row-span-1 bg-white"
+              icon="Calendar"
+              color="text-purple-600"
+              bg="bg-purple-100"
+              title="📅 L'Agenda Secret"
+              desc="Accès prioritaire à toutes les sorties. Sold Out pour le public ? Pas pour toi. Tu es VIP partout."
+            />
+
+            {/* Ventes Privées */}
+            <BenefitCard
+              icon="Gift"
+              color="text-pink-500"
+              bg="bg-pink-100"
+              title="Ventes Privées"
+              desc="-20% à -50% sur tes marques chouchous."
+              tags={['-20%', '-50%', 'Exclusif']}
+            />
+
+            {/* Ardoise */}
+            <BenefitCard
+              icon="CreditCard"
+              color="text-blue-500"
+              bg="bg-blue-100"
+              title="Mon Ardoise"
+              desc="Paiement fluide sans sortir ta CB."
+            />
+
+            {/* WhatsApp */}
+            <BenefitCard
+              icon="MessageCircle"
+              color="text-green-500"
+              bg="bg-green-100"
+              title="WhatsApp Privé"
+              desc="Tes nouvelles copines sont à un message."
+            />
+
+            {/* HERO ITEM: Clubs Thematiques (Large) */}
+            <BenefitCard
+              large={true}
+              className="md:col-span-2 lg:col-span-2 row-span-1 bg-white"
+              icon="Palette"
+              color="text-indigo-500"
+              bg="bg-indigo-100"
+              title="🎨 Clubs Thématiques"
+              desc="Rejoins des sous-groupes de passionnées. Trouve ta tribu dans la tribu."
+              tags={['📚 Book Club', '🎾 Sport Club', '🎨 Art Club', '💄 Business Club', '🍼 Mamans']}
+            />
+
+            {/* Traitement de Reine */}
+            <BenefitCard
+              icon="Crown"
+              color="text-yellow-500"
+              bg="bg-yellow-100"
+              title="Mode Reine"
+              desc="On gère tout. Zéro charge mentale."
+            />
+
+            {/* Gratuités */}
+            <BenefitCard
+              icon="Ticket"
+              color="text-teal-500"
+              bg="bg-teal-100"
+              title="Sorties Offertes"
+              desc="Des événements 100% gratuits inclus."
+            />
+
+            {/* Safe */}
+            <BenefitCard
+              icon="ShieldCheck"
+              color="text-emerald-500"
+              bg="bg-emerald-100"
+              title="100% Safe"
+              desc="Modo & staff aux petits soins."
+            />
+
+            {/* HERO ITEM: Expansion (Large) */}
+            <BenefitCard
+              large={true}
+              className="md:col-span-2 lg:col-span-2 row-span-1 bg-white"
+              icon="MapPin"
+              color="text-red-500"
+              bg="bg-red-100"
+              title="🌍 Partout en Île-de-France"
+              desc="Pas besoin d'aller à Paris. Le Club arrive dans tout l'IDF."
+              tags={['77 Fontainebleau', '78 Versailles', '91 Massy', '92 Boulogne', '93 Saint-Ouen', '94 Vincennes', '95 Cergy']}
+            />
+
+            {/* Growth */}
+            <BenefitCard
+              icon="GraduationCap"
+              color="text-orange-500"
+              bg="bg-orange-100"
+              title="Masterclass"
+              desc="Booste ta carrière et ta vie perso."
+            />
+
+            {/* Digital */}
+            <BenefitCard
+              icon="Laptop"
+              color="text-cyan-500"
+              bg="bg-cyan-100"
+              title="100% Connecté"
+              desc="Apéros visio pour réseauter du canapé."
+            />
+
+          </div>
+
+          {/* Mission Statement (Styled differently to pop) */}
+          <div className="mt-20 mx-auto max-w-5xl">
+            <div className="bg-gray-900 rounded-[2.5rem] p-8 md:p-12 text-center text-white relative overflow-hidden shadow-2xl transform hover:scale-[1.01] transition-transform duration-500">
+              {/* Animated background gradients */}
+              <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-pink-500 rounded-full blur-[100px] opacity-30 animate-pulse"></div>
+              <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-96 h-96 bg-purple-500 rounded-full blur-[100px] opacity-30 animate-pulse" style={{ animationDelay: '1s' }}></div>
+
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mb-8 backdrop-blur-sm border border-white/20">
+                  <Sparkles className="w-10 h-10 text-yellow-400" />
+                </div>
+                <h3 className="text-3xl md:text-5xl font-black mb-6 tracking-tight">
+                  Plus qu'un abonnement,<br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">une mission commune.</span>
+                </h3>
+                <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed mb-8">
+                  En rejoignant le Club, tu ne fais pas que payer un service. <br className="hidden md:block" />
+                  <strong className="text-white">Tu finances directement l'embauche d'animatrices passionnées</strong> qui seront là pour s'occuper de toi comme une reine, à chaque événement.
+                </p>
+                <Link to="/subscription" className="inline-flex items-center px-8 py-4 bg-white text-gray-900 rounded-full font-bold hover:bg-gray-100 transition-colors">
+                  Je participe à l'aventure <ChevronRight className="ml-2 w-5 h-5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 

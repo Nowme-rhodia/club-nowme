@@ -11,7 +11,10 @@ BEGIN;
 -- 1. Ensure the constraint exists. 
 -- We reference user_profiles(user_id) which is a unique column (1:1 with auth users)
 ALTER TABLE public.refund_requests 
-DROP CONSTRAINT IF EXISTS refund_requests_user_id_fkey; -- Drop the auto-generated one if it conflicts or just replace
+DROP CONSTRAINT IF EXISTS refund_requests_user_id_fkey; -- Drop the old one if exists
+
+ALTER TABLE public.refund_requests 
+DROP CONSTRAINT IF EXISTS refund_requests_user_profile_fkey; -- Drop the new one if exists to ensure idempotency
 
 ALTER TABLE public.refund_requests
 ADD CONSTRAINT refund_requests_user_profile_fkey 

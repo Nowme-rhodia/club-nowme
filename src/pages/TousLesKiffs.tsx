@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, MapPin, Filter, X, SlidersHorizontal, Star, Sparkles } from 'lucide-react';
 import { PriceRangeSlider } from '../components/PriceRangeSlider';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { categories } from '../data/categories';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -52,13 +52,14 @@ interface OfferDetails {
 }
 
 export default function TousLesKiffs() {
+  const [searchParams] = useSearchParams();
   const { user, isAdmin, isSubscriber, isPartner } = useAuth();
   const [selectedOffer, setSelectedOffer] = useState<OfferDetails | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [ratingFilter, setRatingFilter] = useState<number>(0);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'all');
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(searchParams.get('subcategory') || null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;

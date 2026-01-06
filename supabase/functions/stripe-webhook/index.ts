@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
             console.log("RAW_STRIPE_METADATA:", JSON.stringify(session.metadata, null, 2))
 
             if (session.metadata && session.metadata.source === 'club-nowme') {
-                const { user_id, offer_id, variant_id, meeting_location } = session.metadata
+                const { user_id, offer_id, variant_id, meeting_location, scheduled_at } = session.metadata
                 const amount = session.amount_total ? session.amount_total / 100 : 0
 
                 // Address Fallback Logic
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
                 const bookingObject = {
                     p_user_id: user_id,
                     p_offer_id: offer_id,
-                    p_booking_date: nowIso,
+                    p_booking_date: scheduled_at || nowIso, // Use Calendly date if present
                     p_status: 'confirmed',
                     p_source: 'stripe',
                     p_amount: amount,
@@ -92,6 +92,19 @@ Deno.serve(async (req) => {
 
                 // 3. Execute RPC
                 const { data, error } = await supabaseClient.rpc('confirm_booking', bookingObject)
+
+                // DATA PERSISTENCE PATCH: Update scheduled_at manually since RPC param update failed deployment
+                const bookingId = (data as any)?.booking_id || (typeof data === 'string' ? data : null);
+                if (bookingId && scheduled_at) {
+                    console.log(`[PATCH] Patching scheduled_at for booking ${bookingId}: ${scheduled_at}`);
+                    const { error: patchError } = await supabaseClient
+                        .from('bookings')
+                        .update({ scheduled_at: scheduled_at })
+                        .eq('id', bookingId);
+
+                    if (patchError) console.error("[PATCH_ERROR] Error patching scheduled_at:", patchError);
+                    else console.log("[PATCH_SUCCESS] Scheduled_at saved.");
+                }
 
                 // --- VERBOSE LOG 3: SQL RESULT ---
                 console.log("SQL_UPSERT_RESULT:", JSON.stringify({ data, error }, null, 2))
@@ -214,6 +227,121 @@ Deno.serve(async (req) => {
                     }
                 }
 
+
+                // 5b. HANDLE INSTALLMENT PLAN (2x, 3x, 4x)
+                if (session.metadata && ['2x', '3x', '4x'].includes(session.metadata.plan_type)) {
+                    console.log(`[INSTALLMENT_PLAN] Processing ${session.metadata.plan_type} plan for User ${session.metadata.user_id}`);
+                    const planType = session.metadata.plan_type;
+                    const totalParts = parseInt(planType[0]);
+                    const installmentAmount = parseFloat(session.metadata.installment_amount);
+                    const offerId = session.metadata.offer_id;
+                    const userId = session.metadata.user_id;
+
+                    // A. Create Payment Plan in DB
+                    // We use session.amount_total (which includes travel fee on 1st payment) + remaining installments.
+                    const remainingParts = totalParts - 1;
+                    const remainingAmount = installmentAmount * remainingParts;
+                    const totalPlanAmount = (session.amount_total / 100) + remainingAmount;
+
+                    const { data: planData, error: planError } = await supabaseClient
+                        .from('payment_plans')
+                        .insert({
+                            booking_id: data.booking_id,
+                            user_id: userId,
+                            plan_type: planType,
+                            total_amount: totalPlanAmount,
+                            status: 'active',
+                            metadata: {
+                                offer_id: offerId,
+                                first_payment_session_id: session.id,
+                                installment_amount: installmentAmount
+                            }
+                        })
+                        .select()
+                        .single();
+
+                    if (planError) {
+                        console.error("[INSTALLMENT_PLAN] Failed to create payment plan:", planError);
+                    } else {
+                        console.log("[INSTALLMENT_PLAN] Plan Created:", planData.id);
+
+                        // B. Record First Installment (Paid)
+                        await supabaseClient.from('payment_installments').insert({
+                            plan_id: planData.id,
+                            amount: session.amount_total / 100, // Includes fee
+                            due_date: new Date().toISOString(),
+                            status: 'paid',
+                            paid_at: new Date().toISOString(),
+                            stripe_payment_intent_id: session.payment_intent as string,
+                            attempt_count: 1
+                        });
+
+                        // C. Create Stripe Schedule for Remaining Parts
+                        try {
+                            const product = await stripe.products.create({
+                                name: `Echéance ${planType} - Ref: ${data.booking_id}`,
+                                metadata: { booking_id: data.booking_id, plan_id: planData.id }
+                            });
+
+                            const price = await stripe.prices.create({
+                                unit_amount: Math.round(installmentAmount * 100),
+                                currency: 'eur',
+                                recurring: { interval: 'month', usage_type: 'licensed' },
+                                product: product.id
+                            });
+
+                            const now = new Date();
+                            const startDate = new Date(now);
+                            startDate.setMonth(startDate.getMonth() + 1);
+
+                            const schedule = await stripe.subscriptionSchedules.create({
+                                customer: session.customer as string,
+                                start_date: Math.floor(startDate.getTime() / 1000),
+                                end_behavior: 'cancel',
+                                phases: [
+                                    {
+                                        items: [{ price: price.id, quantity: 1 }],
+                                        iterations: remainingParts,
+                                        metadata: {
+                                            plan_id: planData.id,
+                                            booking_id: data.booking_id,
+                                            is_installment: 'true'
+                                        }
+                                    }
+                                ],
+                                metadata: {
+                                    plan_id: planData.id,
+                                    booking_id: data.booking_id
+                                }
+                            });
+
+                            // D. Update Plan with Schedule ID
+                            await supabaseClient
+                                .from('payment_plans')
+                                .update({ stripe_schedule_id: schedule.id })
+                                .eq('id', planData.id);
+
+                            // E. Create Pending Installments in DB
+                            for (let i = 0; i < remainingParts; i++) {
+                                const dueDate = new Date(startDate);
+                                dueDate.setMonth(dueDate.getMonth() + i);
+
+                                await supabaseClient.from('payment_installments').insert({
+                                    plan_id: planData.id,
+                                    amount: installmentAmount,
+                                    due_date: dueDate.toISOString(),
+                                    status: 'pending',
+                                    attempt_count: 0
+                                });
+                            }
+                            console.log(`[INSTALLMENT_PLAN] Schedule ${schedule.id} created with ${remainingParts} phases.`);
+
+                        } catch (stripeErr) {
+                            console.error("[INSTALLMENT_PLAN] Stripe Schedule Creation Failed:", stripeErr);
+                        }
+                    }
+                }
+
                 // 5. Trigger Email
                 const emailPayload = { id: data.booking_id };
                 console.log("EMAIL_VARIABLES_FINAL:", JSON.stringify(emailPayload))
@@ -256,10 +384,121 @@ Deno.serve(async (req) => {
                 console.log("[IGNORED_EVENT] Event has no matching 'source' metadata. Metadata:", JSON.stringify(session.metadata));
             }
 
+
         } else if (event.type === 'invoice.payment_succeeded') {
             const invoice = event.data.object;
             console.log(`[INVOICE_PAID] Invoice ${invoice.id} paid. Customer: ${invoice.customer}, Amount: ${invoice.amount_paid}`);
 
+            // --- A. INSTALLMENT HANDLING ---
+            // Check if this invoice belongs to a Payment Plan via Metadata
+            // Metadata can be on the invoice itself (if passed) or on the subscription line item.
+            // Stripe Schedules pass metadata to subscription phases.
+            let planId = invoice.metadata?.plan_id;
+            let bookingId = invoice.metadata?.booking_id;
+
+            // If not on invoice root, check line items
+            if (!planId && invoice.lines?.data?.length > 0) {
+                // Usually the first line item corresponds to the subscription phase
+                const lineItem = invoice.lines.data[0];
+                if (lineItem.metadata?.plan_id) {
+                    planId = lineItem.metadata.plan_id;
+                    bookingId = lineItem.metadata.booking_id;
+                }
+            }
+
+            if (planId) {
+                console.log(`[INVOICE_PAID] Detected Installment Payment for Plan ${planId}`);
+
+                // 1. Update Installment Status in DB
+                // Find the oldest pending installment for this plan
+                const { data: installment, error: fetchError } = await supabaseClient
+                    .from('payment_installments')
+                    .select('id, amount')
+                    .eq('plan_id', planId)
+                    .eq('status', 'pending')
+                    .order('due_date', { ascending: true })
+                    .limit(1)
+                    .single();
+
+                if (fetchError || !installment) {
+                    console.error(`[INVOICE_PAID] No pending installment found for plan ${planId}:`, fetchError);
+                } else {
+                    console.log(`[INVOICE_PAID] Marking installment ${installment.id} as paid.`);
+
+                    const { error: updateError } = await supabaseClient
+                        .from('payment_installments')
+                        .update({
+                            status: 'paid',
+                            paid_at: new Date().toISOString(),
+                            stripe_invoice_id: invoice.id,
+                            stripe_payment_intent_id: invoice.payment_intent,
+                            attempt_count: 1 // Successful attempt
+                        })
+                        .eq('id', installment.id);
+
+                    if (updateError) {
+                        console.error(`[INVOICE_PAID] Failed to update installment status:`, updateError);
+                    } else {
+                        // 2. Wallet Credit Logic (Pro-Rata)
+                        // Fetch Booking to see if it's a Wallet Pack
+                        if (bookingId) {
+                            const { data: booking } = await supabaseClient
+                                .from('bookings')
+                                .select('offer_id, variant_id, user_id')
+                                .eq('id', bookingId)
+                                .single();
+
+                            if (booking && booking.variant_id) {
+                                const { data: variantData } = await supabaseClient
+                                    .from('offer_variants')
+                                    .select('credit_amount, price')
+                                    .eq('id', booking.variant_id)
+                                    .single();
+
+                                // Check if it's a Pack (has credit_amount)
+                                if (variantData?.credit_amount) {
+                                    // Calculate Pro-Rata Credit
+                                    // We need Total Parts. Fetch Plan?
+                                    // Or assume standardized splitting?
+                                    // Ideally: Credit = TotalCredit / TotalParts.
+                                    // Let's fetch the plan to know Total Installments.
+                                    const { data: planData } = await supabaseClient
+                                        .from('payment_plans')
+                                        .select('plan_type, status')
+                                        .eq('id', planId)
+                                        .single();
+
+                                    if (planData && ['2x', '3x', '4x'].includes(planData.plan_type)) {
+                                        const parts = parseInt(planData.plan_type[0]);
+                                        const creditPerPart = variantData.credit_amount / parts;
+
+                                        console.log(`[INVOICE_PAID] Crediting Wallet (Pro-Rata): ${creditPerPart} (1/${parts} of ${variantData.credit_amount})`);
+
+                                        // Reuse credit_wallet RPC
+                                        // We need partner_id
+                                        const { data: offerData } = await supabaseClient
+                                            .from('offers')
+                                            .select('partner_id')
+                                            .eq('id', booking.offer_id)
+                                            .single();
+
+                                        if (offerData?.partner_id) {
+                                            await supabaseClient.rpc('credit_wallet', {
+                                                p_user_id: booking.user_id,
+                                                p_partner_id: offerData.partner_id,
+                                                p_amount: creditPerPart,
+                                                p_description: `Echéance Pack (Ref: ${bookingId})`
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- B. RECEIPT EMAIL (Original Logic) ---
             // Trigger dedicated Invoice Receipt Email
             // We need: email, amount, currency, date, invoicePdfUrl, invoiceId
             const email = invoice.customer_email || invoice.customer_details?.email;
@@ -291,6 +530,69 @@ Deno.serve(async (req) => {
                 }
             } else {
                 console.warn(`[INVOICE_PAID] SKIPPING RECEIPT: No email found in invoice. Object dump:`, JSON.stringify(invoice));
+            }
+
+        } else if (event.type === 'invoice.payment_failed') {
+            const invoice = event.data.object;
+            console.log(`[INVOICE_FAILED] Invoice ${invoice.id} failed. Customer: ${invoice.customer}, Amount: ${invoice.amount_due}`);
+
+            // Installment Logic: Same detection as Succeeded
+            let planId = invoice.metadata?.plan_id;
+            // If not on invoice root, check line items
+            if (!planId && invoice.lines?.data?.length > 0) {
+                const lineItem = invoice.lines.data[0];
+                if (lineItem.metadata?.plan_id) {
+                    planId = lineItem.metadata.plan_id;
+                }
+            }
+
+            if (planId) {
+                console.log(`[INVOICE_FAILED] Detected Failed Installment for Plan ${planId}`);
+
+                // 1. Update Installment Status to 'failed'
+                // Find oldest pending
+                const { data: installment } = await supabaseClient
+                    .from('payment_installments')
+                    .select('id, attempt_count')
+                    .eq('plan_id', planId)
+                    .eq('status', 'pending')
+                    .order('due_date', { ascending: true })
+                    .limit(1)
+                    .single();
+
+                if (installment) {
+                    const newAttemptCount = (installment.attempt_count || 0) + 1;
+                    await supabaseClient
+                        .from('payment_installments')
+                        .update({
+                            status: 'failed',
+                            stripe_invoice_id: invoice.id,
+                            attempt_count: newAttemptCount
+                        })
+                        .eq('id', installment.id);
+
+                    console.log(`[INVOICE_FAILED] Marked installment ${installment.id} as failed (Attempt ${newAttemptCount}).`);
+
+                    // 2. Send Failure Warning Email
+                    // Trigger 'send-payment-failed-email'
+                    const email = invoice.customer_email || invoice.customer_details?.email;
+                    if (email) {
+                        try {
+                            await supabaseClient.functions.invoke('send-payment-failed-email', {
+                                body: {
+                                    email: email,
+                                    invoiceId: invoice.number,
+                                    planId: planId,
+                                    amount: invoice.amount_due / 100,
+                                    retryLink: invoice.hosted_invoice_url // Link to pay manually
+                                }
+                            });
+                            console.log(`[INVOICE_FAILED] Triggered failure email to ${email}`);
+                        } catch (emailErr) {
+                            console.error(`[INVOICE_FAILED] Failed to trigger email:`, emailErr);
+                        }
+                    }
+                }
             }
 
         } else if (event.type === 'customer.subscription.deleted') {
