@@ -96,14 +96,39 @@ export default function BookingSuccess() {
     }, [user, sessionId, offerIdParam, variantIdParam]);
 
     // Load Calendly Script if needed
+    // Load and Init Calendly Widget
     useEffect(() => {
-        if (status === 'success' && type === 'calendly' && !window.Calendly) {
-            const script = document.createElement('script');
-            script.src = "https://assets.calendly.com/assets/external/widget.js";
-            script.async = true;
-            document.body.appendChild(script);
+        if (status === 'success' && type === 'calendly' && offer?.calendly_url) {
+            const initWidget = () => {
+                if (window.Calendly && document.getElementById('calendly-inline-widget')) {
+                    window.Calendly.initInlineWidget({
+                        url: `${offer.calendly_url}${offer.calendly_url.includes('?') ? '&' : '?'}hide_landing_page_details=1&hide_gdpr_banner=1`,
+                        parentElement: document.getElementById('calendly-inline-widget'),
+                        prefill: {
+                            email: user?.email,
+                            name: profile?.full_name || user?.user_metadata?.full_name
+                        },
+                        utm: {
+                            utmSource: user?.id,
+                            utmContent: offer.id,
+                            utmMedium: 'booking_success',
+                            utmCampaign: 'pay_first'
+                        }
+                    });
+                }
+            };
+
+            if (!window.Calendly) {
+                const script = document.createElement('script');
+                script.src = "https://assets.calendly.com/assets/external/widget.js";
+                script.async = true;
+                script.onload = initWidget; // Init after load
+                document.body.appendChild(script);
+            } else {
+                initWidget(); // Init immediately if already present
+            }
         }
-    }, [status, type]);
+    }, [status, type, offer]);
 
     // Listener for Calendly events
     useEffect(() => {
@@ -229,7 +254,27 @@ export default function BookingSuccess() {
                 )}
 
                 {/* Calendly / Event / Purchase Success Combined */}
-                {(type === 'purchase' || type === 'calendly' || !type) && (
+                {/* Calendly Post-Payment Scheduling */}
+                {type === 'calendly' && (
+                    <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
+                        <h2 className="text-xl font-bold mb-4">Dernière étape : Choisissez votre créneau</h2>
+                        <p className="text-gray-600 mb-6">
+                            Votre paiement est validé. Veuillez maintenant sélectionner la date et l'heure de votre rendez-vous ci-dessous.
+                        </p>
+
+                        <div
+                            id="calendly-inline-widget"
+                            style={{ minWidth: '320px', height: '700px', overflow: 'hidden' }}
+                        />
+
+                        <div className="mt-6 text-sm text-gray-400">
+                            Si le calendrier ne s'affiche pas, <a href={offer?.calendly_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">cliquez ici</a>.
+                        </div>
+                    </div>
+                )}
+
+                {/* Purchase Success (Non-Calendly) */}
+                {(type === 'purchase' || !type) && (
                     <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
                         <h2 className="text-xl font-bold mb-4">Réservation confirmée</h2>
                         <p className="text-gray-600 mb-6">

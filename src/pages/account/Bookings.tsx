@@ -117,6 +117,10 @@ export default function Bookings() {
     };
 
     const filteredBookings = bookings.filter((booking) => {
+        // [MODIF] Masquer les réservations 'pending' (panier abandonné / impayé)
+        // On ne veut afficher QUE ce qui est payé/confirmé ou annulé.
+        if (booking.status === 'pending') return false;
+
         const isCancelled = booking.status === 'cancelled';
         if (activeTab === 'cancelled') return isCancelled;
         if (isCancelled) return false;

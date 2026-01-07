@@ -80,16 +80,36 @@ export default function OfferPage() {
     // However, the script is usually fast.
     const initWidget = () => {
       if (offer && window.Calendly && document.getElementById('calendly-inline-widget')) {
+        if (!offer.calendly_url) {
+          console.warn("Calendly URL is missing in offer data.");
+          return;
+        }
+
+        const cleanUrl = offer.calendly_url.trim();
+        console.log("Initializing Calendly Widget with URL:", cleanUrl);
+
+        // Prevent embedding homepage (Common cause of X-Frame-Options error)
+        if (cleanUrl.replace(/\/+$/, '') === 'https://calendly.com') {
+          console.error("CRITICAL: Cannot embed Calendly homepage. Must be a user or event type URL.");
+          toast.error("Erreur de configuration: URL Calendly invalide (Homepage).");
+          return;
+        }
+
         window.Calendly.initInlineWidget({
-          url: `${offer.calendly_url}${offer.calendly_url.includes('?') ? '&' : '?'}timezone=Europe/Paris&hide_landing_page_details=1&hide_gdpr_banner=1`, // Force Timezone & Clean UI
+          url: `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}timezone=Europe/Paris&hide_landing_page_details=1&hide_gdpr_banner=1`,
           parentElement: document.getElementById('calendly-inline-widget'),
-          prefill: {
-            name: (profile?.first_name && profile?.last_name) ? `${profile.first_name} ${profile.last_name}` : undefined,
-            email: user?.email,
-            location: meetingAddress // Prefill location
-          },
-          utm: {},
-          // timezone: 'Europe/Paris' // Kept as backup, but URL param is stronger
+          parentElement: document.getElementById('calendly-inline-widget'),
+          // prefill removed to avoid 500 Error (Conflict parameters)
+          // prefill: {
+          //   name: (profile?.first_name && profile?.last_name) ? `${profile.first_name} ${profile.last_name}` : undefined,
+          //   email: user?.email
+          // },
+          utm: {
+            utmSource: user?.id,
+            utmContent: offer.id,
+            utmMedium: 'offer_page',
+            utmCampaign: 'direct_booking'
+          }
         });
       }
     };
@@ -99,104 +119,122 @@ export default function OfferPage() {
     return () => clearTimeout(timer);
   }, [offer, profile, user]);
 
+  // Helper to trigger booking after Calendly (Moved logic here for centralization)
+  const handlePostCalendly = async (date?: string | null) => {
+    let finalDate = date;
+    const POLLING_ATTEMPTS = 5;
+    const POLLING_DELAY_MS = 2000;
+
+    // Fallback: Fetch from DB if date missing (polling loop)
+    if (!finalDate && user && offer?.id) {
+      console.log("Date missing, starting DB polling...");
+
+      for (let i = 0; i < POLLING_ATTEMPTS; i++) {
+        try {
+          console.log(`Polling attempt ${i + 1}/${POLLING_ATTEMPTS}...`);
+          const { data: pending } = await supabase.from('bookings')
+            .select('scheduled_at')
+            .eq('user_id', user.id)
+            .eq('offer_id', offer.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (pending?.scheduled_at) {
+            console.log("✅ Found pending booking date in DB:", pending.scheduled_at);
+            finalDate = pending.scheduled_at;
+            break; // Found it!
+          }
+        } catch (err) {
+          console.error("DB Fetch Error:", err);
+        }
+        // Wait before next attempt
+        if (i < POLLING_ATTEMPTS - 1) await new Promise(r => setTimeout(r, POLLING_DELAY_MS));
+      }
+    }
+
+    if (!finalDate) {
+      console.warn("❌ No date found in payload or DB after polling.");
+      // Fallback to manual if really nothing found
+      setShowDateConfirmModal(true);
+      toast.error("Impossible de confirmer la date automatiquement. Veuillez compléter manuellement.");
+      return;
+    }
+
+    console.log("Calendly Process Complete. Date:", finalDate);
+    setCalendlyDate(finalDate);
+    calendlyDateRef.current = finalDate;
+
+    // Auto-Redirect to Checkout if possible
+    if (priceInfo.price > 0 && offer.booking_type === 'calendly') {
+      const canCheckout = selectedVariant; // Add zone check if needed
+      if (canCheckout) {
+        toast.loading("Redirection vers le paiement...");
+        handleStripeCheckout('calendly', finalDate);
+      } else {
+        toast.success("Date validée ! Veuillez sélectionner vos options.");
+        // Scroll to options
+        setTimeout(() => {
+          document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+        }, 500);
+      }
+    } else {
+      toast.success("Date confirmée ! Veuillez compléter les informations.");
+      setTimeout(() => {
+        const zoneSection = document.getElementById('zone-selector-section');
+        if (zoneSection) zoneSection.scrollIntoView({ behavior: 'smooth' });
+      }, 500);
+    }
+  };
+
   // Listen for Calendly Events with Robust Handling
   useEffect(() => {
     const handleCalendlyEvent = (e: any) => {
-      // 1. Safe Data Parsing
       let data = e.data;
       if (typeof data === 'string' && (data.includes('calendly') || data.startsWith('{'))) {
-        try {
-          data = JSON.parse(data);
-        } catch (err) {
-          return;
-        }
+        try { data = JSON.parse(data); } catch (err) { return; }
       }
 
       const isCalendly = (data && data.event && data.event.indexOf('calendly') === 0);
 
       if (isCalendly) {
-        // --- A. Capture Provisional Date (Click on slot) ---
+        // --- A. Capture de la date lors de la sélection (Provisoire) ---
         if (data.event === 'calendly.date_and_time_selected') {
-          const payload = data.payload || {};
-          let selectedDate = payload.date_and_time?.start_time || payload.start_time;
+          // Capture préventive (Ce qui marchait avant)
+          const selectedDate = data.payload?.date_and_time?.start_time || data.payload?.start_time;
 
           if (selectedDate) {
-            console.log("[CALENDLY] Date Selected (Provisional):", selectedDate);
-            try {
-              window.sessionStorage.setItem('calendly_last_selected_date', selectedDate);
-            } catch (storageErr) {
-              console.warn("[CALENDLY] SessionStorage blocked:", storageErr);
-            }
+            console.log("[CALENDLY] Date sélectionnée (provisoire):", selectedDate);
+            // On sauvegarde PARTOUT pour être sûr
+            window.sessionStorage.setItem('calendly_last_selected_date', selectedDate);
             calendlyDateRef.current = selectedDate;
             setCalendlyDate(selectedDate);
           }
         }
 
-        // --- B. Capture Final Booking (Confirmation) ---
+        // --- B. Confirmation finale (Event Scheduled) ---
         if (data.event === 'calendly.event_scheduled') {
-          console.log("[CALENDLY] Event Scheduled - Extracting Data...");
-          const payload = data.payload || {};
+          console.log("[DEBUG] Event Scheduled received.");
 
-          // Priority 1: User Suggested Path (Invitee Object)
-          // Often located at payload.invitee.scheduled_at
-          let scheduledDate = payload.invitee?.scheduled_at;
+          // RECHERCHE MULTI-NIVEAUX (Restoration de la logique qui marchait)
+          const scheduledDate =
+            data.payload?.event?.start_time ||
+            data.payload?.invitee?.scheduled_at ||
+            calendlyDateRef.current ||
+            window.sessionStorage.getItem('calendly_last_selected_date');
 
-          // Priority 2: Event Object Path
-          if (!scheduledDate) {
-            scheduledDate = payload.event?.start_time || payload.resource?.start_time;
-          }
+          console.log("[DEBUG] Date finale retenue:", scheduledDate);
 
-          // Priority 3: Session Storage Fallback
-          if (!scheduledDate) {
-            try {
-              const storedDate = window.sessionStorage.getItem('calendly_last_selected_date');
-              if (storedDate) {
-                console.log("[CALENDLY] Recovered date from SessionStorage:", storedDate);
-                scheduledDate = storedDate;
-              }
-            } catch (err) { /* ignore */ }
-          }
-
-          // Priority 4: Ref Fallback
-          if (!scheduledDate && calendlyDateRef.current) {
-            scheduledDate = calendlyDateRef.current;
-          }
-
-          if (scheduledDate) {
-            console.log("✅ CONFIRMED Calendly Date:", scheduledDate);
-            setCalendlyDate(scheduledDate);
-            try {
-              window.sessionStorage.removeItem('calendly_last_selected_date');
-            } catch (e) { /* ignore */ }
-
-            handlePostCalendly(scheduledDate);
-          } else {
-            console.error("CRITICAL: Calendly date could not be found via Payload, Storage, or Ref.", payload);
-            // Trigger Manual Fallback Modal if strictly needed
-            setShowDateConfirmModal(true);
-            // Do NOT error toast immediately, give chance for manual input if modal exists
-          }
+          // Permissive Flow: Continue even if date is null (Server fallback will be attempted)
+          handlePostCalendly(scheduledDate);
         }
       }
     };
 
     window.addEventListener('message', handleCalendlyEvent);
     return () => window.removeEventListener('message', handleCalendlyEvent);
-  }, []);
-
-  // Helper to trigger booking after Calendly
-  const handlePostCalendly = (date: string) => {
-    console.log("Calendly Date Captured:", date);
-    setCalendlyDate(date);
-    calendlyDateRef.current = date;
-    toast.success("Date confirmée ! Veuillez compléter les informations ci-dessous.");
-
-    // Auto-scroll to next section (Zone Selector)
-    setTimeout(() => {
-      const zoneSection = document.getElementById('zone-selector-section');
-      if (zoneSection) zoneSection.scrollIntoView({ behavior: 'smooth' });
-    }, 500);
-  };
+  }, [offer, user, handlePostCalendly]); // Dependencies needed for handlePostCalendly logic (user, offer) and to ensure handlePostCalendly is fresh
 
 
 
@@ -586,19 +624,21 @@ id,
     }
 
     if (type === 'calendly') {
-      // With Inline Widget, we must ensure date is selected
+      // Pay-First Flow: If paid, we skip date check and go to Stripe
+      if (price > 0) {
+        handleStripeCheckout('calendly', null); // Date will be defined AFTER payment
+        return;
+      }
+
+      // Free Flow: Must select date first
       if (!calendlyDate) {
         toast.error("Veuillez choisir un créneau ci-dessus avant de continuer.", { icon: '📅' });
         document.getElementById('calendly-inline-widget')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
 
-      // Proceed to checkout with the captured date
-      if (price > 0) {
-        handleStripeCheckout('calendly', calendlyDate);
-      } else {
-        bookEvent(calendlyDate);
-      }
+      // Free Booking Execution
+      bookEvent(calendlyDate);
       return;
     }
 
@@ -951,13 +991,36 @@ id,
                       </div>
                     )}
 
-                    {/* --- INLINE CALENDLY WIDGET --- */}
-                    {offer.booking_type === 'calendly' && (
+                    {/* --- INLINE CALENDLY WIDGET (FREE ONLY) --- */}
+                    {/* Pay-First Logic: We only show Calendly here if the offer is FREE. Paid offers schedule AFTER payment. */}
+                    {offer.booking_type === 'calendly' && priceInfo.price === 0 && (
                       <div className="mb-6 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                         <h3 className="font-bold text-gray-900 mb-4 uppercase text-sm tracking-wider flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
                           Choisissez votre créneau
                         </h3>
+
+                        <div className="flex flex-col items-center gap-3 mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                          <p className="text-sm text-blue-800 text-center font-medium">
+                            Le calendrier ne s'affiche pas ?
+                          </p>
+                          <div className="flex gap-3">
+                            <a
+                              href={offer.calendly_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-4 py-2 bg-white text-blue-600 border border-blue-200 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors flex items-center gap-2"
+                            >
+                              Ouvrir le calendrier ↗
+                            </a>
+                            <button
+                              onClick={() => handlePostCalendly(null)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                            >
+                              J'ai réservé !
+                            </button>
+                          </div>
+                        </div>
 
                         <div
                           id="calendly-inline-widget"
@@ -1146,7 +1209,11 @@ id,
                           <Clock className="w-5 h-5 animate-spin" />
                           Traitement...
                         </>
-                      ) : getButtonLabel()}
+                      ) : (
+                        offer.booking_type === 'calendly' && priceInfo.price > 0
+                          ? 'Payer et Réserver'
+                          : getButtonLabel()
+                      )}
                     </button>
                   </div>
 

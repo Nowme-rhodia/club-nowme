@@ -153,22 +153,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Vérifier le cache localStorage en priorité
+      // Vérifier le cache localStorage en priorité (SWR Pattern)
       if (!forceRefresh) {
         try {
           const localCache = localStorage.getItem('nowme_profile_cache');
           if (localCache) {
             const { userId: cachedUserId, profile: cachedProfile, timestamp: cachedTimestamp } = JSON.parse(localCache);
-            const cacheAge = timestamp - cachedTimestamp;
-            if (cachedUserId === userId && cacheAge < CACHE_DURATION) {
-              console.log('✅ loadUserProfile - Using localStorage cached profile (age:', Math.round(cacheAge / 1000), 'seconds)');
+            // SWR: On utilise le cache IMMÉDIATEMENT si l'ID correspond, même s'il est vieux
+            if (cachedUserId === userId) {
+              const cacheAge = timestamp - cachedTimestamp;
+              console.log('✅ loadUserProfile (SWR) - Using cached profile immediately (age:', Math.round(cacheAge / 1000), 's)');
+
               setProfile(cachedProfile);
               setProfileCache({ userId, profile: cachedProfile, timestamp: cachedTimestamp });
-              // Charger en arrière-plan pour rafraîchir le cache
-              setTimeout(() => loadUserProfile(userId, true), 1000);
-              return;
-            } else {
-              console.log('⏰ loadUserProfile - localStorage cache expired or different user');
+
+              // On lance TOUJOURS une revalidation en arrière-plan pour être sûr d'être à jour
+              // Sauf si le cache est très très récent (< 10s) pour éviter le spam
+              if (cacheAge > 10000) {
+                setTimeout(() => loadUserProfile(userId, true), 100);
+              }
+              return; // On rend la main tout de suite pour ne pas bloquer l'UI
             }
           }
         } catch (e) {
@@ -185,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Lancer les 2 requêtes essentielles en PARALLÈLE
       console.log('🔍 loadUserProfile - Launching queries in parallel...');
 
-      const timeoutDuration = 5000; // Réduit à 5s pour un fallback plus rapide vers l'Edge Function
+      const timeoutDuration = 15000; // Augmenté à 15s pour éviter les timeouts RPC fréquents
 
       const [
         { data: userData, error: userError },
