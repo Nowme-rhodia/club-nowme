@@ -37,7 +37,7 @@ export function VideoTestimonials() {
                         Elles le racontent mieux que nous
                     </h2>
                     <p className="text-xl text-gray-600">
-                        Découvre les histoires des membres de la communauté Nowme en vidéo.
+                        Découvre les histoires des qui ont déjà kiffé avec Nowme en vidéo.
                     </p>
                 </div>
 

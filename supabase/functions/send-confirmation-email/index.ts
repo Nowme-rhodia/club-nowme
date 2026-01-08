@@ -176,9 +176,16 @@ Deno.serve(async (req) => {
         // So we prioritize scheduled_at. If null, check if type is 'event' or 'calendly'.
 
         let validDateToDisplay = null;
+        // 1. If scheduled_at exists, it ALWAYS wins (Calendly booked or Event booked)
         if (bookingData.scheduled_at) validDateToDisplay = bookingData.scheduled_at;
-        else if (offer.booking_type === 'event' && bookingData.booking_date) validDateToDisplay = bookingData.booking_date;
-        else if (offerDetails?.event_start_date) validDateToDisplay = offerDetails.event_start_date;
+        // 2. If no scheduled_at, check if it is explicitly an event or limited offer
+        else if ((offer.booking_type === 'event' || offerDetails?.requires_agenda) && offerDetails?.event_start_date) {
+            validDateToDisplay = offerDetails.event_start_date;
+        }
+        // 3. Last resort fallback for old simple events
+        else if (offer.booking_type === 'event' && bookingData.booking_date) {
+            validDateToDisplay = bookingData.booking_date;
+        }
 
         if (validDateToDisplay) {
             const dateObj = new Date(validDateToDisplay);

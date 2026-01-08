@@ -321,6 +321,12 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         return;
       }
 
+      if (eventType === 'event' && locationMode === 'physical' && !locationState.street_address) {
+        toast.error('L\'adresse est obligatoire pour un événement physique');
+        setLoading(false);
+        return;
+      }
+
       if (eventType === 'calendly' && !calendlyUrl) {
         toast.error('L\'URL Calendly est obligatoire');
         setLoading(false);
@@ -420,15 +426,15 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         category_id: categoryData.id,
         booking_type: eventType,
         calendly_url: eventType === 'calendly' ? calendlyUrl : null,
-        event_start_date: eventType === 'event' ? eventDate : null,
-        event_end_date: eventType === 'event' ? eventEndDate : null,
+        event_start_date: eventType === 'event' && eventDate ? new Date(eventDate).toISOString() : null,
+        event_end_date: eventType === 'event' && eventEndDate ? new Date(eventEndDate).toISOString() : null,
         external_link: (eventType === 'promo' || (eventType === 'event' && locationMode === 'online')) ? externalLink : null,
         promo_code: eventType === 'promo' ? promoCode : null,
         promo_conditions: eventType === 'promo' ? promoConditions : null,
         digital_product_file: eventType === 'purchase' ? digitalProductFile : null,
         duration_type: durationType,
-        validity_start_date: durationType === 'fixed' ? validityStartDate : null,
-        validity_end_date: durationType === 'fixed' ? validityEndDate : null,
+        validity_start_date: durationType === 'fixed' && validityStartDate ? new Date(validityStartDate).toISOString() : null,
+        validity_end_date: durationType === 'fixed' && validityEndDate ? new Date(validityEndDate).toISOString() : null,
         street_address: locationMode === 'at_home' ? 'Au domicile du client' : (locationMode === 'online' ? 'En ligne' : locationState.street_address),
         zip_code: locationMode === 'physical' ? locationState.zip_code : '',
         // For At Home: we set 'city' to a readable summary like "Paris, 92, 94..." for display cards

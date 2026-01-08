@@ -285,7 +285,7 @@ async function processBooking(supabaseAdmin: any, payload: any, partnerId: strin
         .select('id, status, meeting_location')
         .eq('user_id', userId)
         .eq('offer_id', offerId)
-        .is('scheduled_at', null)
+        // .is('scheduled_at', null) // REMOVED: Stripe webhook seeds with 'now', so it's rarely null. We want to attach to the latest booking regardless.
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false })
         .limit(1)

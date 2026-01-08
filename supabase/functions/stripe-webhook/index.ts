@@ -50,8 +50,60 @@ Deno.serve(async (req) => {
                 const { user_id, offer_id, variant_id, meeting_location, scheduled_at } = session.metadata
                 const amount = session.amount_total ? session.amount_total / 100 : 0
 
-                // Address Fallback Logic
-                const finalMeetingLocation = meeting_location || "";
+
+
+                // --- 0. CHECK SINGLE PURCHASE LIMIT ---
+                const { data: offerDetails } = await supabaseClient
+                    .from('offers')
+                    .select('booking_type, requires_agenda')
+                    .eq('id', offer_id)
+                    .single();
+
+                if (offerDetails && (offerDetails.booking_type === 'event' || offerDetails.requires_agenda)) {
+                    console.log(`[Limit Check] Checking existing bookings for User ${user_id} on Offer ${offer_id}...`);
+                    const { data: existingBooking } = await supabaseClient
+                        .from('bookings')
+                        .select('id, status')
+                        .eq('user_id', user_id)
+                        .eq('offer_id', offer_id)
+                        .neq('status', 'cancelled')
+                        .maybeSingle();
+
+                    if (existingBooking) {
+                        console.error(`[BLOCK] User ${user_id} already booked offer ${offer_id}. ID: ${existingBooking.id}`);
+                        return new Response(`Already booked. Booking ID: ${existingBooking.id}`, { status: 400 });
+                    }
+                }
+
+                // --- 1. ROBUST DATE & LOCATION LOGIC ---
+                // If this is an event and scheduled_at is missing, fetch it from offer.
+                // If meeting_location is missing, fetch it from offer.
+
+                let finalScheduledAt = scheduled_at;
+                let finalMeetingLocation = meeting_location || "";
+
+                // Only fetch if we are missing something crucial
+                if (offerDetails && (offerDetails.booking_type === 'event' || offerDetails.requires_agenda)) {
+                    // We might need more details than we fetched in limit check
+                    // Fetch full offer details needed for recovery
+                    const { data: recoveryOffer } = await supabaseClient
+                        .from('offers')
+                        .select('event_start_date, street_address, zip_code, city')
+                        .eq('id', offer_id)
+                        .single();
+
+                    if (recoveryOffer) {
+                        if (!finalScheduledAt && recoveryOffer.event_start_date) {
+                            console.log(`[RECOVERY] Recovered event date from DB: ${recoveryOffer.event_start_date}`);
+                            finalScheduledAt = recoveryOffer.event_start_date;
+                        }
+                        if (!finalMeetingLocation) {
+                            const addr = recoveryOffer.street_address ? `${recoveryOffer.street_address}, ${recoveryOffer.zip_code} ${recoveryOffer.city}` : recoveryOffer.city;
+                            console.log(`[RECOVERY] Recovered location from DB: ${addr}`);
+                            finalMeetingLocation = addr || "Adresse non spécifiée";
+                        }
+                    }
+                }
 
                 // Date Logic
                 const nowIso = new Date().toISOString();
@@ -60,7 +112,7 @@ Deno.serve(async (req) => {
                 const bookingObject = {
                     p_user_id: user_id,
                     p_offer_id: offer_id,
-                    p_booking_date: scheduled_at || nowIso, // Use Calendly date if present
+                    p_booking_date: finalScheduledAt || null, // FIX: Don't default to 'now' for p_booking_date (scheduled_at) if missing. Keep it null so it shows in Upcoming.
                     p_status: 'confirmed',
                     p_source: 'stripe',
                     p_amount: amount,
@@ -84,7 +136,8 @@ Deno.serve(async (req) => {
                 const stripeEmail = session.customer_details?.email || session.customer_email;
 
                 if (internalEmail && stripeEmail && internalEmail.toLowerCase() !== stripeEmail.toLowerCase()) {
-                    console.error(`[CRITICAL_EMAIL_MISMATCH] Internal User: ${internalEmail} vs Stripe Payer: ${stripeEmail}. ID: ${user_id}. Proceeding with attribution to ID ${user_id}.`);
+                    console.error(`[SECURITY_BLOCK] Identity Mismatch! Internal: ${internalEmail} vs Stripe: ${stripeEmail}. ID: ${user_id}.`);
+                    return new Response("Identity mismatch: Email does not match user account.", { status: 400 });
                 } else {
                     console.log("[EMAIL_MATCH_CONFIRMED] Stripe email matches internal profile.");
                 }
@@ -95,11 +148,11 @@ Deno.serve(async (req) => {
 
                 // DATA PERSISTENCE PATCH: Update scheduled_at manually since RPC param update failed deployment
                 const bookingId = (data as any)?.booking_id || (typeof data === 'string' ? data : null);
-                if (bookingId && scheduled_at) {
-                    console.log(`[PATCH] Patching scheduled_at for booking ${bookingId}: ${scheduled_at}`);
+                if (bookingId && finalScheduledAt) {
+                    console.log(`[PATCH] Patching scheduled_at for booking ${bookingId}: ${finalScheduledAt}`);
                     const { error: patchError } = await supabaseClient
                         .from('bookings')
-                        .update({ scheduled_at: scheduled_at })
+                        .update({ scheduled_at: finalScheduledAt })
                         .eq('id', bookingId);
 
                     if (patchError) console.error("[PATCH_ERROR] Error patching scheduled_at:", patchError);

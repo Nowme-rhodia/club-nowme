@@ -228,7 +228,7 @@ export default function Subscription() {
                 {/* Image principale */}
                 <div className="transform rotate-3 hover:rotate-0 transition-transform duration-500">
                   <img
-                    src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=600"
+                    src="https://plus.unsplash.com/premium_photo-1730157540298-82994f9336f4?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                     alt="Femmes qui rient ensemble"
                     className="rounded-2xl shadow-2xl"
                   />
@@ -265,6 +265,16 @@ export default function Subscription() {
       {/* Event Gallery */}
       <EventGallery />
 
+      <div className="text-center pb-12 bg-white">
+        <Link
+          to={getActionLink('monthly')}
+          className="inline-flex items-center px-8 py-4 bg-primary text-white rounded-full font-bold text-lg hover:bg-primary-dark transform hover:scale-105 transition-all duration-300 shadow-lg"
+        >
+          <Camera className="w-5 h-5 mr-2" />
+          Je veux être sur les prochaines photos !
+        </Link>
+      </div>
+
       {/* Section "Avant/Après" - Design en zigzag */}
       <motion.section className="py-20 bg-gray-50" {...fadeInUp}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -283,7 +293,7 @@ export default function Subscription() {
               <motion.div {...fadeInUp}>
                 <div className="transform -rotate-2 hover:rotate-0 transition-transform duration-500">
                   <img
-                    src="https://images.unsplash.com/photo-1551836022-deb4988cc6c0?auto=format&fit=crop&q=80&w=600"
+                    src="https://plus.unsplash.com/premium_photo-1663039865571-4f1b9d2d8bcf?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?auto=format&fit=crop&q=80&w=600"
                     alt="Femme qui s'ennuie"
                     className="rounded-2xl shadow-lg"
                   />
@@ -310,7 +320,7 @@ export default function Subscription() {
               <motion.div className="lg:order-2" {...fadeInUp}>
                 <div className="transform rotate-2 hover:rotate-0 transition-transform duration-500">
                   <img
-                    src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80&w=600"
+                    src="https://plus.unsplash.com/premium_photo-1658507000356-760051bd712b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?auto=format&fit=crop&q=80&w=600"
                     alt="Femmes heureuses découvrant"
                     className="rounded-2xl shadow-lg"
                   />
@@ -337,7 +347,7 @@ export default function Subscription() {
               <motion.div {...fadeInUp}>
                 <div className="transform -rotate-1 hover:rotate-0 transition-transform duration-500">
                   <img
-                    src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600"
+                    src="https://images.unsplash.com/photo-1596473026161-1082f268b98d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?auto=format&fit=crop&q=80&w=600"
                     alt="Femme seule"
                     className="rounded-2xl shadow-lg"
                   />
@@ -364,7 +374,7 @@ export default function Subscription() {
               <motion.div className="lg:order-2" {...fadeInUp}>
                 <div className="transform rotate-1 hover:rotate-0 transition-transform duration-500">
                   <img
-                    src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&q=80&w=600"
+                    src="https://images.unsplash.com/photo-1619377729660-a70a83341dc4?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D?auto=format&fit=crop&q=80&w=600"
                     alt="Groupe d'amies"
                     className="rounded-2xl shadow-lg"
                   />
@@ -391,7 +401,7 @@ export default function Subscription() {
 
       {/* Section "Scientific Fact" (Reordered) */}
       <motion.section className="py-16 bg-blue-900 text-white relative overflow-hidden" {...fadeInUp}>
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1543807535-eceef0bc6599?auto=format&fit=crop&q=80")', backgroundSize: 'cover', backgroundPosition: 'center', mixBlendMode: 'overlay' }}></div>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'url("https://plus.unsplash.com/premium_photo-1663091138291-dc6b51234070?auto=format&fit=crop&q=80")', backgroundSize: 'cover', backgroundPosition: 'center', mixBlendMode: 'overlay' }}></div>
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
           <h2 className="text-2xl md:text-3xl font-bold mb-6">🧠 Le savais-tu ?</h2>
           <div className="text-xl md:text-2xl font-medium mb-8 leading-relaxed">
@@ -400,7 +410,7 @@ export default function Subscription() {
           </div>
           <p className="text-lg text-blue-100 mb-8">
             La solitude urbaine et la routine tuent notre joie de vivre. <br />
-            Rejoins une <strong className="text-yellow-300">communauté prouvée et approuvée par 500+ membres</strong> pour booster ton bonheur.
+            Rejoins une <strong className="text-yellow-300">communauté de KIFFEUSES</strong> pour booster ton bonheur.
           </p>
           <Link
             to={getActionLink('monthly')}
@@ -420,14 +430,14 @@ export default function Subscription() {
               <span className="text-primary">Nowme</span> = <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent italic">Maintenant Moi</span>.<br />
             </h1>
             <p className="text-2xl text-gray-700 font-medium mb-8">
-              C'est ton moment. Tu mérites de kiffer à fond, sans culpabiliser.
+              C'est ton moment, tu replaces le kiff au centre de ta vie. Tu mérites de kiffer à fond, sans culpabiliser.
               <br /><span className="text-gray-500 text-lg font-normal">On s'occupe de tout, tu n'as plus qu'à profiter.</span>
             </p>
             <motion.h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Concrètement, qu'est-ce que tu auras ?
             </motion.h2>
             <motion.p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Tout pour booster ta vie sociale, pro et perso.
+              Tout pour booster tes découvertes, ta vie sociale, pro et perso.
             </motion.p>
           </div>
 

@@ -37,6 +37,31 @@ export default function OfferPage() {
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [showEventConfirmModal, setShowEventConfirmModal] = useState(false);
+  const [isAlreadyBooked, setIsAlreadyBooked] = useState(false);
+
+  // Check for existing booking
+  useEffect(() => {
+    const checkExistingBooking = async () => {
+      if (!user || !offer) return;
+
+      const shouldCheck = offer.requires_agenda || offer.booking_type === 'event';
+      if (!shouldCheck) return;
+
+      const { data } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('offer_id', offer.id)
+        .neq('status', 'cancelled')
+        .maybeSingle();
+
+      if (data) {
+        setIsAlreadyBooked(true);
+      }
+    };
+
+    checkExistingBooking();
+  }, [user, offer]);
 
   // State for selected variant
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
@@ -256,6 +281,7 @@ id,
   coordinates,
   calendly_url,
   booking_type,
+  requires_agenda,
   external_link,
   promo_code,
   event_start_date,
@@ -473,7 +499,7 @@ id,
         booking_type: bookingType,
         travel_fee: travelFee,
         department_code: selectedZoneCode,
-        meeting_location: meetingAddressRef.current?.value || meetingAddress, // Robust Ref usage
+        meeting_location: meetingAddressRef.current?.value || meetingAddress || (offer.street_address ? `${offer.street_address}, ${offer.zip_code} ${offer.city}` : offer.city), // Robust Address Logic
         installment_plan: installmentPlan, // Pass selected plan ('1x', '2x', '3x', '4x')
         scheduled_at: scheduledDate // NEW: Pass the date!
       };
@@ -626,7 +652,8 @@ id,
     if (type === 'calendly') {
       // Pay-First Flow: If paid, we skip date check and go to Stripe
       if (price > 0) {
-        handleStripeCheckout('calendly', null); // Date will be defined AFTER payment
+        // Pass the date if selected (for pre-filled flows), otherwise undefined (for Pay-First flows)
+        handleStripeCheckout('calendly', calendlyDate || undefined);
         return;
       }
 
@@ -643,7 +670,8 @@ id,
     }
 
     if (price > 0) {
-      handleStripeCheckout(type as 'calendly' | 'event');
+      // Pass the event start date explicitly for 'event' type!
+      handleStripeCheckout(type as 'calendly' | 'event', type === 'event' ? offer.event_start_date : undefined);
     } else {
       if (type === 'event') {
         setShowEventConfirmModal(true);
@@ -652,6 +680,7 @@ id,
   };
 
   const getButtonLabel = () => {
+    if (isAlreadyBooked) return "Vous êtes déjà inscrit";
     const type = offer.booking_type || 'calendly';
     const price = priceInfo.price || 0;
     const count = parseInt(installmentPlan) || 1;
@@ -1200,7 +1229,7 @@ id,
 
                     <button
                       onClick={handleBooking}
-                      disabled={bookingLoading || isOutOfStock || !hasAccess}
+                      disabled={bookingLoading || isOutOfStock || !hasAccess || isAlreadyBooked}
                       className={`w-full px-6 py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${isOutOfStock ? 'bg-gray-400' : 'bg-primary hover:bg-primary-dark'
                         }`}
                     >

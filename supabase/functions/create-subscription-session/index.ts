@@ -124,7 +124,7 @@ serve(async (req: Request): Promise<Response> => {
     // Créer la Checkout Session Stripe
     const sessionParams: any = {
       mode: "subscription",
-      payment_method_types: ["card"],
+      automatic_payment_methods: { enabled: true },
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url,

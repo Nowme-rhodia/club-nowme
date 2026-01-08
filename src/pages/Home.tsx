@@ -6,6 +6,8 @@ import { SEO } from '../components/SEO';
 
 import { supabase } from '../lib/supabase';
 import { OfferCard } from '../components/OfferCard';
+import { EventGallery } from '../components/EventGallery';
+import { VideoTestimonials } from '../components/VideoTestimonials';
 
 // ✅ On tape explicitement les noms d’icônes
 type IconName = keyof typeof LucideIcons;
@@ -104,12 +106,7 @@ function LatestOffers() {
   );
 }
 
-import { EventGallery } from '../components/EventGallery';
-import { VideoTestimonials } from '../components/VideoTestimonials';
 
-// ... (keep existing imports)
-
-// ... (keep LatestOffers component)
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
@@ -173,11 +170,11 @@ export default function Home() {
       {/* Hero Section */}
       <div className="relative min-h-[90vh] bg-white flex items-center overflow-hidden border-b-4 border-pink-500">
         {/* ... Hero Content (unchanged) ... */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1571388208497-71bedc66e932?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10 animate-subtle-zoom" />
+        <div className="absolute inset-0 bg-[url('https://plus.unsplash.com/premium_photo-1681486904214-1eefdaaf1753?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')] bg-cover bg-center opacity-10 animate-subtle-zoom" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center max-w-4xl mx-auto">
             <span className="inline-block px-4 py-1 rounded-full bg-pink-100 text-pink-600 font-bold text-sm mb-6 animate-fade-in-down">
-              👑 Le Club N°1 en Île-de-France
+              👑 Le Club des femmes qui kiffent
             </span>
             <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight mb-6 animate-fade-in-down ${scrollY > 50 ? 'opacity-0' : 'opacity-100'}`}>
               Marre de la routine ?<br />
@@ -211,7 +208,7 @@ export default function Home() {
                 <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=50" alt="" />
                 <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=50" alt="" />
               </div>
-              <span>Rejoint par +2000 membres cette année</span>
+              <span>Déjà +2000 femmes qui ont participé à nos événements - concentrés de kiffs</span>
             </div>
           </div>
         </div>
@@ -250,7 +247,7 @@ export default function Home() {
               color="text-pink-500"
               bg="bg-pink-100"
               title="Ventes Privées"
-              desc="-20% à -50% sur tes marques chouchous."
+              desc="-20% à -50% sur tes marques et lieux chouchous."
               tags={['-20%', '-50%', 'Exclusif']}
             />
 
@@ -360,7 +357,7 @@ export default function Home() {
                 </h3>
                 <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed mb-8">
                   En rejoignant le Club, tu ne fais pas que payer un service. <br className="hidden md:block" />
-                  <strong className="text-white">Tu finances directement l'embauche d'animatrices passionnées</strong> qui seront là pour s'occuper de toi comme une reine, à chaque événement.
+                  <strong className="text-white">Tu finances directement, des lieux prestigieux, un service de malade, la possibilité de rencontrer d'autres kiffeuses avec qui profiter sans parler des animatrices passionnées qui t'accompagne,</strong> qui seront là pour s'occuper de toi comme une reine, à chaque événement.
                 </p>
                 <Link to="/subscription" className="inline-flex items-center px-8 py-4 bg-white text-gray-900 rounded-full font-bold hover:bg-gray-100 transition-colors">
                   Je participe à l'aventure <ChevronRight className="ml-2 w-5 h-5" />
@@ -380,7 +377,7 @@ export default function Home() {
 
       {/* CTA final */}
       <div className="py-20 bg-gradient-to-br from-pink-500 to-purple-600 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[url('https://plus.unsplash.com/premium_photo-1748061945412-a6d0cc5da78b?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
           <h2 className="text-3xl md:text-5xl font-bold mb-6">
             Ta nouvelle vie commence maintenant.

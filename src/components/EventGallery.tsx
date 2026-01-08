@@ -3,40 +3,88 @@ import { motion } from 'framer-motion';
 
 const events = [
     {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1543807535-eceef0bc6599?auto=format&fit=crop&q=80&w=600",
-        title: "Apéro sur la Seine",
-        date: "Juin 2024"
-    },
-    {
-        id: 2,
-        image: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&q=80&w=600",
-        title: "Atelier Cocktail",
-        date: "Mai 2024"
-    },
-    {
-        id: 3,
-        image: "https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&q=80&w=600",
-        title: "Soirée Rooftop",
-        date: "Avril 2024"
-    },
-    {
-        id: 4,
-        image: "https://images.unsplash.com/photo-1514525253440-b393332569ca?auto=format&fit=crop&q=80&w=600",
-        title: "Dégustation Vin",
+        id: 7,
+        image: "/images/NOWME-Karaoke-2024 (69).jpg",
+        title: "Karaoké Party",
         date: "Mars 2024"
     },
     {
-        id: 5,
-        image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=600",
-        title: "Festival Nowme",
-        date: "Sept 2024"
+        id: 2,
+        image: "/images/2025-fevrier-NOWME-clubbing (77).jpg",
+        title: "Soirée Clubbing",
+        date: "Février 2025"
+    },
+    {
+        id: 11,
+        image: "/images/IMG_20241012_125525_1.jpg",
+        title: "Séjour à Marrakech",
+        date: "Oct 2024"
+    },
+    {
+        id: 4,
+        image: "/images/NOWME-Karaoke-2024 (20).jpg",
+        title: "Karaoké & massage",
+        date: "Mars 2024"
     },
     {
         id: 6,
-        image: "https://images.unsplash.com/photo-1475721027767-f4240295bd43?auto=format&fit=crop&q=80&w=600",
-        title: "Week-end Surf",
+        image: "/images/Sport-NOWME (34).jpg",
+        title: "Session Sport",
         date: "Juillet 2024"
+    },
+    {
+        id: 1,
+        image: "/images/2024-Nowme-brunch (30).jpg",
+        title: "Brunch & paint",
+        date: "Juin 2024"
+    },
+    {
+        id: 9,
+        image: "/images/IMG_20250523_190803.jpg",
+        title: "Séjour en grèce",
+        date: "Mai 2025"
+    },
+    {
+        id: 3,
+        image: "/images/2024-soiree-pyjama-NOWME-053.jpg",
+        title: "Soirée Pyjama",
+        date: "Avril 2024"
+    },
+    {
+        id: 12,
+        image: "/images/IMG_20240407_194459.jpg",
+        title: "Game night",
+        date: "Avril 2024"
+    },
+    {
+        id: 5,
+        image: "/images/2024-Nowme-brunch (41).jpg",
+        title: "Brunch entre filles",
+        date: "Sept 2024"
+    },
+    {
+        id: 14,
+        image: "/images/20250219_204444.jpg",
+        title: "Séjour en Laponie",
+        date: "Fév 2025"
+    },
+    {
+        id: 8,
+        image: "/images/IMG_6826.JPEG",
+        title: "Pole dance & Massage",
+        date: "2024"
+    },
+    {
+        id: 13,
+        image: "/images/20250523_160815.jpg",
+        title: "Séjour entre filles",
+        date: "Mai 2025"
+    },
+    {
+        id: 10,
+        image: "/images/IMG_20250216_153538.jpg",
+        title: "Ski Arctique",
+        date: "Fév 2025"
     }
 ];
 
@@ -56,7 +104,7 @@ export function EventGallery() {
                     </p>
                 </div>
 
-                <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
+                <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
                     {events.map((event, index) => (
                         <motion.div
                             key={event.id}
