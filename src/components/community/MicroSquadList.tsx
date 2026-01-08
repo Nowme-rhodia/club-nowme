@@ -31,15 +31,17 @@ export const MicroSquadList: React.FC<MicroSquadListProps> = ({ hubId, hubName, 
             const textToScan = ((hubName || '') + ' ' + (hubCity || '')).toLowerCase();
             const deptMatches: string[] = textToScan.match(/\b(97\d|2A|2B|[0-9]{2})\b/g) || [];
 
-            // Aliases
-            if (textToScan.includes('paris')) deptMatches.push('75');
-            if (textToScan.includes('est') || textToScan.includes('77') || textToScan.includes('91')) deptMatches.push('77', '91');
-            if (textToScan.includes('ouest') || textToScan.includes('78') || textToScan.includes('95')) deptMatches.push('78', '95');
+            // Aliases - Use strict word boundaries to avoid matching "est" inside "ouest"
+            if (/\b(paris|banlieue)\b/.test(textToScan)) {
+                deptMatches.push('75', '92', '93', '94');
+            }
+            if (/\b(est|francilien|77|91)\b/.test(textToScan)) deptMatches.push('77', '91');
+            if (/\b(ouest|78|95)\b/.test(textToScan)) deptMatches.push('78', '95');
 
             const uniqueTargetDepts = [...new Set(deptMatches)];
             const isGeoHub = uniqueTargetDepts.length > 0;
 
-            console.log(`[MicroSquadList] Hub: ${hubName} | IsGeo: ${isGeoHub} | Targets:`, uniqueTargetDepts);
+            // console.log(`[MicroSquadList] Hub: ${hubName} | IsGeo: ${isGeoHub} | Targets:`, uniqueTargetDepts);
 
             // 2. Fetch ALL open/future squads
             let query = supabase
@@ -60,6 +62,7 @@ export const MicroSquadList: React.FC<MicroSquadListProps> = ({ hubId, hubName, 
 
             // Optimization: If NOT a geo hub AND we are not in global "showFilter" mode (Agenda), strict filtering is fine.
             if (!isGeoHub && hubId && !showFilter) {
+                console.log("[MicroSquadList] Not a Geo Hub, applying strict hub_id filter");
                 query = query.eq('hub_id', hubId);
             }
 
@@ -79,7 +82,9 @@ export const MicroSquadList: React.FC<MicroSquadListProps> = ({ hubId, hubName, 
                         const eventDeptMatch = location.match(/\b(97\d|2A|2B|[0-9]{2})[0-9]{3}\b/);
                         const eventDept = eventDeptMatch ? eventDeptMatch[1] : null;
 
-                        if (eventDept && uniqueTargetDepts.includes(eventDept)) {
+                        const isMatch = eventDept && uniqueTargetDepts.includes(eventDept);
+
+                        if (isMatch) {
                             return true;
                         }
                         return false;

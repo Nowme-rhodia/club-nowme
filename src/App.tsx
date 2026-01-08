@@ -29,6 +29,7 @@ const Profile = React.lazy(() => import('./pages/account/Profile'));
 const SubmitOffer = React.lazy(() => import('./pages/SubmitOffer'));
 const WalletPay = React.lazy(() => import('./pages/account/WalletPay'));
 const Bookings = React.lazy(() => import('./pages/account/Bookings'));
+const MySquads = React.lazy(() => import('./pages/account/MySquads'));
 const PaymentPlans = React.lazy(() => import('./pages/account/PaymentPlans'));
 const SubscriberLayout = React.lazy(() => import('./layouts/SubscriberLayout'));
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
@@ -204,7 +205,9 @@ function App() {
                     </PrivateRoute>
                   }>
                     <Route index element={<DashboardOverview />} />
+                    <Route index element={<DashboardOverview />} />
                     <Route path="bookings" element={<Bookings />} />
+                    <Route path="squads" element={<MySquads />} />
                     <Route path="payment-plans" element={<PaymentPlans />} />
                     <Route path="wallet" element={<WalletPay />} />
                     <Route path="profile" element={

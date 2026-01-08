@@ -19,40 +19,79 @@ export default function DashboardOverview() {
     }, [profile]);
 
     const fetchDashboardData = async () => {
+        if (!profile?.user_id) return;
+
         try {
-            // 1. Fetch Next Booking
-            const { data: bookingData } = await supabase
+            const today = new Date().toISOString();
+
+            // 1. Fetch Official Bookings
+            const { data: bookingsData } = await supabase
                 .from('bookings')
                 .select(`
-          id,
-          booking_date,
-          scheduled_at,
-          offer:offers (
-            title,
-            image_url,
-            city,
-            event_start_date
-          )
-        `)
-                .eq('user_id', profile?.user_id)
-                .gte('booking_date', new Date().toISOString()) // Approximation, better to filter by event date in JS
-                .order('booking_date', { ascending: true })
-                .limit(1)
-                .maybeSingle();
+                    id,
+                    booking_date,
+                    scheduled_at,
+                    offer:offers (
+                        title,
+                        image_url,
+                        city,
+                        offer_media(url)
+                    )
+                `)
+                .eq('user_id', profile.user_id)
+                .gte('booking_date', today) // Basic filter, refine in JS
+                .order('booking_date', { ascending: true });
 
-            // Since we can't easily filter by "future event date" in a simple query if scheduled_at logic varies,
-            // we might fetch a few and filter in JS or just take the most recent booking that is likely future.
-            // For now, let's trust the query or improve it later. 
-            // Actually, let's fetch top 5 future bookings (by created_at or scheduled_at?)
-            // Better: Fetch where booking_date or scheduled_at > now. 
-            // Simplified: Just one for now.
-            setNextBooking(bookingData);
+            // 2. Fetch Community Squads
+            const { data: squadData } = await supabase
+                .from('squad_members')
+                .select(`
+                    squad:micro_squads (
+                        id,
+                        title,
+                        date_event,
+                        location,
+                        description
+                    )
+                `)
+                .eq('user_id', profile.user_id)
+                .gte('squad.date_event', today); // This might not work perfectly with inner join filter, filtering in JS is safer
 
-            // 2. Fetch Wallet Balance (Sum of all positive wallets)
+            // 3. Normalize and Merge
+            const normalizedBookings = (bookingsData || []).map((b: any) => ({
+                id: b.id,
+                title: b.offer?.title,
+                date: b.scheduled_at || b.booking_date,
+                image: b.offer?.image_url || b.offer?.offer_media?.[0]?.url,
+                location: b.offer?.city,
+                type: 'official'
+            }));
+
+            // Filter out null squads (if filtered by inner join) and normalize
+            const normalizedSquads = (squadData || [])
+                .map((s: any) => s.squad)
+                .filter((s: any) => s && new Date(s.date_event) > new Date()) // Ensure future
+                .map((s: any) => ({
+                    id: s.id,
+                    title: s.title,
+                    date: s.date_event,
+                    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80', // Generic placeholder for squads
+                    location: s.location,
+                    type: 'community'
+                }));
+
+            const allEvents = [...normalizedBookings, ...normalizedSquads].sort((a, b) =>
+                new Date(a.date).getTime() - new Date(b.date).getTime()
+            );
+
+            // Set the very next event
+            setNextBooking(allEvents[0] || null);
+
+            // 4. Fetch Wallet Balance
             const { data: dataWallets, error: walletError } = await supabase
                 .from('wallets')
                 .select('balance')
-                .eq('user_id', profile?.user_id)
+                .eq('user_id', profile.user_id)
                 .gt('balance', 0);
 
             if (walletError) console.error(walletError);
@@ -115,7 +154,14 @@ export default function DashboardOverview() {
                             <Calendar className="w-5 h-5 text-primary" />
                             Prochaine sortie
                         </h3>
-                        <Link to="/account/bookings" className="text-sm text-primary font-medium hover:underline">
+                        {/* Link destination depends on type, or generic bookings page if both are listed there? 
+                            Ideally should go to specific list. For now, general bookings page or toggle.
+                            Using /account/bookings for now.
+                         */}
+                        <Link
+                            to={nextBooking?.type === 'community' ? '/account/squads' : '/account/bookings'}
+                            className="text-sm text-primary font-medium hover:underline"
+                        >
                             Tout voir
                         </Link>
                     </div>
@@ -124,27 +170,37 @@ export default function DashboardOverview() {
                         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 bg-gray-50 rounded-xl border border-gray-100 transition-colors hover:bg-gray-100">
                             <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
                                 <img
-                                    src={nextBooking.offer?.image_url}
+                                    src={nextBooking.image}
                                     alt=""
                                     className="w-full h-full object-cover"
                                 />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="font-bold text-gray-900 truncate pr-4">
-                                    {nextBooking.offer?.title}
-                                </h4>
+                                <div className="flex justify-between items-start">
+                                    <h4 className="font-bold text-gray-900 truncate pr-4">
+                                        {nextBooking.title}
+                                    </h4>
+                                    {nextBooking.type === 'community' && (
+                                        <span className="text-[10px] uppercase font-bold text-white bg-orange-400 px-2 py-0.5 rounded-full">
+                                            Sortie
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-gray-500">
                                     <div className="flex items-center gap-1.5">
                                         <Clock className="w-4 h-4" />
-                                        {nextBooking.scheduled_at
-                                            ? format(new Date(nextBooking.scheduled_at), "d MMM 'à' HH'h'mm", { locale: fr })
+                                        {nextBooking.date
+                                            ? format(new Date(nextBooking.date), "d MMM 'à' HH'h'mm", { locale: fr })
                                             : "Date à confirmer"
                                         }
                                     </div>
-                                    {nextBooking.offer?.city && (
+                                    {nextBooking.location && (
                                         <div className="flex items-center gap-1.5">
                                             <MapPin className="w-4 h-4" />
-                                            {nextBooking.offer.city}
+                                            {/* Truncate location if too long */}
+                                            <span className="truncate max-w-[200px]">
+                                                {nextBooking.location}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -152,7 +208,7 @@ export default function DashboardOverview() {
                         </div>
                     ) : (
                         <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                            <p className="text-gray-500 text-sm mb-3">Aucune réservation à venir</p>
+                            <p className="text-gray-500 text-sm mb-3">Aucune sortie à venir</p>
                             <Link to="/tous-les-kiffs" className="text-primary font-medium text-sm hover:underline">
                                 Réserver mon prochain kiff
                             </Link>

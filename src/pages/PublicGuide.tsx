@@ -60,7 +60,7 @@ export function PublicGuide() {
                     </div>
                     <div className="flex-1 order-1 md:order-2">
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:rotate-2 transition-transform duration-500">
-                            <img src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&q=80" alt="Sortie entre filles" className="w-full h-auto" />
+                            <img src="https://plus.unsplash.com/premium_photo-1764592023835-89a3db64a5f8?auto=format&fit=crop&q=80" alt="Sortie entre filles" className="w-full h-auto" />
                         </div>
                     </div>
                 </div>
@@ -69,7 +69,7 @@ export function PublicGuide() {
                 <div className="flex flex-col md:flex-row items-center gap-12">
                     <div className="flex-1">
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:-rotate-2 transition-transform duration-500">
-                            <img src="https://images.unsplash.com/photo-1540497077202-7c8a33801524?auto=format&fit=crop&q=80" alt="Spa et détente" className="w-full h-auto" />
+                            <img src="https://plus.unsplash.com/premium_photo-1681486904214-1eefdaaf1753?auto=format&fit=crop&q=80" alt="Spa et détente" className="w-full h-auto" />
                         </div>
                     </div>
                     <div className="flex-1">
@@ -105,7 +105,7 @@ export function PublicGuide() {
                     </div>
                     <div className="flex-1 order-1 md:order-2">
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform hover:rotate-1 transition-transform duration-500">
-                            <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&q=80" alt="Groupe d'amies" className="w-full h-auto" />
+                            <img src="https://plus.unsplash.com/premium_photo-1670884128402-ee91907adab0?auto=format&fit=crop&q=80" alt="Groupe d'amies" className="w-full h-auto" />
                         </div>
                     </div>
                 </div>
@@ -149,7 +149,7 @@ export function PublicGuide() {
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="text-center mb-12">
                         <Heart className="w-12 h-12 text-pink-500 mx-auto mb-4 fill-current animate-pulse" />
-                        <h2 className="text-3xl font-bold">Elles l'utilisent déjà tous les jours</h2>
+                        <h2 className="text-3xl font-bold">Elles ont déjà testé les événements</h2>
                         <p className="text-gray-600 mt-2">Ce n'est pas juste une promesse, c'est leur réalité.</p>
                     </div>
                     <VideoTestimonials />

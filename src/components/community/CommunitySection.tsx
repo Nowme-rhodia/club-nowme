@@ -41,10 +41,8 @@ export const CommunitySection: React.FC<CommunitySectionProps> = ({ profile }) =
     // For now, let's show ALL because we don't know the exact address format vs city column match.
     // We'll Sort them instead: Matching city first.
 
-    const excludedNames = ["Nature & Détente", "Chic & Chill", "City Life"];
-    const filteredHubs = hubs.filter(h => !excludedNames.some(name => h.name.includes(name)));
-
-    const sortedHubs = [...filteredHubs].sort((a, b) => {
+    // We'll Sort them instead: Matching city first.
+    const sortedHubs = [...hubs].sort((a, b) => {
         // Priority 1: Geo Groups (Match typical names or IDs if stable, using names for flexibility)
         const geoNames = ["Team Est Francilien", "Team Ouest & Nord", "Paris & Proche Banlieue", "92", "93", "94", "75", "77", "91", "78", "95"];
         const isAGeo = geoNames.some(name => a.name.includes(name));

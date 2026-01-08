@@ -48,8 +48,29 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpe
 
     const handleSelect = async (address: string) => {
         setValue(address, false);
-        setFormValue('location', address); // Update React Hook Form
         clearSuggestions();
+
+        try {
+            const results = await getGeocode({ address });
+            const { lat, lng } = await getLatLng(results[0]);
+
+            // Extract Zip Code to ensure we have it for filtering
+            const zipComponent = results[0].address_components.find(c => c.types.includes('postal_code'));
+            const zipCode = zipComponent ? zipComponent.long_name : '';
+
+            // Construct a robust location string: "Address, Zip City"
+            // If the user selected string already has it, fine, but we force it to be safe for our Regex
+            let finalLocation = address;
+            if (zipCode && !address.includes(zipCode)) {
+                finalLocation = `${address}, ${zipCode}`;
+            }
+
+            setFormValue('location', finalLocation);
+        } catch (error) {
+            console.error("Error: ", error);
+            // Fallback to just the string if geocode fails
+            setFormValue('location', address);
+        }
     };
 
     if (!isOpen) return null;

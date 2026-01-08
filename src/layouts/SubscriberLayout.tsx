@@ -29,6 +29,7 @@ export default function SubscriberLayout() {
     const navItems = [
         { icon: LayoutDashboard, label: 'Tableau de bord', to: '/account', end: true },
         { icon: Calendar, label: 'Mes Réservations', to: '/account/bookings' },
+        { icon: Sparkles, label: 'Mes Sorties Club', to: '/account/squads' },
         { icon: CreditCard, label: 'Mes Echéanciers', to: '/account/payment-plans' },
         { icon: Wallet, label: 'Mon Ardoise', to: '/account/wallet' },
         { icon: User, label: 'Mon Profil', to: '/account/profile' },

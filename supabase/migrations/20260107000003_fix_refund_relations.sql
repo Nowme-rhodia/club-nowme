@@ -6,8 +6,6 @@
 -- We keep the auth.users FK for strict security or drop it? 
 -- Usually we can have both, but for PostgREST detection, linking to the exposed table is key.
 
-BEGIN;
-
 -- 1. Ensure the constraint exists. 
 -- We reference user_profiles(user_id) which is a unique column (1:1 with auth users)
 ALTER TABLE public.refund_requests 
@@ -24,5 +22,3 @@ ON DELETE CASCADE;
 
 -- 2. Force schema cache reload (Supabase specific helper often used, or just valid SQL)
 NOTIFY pgrst, 'reload config';
-
-COMMIT;

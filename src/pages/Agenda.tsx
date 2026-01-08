@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sparkles, Calendar, Users, MapPin } from 'lucide-react';
+import { Sparkles, Calendar, Users, MapPin, Tag } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
@@ -30,7 +30,9 @@ export default function Agenda() {
     const { profile } = useAuth();
     const [officialEvents, setOfficialEvents] = useState<OfferDetails[]>([]);
     const [departments, setDepartments] = useState<string[]>([]);
+    const [categories, setCategories] = useState<string[]>([]);
     const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -55,7 +57,8 @@ export default function Agenda() {
             *,
             offer_variants(price, discounted_price),
             partner:partners(business_name, address),
-            offer_media(url)
+            offer_media(url),
+            category:offer_categories(name)
           `)
                     .eq('partner_id', partnerData.id)
                     .eq('status', 'approved')
@@ -67,6 +70,7 @@ export default function Agenda() {
 
                 if (data) {
                     const uniqueDepts = new Set<string>();
+                    const uniqueCats = new Set<string>();
 
                     const formattedEvents: OfferDetails[] = data.map((offer: any) => {
                         const firstVariant = offer.offer_variants?.[0];
@@ -92,6 +96,10 @@ export default function Agenda() {
                             uniqueDepts.add(dept);
                         }
 
+                        // Category extraction
+                        const catName = offer.category?.name || 'Événement Club';
+                        uniqueCats.add(catName);
+
                         return {
                             id: offer.id,
                             title: offer.title,
@@ -106,7 +114,7 @@ export default function Agenda() {
                                 address: [offer.street_address, offer.zip_code, offer.city].filter(Boolean).join(', ') || 'Lieu à définir'
                             },
                             department: dept,
-                            category: 'Événement Club',
+                            category: catName,
                             promoConditions: offer.promo_conditions,
                             bookingType: offer.booking_type,
                             date: offer.event_start_date
@@ -133,6 +141,7 @@ export default function Agenda() {
 
                     setOfficialEvents(sortedEvents);
                     setDepartments(Array.from(uniqueDepts).sort());
+                    setCategories(Array.from(uniqueCats).sort());
                 }
             } catch (err) {
                 console.error('Error fetching events:', err);
@@ -144,9 +153,11 @@ export default function Agenda() {
         fetchOfficialEvents();
     }, []);
 
-    const filteredEvents = selectedDepartment === 'all'
-        ? officialEvents
-        : officialEvents.filter(event => event.department === selectedDepartment);
+    const filteredEvents = officialEvents.filter(event => {
+        const matchesDept = selectedDepartment === 'all' || event.department === selectedDepartment;
+        const matchesCat = selectedCategory === 'all' || event.category === selectedCategory;
+        return matchesDept && matchesCat;
+    });
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4] py-12">
@@ -169,7 +180,7 @@ export default function Agenda() {
 
                 {/* SECTION 1: ÉVÉNEMENTS OFFICIELS (REVENUE) */}
                 <div className="mb-16">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
                         <div className="flex items-center gap-3">
                             <div className="bg-pink-100 p-2 rounded-full">
                                 <Sparkles className="w-6 h-6 text-pink-600" />
@@ -177,27 +188,51 @@ export default function Agenda() {
                             <h2 className="text-2xl font-bold text-gray-900">Les Temps Forts (Officiel)</h2>
                         </div>
 
-                        {/* Department Filter */}
-                        {departments.length > 0 && (
-                            <div className="inline-flex items-center bg-white rounded-full shadow-sm p-1 border border-gray-200">
-                                <div className="px-4 py-2 flex items-center text-gray-500 font-medium">
-                                    <MapPin className="w-4 h-4 mr-2" />
-                                    Filtrer :
+                        <div className="flex flex-wrap gap-3">
+                            {/* Department Filter */}
+                            {departments.length > 0 && (
+                                <div className="inline-flex items-center bg-white rounded-full shadow-sm p-1 border border-gray-200">
+                                    <div className="px-4 py-2 flex items-center text-gray-500 font-medium whitespace-nowrap">
+                                        <MapPin className="w-4 h-4 mr-2" />
+                                        Lieu :
+                                    </div>
+                                    <select
+                                        value={selectedDepartment}
+                                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                                        className="form-select border-none bg-transparent py-2 pl-2 pr-8 text-primary font-bold focus:ring-0 cursor-pointer min-w-[150px] outline-none"
+                                    >
+                                        <option value="all">Tous ({officialEvents.length})</option>
+                                        {departments.map(dept => (
+                                            <option key={dept} value={dept}>
+                                                {dept} ({officialEvents.filter(e => e.department === dept).length})
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
-                                <select
-                                    value={selectedDepartment}
-                                    onChange={(e) => setSelectedDepartment(e.target.value)}
-                                    className="form-select border-none bg-transparent py-2 pl-2 pr-8 text-primary font-bold focus:ring-0 cursor-pointer min-w-[150px] outline-none"
-                                >
-                                    <option value="all">Tous ({officialEvents.length})</option>
-                                    {departments.map(dept => (
-                                        <option key={dept} value={dept}>
-                                            {dept} ({officialEvents.filter(e => e.department === dept).length})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
+                            )}
+
+                            {/* Category Filter */}
+                            {categories.length > 0 && (
+                                <div className="inline-flex items-center bg-white rounded-full shadow-sm p-1 border border-gray-200">
+                                    <div className="px-4 py-2 flex items-center text-gray-500 font-medium whitespace-nowrap">
+                                        <Tag className="w-4 h-4 mr-2" />
+                                        Thème :
+                                    </div>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="form-select border-none bg-transparent py-2 pl-2 pr-8 text-primary font-bold focus:ring-0 cursor-pointer min-w-[150px] outline-none"
+                                    >
+                                        <option value="all">Tous</option>
+                                        {categories.map(cat => (
+                                            <option key={cat} value={cat}>
+                                                {cat} ({officialEvents.filter(e => e.category === cat).length})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {isLoading ? (
@@ -219,14 +254,17 @@ export default function Agenda() {
                     ) : (
                         <div className="bg-white rounded-xl p-8 text-center border border-gray-100 shadow-sm">
                             <p className="text-gray-500">
-                                Aucun événement officiel trouvé {selectedDepartment !== 'all' ? `dans le ${selectedDepartment}` : ''}.
+                                Aucun événement officiel trouvé avec ces filtres.
                             </p>
-                            {selectedDepartment !== 'all' && (
+                            {(selectedDepartment !== 'all' || selectedCategory !== 'all') && (
                                 <button
-                                    onClick={() => setSelectedDepartment('all')}
+                                    onClick={() => {
+                                        setSelectedDepartment('all');
+                                        setSelectedCategory('all');
+                                    }}
                                     className="mt-4 text-primary font-medium hover:underline"
                                 >
-                                    Voir tous les départements
+                                    Réinitialiser les filtres
                                 </button>
                             )}
                         </div>
