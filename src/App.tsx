@@ -103,12 +103,12 @@ function App() {
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<Home />} />
-                  <Route path="/guide" element={
+                  <Route path="/guide-abonnee" element={
                     <PrivateRoute allowedRoles={['subscriber', 'admin']}>
                       <Guide />
                     </PrivateRoute>
                   } />
-                  <Route path="/guidenonabonnee" element={<PublicGuide />} />
+                  <Route path="/guide-public" element={<PublicGuide />} />
                   <Route path="/categories" element={
                     <GoogleMapsLoader>
                       <Categories />
@@ -124,10 +124,10 @@ function App() {
                       <OfferPage />
                     </GoogleMapsLoader>
                   } />
-                  <Route path="/subscription" element={<Subscription />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/subscription-success" element={<SubscriptionSuccess />} />
-                  <Route path="/feedback" element={<CancellationFeedback />} />
+                  <Route path="/abonnement" element={<Subscription />} />
+                  <Route path="/paiement" element={<Checkout />} />
+                  <Route path="/abonnement-confirme" element={<SubscriptionSuccess />} />
+                  <Route path="/avis-annulation" element={<CancellationFeedback />} />
                   <Route path="/devenir-partenaire" element={
                     <GoogleMapsLoader>
                       <SubmitOffer />
@@ -139,7 +139,7 @@ function App() {
                     </PrivateRoute>
                   } />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
-                  <Route path="/community-space" element={
+                  <Route path="/le-club" element={
                     <PrivateRoute allowedRoles={['subscriber', 'admin']}>
                       <GoogleMapsLoader>
                         <CommunitySpace />
@@ -151,23 +151,22 @@ function App() {
                   <Route path="/blog/:slug" element={<BlogPost />} />
 
                   {/* Booking publique */}
-                  <Route path="/booking/:id" element={
+                  <Route path="/reservation/:id" element={
                     <GoogleMapsLoader>
                       <Booking />
                     </GoogleMapsLoader>
                   } />
-                  <Route path="/booking-success" element={<BookingSuccess />} />
+                  <Route path="/reservation-confirmee" element={<BookingSuccess />} />
 
                   {/* Auth routes */}
-                  <Route path="/auth/signin" element={<SignIn />} />
-                  <Route path="/auth/signup" element={
+                  <Route path="/connexion" element={<SignIn />} />
+                  <Route path="/inscription" element={
                     <GoogleMapsLoader>
                       <SignUp />
                     </GoogleMapsLoader>
                   } />
-                  <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/auth/update-password" element={<UpdatePassword />} />
-                  <Route path="/update-password" element={<Navigate to="/auth/update-password" replace />} /> {/* Fix for old links */}
+                  <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
+                  <Route path="/nouveau-mot-de-passe" element={<UpdatePassword />} />
                   <Route path="/auth/callback" element={<AuthCallback />} />
 
                   {/* Partner routes */}
@@ -199,18 +198,20 @@ function App() {
                   </Route>
 
                   {/* Protected user routes */}
-                  <Route path="/account" element={
-                    <PrivateRoute allowedRoles={['subscriber', 'admin']}>
-                      <SubscriberLayout />
-                    </PrivateRoute>
-                  }>
+                  <Route
+                    path="/mon-compte"
+                    element={
+                      <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                        <SubscriberLayout />
+                      </PrivateRoute>
+                    }
+                  >
                     <Route index element={<DashboardOverview />} />
-                    <Route index element={<DashboardOverview />} />
-                    <Route path="bookings" element={<Bookings />} />
+                    <Route path="reservations" element={<Bookings />} />
                     <Route path="squads" element={<MySquads />} />
-                    <Route path="payment-plans" element={<PaymentPlans />} />
-                    <Route path="wallet" element={<WalletPay />} />
-                    <Route path="profile" element={
+                    <Route path="echeanciers" element={<PaymentPlans />} />
+                    <Route path="ardoise" element={<WalletPay />} />
+                    <Route path="profil" element={
                       <GoogleMapsLoader>
                         <Profile />
                       </GoogleMapsLoader>
@@ -218,33 +219,55 @@ function App() {
                   </Route>
 
                   {/* Redirect legacy routes */}
-                  <Route path="/my-bookings" element={<Navigate to="/account/bookings" replace />} />
-                  <Route path="/mes-reservations" element={<Navigate to="/account/bookings" replace />} />
+                  <Route path="/guide" element={<Navigate to="/guide-abonnee" replace />} />
+                  <Route path="/guidenonabonnee" element={<Navigate to="/guide-public" replace />} />
+                  <Route path="/subscription" element={<Navigate to="/abonnement" replace />} />
+                  <Route path="/checkout" element={<Navigate to="/paiement" replace />} />
+                  <Route path="/subscription-success" element={<Navigate to="/abonnement-confirme" replace />} />
+                  <Route path="/feedback" element={<Navigate to="/avis-annulation" replace />} />
+                  <Route path="/community-space" element={<Navigate to="/le-club" replace />} />
+                  <Route path="/club" element={<Navigate to="/le-club" replace />} />
+                  <Route path="/booking/:id" element={<Navigate to="/reservation/:id" replace />} />
+                  <Route path="/booking-success" element={<Navigate to="/reservation-confirmee" replace />} />
 
-                  {/* Legacy Profile route handling if any direct links exist */}
-                  <Route path="/account/profile" element={<Navigate to="/account/profile" replace />} /> {/* Redundant but safe */}
+                  {/* Auth Redirects */}
+                  <Route path="/auth/signin" element={<Navigate to="/connexion" replace />} />
+                  <Route path="/auth/signup" element={<Navigate to="/inscription" replace />} />
+                  <Route path="/auth/forgot-password" element={<Navigate to="/mot-de-passe-oublie" replace />} />
+                  <Route path="/auth/update-password" element={<Navigate to="/nouveau-mot-de-passe" replace />} />
+                  <Route path="/update-password" element={<Navigate to="/nouveau-mot-de-passe" replace />} />
+
+                  {/* Account Redirects */}
+                  <Route path="/account" element={<Navigate to="/mon-compte" replace />} />
+                  <Route path="/account/bookings" element={<Navigate to="/mon-compte/reservations" replace />} />
+                  <Route path="/account/squads" element={<Navigate to="/mon-compte/squads" replace />} />
+                  <Route path="/account/payment-plans" element={<Navigate to="/mon-compte/echeanciers" replace />} />
+                  <Route path="/account/wallet" element={<Navigate to="/mon-compte/ardoise" replace />} />
+                  <Route path="/account/profile" element={<Navigate to="/mon-compte/profil" replace />} />
+                  <Route path="/my-bookings" element={<Navigate to="/mon-compte/reservations" replace />} />
+                  <Route path="/mes-reservations" element={<Navigate to="/mon-compte/reservations" replace />} />
 
                   {/* Club routes */}
-                  <Route path="/club" element={<Navigate to="/community-space" replace />} /> {/* Redirect legacy club to QG */}
-
                   <Route path="/agenda" element={
                     <PrivateRoute allowedRoles={['subscriber', 'admin']}>
                       <Agenda />
                     </PrivateRoute>
                   } />
 
-                  <Route path="/club/events" element={
+                  <Route path="/le-club/evenements" element={
                     <PrivateRoute allowedRoles={['subscriber']}>
                       <Events />
                     </PrivateRoute>
                   } />
+                  <Route path="/club/events" element={<Navigate to="/le-club/evenements" replace />} />
 
                   {/* Admin routes */}
                   <Route path="/admin/*" element={
                     <PrivateRoute allowedRoles={['admin']}>
                       <AdminLayout />
                     </PrivateRoute>
-                  }>
+                  }
+                  >
                     <Route index element={<AdminDashboard />} />
                     <Route path="partners" element={<Partners />} />
                     <Route path="ambassadors" element={<AmbassadorApplications />} />

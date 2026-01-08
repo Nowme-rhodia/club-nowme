@@ -17,6 +17,8 @@ type BusinessPayload = {
   instagram?: string;
   termsAccepted?: boolean;
   password?: string; // [NEW] Password field
+  mainCategoryId?: string;
+  subcategoryIds?: string[];
 };
 
 type OfferPayload = {
@@ -107,6 +109,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         address: business.address ?? null,
         facebook: business.facebook ?? null,
         instagram: business.instagram ?? null,
+        main_category_id: business.mainCategoryId || null,
+        subcategory_ids: business.subcategoryIds || [],
 
         terms_accepted_at: business.termsAccepted ? new Date() : null,
         status: "pending",
@@ -184,6 +188,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           ${business.website ? `<p><strong>Site web :</strong> ${business.website}</p>` : ""}
           ${business.siret ? `<p><strong>SIRET :</strong> ${business.siret}</p>` : ""}
           ${business.message ? `<p><strong>Message :</strong><br/>${business.message.replace(/\n/g, "<br/>")}</p>` : ""}
+          <p><strong>Catégories sélectionnées :</strong> ${business.mainCategoryId ? 'Oui' : 'Non'}</p>
           <p style="margin-top:20px;">👉 Connectez-vous au dashboard admin pour approuver ou rejeter cette demande.</p>
         `;
 

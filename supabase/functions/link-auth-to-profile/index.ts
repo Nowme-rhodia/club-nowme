@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, authUserId, role, plan } = await req.json()
+    const requestBody = await req.json();
+    const { email, authUserId, role, plan } = requestBody;
     if (!email || !authUserId || !role) {
       throw new Error('Email, authUserId et role requis')
     }
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
 
     // --- CAS 2 : PARTNER ---
     if (role === 'partner') {
-      const { businessName, contactName, phone } = await req.json()
+      const { businessName, contactName, phone, mainCategoryId, subcategoryIds } = requestBody;
 
       // 1. Upsert du profil utilisateur pour s'assurer qu'il existe
       const { data: profile, error: profileError } = await supabase
@@ -155,6 +156,8 @@ Deno.serve(async (req) => {
               business_name: businessName,
               contact_name: contactName,
               phone: phone,
+              main_category_id: mainCategoryId || null,
+              subcategory_ids: subcategoryIds || [],
               status: 'pending',
               updated_at: now,
             })

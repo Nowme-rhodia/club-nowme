@@ -19,12 +19,93 @@ interface PartnerProfile {
   description: string;
   siret: string;
   tva_intra: string;
+  main_category_id: string | null;
+  subcategory_ids: string[];
   notification_settings: {
     new_booking: boolean;
     booking_reminder: boolean;
     booking_cancellation: boolean;
     marketing: boolean;
   };
+}
+
+function CategorySection({ mainCategoryId, subcategoryIds, onChange }: {
+  mainCategoryId: string | null,
+  subcategoryIds: string[],
+  onChange: (main: string | null, subs: string[]) => void
+}) {
+  const [categories, setCategories] = useState<{ id: string; name: string; parent_name: string | null }[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('offer_categories')
+      .select('id, name, parent_name')
+      .order('name')
+      .then(({ data }) => {
+        if (data) setCategories(data);
+      });
+  }, []);
+
+  const mainCategories = categories.filter(c => !c.parent_name);
+  const subCategories = mainCategoryId
+    ? categories.filter(c => c.parent_name === categories.find(mc => mc.id === mainCategoryId)?.name)
+    : [];
+
+  const handleSubToggle = (id: string) => {
+    const newSubs = subcategoryIds.includes(id)
+      ? subcategoryIds.filter(s => s !== id)
+      : [...subcategoryIds, id];
+    onChange(mainCategoryId, newSubs);
+  };
+
+  return (
+    <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="bg-primary/10 p-2.5 rounded-lg w-fit">
+          <Building className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Catégorie et Expertises</h2>
+          <p className="text-sm text-gray-500">Définissez votre activité pour être mieux trouvé par les abonnées.</p>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Catégorie Principale</label>
+          <select
+            value={mainCategoryId || ''}
+            onChange={(e) => onChange(e.target.value || null, [])}
+            className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm h-11"
+          >
+            <option value="">Sélectionner une catégorie</option>
+            {mainCategories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {mainCategoryId && subCategories.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sous-catégories (Expertises spécifiques)</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-3 border border-gray-200 rounded-lg bg-gray-50/50">
+              {subCategories.map(sub => (
+                <label key={sub.id} className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-white rounded-md transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={subcategoryIds.includes(sub.id)}
+                    onChange={() => handleSubToggle(sub.id)}
+                    className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <span className="text-sm text-gray-700 font-medium">{sub.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
 
 export default function SettingsGeneral() {
@@ -48,6 +129,8 @@ export default function SettingsGeneral() {
     description: '',
     siret: '',
     tva_intra: '',
+    main_category_id: null,
+    subcategory_ids: [],
     notification_settings: {
       new_booking: true,
       booking_reminder: true,
@@ -142,7 +225,7 @@ export default function SettingsGeneral() {
       // 2. Fetch Partner Data using the Partner ID (NOT user_id)
       const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
-        .select('id, business_name, contact_name, contact_email, phone, address, website, instagram, cover_image_url, description, siret, tva_intra, notification_settings')
+        .select('id, business_name, contact_name, contact_email, phone, address, website, instagram, cover_image_url, description, siret, tva_intra, notification_settings, main_category_id, subcategory_ids')
         .eq('id', currentPartnerId)
         .single();
 
@@ -165,6 +248,8 @@ export default function SettingsGeneral() {
           description: partner.description || '',
           siret: partner.siret || '',
           tva_intra: partner.tva_intra || '',
+          main_category_id: partner.main_category_id || null,
+          subcategory_ids: partner.subcategory_ids || [],
           notification_settings: partner.notification_settings || {
             new_booking: true,
             booking_reminder: true,
@@ -220,6 +305,8 @@ export default function SettingsGeneral() {
           description: profileForm.description,
           siret: profileForm.siret,
           tva_intra: profileForm.tva_intra,
+          main_category_id: profileForm.main_category_id,
+          subcategory_ids: profileForm.subcategory_ids,
           notification_settings: profileForm.notification_settings
         })
         .eq('id', partnerId);
@@ -337,6 +424,13 @@ export default function SettingsGeneral() {
         )}
 
         <div className="space-y-8">
+
+          {/* Section Catégories */}
+          <CategorySection
+            mainCategoryId={profileForm.main_category_id}
+            subcategoryIds={profileForm.subcategory_ids}
+            onChange={(main, subs) => setProfileForm(prev => ({ ...prev, main_category_id: main, subcategory_ids: subs }))}
+          />
 
           {/* Section Informations du Profil */}
           <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

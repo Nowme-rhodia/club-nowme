@@ -12,8 +12,8 @@ export function Header() {
     { name: 'Accueil', path: '/' },
     { name: 'Tous les kiffs', path: '/tous-les-kiffs' }, // Shop
     { name: "L'Agenda", path: '/agenda', requiresSubscription: true }, // Events
-    { name: 'Le QG', path: '/community-space', requiresSubscription: true }, // Social
-    { name: "Mode d'emploi", path: (isSubscriber || isAdmin || user?.email === 'rhodia@nowme.fr') ? '/guide' : '/guidenonabonnee' }
+    { name: 'Le QG', path: '/le-club', requiresSubscription: true }, // Social
+    ...(isPartner && !isAdmin ? [] : [{ name: "Mode d'emploi", path: (isSubscriber || isAdmin || user?.email === 'rhodia@nowme.fr') ? '/guide-abonnee' : '/guide-public' }])
   ];
 
   const getAccountPath = () => {
@@ -145,7 +145,7 @@ export function Header() {
                 )}
               {!isSubscriber && !isPartner && (
                 <Link
-                  to="/subscription"
+                  to="/abonnement"
                   className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-medium transition-all duration-200 transform hover:scale-105 w-full text-center active:scale-95"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -200,7 +200,7 @@ export function Header() {
                 </Link>
               ) : (
                 <Link
-                  to="/auth/signin"
+                  to="/connexion"
                   className="text-primary hover:text-primary-dark font-medium px-2 py-1 flex items-center"
                   onClick={() => setIsMenuOpen(false)}
                 >

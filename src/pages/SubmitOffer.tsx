@@ -25,6 +25,8 @@ interface FormData {
   address: string;
   password?: string;
   confirmPassword?: string;
+  mainCategoryId: string;
+  subcategoryIds: string[];
 }
 
 export default function SubmitOffer() {
@@ -44,12 +46,43 @@ export default function SubmitOffer() {
     facebook: isDev ? 'SpaZenBienEtre' : '',
     password: '',
     confirmPassword: '',
+    mainCategoryId: '',
+    subcategoryIds: [],
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [categories, setCategories] = useState<{ id: string; name: string; parent_name: string | null }[]>([]);
+
+  React.useEffect(() => {
+    supabase
+      .from('offer_categories')
+      .select('id, name, parent_name')
+      .order('name')
+      .then(({ data }) => {
+        if (data) setCategories(data);
+      });
+  }, []);
+
+  const mainCategories = categories.filter(c => !c.parent_name);
+  const subCategories = formData.mainCategoryId
+    ? categories.filter(c => c.parent_name === categories.find(mc => mc.id === formData.mainCategoryId)?.name)
+    : [];
+
+  const handleSubCategoryToggle = (id: string) => {
+    setFormData(prev => {
+      const isSelected = prev.subcategoryIds.includes(id);
+      return {
+        ...prev,
+        subcategoryIds: isSelected
+          ? prev.subcategoryIds.filter(catId => catId !== id)
+          : [...prev.subcategoryIds, id]
+      };
+    });
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
@@ -90,7 +123,7 @@ export default function SubmitOffer() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
@@ -128,6 +161,8 @@ export default function SubmitOffer() {
             instagram: formData.instagram || undefined,
             facebook: formData.facebook || undefined,
             password: formData.password, // [NEW] Sending password
+            mainCategoryId: formData.mainCategoryId,
+            subcategoryIds: formData.subcategoryIds,
           },
         },
       });
@@ -445,6 +480,46 @@ export default function SubmitOffer() {
                 </p>
               )}
             </div>
+
+            {/* Catégories */}
+            <div>
+              <label htmlFor="mainCategoryId" className="block text-sm font-medium text-gray-700 mb-1">
+                Catégorie Principale du Partenaire
+              </label>
+              <select
+                id="mainCategoryId"
+                name="mainCategoryId"
+                value={formData.mainCategoryId}
+                onChange={(e) => setFormData({ ...formData, mainCategoryId: e.target.value, subcategoryIds: [] })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+              >
+                <option value="">Sélectionner une catégorie</option>
+                {mainCategories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {formData.mainCategoryId && subCategories.length > 0 && (
+              <div>
+                <span className="block text-sm font-medium text-gray-700 mb-2">
+                  Sous-catégories (Expertises spécifiques)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 max-h-48 overflow-y-auto p-3 border border-gray-200 rounded-lg bg-gray-50">
+                  {subCategories.map(sub => (
+                    <label key={sub.id} className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-white rounded-md transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.subcategoryIds.includes(sub.id)}
+                        onChange={() => handleSubCategoryToggle(sub.id)}
+                        className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span className="text-sm text-gray-700">{sub.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Divider */}
             <div className="relative">

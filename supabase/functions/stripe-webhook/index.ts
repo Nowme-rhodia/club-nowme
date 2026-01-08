@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
                 // --- 0. CHECK SINGLE PURCHASE LIMIT ---
                 const { data: offerDetails } = await supabaseClient
                     .from('offers')
-                    .select('booking_type, requires_agenda')
+                    .select('booking_type, requires_agenda, partner_id, category:offer_categories(commission_model, rate_first_order, rate_recurring)')
                     .eq('id', offer_id)
                     .single();
 
@@ -109,16 +109,58 @@ Deno.serve(async (req) => {
                 const nowIso = new Date().toISOString();
 
                 // --- VERBOSE LOG 2: MAPPED DATA ---
+                // --- COMMISSION CALCULATION ---
+                let commissionAmount = 0;
+                let commissionNote = "Standard (0%)";
+
+                if (offerDetails?.category) {
+                    const { commission_model, rate_first_order, rate_recurring } = offerDetails.category;
+                    const model = commission_model || 'transaction'; // Default
+                    const rateFirst = Number(rate_first_order) || 0;
+                    const rateRecur = Number(rate_recurring) || 0;
+
+                    if (model === 'acquisition') {
+                        // Check for previous confirmed bookings with this partner
+                        const { count, error: countError } = await supabaseClient
+                            .from('bookings')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('user_id', user_id)
+                            .eq('partner_id', offerDetails.partner_id) // Ensure we use partner_id from offer
+                            .eq('status', 'confirmed');
+
+                        // Note: current booking is not yet inserted/confirmed, so count is historic.
+                        const isFirstOrder = (count === 0);
+
+                        if (isFirstOrder) {
+                            commissionAmount = amount * (rateFirst / 100);
+                            commissionNote = `Acquisition client (${rateFirst}%)`;
+                        } else {
+                            commissionAmount = amount * (rateRecur / 100);
+                            commissionNote = `Frais de suivi (${rateRecur}%)`;
+                        }
+                    } else {
+                        // Transaction Mode (Fixed)
+                        commissionAmount = amount * (rateFirst / 100); // Using first_order as the fixed rate
+                        commissionNote = `Commission de vente (${rateFirst}%)`;
+                    }
+                }
+
+                // Round to 2 decimals
+                commissionAmount = Math.round(commissionAmount * 100) / 100;
+
+                // --- VERBOSE LOG 2: MAPPED DATA ---
                 const bookingObject = {
                     p_user_id: user_id,
                     p_offer_id: offer_id,
-                    p_booking_date: finalScheduledAt || null, // FIX: Don't default to 'now' for p_booking_date (scheduled_at) if missing. Keep it null so it shows in Upcoming.
+                    p_booking_date: finalScheduledAt || null,
                     p_status: 'confirmed',
                     p_source: 'stripe',
                     p_amount: amount,
                     p_variant_id: (variant_id && variant_id !== 'null') ? variant_id : null,
                     p_external_id: session.id,
-                    p_meeting_location: finalMeetingLocation
+                    p_meeting_location: finalMeetingLocation,
+                    p_commission_amount: commissionAmount,
+                    p_commission_note: commissionNote
                 };
                 console.log("MAPPED_BOOKING_DATA_BEFORE_SAVE:", JSON.stringify(bookingObject, null, 2))
 

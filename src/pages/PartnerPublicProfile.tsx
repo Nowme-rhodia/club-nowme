@@ -25,7 +25,10 @@ interface Partner {
     cover_image_url: string;
     contact_email: string;
     phone: string;
-    category?: string;
+    main_category_id?: string;
+    subcategory_ids?: string[];
+    main_category?: { name: string };
+    subcategories?: { name: string }[];
 }
 
 export default function PartnerPublicProfile() {
@@ -195,11 +198,16 @@ export default function PartnerPublicProfile() {
                                         {partner.address.split(',').pop()?.trim() || partner.address}
                                     </div>
                                 )}
-                                {partner.category && (
+                                {partner.main_category && (
                                     <span className="text-sm font-medium px-3 py-1 bg-primary/10 text-primary rounded-full">
-                                        Bien-être
+                                        {partner.main_category.name}
                                     </span>
                                 )}
+                                {partner.subcategories && partner.subcategories.map((subcat, index) => (
+                                    <span key={index} className="text-sm font-medium px-3 py-1 bg-gray-100 text-gray-700 rounded-full">
+                                        {subcat.name}
+                                    </span>
+                                ))}
                             </div>
                         </div>
 
@@ -321,6 +329,33 @@ export default function PartnerPublicProfile() {
                                     </div>
                                 )}
                             </div>
+                            {/* Mobile Actions */}
+                            <div className="flex md:hidden gap-3 mt-6">
+                                <a href={`tel:${partner.phone}`} className="flex-1 bg-white text-gray-900 py-2.5 rounded-xl font-medium border border-gray-200 shadow-sm flex items-center justify-center gap-2">
+                                    <Phone className="w-4 h-4" />
+                                    Appeler
+                                </a>
+                                <a href={`mailto:${partner.contact_email}`} className="flex-1 bg-primary text-white py-2.5 rounded-xl font-medium shadow-lg shadow-primary/25 flex items-center justify-center gap-2">
+                                    <Mail className="w-4 h-4" />
+                                    Email
+                                </a>
+                            </div>
+
+                            {/* Categories & Expertises */}
+                            {(partner.main_category || (partner.subcategories && partner.subcategories.length > 0)) && (
+                                <div className="mt-6 flex flex-wrap gap-2">
+                                    {partner.main_category && (
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
+                                            {partner.main_category.name}
+                                        </span>
+                                    )}
+                                    {partner.subcategories?.map((sub, idx) => (
+                                        <span key={idx} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                                            {sub.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 

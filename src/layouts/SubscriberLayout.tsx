@@ -27,13 +27,13 @@ export default function SubscriberLayout() {
     };
 
     const navItems = [
-        { icon: LayoutDashboard, label: 'Tableau de bord', to: '/account', end: true },
-        { icon: Calendar, label: 'Mes Réservations', to: '/account/bookings' },
-        { icon: Sparkles, label: 'Mes Sorties Club', to: '/account/squads' },
-        { icon: CreditCard, label: 'Mes Echéanciers', to: '/account/payment-plans' },
-        { icon: Wallet, label: 'Mon Ardoise', to: '/account/wallet' },
-        { icon: User, label: 'Mon Profil', to: '/account/profile' },
-        // { icon: Settings, label: 'Paramètres', to: '/account/settings' }, // Future
+        { icon: LayoutDashboard, label: 'Tableau de bord', to: '/mon-compte', end: true },
+        { icon: Calendar, label: 'Mes Réservations', to: '/mon-compte/reservations' },
+        { icon: Sparkles, label: 'Mes Sorties Club', to: '/mon-compte/squads' },
+        { icon: CreditCard, label: 'Mes Echéanciers', to: '/mon-compte/echeanciers' },
+        { icon: Wallet, label: 'Mon Ardoise', to: '/mon-compte/ardoise' },
+        { icon: User, label: 'Mon Profil', to: '/mon-compte/profil' },
+        // { icon: Settings, label: 'Paramètres', to: '/mon-compte/settings' }, // Future
     ];
 
     return (

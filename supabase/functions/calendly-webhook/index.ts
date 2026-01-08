@@ -317,8 +317,52 @@ async function processBooking(supabaseAdmin: any, payload: any, partnerId: strin
         console.log("Creating New Pending Booking");
 
         // Get Price Check (Optional but good for records)
-        const { data: variant } = await supabaseAdmin.from('offer_variants').select('price, discounted_price').eq('offer_id', offerId).limit(1).maybeSingle();
-        const price = variant ? (variant.discounted_price || variant.price) : 0;
+        // [MODIFIED] Fetch Category and Price for Commission
+        const { data: offerDetails } = await supabaseAdmin
+            .from('offers')
+            .select('partner_id, category:offer_categories(commission_model, rate_first_order, rate_recurring), variants:offer_variants(price, discounted_price)')
+            .eq('id', offerId)
+            .single();
+
+        let price = 0;
+        if (offerDetails?.variants && offerDetails.variants.length > 0) {
+            const v = offerDetails.variants[0];
+            price = v.discounted_price || v.price;
+        }
+
+        // --- COMMISSION CALCULATION ---
+        let commissionAmount = 0;
+        let commissionNote = "Standard (0%)";
+
+        if (offerDetails?.category) {
+            const { commission_model, rate_first_order, rate_recurring } = offerDetails.category;
+            const model = commission_model || 'transaction';
+            const rateFirst = Number(rate_first_order) || 0;
+            const rateRecur = Number(rate_recurring) || 0;
+
+            if (model === 'acquisition') {
+                const { count } = await supabaseAdmin
+                    .from('bookings')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_id', userId)
+                    .eq('partner_id', offerDetails.partner_id)
+                    .eq('status', 'confirmed');
+
+                const isFirstOrder = (count === 0);
+                if (isFirstOrder) {
+                    commissionAmount = price * (rateFirst / 100);
+                    commissionNote = `Acquisition client (${rateFirst}%)`;
+                } else {
+                    commissionAmount = price * (rateRecur / 100);
+                    commissionNote = `Frais de suivi (${rateRecur}%)`;
+                }
+            } else {
+                commissionAmount = price * (rateFirst / 100);
+                commissionNote = `Commission de vente (${rateFirst}%)`;
+            }
+        }
+        commissionAmount = Math.round(commissionAmount * 100) / 100;
+
 
         const { data: newBooking, error: insertError } = await supabaseAdmin.from('bookings').insert({
             user_id: userId,
@@ -332,7 +376,9 @@ async function processBooking(supabaseAdmin: any, payload: any, partnerId: strin
             status: 'pending',
             amount: price,
             currency: 'EUR',
-            partner_id: partnerId
+            partner_id: partnerId,
+            commission_amount: commissionAmount,
+            commission_note: commissionNote
         }).select('id').single();
 
         if (insertError) throw insertError;

@@ -36,7 +36,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   // 2️⃣ Si pas de session après le chargement → redirection
   if (!user) {
     console.warn('PrivateRoute - Aucun utilisateur connecté, redirection...');
-    return <Navigate to="/auth/signin" state={{ from: location }} replace />;
+    return <Navigate to="/connexion" state={{ from: location }} replace />;
   }
 
   // 3️⃣ Vérification des rôles si demandés
@@ -64,7 +64,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
       if (isPartner) {
         return <Navigate to="/partner/dashboard" replace />;
       }
-      return <Navigate to="/subscription" replace />;
+      return <Navigate to="/abonnement" replace />;
     }
   }
 
