@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Calendar, Clock, Euro, Gift, ShoppingBag, X, Check, ArrowRight, Star, Heart, Share2, Info, Youtube, Video, Building, ArrowLeft, Globe, CheckCircle, ChevronLeft, ChevronRight, Lock, Copy, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 
 import { stripePromise } from '../lib/stripe';
 import { categories } from '../data/categories';
@@ -23,7 +24,7 @@ declare global {
 }
 
 export default function OfferPage() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile, isAdmin, isPartner, isSubscriber, refreshProfile } = useAuth();
@@ -278,44 +279,53 @@ export default function OfferPage() {
 
   useEffect(() => {
     const fetchOffer = async () => {
-      if (!id) return;
+      if (!slug) return;
 
-      const { data, error } = await (supabase
-        .from('offers') as any)
-        .select(`
-id,
-  title,
-  description,
-  street_address,
-  is_online,
-  zip_code,
-  city,
-  cancellation_policy,
-  coordinates,
-  calendly_url,
-  booking_type,
-  requires_agenda,
-  external_link,
-  promo_code,
-  event_start_date,
-  event_end_date,
-  installment_options,
-  image_url,
-  is_official,
-  category: offer_categories!offers_category_id_fkey(name, slug, parent_slug),
-    offer_variants(id, name, description, price, discounted_price, stock),
-    offer_media(url, type),
-    digital_product_file,
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
-    service_zones,
-    promo_conditions,
-    duration_type,
-    validity_start_date,
-    validity_end_date,
-    partner:partners(id, business_name, contact_email)
-      `)
-        .eq('id', id)
-        .single();
+      let query = supabase.from('offers').select(`
+        id,
+        slug,
+        title,
+        description,
+        street_address,
+        is_online,
+        zip_code,
+        city,
+        cancellation_policy,
+        coordinates,
+        calendly_url,
+        booking_type,
+        requires_agenda,
+        external_link,
+        promo_code,
+        event_start_date,
+        event_end_date,
+        installment_options,
+        image_url,
+        is_official,
+        category: offer_categories!offers_category_id_fkey(name, slug, parent_slug),
+        offer_variants(id, name, description, price, discounted_price, stock),
+        offer_media(url, type),
+        digital_product_file,
+
+        service_zones,
+        promo_conditions,
+        duration_type,
+        validity_start_date,
+        validity_end_date,
+        partner:partners(id, business_name, contact_email)
+      `);
+
+      if (isUUID) {
+        query = query.eq('id', slug);
+      } else {
+        query = query.eq('slug', slug);
+      }
+
+      const { data: rawData, error } = await query.single();
+      const data = rawData as any;
+
 
       if (error) {
         console.error('Error fetching offer:', error);
@@ -353,7 +363,7 @@ id,
     };
 
     fetchOffer();
-  }, [id]);
+  }, [slug]);
 
   // State for Service Zones
   // State for Service Zones
@@ -423,24 +433,46 @@ id,
 
   const isOutOfStock = selectedVariant && selectedVariant.stock !== null && selectedVariant.stock <= 0;
 
+  // Format date if present
+  const formattedDate = offer?.event_start_date ? new Date(offer.event_start_date).toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : null;
+
+  // Breadcrumbs items
+  const breadcrumbItems = [
+    { label: 'Tous les kiffs', path: '/tous-les-kiffs' },
+  ];
+
+  if (offer?.category) {
+    breadcrumbItems.push({
+      label: offer.category.name,
+      path: `/tous-les-kiffs?category=${offer.category.parent_slug || offer.category.slug}`
+    });
+  }
+
+  breadcrumbItems.push({ label: offer?.title || 'Offre' });
+
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   if (!offer) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Offre introuvable</h1>
-          <p className="text-gray-600 mb-8">Cette offre n'existe pas ou a été supprimée.</p>
-          <Link
-            to="/tous-les-kiffs"
-            className="inline-flex items-center px-6 py-3 rounded-full text-white bg-primary hover:bg-primary-dark transition-colors duration-200"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Retour aux offres
-          </Link>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Offre introuvable</h1>
+        <p className="text-gray-600 mb-6">Cette offre n'existe pas ou n'est plus disponible.</p>
+        <Link to="/tous-les-kiffs" className="text-primary hover:underline">
+          Retour aux kiffs
+        </Link>
       </div>
     );
   }
@@ -856,6 +888,8 @@ id,
                     <img
                       src={images[currentImageIndex]}
                       alt={offer.title}
+                      fetchPriority="high"
+                      decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     {images.length > 1 && (

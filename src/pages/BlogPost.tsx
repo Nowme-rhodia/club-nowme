@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { SEO } from '../components/SEO';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Calendar, User, ArrowLeft, ArrowRight, Tag, MapPin } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
@@ -137,6 +138,8 @@ export default function BlogPost() {
                 <img
                     src={post.cover_image || 'https://images.unsplash.com/photo-1544367563-12123d8965cd'}
                     alt={post.title}
+                    fetchPriority="high"
+                    decoding="async"
                     className="w-full h-full object-cover transition-opacity duration-500"
                     onLoad={(e) => (e.currentTarget.style.opacity = '1')}
                     onError={(e) => {
@@ -149,6 +152,13 @@ export default function BlogPost() {
 
             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 relative z-10">
                 <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-12">
+                    <Breadcrumbs
+                        items={[
+                            { label: 'Blog', path: '/blog' },
+                            { label: post.title }
+                        ]}
+                        className="mb-6"
+                    />
                     <Link to="/blog" className="inline-flex items-center text-gray-500 hover:text-primary mb-8 transition-colors">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Retour au blog
                     </Link>

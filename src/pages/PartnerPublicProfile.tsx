@@ -13,6 +13,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { OfferCard } from '../components/OfferCard';
 import { SEO } from '../components/SEO';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import { motion } from 'framer-motion';
 
 interface Partner {
@@ -32,7 +33,7 @@ interface Partner {
 }
 
 export default function PartnerPublicProfile() {
-    const { id } = useParams<{ id: string }>();
+    const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const [partner, setPartner] = useState<Partner | null>(null);
     const [offers, setOffers] = useState<any[]>([]);
@@ -40,19 +41,25 @@ export default function PartnerPublicProfile() {
 
     useEffect(() => {
         const fetchPartnerProfile = async () => {
-            if (!id) return;
+            if (!slug) return;
 
             try {
                 setLoading(true);
                 // 1. Fetch Partner Details
-                const { data: partnerData, error: partnerError } = await supabase
-                    .from('partners')
-                    .select('id, business_name, description, address, website, instagram, cover_image_url, contact_email, phone')
-                    .eq('id', id)
-                    .single();
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+                let query = supabase.from('partners').select('id, business_name, description, address, website, instagram, cover_image_url, contact_email, phone');
+
+                if (isUUID) {
+                    query = query.eq('id', slug);
+                } else {
+                    query = query.eq('slug', slug);
+                }
+
+                const { data: partnerData, error: partnerError } = await query.single();
 
                 if (partnerError) throw partnerError;
                 setPartner(partnerData as any);
+                const partnerId = (partnerData as any).id;
 
                 // 2. Fetch Active Offers for this partner
                 const { data: offersData, error: offersError } = await supabase
@@ -63,7 +70,7 @@ export default function PartnerPublicProfile() {
             offer_media(url, type),
             category:offer_categories(name, slug)
           `)
-                    .eq('partner_id', id)
+                    .eq('partner_id', partnerId)
                     .eq('status', 'approved')
                     .order('created_at', { ascending: false });
 
@@ -78,6 +85,7 @@ export default function PartnerPublicProfile() {
 
                     return {
                         id: offer.id,
+                        slug: offer.slug,
                         title: offer.title,
                         description: offer.description,
                         imageUrl: offer.image_url || offer.offer_media?.[0]?.url,
@@ -107,7 +115,7 @@ export default function PartnerPublicProfile() {
         };
 
         fetchPartnerProfile();
-    }, [id]);
+    }, [slug]);
 
     if (loading) {
         return (
@@ -137,15 +145,23 @@ export default function PartnerPublicProfile() {
                 image={partner.cover_image_url}
             />
 
+            <div className="relative pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto z-20">
+                <Breadcrumbs items={[
+                    { label: 'Tous les kiffs', path: '/tous-les-kiffs' },
+                    { label: partner.business_name }
+                ]} className="mb-4" />
+            </div>
+
             {/* Hero / Cover Image */}
-            <div className="relative h-64 md:h-80 w-full bg-gray-900">
+            <div className="relative h-64 md:h-80 w-full bg-gray-900 mt-0">
                 {/* Background (Blurred / Gradient) - Wrapped to clip overflow */}
                 <div className="absolute inset-0 overflow-hidden">
                     {partner.cover_image_url ? (
                         <div className="absolute inset-0">
                             <img
                                 src={partner.cover_image_url}
-                                alt="Background"
+                                alt=""
+                                decoding="async"
                                 className="w-full h-full object-cover opacity-50 blur-xl scale-110"
                             />
                             <div className="absolute inset-0 bg-black/40" />

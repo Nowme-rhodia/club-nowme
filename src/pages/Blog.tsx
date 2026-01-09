@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SEO } from '../components/SEO';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Calendar, User, ArrowRight, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -92,6 +93,9 @@ export default function Blog() {
             {/* Hero Section */}
             <div className="bg-white border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 text-center">
+                    <div className="flex justify-center mb-4">
+                        <Breadcrumbs items={[{ label: 'Blog' }]} />
+                    </div>
                     <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
                         Le Blog <span className="text-primary">NowMe</span>
                     </h1>

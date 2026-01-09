@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { OfferCard } from '../components/OfferCard';
 import { LocationSearch } from '../components/LocationSearch';
 import { SEO } from '../components/SEO';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Cette fonction calcule la distance entre deux points en km
@@ -25,6 +26,7 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 
 interface OfferDetails {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   imageUrl: string;
@@ -151,6 +153,7 @@ export default function TousLesKiffs() {
 
             return {
               id: offer.id,
+              slug: offer.slug,
               title: offer.title,
               description: offer.description,
               imageUrl: offer.image_url || offer.offer_media?.[0]?.url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
@@ -391,6 +394,9 @@ export default function TousLesKiffs() {
         transition={{ duration: 0.6 }}
         className="pt-8 pb-6 px-4 sm:px-6 lg:px-8 text-center"
       >
+        <div className="flex justify-center mb-4">
+          <Breadcrumbs items={[{ label: 'Tous les kiffs' }]} />
+        </div>
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
           Tous les kiffs
         </h1>
@@ -720,6 +726,7 @@ export default function TousLesKiffs() {
                 <img
                   src={selectedOffer.imageUrl}
                   alt={selectedOffer.title}
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
                 <button

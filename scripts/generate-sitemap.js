@@ -47,13 +47,14 @@ async function generateSitemap() {
     console.log('   Fetching offers...');
     const { data: offers, error: offersError } = await supabase
         .from('offers')
-        .select('id, updated_at')
+        .select('id, slug, updated_at') // Added slug
         .eq('status', 'approved');
 
     if (offersError) console.error('Error fetching offers:', offersError);
     else {
         offers.forEach(offer => {
-            routes.push(`/offres/${offer.id}`);
+            const identifier = offer.slug || offer.id; // Use slug or fallback to id
+            routes.push(`/offres/${identifier}`);
         });
         console.log(`   ✅ Added ${offers.length} offers`);
     }
@@ -77,13 +78,14 @@ async function generateSitemap() {
     console.log('   Fetching partners...');
     const { data: partners, error: partnersError } = await supabase
         .from('partners')
-        .select('id, updated_at')
+        .select('id, slug, updated_at') // Added slug
         .eq('status', 'approved');
 
     if (partnersError) console.error('Error fetching partners:', partnersError);
     else {
         partners.forEach(partner => {
-            routes.push(`/partenaire/${partner.id}`);
+            const identifier = partner.slug || partner.id; // Use slug or fallback to id
+            routes.push(`/partenaire/${identifier}`);
         });
         console.log(`   ✅ Added ${partners.length} partners`);
     }

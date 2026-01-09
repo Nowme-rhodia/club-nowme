@@ -275,22 +275,37 @@ export default function Agenda() {
                 <div className="border-t border-gray-200 my-12"></div>
 
                 {/* SECTION 2: SORTIES ENTRE FILLES (RETENTION) */}
-                {/* Pre-launch restriction: Only show to authorized users */}
-                {(isAdmin || profile?.email === 'nowme.club@gmail.com' || profile?.email === 'rhodia@nowme.fr') && (
-                    <div>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="bg-orange-100 p-2 rounded-full">
-                                <Users className="w-6 h-6 text-primary" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-gray-900">Les Sorties Entre Filles</h2>
-                                <p className="text-sm text-gray-500">Proposées et animées par les membres</p>
+                <div>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-orange-100 p-2 rounded-full">
+                            <Users className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900">Les Sorties Entre Filles</h2>
+                            <p className="text-sm text-gray-500">Proposées et animées par les membres</p>
+                        </div>
+                    </div>
+
+                    {(isAdmin || profile?.email === 'nowme.club@gmail.com' || profile?.email === 'rhodia@nowme.fr') ? (
+                        <MicroSquadList showFilter={true} />
+                    ) : (
+                        <div className="bg-white rounded-2xl p-8 text-center border border-dashed border-gray-300 shadow-sm relative overflow-hidden group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-pink-50 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="relative z-10 py-8">
+                                <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 animate-bounce-slow">
+                                    <Sparkles className="w-8 h-8 text-primary" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2 font-display">
+                                    Bientôt disponible ! 🤫
+                                </h3>
+                                <p className="text-gray-500 max-w-lg mx-auto">
+                                    Les sorties entre filles arrivent en Février.<br />
+                                    Prépare-toi à créer et rejoindre des moments inoubliables !
+                                </p>
                             </div>
                         </div>
-
-                        <MicroSquadList showFilter={true} />
-                    </div>
-                )}
+                    )}
+                </div>
 
             </div>
         </div>

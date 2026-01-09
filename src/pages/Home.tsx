@@ -63,7 +63,8 @@ function LatestOffers() {
               category: 'Nouveauté',
               partnerName: offer.partner?.business_name,
               promoConditions: offer.promo_conditions,
-              bookingType: offer.booking_type
+              bookingType: offer.booking_type,
+              slug: offer.slug
             };
           });
           setOffers(formatted);
@@ -204,9 +205,9 @@ export default function Home() {
             </div>
             <div className="mt-8 flex items-center justify-center gap-2 text-sm text-gray-500">
               <div className="flex -space-x-2">
-                <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=50" alt="" />
-                <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=50" alt="" />
-                <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=50" alt="" />
+                <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=50" alt="Membre du club" />
+                <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=50" alt="Membre du club" />
+                <img className="w-8 h-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=50" alt="Membre du club" />
               </div>
               <span>Déjà +2000 femmes qui ont participé à nos événements - concentrés de kiffs</span>
             </div>

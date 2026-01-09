@@ -119,7 +119,7 @@ function App() {
                       <TousLesKiffs />
                     </GoogleMapsLoader>
                   } />
-                  <Route path="/offres/:id" element={
+                  <Route path="/offres/:slug" element={
                     <GoogleMapsLoader>
                       <OfferPage />
                     </GoogleMapsLoader>
@@ -170,7 +170,7 @@ function App() {
                   <Route path="/auth/callback" element={<AuthCallback />} />
 
                   {/* Partner routes */}
-                  <Route path="/partenaire/:id" element={
+                  <Route path="/partenaire/:slug" element={
                     <GoogleMapsLoader>
                       <PartnerPublicProfile />
                     </GoogleMapsLoader>

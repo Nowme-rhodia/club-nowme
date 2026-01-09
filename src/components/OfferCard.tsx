@@ -18,10 +18,12 @@ interface OfferCardProps {
   promoConditions?: string;
   bookingType?: string;
   date?: string;
+  slug?: string;
 }
 
 export function OfferCard({
   id,
+  slug,
   title,
   description,
   location,
@@ -58,7 +60,7 @@ export function OfferCard({
 
   return (
     <Link
-      to={`/offres/${id}`}
+      to={`/offres/${slug || id}`}
       className="group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl block h-full flex flex-col"
     >
       {/* Image container */}
@@ -66,6 +68,8 @@ export function OfferCard({
         <img
           src={imageUrl}
           alt={title}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
 
