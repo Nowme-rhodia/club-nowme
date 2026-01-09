@@ -1,7 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import Stripe from 'npm:stripe@^14.10.0'
+import Stripe from "stripe";
 
-console.log("Create Checkout Session Function Invoked (v7 - Stable NPM Import)")
+console.log("Create Checkout Session Function Invoked (v7 - Standardized Import)")
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -17,19 +17,16 @@ Deno.serve(async (req) => {
         const reqBody = await req.json()
         const { offer_id, price, user_id, user_email, success_url, cancel_url, booking_type, variant_id, travel_fee, department_code, scheduled_at } = reqBody
 
-        // Initialisation propre sans adaptateur inutile qui fait crasher Deno
+        // Initialisation propre via Import Map (Standard)
         const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
             apiVersion: '2023-10-16',
-            httpClient: Stripe.createFetchHttpClient(),
         })
 
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
             {
-                global: {
-                    headers: { Authorization: req.headers.get('Authorization')! },
-                },
+                // No global headers needed as we are using Service Role
             }
         )
 
@@ -66,15 +63,20 @@ Deno.serve(async (req) => {
         }
 
         // --- NEW: Ambassador Discount Logic ---
-        console.log(`[DEBUG] Checking Ambassador Status for user_id: ${user_id}`);
-        const { data: userData, error: userError } = await supabaseClient
-            .from('user_profiles')
-            .select('email, is_ambassador')
-            .eq('user_id', user_id)
-            .single();
+        let userData: any = null;
+        if (user_id) {
+            console.log(`[DEBUG] Checking Ambassador Status for user_id: ${user_id}`);
+            const { data, error } = await supabaseClient
+                .from('user_profiles')
+                .select('email, is_ambassador')
+                .eq('user_id', user_id)
+                .single();
 
-        if (userError) {
-            console.error(`[DEBUG] Error fetching user profile: ${JSON.stringify(userError)}`);
+            if (error) {
+                console.error(`[DEBUG] Error fetching user profile: ${JSON.stringify(error)}`);
+            } else {
+                userData = data;
+            }
         }
 
         let appliedDiscount = 0;
@@ -141,6 +143,7 @@ Deno.serve(async (req) => {
                     product_data: {
                         name: `Frais de déplacement - ${department_code || 'Zone'}`,
                         description: `Déplacement à domicile`,
+                        images: [],
                     },
                     unit_amount: Math.round(travel_fee * 100),
                 },
@@ -165,7 +168,7 @@ Deno.serve(async (req) => {
                     },
                     unit_amount: unitAmount,
                 },
-                quantity: 1,
+                quantity: reqBody.quantity || 1,
             },
         ];
 
@@ -194,7 +197,7 @@ Deno.serve(async (req) => {
 
         // Session Config
         const sessionConfig: any = {
-            automatic_payment_methods: { enabled: true },
+            payment_method_types: ['card'],
             line_items: line_items,
             mode: 'payment',
             customer_email: customerEmail,

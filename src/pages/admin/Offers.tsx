@@ -12,7 +12,9 @@ import {
   Euro,
   Image as ImageIcon,
   Calendar,
-  Building2
+  Building2,
+  XCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
@@ -34,6 +36,7 @@ interface Offer {
     id: string;
     business_name: string;
     contact_name: string;
+    contact_email: string;
     phone: string;
   } | null; // Partner can be null if deleted
   variants: Array<{
@@ -62,6 +65,11 @@ export default function Offers() {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+
+  // States for Rejection Modal
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [offerToReject, setOfferToReject] = useState<Offer | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     loadOffers();
@@ -113,6 +121,18 @@ export default function Offers() {
 
       if (error) throw error;
 
+      // Get offer details for email
+      const offer = offers.find(o => o.id === offerId);
+      if (offer && offer.partner) {
+        await supabase.functions.invoke('send-offer-approval', {
+          body: {
+            to: offer.partner.contact_email,
+            contactName: offer.partner.contact_name,
+            offerTitle: offer.title
+          }
+        });
+      }
+
       toast.success('Offre approuvée');
       await loadOffers();
     } catch (error) {
@@ -120,6 +140,47 @@ export default function Offers() {
       toast.error('Erreur lors de l\'approbation');
     }
   };
+
+  const handleReject = async () => {
+    if (!offerToReject || !rejectionReason.trim()) {
+      toast.error('Veuillez saisir une raison de rejet');
+      return;
+    }
+
+    try {
+      const { error: updateError } = await (supabase
+        .from('offers') as any)
+        .update({
+          status: 'rejected',
+          rejection_reason: rejectionReason,
+          is_approved: false
+        })
+        .eq('id', offerToReject.id);
+
+      if (updateError) throw updateError;
+
+      if (offerToReject.partner) {
+        await supabase.functions.invoke('send-offer-rejection', {
+          body: {
+            to: offerToReject.partner.contact_email,
+            contactName: offerToReject.partner.contact_name,
+            offerTitle: offerToReject.title,
+            rejectionReason: rejectionReason
+          }
+        });
+      }
+
+      toast.success('Offre rejetée');
+      setShowRejectionModal(false);
+      setOfferToReject(null);
+      setRejectionReason('');
+      await loadOffers();
+    } catch (error) {
+      console.error('Error rejecting offer:', error);
+      toast.error('Erreur lors du rejet');
+    }
+  };
+
 
   const handleToggleActive = async (offerId: string, currentStatus: boolean) => {
     try {
@@ -141,7 +202,7 @@ export default function Offers() {
         if (error) throw error;
       }
 
-      if (error) throw error;
+      // if (error) throw error; // Double check, loop above handles it
 
       toast.success(currentStatus ? 'Offre désactivée' : 'Offre activée');
       await loadOffers();
@@ -345,6 +406,28 @@ export default function Offers() {
             const isActive = offer.is_approved !== false;
             const heroImage = offer.image_url || offer.offer_media?.[0]?.url;
 
+            // Determines badge display
+            let statusBadge;
+            if (offer.status === 'pending') {
+              statusBadge = (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                  En attente
+                </span>
+              );
+            } else if (offer.status === 'rejected') {
+              statusBadge = (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                  Refusée
+                </span>
+              );
+            } else {
+              statusBadge = (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                  {isActive ? 'Active' : 'Désactivée'}
+                </span>
+              );
+            }
+
             return (
               <li key={offer.id}>
                 <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-200">
@@ -371,10 +454,7 @@ export default function Offers() {
                             {offer.title}
                           </h3>
                           <div className="mt-1 flex items-center gap-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                              }`}>
-                              {isActive ? 'Active' : 'Désactivée'}
-                            </span>
+                            {statusBadge}
                             <span className="text-sm text-gray-500">
                               {format(new Date(offer.created_at), 'dd MMMM yyyy', { locale: fr })}
                             </span>
@@ -400,13 +480,25 @@ export default function Offers() {
                     {/* Actions */}
                     <div className="flex items-center gap-2 ml-4">
                       {(offer.status === 'draft' || offer.status === 'pending') && (
-                        <button
-                          onClick={() => handleApproveOffer(offer.id)}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                          title="Approuver l'offre"
-                        >
-                          Approuver
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleApproveOffer(offer.id)}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm flex items-center gap-1"
+                            title="Approuver l'offre"
+                          >
+                            <CheckCircle2 className="w-4 h-4" /> Approuver
+                          </button>
+                          <button
+                            onClick={() => {
+                              setOfferToReject(offer);
+                              setShowRejectionModal(true);
+                            }}
+                            className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm flex items-center gap-1"
+                            title="Rejeter l'offre"
+                          >
+                            <XCircle className="w-4 h-4" /> Refuser
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => setSelectedOffer(offer)}
@@ -563,6 +655,55 @@ export default function Offers() {
           </div>
         </div>
       )}
+
+      {/* Modal de rejet */}
+      {
+        showRejectionModal && offerToReject && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">
+                  Rejeter l'offre
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Offre : <strong>{offerToReject.title}</strong>
+                </p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Raison du rejet *
+                  </label>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    placeholder="Expliquez pourquoi cette offre ne peut pas être acceptée..."
+                    required
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowRejectionModal(false);
+                      setOfferToReject(null);
+                      setRejectionReason('');
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleReject}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Rejeter l'offre
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
     </div>
   );
 }

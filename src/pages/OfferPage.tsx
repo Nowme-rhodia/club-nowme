@@ -11,6 +11,7 @@ import { getCategoryBackground } from '../utils/categoryBackgrounds';
 import toast from 'react-hot-toast';
 import { useAuth } from '../lib/auth';
 import { SEO } from '../components/SEO';
+import GuestBookingModal from '../components/GuestBookingModal';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import DOMPurify from 'dompurify'; // Safe HTML rendering
 
@@ -25,20 +26,25 @@ export default function OfferPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, isAdmin, isPartner, isSubscriber } = useAuth();
-
-  // Access Control Logic
-  const hasAccess = isSubscriber || isAdmin || isPartner || (user?.email === 'rhodia@nowme.fr');
-  const isPending = user && !hasAccess;
-  const isGuest = !user;
+  const { user, profile, isAdmin, isPartner, isSubscriber, refreshProfile } = useAuth();
 
   const [offer, setOffer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [showEventConfirmModal, setShowEventConfirmModal] = useState(false);
+  const [showGuestModal, setShowGuestModal] = useState(false);
   const [isAlreadyBooked, setIsAlreadyBooked] = useState(false);
 
+  // Access Control Logic
+  const isOfficial = offer?.is_official === true || offer?.partner?.contact_email === 'rhodia@nowme.fr' || offer?.partner?.business_name === 'Nowme';
+  const isGuest = !user;
+
+  // Access: Subscribers, Admin, Partner OR Official Event (Open to all registered)
+  // For 'isOfficial', we allow guests to SEE content, but booking requires login.
+  const hasAccess = isSubscriber || isAdmin || isPartner || (user?.email === 'rhodia@nowme.fr') || isOfficial;
+
+  const isPending = user && !isSubscriber && !isAdmin && !isPartner && !isOfficial; // Rough check, likely unused or for UI hints
   // Check for existing booking
   useEffect(() => {
     const checkExistingBooking = async () => {
@@ -66,8 +72,13 @@ export default function OfferPage() {
   // State for selected variant
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
 
+
+
   // State for Installment Plan
   const [installmentPlan, setInstallmentPlan] = useState<string>('1x');
+
+  // State for Quantity
+  const [quantity, setQuantity] = useState<number>(1);
 
   // Carousel State
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -123,7 +134,7 @@ export default function OfferPage() {
         window.Calendly.initInlineWidget({
           url: `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}timezone=Europe/Paris&hide_landing_page_details=1&hide_gdpr_banner=1`,
           parentElement: document.getElementById('calendly-inline-widget'),
-          parentElement: document.getElementById('calendly-inline-widget'),
+
           // prefill removed to avoid 500 Error (Conflict parameters)
           // prefill: {
           //   name: (profile?.first_name && profile?.last_name) ? `${profile.first_name} ${profile.last_name}` : undefined,
@@ -288,6 +299,7 @@ id,
   event_end_date,
   installment_options,
   image_url,
+  is_official,
   category: offer_categories!offers_category_id_fkey(name, slug, parent_slug),
     offer_variants(id, name, description, price, discounted_price, stock),
     offer_media(url, type),
@@ -298,7 +310,7 @@ id,
     duration_type,
     validity_start_date,
     validity_end_date,
-    partner:partners(id, business_name)
+    partner:partners(id, business_name, contact_email)
       `)
         .eq('id', id)
         .single();
@@ -389,8 +401,14 @@ id,
     }
     : { price: 0, original_price: null, variant_id: null };
 
-  // Total to Pay (Price + Travel Fee)
-  const totalToPay = (priceInfo.price || 0) + travelFee;
+  // Total to Pay (Price * Quantity + Travel Fee)
+  // Note: Travel Fee is usually per trip, not per person if same location. 
+  // But if it's per person? Usually per trip. 
+  // Let's assume Travel Fee is ONCE per order for now, OR multiply.
+  // Users usually buy tickets for friends -> Travel fee might not apply to "Event" type usually.
+  // For "At Home", quantity might mean number of people? 
+  // Let's assume Price * Qty. Travel Fee added ONCE.
+  const totalToPay = ((priceInfo.price || 0) * quantity) + travelFee;
 
   const isOutOfStock = selectedVariant && selectedVariant.stock !== null && selectedVariant.stock <= 0;
 
@@ -501,44 +519,51 @@ id,
         department_code: selectedZoneCode,
         meeting_location: meetingAddressRef.current?.value || meetingAddress || (offer.street_address ? `${offer.street_address}, ${offer.zip_code} ${offer.city}` : offer.city), // Robust Address Logic
         installment_plan: installmentPlan, // Pass selected plan ('1x', '2x', '3x', '4x')
-        scheduled_at: scheduledDate // NEW: Pass the date!
+        fulfillment_status: 'fulfilled', // or 'pending' if manual approval needed
+        quantity: quantity // Pass quantity
       };
 
-      console.log("PAYLOAD DEBUG (Checkout):", payload);
+      // Use fetch instead of invoke to get better error details
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-
-
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify({
           ...payload,
-          success_url: `${window.location.origin}/booking-success`,
+          success_url: `${window.location.origin}/reservation-confirmee`,
           cancel_url: window.location.href,
-        }
+        })
       });
 
+      const responseData = await response.json();
 
-      if (error) {
-        console.error("Supabase Function Error:", error);
-        throw error;
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.message || "Erreur inconnue du serveur");
       }
 
-      if (!data?.sessionId) throw new Error("No session ID returned");
+      const { sessionId } = responseData;
+
+      if (!sessionId) throw new Error("No session ID returned");
 
       const stripe = await stripePromise;
       const { error: stripeError } = await stripe!.redirectToCheckout({
-        sessionId: data.sessionId
+        sessionId: sessionId
       });
 
       if (stripeError) throw stripeError;
 
     } catch (err: any) {
       console.error("Payment Error:", err);
-      toast.error("Erreur lors de l'initialisation du paiement: " + (err.message || "Unknown error"));
+      toast.error("Erreur: " + (err.message || "Unknown error"));
       setBookingLoading(false);
     }
   };
-
-  // openCalendly unmounted. Inline widget used instead.
 
   // Manual trigger if listener fails
   const handleManualCalendlyContinue = () => {
@@ -609,6 +634,21 @@ id,
   };
 
   const handleBooking = async () => {
+    // Guest Handling for Official Events
+    if (isGuest) {
+      if (offer.is_official) {
+        // Redirect to Login with redirect back
+        navigate(`/connexion?redirectTo=${encodeURIComponent(location.pathname)}`);
+        return;
+      }
+    }
+
+    // Guest Handling: Enforce login for official events BEFORE any other logic
+    if (isGuest && isOfficial) {
+      setShowGuestModal(true);
+      return;
+    }
+
     if (!hasAccess) {
       // Should rely on CTA buttons instead but for safety:
       toast('Rejoignez le club pour réserver !', { icon: '✨' });
@@ -680,6 +720,10 @@ id,
   };
 
   const getButtonLabel = () => {
+    // Guest Handling
+    if (isGuest && isOfficial) return "Se connecter pour réserver";
+    if (isGuest) return "Rejoindre le club"; // Should be unreachable if blurred, but safe fallback
+
     if (isAlreadyBooked) return "Vous êtes déjà inscrit";
     const type = offer.booking_type || 'calendly';
     const price = priceInfo.price || 0;
@@ -1134,6 +1178,36 @@ id,
 
                           {/* DEBUG ADDRESS STATE REMOVED FOR CLEANER UI, BUT DATA FLOW SECURED */}
                         </div>
+
+                      )}
+
+                      {/* --- Quantity Selector (For Official Events or All?) --- */}
+                      {/* Allow quantity for everyone if it's an event or purchase, except calendly maybe? */}
+                      {/* Usually Calendar is 1 person. But maybe 4 friends? */}
+                      {/* Let's allow for 'event' type mostly. */}
+                      {(offer.booking_type === 'event' || offer.booking_type === 'purchase') && (
+                        <div className="mb-6 border-b border-gray-100 pb-6 w-full">
+                          <div className="bg-gray-50 p-3 rounded-lg flex items-center justify-between">
+                            <span className="font-bold text-gray-700">Nombre de places</span>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                                disabled={quantity <= 1}
+                              >
+                                -
+                              </button>
+                              <span className="font-bold text-lg w-6 text-center">{quantity}</span>
+                              <button
+                                onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                                className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                                disabled={quantity >= 10}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       )}
 
 
@@ -1410,6 +1484,22 @@ id,
           </div >
         </div >
       </div >
-    </div >
+
+      <GuestBookingModal
+        isOpen={showGuestModal}
+        onClose={() => setShowGuestModal(false)}
+        offerTitle={offer?.title || ''}
+        onSuccess={async () => {
+          // 7. Refresh Auth Context (Fast update)
+          await refreshProfile();
+
+          // 8. Close modal
+          setShowGuestModal(false);
+
+          // 9. Toast expectation
+          toast.success("Compte créé ! Vous êtes connecté.", { icon: '👋' });
+        }}
+      />
+    </div>
   );
 }

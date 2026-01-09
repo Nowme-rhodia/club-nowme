@@ -90,9 +90,8 @@ export default function BookingSuccess() {
             }
         };
 
-        if (user) {
-            init();
-        }
+        // Initialize regardless of user state (Guests need to see success too)
+        init();
     }, [user, sessionId, offerIdParam, variantIdParam]);
 
     // Load Calendly Script if needed
@@ -106,7 +105,7 @@ export default function BookingSuccess() {
                         parentElement: document.getElementById('calendly-inline-widget'),
                         prefill: {
                             email: user?.email,
-                            name: profile?.full_name || user?.user_metadata?.full_name
+                            name: (profile?.first_name && profile?.last_name) ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name
                         },
                         utm: {
                             utmSource: user?.id,

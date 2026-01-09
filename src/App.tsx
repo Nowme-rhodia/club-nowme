@@ -197,11 +197,10 @@ function App() {
                     <Route path="settings/payments" element={<SettingsPayments />} />
                   </Route>
 
-                  {/* Protected user routes */}
                   <Route
                     path="/mon-compte"
                     element={
-                      <PrivateRoute allowedRoles={['subscriber', 'admin']}>
+                      <PrivateRoute allowedRoles={['subscriber', 'admin', 'guest']}>
                         <SubscriberLayout />
                       </PrivateRoute>
                     }

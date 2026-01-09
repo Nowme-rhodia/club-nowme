@@ -5,11 +5,11 @@ import { LoadingSpinner } from './LoadingSpinner';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'partner' | 'subscriber')[];
+  allowedRoles?: ('admin' | 'partner' | 'subscriber' | 'guest')[];
 }
 
 export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
-  const { user, loading, isAdmin, isPartner, isSubscriber } = useAuth();
+  const { user, profile, loading, isAdmin, isPartner, isSubscriber } = useAuth();
   const location = useLocation();
   const [timeoutPassed, setTimeoutPassed] = useState(false);
 
@@ -52,6 +52,8 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
           return isPartner;
         case 'subscriber':
           return isSubscriber;
+        case 'guest':
+          return profile?.role === 'guest';
         default:
           return false;
       }

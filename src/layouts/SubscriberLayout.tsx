@@ -27,14 +27,18 @@ export default function SubscriberLayout() {
     };
 
     const navItems = [
-        { icon: LayoutDashboard, label: 'Tableau de bord', to: '/mon-compte', end: true },
-        { icon: Calendar, label: 'Mes Réservations', to: '/mon-compte/reservations' },
-        { icon: Sparkles, label: 'Mes Sorties Club', to: '/mon-compte/squads' },
-        { icon: CreditCard, label: 'Mes Echéanciers', to: '/mon-compte/echeanciers' },
-        { icon: Wallet, label: 'Mon Ardoise', to: '/mon-compte/ardoise' },
-        { icon: User, label: 'Mon Profil', to: '/mon-compte/profil' },
-        // { icon: Settings, label: 'Paramètres', to: '/mon-compte/settings' }, // Future
+        { icon: LayoutDashboard, label: 'Tableau de bord', to: '/mon-compte', end: true, roles: ['subscriber', 'admin', 'partner'] },
+        { icon: Calendar, label: 'Mes Réservations', to: '/mon-compte/reservations', roles: ['subscriber', 'admin', 'partner', 'guest'] },
+        { icon: Sparkles, label: 'Mes Sorties Club', to: '/mon-compte/squads', roles: ['subscriber', 'admin'] },
+        { icon: CreditCard, label: 'Mes Echéanciers', to: '/mon-compte/echeanciers', roles: ['subscriber', 'admin'] },
+        { icon: Wallet, label: 'Mon Ardoise', to: '/mon-compte/ardoise', roles: ['subscriber', 'admin'] },
+        { icon: User, label: 'Mon Profil', to: '/mon-compte/profil', roles: ['subscriber', 'admin', 'partner', 'guest'] },
     ];
+
+    const currentRole = profile?.role || 'guest';
+    const displayLabel = currentRole === 'guest'
+        ? 'Invitée'
+        : (profile?.subscription_status === 'active' ? 'Kiffeuse Active' : 'Membre');
 
     return (
         <div className="min-h-screen bg-[#FDF8F4]">
@@ -101,7 +105,7 @@ export default function SubscriberLayout() {
                                 </p>
                                 <p className="text-xs text-primary font-medium flex items-center gap-1">
                                     <Sparkles className="w-3 h-3" />
-                                    {profile?.subscription_status === 'active' ? 'Kiffeuse Active' : 'Membre'}
+                                    {displayLabel}
                                 </p>
                             </div>
                         </div>
@@ -109,7 +113,7 @@ export default function SubscriberLayout() {
 
                     <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
                         <nav className="space-y-1">
-                            {navItems.map((item) => (
+                            {navItems.filter(item => item.roles.includes(currentRole) || (currentRole === 'admin' && item.roles.includes('subscriber'))).map((item) => (
                                 <NavLink
                                     key={item.to}
                                     to={item.to}

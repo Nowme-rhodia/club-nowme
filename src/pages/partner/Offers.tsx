@@ -565,6 +565,17 @@ export default function Offers() {
         }
       });
 
+      // Notifier le partenaire (Confirmation)
+      if (user?.email) {
+        await supabase.functions.invoke('send-offer-submission-confirmation', {
+          body: {
+            to: user.email,
+            contactName: user.user_metadata?.first_name || 'Partenaire',
+            offerTitle: offer.title
+          }
+        });
+      }
+
       toast.success('Offre soumise pour validation !');
       await loadOffers();
     } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, MapPin, Filter, X, SlidersHorizontal, Star, Sparkles } from 'lucide-react';
+import { Search, MapPin, Filter, X, SlidersHorizontal, Star, Sparkles, LayoutGrid, Music, Brain, Palette, ShoppingBag, Package, Home, Activity, Globe, Smile as Spa } from 'lucide-react';
 import { PriceRangeSlider } from '../components/PriceRangeSlider';
 import { Link, useSearchParams } from 'react-router-dom';
 import { categories } from '../data/categories';
@@ -49,15 +49,21 @@ interface OfferDetails {
   is_event?: boolean;
   event_end_date?: string;
   date?: string;
+  isOfficial?: boolean;
 }
 
 export default function TousLesKiffs() {
   const [searchParams] = useSearchParams();
   const { user, isAdmin, isSubscriber, isPartner } = useAuth();
+  // Filters State
+  const [sortOption, setSortOption] = useState<'price_asc' | 'price_desc' | 'date_asc' | 'newest'>('newest');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'tomorrow' | 'weekend'>('all');
+  const [isOfficialFilter, setIsOfficialFilter] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+
   const [selectedOffer, setSelectedOffer] = useState<OfferDetails | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
-  const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'all');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(searchParams.get('subcategory') || null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,6 +85,16 @@ export default function TousLesKiffs() {
   const lastElementRef = useRef<HTMLDivElement | null>(null);
 
   const [offersWithLocations, setOffersWithLocations] = useState<OfferDetails[]>([]);
+
+  // List of departments found in available offers
+  const availableDepartments = useMemo(() => {
+    const depts = new Set<string>();
+    offersWithLocations.forEach(offer => {
+      const postcode = offer.location.address.match(/\b(97|2A|2B|[0-9]{2})[0-9]{3}\b/)?.[1];
+      if (postcode) depts.add(postcode);
+    });
+    return Array.from(depts).sort();
+  }, [offersWithLocations]);
 
   useEffect(() => {
     const fetchOffers = async () => {
@@ -159,7 +175,8 @@ export default function TousLesKiffs() {
               badge: isOfficial ? 'Événement Officiel' : undefined,
               promoConditions: offer.promo_conditions,
               bookingType: offer.booking_type,
-              date: offer.event_start_date
+              date: offer.event_start_date,
+              isOfficial: isOfficial
             };
           });
           setOffersWithLocations(formattedOffers);
@@ -177,6 +194,7 @@ export default function TousLesKiffs() {
   const filteredOffers = useMemo(() => {
     let filtered = offersWithLocations;
 
+    // 1. Text Search
     if (searchTerm.trim()) {
       const normalizedSearch = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(offer =>
@@ -186,14 +204,22 @@ export default function TousLesKiffs() {
       );
     }
 
+    // 2. Official Filter
+    if (isOfficialFilter) {
+      filtered = filtered.filter(offer => offer.isOfficial);
+    }
+
+    // 3. Online Filter
     if (isOnlineFilter) {
       filtered = filtered.filter(offer => offer.is_online === true);
     }
 
+    // 4. Wallet Pack Filter
     if (isWalletFilter) {
       filtered = filtered.filter(offer => offer.bookingType === 'wallet_pack');
     }
 
+    // 5. Category Filter
     if (activeCategory !== 'all') {
       filtered = filtered.filter(offer => offer.categorySlug === activeCategory);
       if (activeSubcategory) {
@@ -201,20 +227,60 @@ export default function TousLesKiffs() {
       }
     }
 
+    // 6. Department Filter
+    if (selectedDepartment !== 'all') {
+      filtered = filtered.filter(offer => {
+        const postcode = offer.location.address.match(/\b(97|2A|2B|[0-9]{2})[0-9]{3}\b/)?.[1];
+        return postcode === selectedDepartment;
+      });
+    }
+
+    // 7. Date Filter
+    if (dateFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const nextDay = new Date(tomorrow);
+      nextDay.setDate(nextDay.getDate() + 1);
+
+      filtered = filtered.filter(offer => {
+        if (!offer.date) return false;
+        const eventDate = new Date(offer.date);
+        eventDate.setHours(0, 0, 0, 0);
+
+        if (dateFilter === 'today') {
+          return eventDate.getTime() === today.getTime();
+        } else if (dateFilter === 'tomorrow') {
+          return eventDate.getTime() === tomorrow.getTime();
+        } else if (dateFilter === 'weekend') {
+          // Simple logic: Is it this upcoming weekend?
+          // Or just simply "is it a Saturday or Sunday"?
+          // Let's do: Next Friday to Sunday window.
+          const day = today.getDay();
+          const distanceToFriday = (5 - day + 7) % 7;
+          const nextFriday = new Date(today);
+          nextFriday.setDate(today.getDate() + distanceToFriday);
+          const nextSunday = new Date(nextFriday);
+          nextSunday.setDate(nextSunday.getDate() + 2);
+
+          return eventDate >= nextFriday && eventDate <= nextSunday;
+        }
+        return true;
+      });
+    }
+
+    // 8. Location Filter
     if (selectedLocation) {
       filtered = filtered.filter(offer => {
-        // CASE 1: At Home Offers (Zones)
         if (offer.service_zones && Array.isArray(offer.service_zones) && offer.service_zones.length > 0) {
           const userZip = selectedLocation.zip_code;
-          if (!userZip) return false; // Need zip to know department
+          if (!userZip) return false;
           const userDept = userZip.substring(0, 2);
-          const servesZone = offer.service_zones.some(z => z.code === userDept);
-          // Also check if user is close enough to center? No, zone is the truth.
-          return servesZone;
+          return offer.service_zones.some(z => z.code === userDept);
         }
-
-        // CASE 2: Physical Offers (Distance)
-        // Only if coords exist
         if (offer.location.lat !== 0 && offer.location.lng !== 0) {
           const distance = getDistance(
             selectedLocation.lat,
@@ -222,36 +288,55 @@ export default function TousLesKiffs() {
             offer.location.lat,
             offer.location.lng
           );
-          return distance <= 15; // 15km radius
+          return distance <= 15;
         }
-
-        // CASE 3: Online
-        if (offer.is_online) return true; // Online is everywhere, but we likely filter it out via format toggles if implemented, else keep it.
-        // Actually if I search "Paris", do I want Online offers? Maybe.
-        // But usually online offers are filtered by "Online" pill.
-        // If I input a location, I probably want things near me OR served at my home.
-        // Let's exclude purely Online offers if a location is explicitly set, UNLESS they are smart enough.
-        // Currently existing logic didn't exclude online. Let's keep them if they are 'is_online'.
         return offer.is_online;
       });
     }
 
+    // 9. Price Range
     filtered = filtered.filter(offer => {
-      // Filter out expired offers if they have an event date
-      // Note: Backend archiving job should handle this, but visual filter is immediate
+      const priceToCheck = offer.filterPrice !== undefined ? offer.filterPrice : offer.price;
+      return priceToCheck >= priceRange[0] &&
+        priceToCheck <= priceRange[1];
+    });
+
+    // 10. Filter out expired offers if they have an event date
+    // Note: Backend archiving job should handle this, but visual filter is immediate
+    filtered = filtered.filter(offer => {
       if (offer.is_event && offer.event_end_date) {
         const eventDate = new Date(offer.event_end_date);
         if (eventDate < new Date()) return false;
       }
+      return true;
+    });
 
-      const priceToCheck = offer.filterPrice !== undefined ? offer.filterPrice : offer.price;
-      return priceToCheck >= priceRange[0] &&
-        priceToCheck <= priceRange[1] &&
-        offer.rating >= ratingFilter;
+    // 11. Sorting
+    filtered.sort((a, b) => {
+      if (sortOption === 'price_asc') {
+        const typeA = (a.filterPrice !== undefined ? a.filterPrice : a.price);
+        const typeB = (b.filterPrice !== undefined ? b.filterPrice : b.price);
+        return typeA - typeB;
+      }
+      if (sortOption === 'price_desc') {
+        const typeA = (a.filterPrice !== undefined ? a.filterPrice : a.price);
+        const typeB = (b.filterPrice !== undefined ? b.filterPrice : b.price);
+        return typeB - typeA;
+      }
+      if (sortOption === 'date_asc') {
+        if (!a.date) return 1;
+        if (!b.date) return -1;
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      }
+      // newest (default) - implicitly handled by fetch order but safe to re-enforce if IDs or created_at were available properly typed in offers object?
+      // actually created_at is not stored in OfferDetails. We rely on initial fetch order.
+      // But map destroys order? No map preserves order.
+      // Let's assume initial fetch is 'newest' and only re-sort if other options selected.
+      return 0;
     });
 
     return filtered;
-  }, [searchTerm, activeCategory, activeSubcategory, selectedLocation, priceRange, ratingFilter, offersWithLocations, isOnlineFilter, isWalletFilter]);
+  }, [searchTerm, activeCategory, activeSubcategory, selectedLocation, priceRange, offersWithLocations, isOnlineFilter, isWalletFilter, sortOption, dateFilter, isOfficialFilter, selectedDepartment]);
 
   const paginatedOffers = useMemo(() => {
     return filteredOffers.slice(0, page * itemsPerPage);
@@ -361,40 +446,126 @@ export default function TousLesKiffs() {
                 className="overflow-hidden"
               >
                 <div className="pt-4 space-y-4">
-                  {/* Filtres de prix */}
-                  <div>
-                    <PriceRangeSlider
-                      min={0}
-                      max={1000}
-                      value={priceRange}
-                      onChange={setPriceRange}
-                    />
-                  </div>
 
-                  {/* Filtre par note */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Note minimum
-                    </label>
-                    <div className="flex items-center gap-2">
-                      {[0, 1, 2, 3, 4, 5].map((rating) => (
-                        <button
-                          key={rating}
-                          onClick={() => setRatingFilter(rating)}
-                          className={`flex items-center gap-1 px-3 py-1 rounded-full ${ratingFilter === rating
-                            ? 'bg-primary text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            } transition-colors`}
-                        >
-                          <Star className="w-4 h-4" />
-                          <span>{rating}+</span>
-                        </button>
-                      ))}
+                  {/* Row 1: Sort & Department */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Sort */}
+                    <div>
+                      <select
+                        value={sortOption}
+                        onChange={(e) => setSortOption(e.target.value as any)}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 bg-gray-50 hover:bg-white transition-colors"
+                      >
+                        <option value="newest">Trier par : Nouveautés</option>
+                        <option value="price_asc">Prix croissant</option>
+                        <option value="price_desc">Prix décroissant</option>
+                        <option value="date_asc">Date (Bientôt)</option>
+                      </select>
+                    </div>
+
+                    {/* Department */}
+                    <div>
+                      <select
+                        value={selectedDepartment}
+                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 bg-gray-50 hover:bg-white transition-colors"
+                      >
+                        <option value="all">Tous les départements</option>
+                        {availableDepartments.map(dept => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Date Filter */}
+                    <div>
+                      <select
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value as any)}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm p-2 bg-gray-50 hover:bg-white transition-colors"
+                      >
+                        <option value="all">Toutes les dates</option>
+                        <option value="today">Aujourd'hui</option>
+                        <option value="tomorrow">Demain</option>
+                        <option value="weekend">Ce Week-end</option>
+                      </select>
                     </div>
                   </div>
 
-                  {/* Filtre Flemme de bouger & Pack Ardoise */}
-                  <div className="flex flex-wrap items-center pt-2 gap-3">
+                  {/* Rubrique Catégories */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-4">Catégories</h3>
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+                      <button
+                        onClick={() => setActiveCategory('all')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border whitespace-nowrap transition-all ${activeCategory === 'all'
+                          ? 'bg-primary text-white border-primary shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                          }`}
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                        <span className="font-medium">Tout voir</span>
+                      </button>
+
+                      {categories.map((category) => {
+                        // Dynamic icon mapping
+                        const IconComponent = {
+                          'Spa': Spa, // Already imported? need to check imports or use strings/generic
+                          'Music': Music,
+                          'Brain': Brain,
+                          'Palette': Palette,
+                          'ShoppingBag': ShoppingBag,
+                          'Package': Package,
+                          'Home': Home,
+                          'Sparkles': Sparkles, // Already imported
+                          'Activity': Activity,
+                          'Globe': Globe
+                        }[category.icon || 'Sparkles'] || Sparkles;
+
+                        return (
+                          <button
+                            key={category.slug}
+                            onClick={() => setActiveCategory(activeCategory === category.slug ? 'all' : category.slug)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full border whitespace-nowrap transition-all ${activeCategory === category.slug
+                              ? 'bg-primary text-white border-primary shadow-sm'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-primary hover:text-primary'
+                              }`}
+                          >
+                            <IconComponent className="w-4 h-4" />
+                            <span className="font-medium">{category.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Row 2: Price & Official */}
+                  <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center">
+                    <div className="flex-1 w-full sm:w-auto">
+                      <h3 className="text-sm font-medium text-gray-700 mb-4">Budget</h3>
+                      <PriceRangeSlider
+                        min={0}
+                        max={1000}
+                        value={priceRange}
+                        onChange={setPriceRange}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setIsOfficialFilter(!isOfficialFilter)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isOfficialFilter
+                          ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-purple-600 hover:text-purple-600'
+                          }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        <span className="font-medium">Événements Officiels</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Special Filters */}
+                  <div className="flex flex-wrap items-center pt-2 gap-3 border-t border-gray-100 mt-4">
                     <button
                       onClick={() => setIsOnlineFilter(!isOnlineFilter)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${isOnlineFilter
@@ -416,6 +587,25 @@ export default function TousLesKiffs() {
                       <span className="text-xl">💳</span>
                       <span className="font-medium">Pack Ardoise</span>
                     </button>
+
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setPriceRange([0, 1000]);
+                        setSortOption('newest');
+                        setDateFilter('all');
+                        setIsOfficialFilter(false);
+                        setSelectedDepartment('all');
+                        setActiveCategory('all');
+                        setActiveSubcategory(null);
+                        setSelectedLocation(null);
+                        setIsOnlineFilter(false);
+                        setIsWalletFilter(false); // Added reset for wallet filter
+                      }}
+                      className="ml-auto text-sm text-gray-500 hover:text-primary underline"
+                    >
+                      Réinitialiser
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -423,10 +613,9 @@ export default function TousLesKiffs() {
           </AnimatePresence>
         </div>
       </div>
-
       {/* Grille des offres */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isLoading ? (
+        {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
             {[...Array(8)].map((_, i) => (
               <div
@@ -442,7 +631,9 @@ export default function TousLesKiffs() {
               </div>
             ))}
           </div>
-        ) : filteredOffers.length > 0 ? (
+        )}
+
+        {!isLoading && filteredOffers.length > 0 && (
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8"
             initial="hidden"
@@ -455,7 +646,7 @@ export default function TousLesKiffs() {
               }
             }}
           >
-            {paginatedOffers.map((offer, index) => (
+            {paginatedOffers.map((offer) => (
               <motion.div
                 key={offer.id}
                 variants={{
@@ -475,7 +666,9 @@ export default function TousLesKiffs() {
               </div>
             )}
           </motion.div>
-        ) : (
+        )}
+
+        {!isLoading && filteredOffers.length === 0 && (
           <div className="text-center py-20">
             <Sparkles className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-gray-900 mb-2">
@@ -488,11 +681,15 @@ export default function TousLesKiffs() {
               onClick={() => {
                 setSearchTerm('');
                 setPriceRange([0, 1000]);
-                setRatingFilter(0);
+                setSortOption('newest');
+                setDateFilter('all');
+                setIsOfficialFilter(false);
+                setSelectedDepartment('all');
                 setActiveCategory('all');
                 setActiveSubcategory(null);
                 setSelectedLocation(null);
                 setIsOnlineFilter(false);
+                setIsWalletFilter(false);
               }}
               className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-primary/10 hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
             >

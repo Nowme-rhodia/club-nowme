@@ -449,7 +449,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         cancellation_policy: cancellationPolicy,
         installment_options: installmentOptions,
         // Status remains mostly unchanged or resets to draft if needed, but let's keep it simple
-        status: offer ? offer.status : 'draft'
+        status: (offer && offer.status === 'rejected') ? 'draft' : (offer ? offer.status : 'draft')
       };
 
       let outputOfferId = offer?.id;

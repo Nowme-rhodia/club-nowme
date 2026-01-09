@@ -34,10 +34,15 @@ export function OfferCard({
   partnerName,
   promoConditions,
   bookingType,
-  date
-}: OfferCardProps) {
+  date,
+  isOfficial
+}: OfferCardProps & { isOfficial?: boolean }) {
   const { user, isSubscriber, isPartner, isAdmin } = useAuth();
-  const hasAccess = isSubscriber || isPartner || isAdmin || (user?.email === 'rhodia@nowme.fr');
+
+  // Official events are open to everyone (public booking)
+  // But we still want to encourage subscription for other perks? 
+  // For now, if it's official, everyone has 'access' to book/view.
+  const hasAccess = isSubscriber || isPartner || isAdmin || isOfficial || (user?.email === 'rhodia@nowme.fr');
 
   const discount = promoPrice ? Math.round(((price - promoPrice) / price) * 100) : 0;
 
@@ -89,7 +94,7 @@ export function OfferCard({
 
         {/* Helper overlay for non-access */}
         {!hasAccess && (
-          <div className="absolute top-4 left-4">
+          <div className="absolute bottom-4 left-4 z-10">
             <div className="bg-white/90 backdrop-blur-sm text-gray-800 px-3 py-1.5 rounded-full font-semibold text-xs shadow-sm flex items-center gap-1">
               <Lock className="w-3 h-3" /> Réservé membre
             </div>
