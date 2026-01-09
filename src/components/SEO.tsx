@@ -12,7 +12,7 @@ export const SEO = ({ title, description, canonical, image }: SEOProps) => {
   const siteTitle = 'Nowme - Ton kiff au féminin';
   const fullTitle = `${title} | ${siteTitle}`;
   const defaultImage = 'https://i.imgur.com/or3q8gE.png';
-  const siteUrl = 'https://nowme.fr';
+  const siteUrl = 'https://club.nowme.fr';
 
   // Clean canonical: Remove query params
   const cleanCanonical = canonical ? canonical.split('?')[0] : siteUrl;

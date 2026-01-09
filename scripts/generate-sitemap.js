@@ -24,7 +24,7 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const BASE_URL = 'https://nowme.fr';
+const BASE_URL = 'https://club.nowme.fr';
 
 // Static routes
 const STATIC_ROUTES = [
