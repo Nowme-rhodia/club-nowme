@@ -763,6 +763,61 @@ id,
         image={offer?.image_url}
         canonical={window.location.href}
       />
+      {/* Structured Data (JSON-LD) */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": offer?.booking_type === 'event' || offer?.booking_type === 'calendly' ? "Event" : "Product",
+          "name": offer?.title,
+          "description": seoDescription,
+          "image": [offer?.image_url, ...(images || [])],
+          ...(offer?.booking_type === 'event' || offer?.booking_type === 'calendly' ? {
+            "startDate": offer?.event_start_date ? new Date(offer.event_start_date).toISOString() : undefined,
+            "endDate": offer?.event_end_date ? new Date(offer.event_end_date).toISOString() : undefined,
+            "eventStatus": "https://schema.org/EventScheduled",
+            "eventAttendanceMode": offer?.is_online ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
+            "location": offer?.is_online ? {
+              "@type": "VirtualLocation",
+              "url": offer?.external_link || window.location.href
+            } : {
+              "@type": "Place",
+              "name": offer?.partner?.business_name || offer?.city || "Lieu secret",
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": offer?.street_address,
+                "addressLocality": offer?.city,
+                "postalCode": offer?.zip_code,
+                "addressCountry": "FR"
+              }
+            },
+            "organizer": {
+              "@type": "Organization",
+              "name": offer?.partner?.business_name || "Nowme",
+              "url": "https://nowme.fr"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": priceInfo.price,
+              "priceCurrency": "EUR",
+              "url": window.location.href,
+              "availability": isOutOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+              "validFrom": offer?.created_at
+            }
+          } : {
+            "brand": {
+              "@type": "Brand",
+              "name": offer?.partner?.business_name || "Nowme"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": priceInfo.price,
+              "priceCurrency": "EUR",
+              "url": window.location.href,
+              "availability": isOutOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock"
+            }
+          })
+        })}
+      </script>
 
       <div
         className="fixed inset-0 bg-cover bg-center bg-no-repeat"

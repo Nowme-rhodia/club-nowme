@@ -27,7 +27,8 @@
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
-    "test:debug": "playwright test --debug"
+    "test:debug": "playwright test --debug",
+    "build:sitemap": "node scripts/generate-sitemap.js"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",

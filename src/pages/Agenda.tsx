@@ -27,7 +27,7 @@ interface OfferDetails {
 }
 
 export default function Agenda() {
-    const { profile } = useAuth();
+    const { profile, isAdmin } = useAuth();
     const [officialEvents, setOfficialEvents] = useState<OfferDetails[]>([]);
     const [departments, setDepartments] = useState<string[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
@@ -275,20 +275,22 @@ export default function Agenda() {
                 <div className="border-t border-gray-200 my-12"></div>
 
                 {/* SECTION 2: SORTIES ENTRE FILLES (RETENTION) */}
-                <div>
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="bg-orange-100 p-2 rounded-full">
-                            <Users className="w-6 h-6 text-primary" />
+                {/* Pre-launch restriction: Only show to authorized users */}
+                {(isAdmin || profile?.email === 'nowme.club@gmail.com' || profile?.email === 'rhodia@nowme.fr') && (
+                    <div>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="bg-orange-100 p-2 rounded-full">
+                                <Users className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900">Les Sorties Entre Filles</h2>
+                                <p className="text-sm text-gray-500">Proposées et animées par les membres</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900">Les Sorties Entre Filles</h2>
-                            <p className="text-sm text-gray-500">Proposées et animées par les membres</p>
-                        </div>
+
+                        <MicroSquadList showFilter={true} />
                     </div>
-
-                    <MicroSquadList showFilter={true} />
-
-                </div>
+                )}
 
             </div>
         </div>

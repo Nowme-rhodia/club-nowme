@@ -7,10 +7,20 @@ import { Link } from 'react-router-dom';
 import { MicroSquad } from '../../types/community';
 import { SquadCard } from '../../components/community/SquadCard';
 
+import { PreLaunchBlocker } from '../../components/PreLaunchBlocker';
+
 export default function MySquads() {
-    const { user } = useAuth();
+    const { user, isAdmin } = useAuth();
+
+    // Pre-launch Blocking Logic
+    const isAllowed = isAdmin || user?.email === 'nowme.club@gmail.com' || user?.email === 'rhodia@nowme.fr';
+
     const [squads, setSquads] = useState<MicroSquad[]>([]);
     const [loading, setLoading] = useState(true);
+
+    if (!loading && !isAllowed) {
+        return <PreLaunchBlocker />;
+    }
 
     useEffect(() => {
         if (user) {

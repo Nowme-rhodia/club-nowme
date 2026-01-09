@@ -14,6 +14,9 @@ export const SEO = ({ title, description, canonical, image }: SEOProps) => {
   const defaultImage = 'https://i.imgur.com/or3q8gE.png';
   const siteUrl = 'https://nowme.fr';
 
+  // Clean canonical: Remove query params
+  const cleanCanonical = canonical ? canonical.split('?')[0] : siteUrl;
+
   return (
     <Helmet>
       {/* Balises de base */}
@@ -22,20 +25,20 @@ export const SEO = ({ title, description, canonical, image }: SEOProps) => {
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content="website" />
-      <meta property="og:url" content={canonical || siteUrl} />
+      <meta property="og:url" content={cleanCanonical} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image || defaultImage} />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:url" content={canonical || siteUrl} />
+      <meta name="twitter:url" content={cleanCanonical} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image || defaultImage} />
 
       {/* Canonical URL */}
-      {canonical && <link rel="canonical" href={canonical} />}
+      {cleanCanonical && <link rel="canonical" href={cleanCanonical} />}
 
       {/* Autres méta-données importantes */}
       <meta name="viewport" content="width=device-width, initial-scale=1" />

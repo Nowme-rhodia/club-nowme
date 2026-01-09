@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { CommunityRulesModal } from '../components/community/CommunityRulesModal';
 import { CommunitySection } from '../components/community/CommunitySection';
+import { PreLaunchBlocker } from '../components/PreLaunchBlocker';
 
 // --- TYPES ---
 interface CommunityContent {
@@ -104,7 +105,10 @@ const KiffModal = ({ kiff, onClose }: { kiff: CommunityContent, onClose: () => v
 const LIBRARIES: ("places")[] = ["places"];
 
 export default function CommunitySpace() {
-  const { profile, loading: authLoading, refreshProfile } = useAuth();
+  const { profile, loading: authLoading, user, isAdmin, refreshProfile } = useAuth();
+
+  // Pre-launch Blocking Logic
+  const isAllowed = isAdmin || user?.email === 'nowme.club@gmail.com' || user?.email === 'rhodia@nowme.fr';
 
   // Data State
   const [announcements, setAnnouncements] = useState<CommunityContent[]>([]);
@@ -148,10 +152,9 @@ export default function CommunitySpace() {
         .from('offers')
         .select('*')
         .eq('partner_id', RHODIA_PARTNER_ID)
-        .eq('status', 'approved'); // Only approved offers (archived are past)
+        .eq('status', 'approved'); // Only approved offers
 
-      // Fetch Past/Archived Offers (Events only generally, or all archived)
-      // We look for 'archived' status OR past event_end_date (double check)
+      // Fetch Past/Archived Offers
       const { data: archivedOffers, error: archivedError } = await supabase
         .from('offers')
         .select('*')
@@ -178,14 +181,14 @@ export default function CommunitySpace() {
       // Map Past Offers to Kiffs format
       const pastOffersList: CommunityContent[] = (archivedOffers as any[] || []).map(offer => ({
         id: offer.id,
-        type: 'kiff', // treated as kiff for display type
+        type: 'kiff',
         title: offer.title,
         content: offer.description,
         image_url: offer.image_url,
         created_at: offer.created_at
       }));
 
-      // Filter out duplicates if any overlap occurs due to date/status race
+      // Filter out duplicates
       const uniquePastOffers = pastOffersList.filter(p => !offerKiffs.find(a => a.id === p.id));
 
       setAnnouncements(manualAnnouncements);
@@ -245,188 +248,182 @@ export default function CommunitySpace() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDF8F4] pb-20">
-      <SEO title="Le Club Privé" description="Espace communautaire exclusif Nowme" />
+    <div className="relative min-h-screen">
+      {!authLoading && !isAllowed && (
+        <PreLaunchBlocker overlay={true} />
+      )}
 
-      {/* HEADER */}
-      <div className="bg-white border-b sticky top-0 z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                Hello {profile?.first_name || 'Sunshine'} ✨
-              </h1>
-              <p className="text-gray-500 text-xs sm:text-sm">
-                Bienvenue dans ton espace privé.
-              </p>
-            </div>
-            <div className="hidden sm:block">
-              <span className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-semibold border border-primary/20">
-                Membre Club
-              </span>
+      <div className={`min-h-screen bg-[#FDF8F4] pb-20 transition-all duration-500 ${!isAllowed ? 'blur-md pointer-events-none select-none h-screen overflow-hidden' : ''}`}>
+        <SEO title="Le Club Privé" description="Espace communautaire exclusif Nowme" />
+
+        {/* HEADER */}
+        <div className="bg-white border-b sticky top-0 z-40 shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                  Hello {profile?.first_name || 'Sunshine'} ✨
+                </h1>
+                <p className="text-gray-500 text-xs sm:text-sm">
+                  Bienvenue dans ton espace privé.
+                </p>
+              </div>
+              <div className="hidden sm:block">
+                <span className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-sm font-semibold border border-primary/20">
+                  Membre Club
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
+        <div className="max-w-6xl mx-auto px-4 py-8 space-y-12">
 
-        {/* SECTION 0: ANNONCES */}
-        {announcements.length > 0 && (
-          <div className="space-y-4">
-            {announcements.map(announcement => (
-              <AnnouncementBanner key={announcement.id} text={announcement.title} />
-            ))}
-          </div>
-        )}
-
-        {/* SECTION 1: LE MUR DES KIFFS (CAROUSEL) */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-primary" />
-              <h2 className="text-2xl font-bold text-gray-900">Le Mur des Kiffs</h2>
-            </div>
-            {kiffs.length > itemsPerSlide && (
-              <div className="flex gap-2">
-                <button onClick={prevSlide} className="p-2 rounded-full border border-gray-200 hover:bg-white transition-colors">
-                  <ChevronLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <button onClick={nextSlide} className="p-2 rounded-full border border-gray-200 hover:bg-white transition-colors">
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {kiffs.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {visibleKiffs.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedKiff(item)}
-                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group cursor-pointer border border-gray-100 flex flex-col"
-                >
-                  <div className="h-48 overflow-hidden relative bg-gray-100">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <ImageIcon className="w-12 h-12" />
-                      </div>
-                    )}
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm">
-                      Pépite du mois
-                    </div>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="font-bold text-lg mb-2 text-gray-900 line-clamp-2">{item.title}</h3>
-                    <p className="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-4 flex-1">
-                      {item.content}
-                    </p>
-                    <div className="text-primary font-medium text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                      Lire la suite <ArrowRight className="w-4 h-4" />
-                    </div>
-                  </div>
-                </div>
+          {/* SECTION 0: ANNONCES */}
+          {announcements.length > 0 && (
+            <div className="space-y-4">
+              {announcements.map(announcement => (
+                <AnnouncementBanner key={announcement.id} text={announcement.title} />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300 text-gray-500">
-              Les pépites arrivent bientôt ! 💎
-            </div>
           )}
-        </section>
 
-
-
-        {/* SECTION 2: LE HUB DES CERCLES */}
-        <section>
-          <div className="flex items-center gap-3 mb-8">
-            <MessageCircle className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-gray-900">Vos Cercles de Discussion</h2>
-          </div>
-
-          <CommunitySection profile={profile} />
-
-
-        </section>
-
-        {/* SECTION 4: LA BOITE A IDÉES */}
-        <section className="max-w-2xl mx-auto text-center pt-8">
-          <div className="bg-gradient-to-br from-primary to-primary-dark rounded-3xl p-8 sm:p-12 text-white shadow-xl">
-            <h2 className="text-3xl font-bold mb-4">Une idée brillante ? 💡</h2>
-            <p className="text-primary-100 mb-8 max-w-lg mx-auto">
-              C'est votre club. Dites-nous ce qui vous ferait vibrer pour les prochains mois !
-            </p>
-
-            <form onSubmit={handleSuggestionSubmit} className="relative">
-              <textarea
-                value={suggestion}
-                onChange={(e) => setSuggestion(e.target.value)}
-                placeholder="J'aimerais trop voir..."
-                className="w-full h-32 rounded-xl p-4 text-gray-900 focus:outline-none focus:ring-4 focus:ring-white/30 placeholder:text-gray-400"
-              />
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={sending || !suggestion.trim()}
-                  className="bg-white text-primary px-8 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {sending ? 'Envoi...' : 'Envoyer'}
-                  <Send className="w-4 h-4" />
-                </button>
+          {/* SECTION 1: LE MUR DES KIFFS (CAROUSEL) */}
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-6 h-6 text-primary" />
+                <h2 className="text-2xl font-bold text-gray-900">Le Mur des Kiffs</h2>
               </div>
-            </form>
-          </div>
-        </section>
-
-        {/* SECTION 1.5: CARTE COMMUNAUTAIRE (Moved to bottom) */}
-        <section>
-          <div className="flex items-center gap-3 mb-6">
-            <MapPin className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-bold text-gray-900">Le Quartier Nowme</h2>
-          </div>
-
-          {loadError && <div className="text-red-500 bg-red-50 p-4 rounded-xl">Erreur de chargement de la carte</div>}
-
-          {!isLoaded ? (
-            <div className="h-[400px] flex items-center justify-center bg-gray-50 rounded-2xl">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <>
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 text-center">
-                <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
-                  <MapPin className="w-8 h-8 text-purple-500" />
+              {kiffs.length > itemsPerSlide && (
+                <div className="flex gap-2">
+                  <button onClick={prevSlide} className="p-2 rounded-full border border-gray-200 hover:bg-white transition-colors">
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <button onClick={nextSlide} className="p-2 rounded-full border border-gray-200 hover:bg-white transition-colors">
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                  </button>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Le Quartier arrive bientôt !</h3>
-                <p className="text-gray-500 max-w-lg mx-auto">
-                  Nous peaufinons la carte pour vous offrir la meilleure expérience possible.
-                  Vous pourrez bientôt découvrir les membres de votre quartier.
-                </p>
+              )}
+            </div>
+
+            {kiffs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {visibleKiffs.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => setSelectedKiff(item)}
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group cursor-pointer border border-gray-100 flex flex-col"
+                  >
+                    <div className="h-48 overflow-hidden relative bg-gray-100">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <ImageIcon className="w-12 h-12" />
+                        </div>
+                      )}
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary shadow-sm">
+                        Pépite du mois
+                      </div>
+                    </div>
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="font-bold text-lg mb-2 text-gray-900 line-clamp-2">{item.title}</h3>
+                      <p className="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-4 flex-1">
+                        {item.content}
+                      </p>
+                      <div className="text-primary font-medium text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Lire la suite <ArrowRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </>
-          )}
-        </section>
+            ) : (
+              <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300 text-gray-500">
+                Les pépites arrivent bientôt ! 💎
+              </div>
+            )}
+          </section>
+
+          {/* SECTION 2: LE HUB DES CERCLES */}
+          <section>
+            <div className="flex items-center gap-3 mb-8">
+              <MessageCircle className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold text-gray-900">Vos Cercles de Discussion</h2>
+            </div>
+            <CommunitySection profile={profile} />
+          </section>
+
+          {/* SECTION 4: LA BOITE A IDÉES */}
+          <section className="max-w-2xl mx-auto text-center pt-8">
+            <div className="bg-gradient-to-br from-primary to-primary-dark rounded-3xl p-8 sm:p-12 text-white shadow-xl">
+              <h2 className="text-3xl font-bold mb-4">Une idée brillante ? 💡</h2>
+              <p className="text-primary-100 mb-8 max-w-lg mx-auto">
+                C'est votre club. Dites-nous ce qui vous ferait vibrer pour les prochains mois !
+              </p>
+
+              <form onSubmit={handleSuggestionSubmit} className="relative">
+                <textarea
+                  value={suggestion}
+                  onChange={(e) => setSuggestion(e.target.value)}
+                  placeholder="J'aimerais trop voir..."
+                  className="w-full h-32 rounded-xl p-4 text-gray-900 focus:outline-none focus:ring-4 focus:ring-white/30 placeholder:text-gray-400"
+                />
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={sending || !suggestion.trim()}
+                    className="bg-white text-primary px-8 py-3 rounded-xl font-bold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {sending ? 'Envoi...' : 'Envoyer'}
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          {/* SECTION 1.5: CARTE COMMUNAUTAIRE */}
+          <section>
+            <div className="flex items-center gap-3 mb-6">
+              <MapPin className="w-6 h-6 text-primary" />
+              <h2 className="text-2xl font-bold text-gray-900">Le Quartier Nowme</h2>
+            </div>
+            {loadError && <div className="text-red-500 bg-red-50 p-4 rounded-xl">Erreur de chargement de la carte</div>}
+            {!isLoaded ? (
+              <div className="h-[400px] flex items-center justify-center bg-gray-50 rounded-2xl">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 rounded-2xl border border-purple-100 text-center">
+                  <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+                    <MapPin className="w-8 h-8 text-purple-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Le Quartier arrive bientôt !</h3>
+                  <p className="text-gray-500 max-w-lg mx-auto">
+                    Nous peaufinons la carte pour vous offrir la meilleure expérience possible.
+                    Vous pourrez bientôt découvrir les membres de votre quartier.
+                  </p>
+                </div>
+              </>
+            )}
+          </section>
+
+        </div>
+
+        {/* MODAL */}
+        {selectedKiff && (
+          <KiffModal kiff={selectedKiff} onClose={() => setSelectedKiff(null)} />
+        )}
+
+        {/* Community Rules Modal */}
+        {!authLoading && profile && !profile.accepted_community_rules_at && (
+          <CommunityRulesModal onAccept={() => refreshProfile()} />
+        )}
 
       </div>
-
-      {/* MODAL */}
-      {selectedKiff && (
-        <KiffModal kiff={selectedKiff} onClose={() => setSelectedKiff(null)} />
-      )}
-
-      {/* MODAL */}
-      {selectedKiff && (
-        <KiffModal kiff={selectedKiff} onClose={() => setSelectedKiff(null)} />
-      )}
-
-      {/* Community Rules Modal */}
-      {!authLoading && profile && !profile.accepted_community_rules_at && (
-        <CommunityRulesModal onAccept={() => refreshProfile()} />
-      )}
-
     </div>
   );
 }
