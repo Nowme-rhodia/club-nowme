@@ -50,7 +50,9 @@ export default function OfferPage() {
     const checkExistingBooking = async () => {
       if (!user || !offer) return;
 
-      const shouldCheck = offer.requires_agenda || offer.booking_type === 'event';
+      // Only check for existing bookings if the user is a subscriber/privileged.
+      // Guests (paying full price) should be allowed to book multiple times.
+      const shouldCheck = (isSubscriber || isAdmin || isPartner) && (offer.requires_agenda || offer.booking_type === 'event');
       if (!shouldCheck) return;
 
       const { data } = await supabase
@@ -393,13 +395,22 @@ id,
   const selectedZone = offer?.service_zones?.find((z: any) => z.code === selectedZoneCode);
   const travelFee = selectedZone ? (Number(selectedZone.fee) || 0) : 0;
 
+  const isPrivileged = isSubscriber || isAdmin || isPartner;
+
   const priceInfo = selectedVariant
     ? {
-      price: selectedVariant.discounted_price || selectedVariant.price,
-      original_price: selectedVariant.discounted_price ? selectedVariant.price : null,
-      variant_id: selectedVariant.id
+      // Non-subscribers pay full price (price), subscribers pay discounted_price if available
+      price: isPrivileged
+        ? (selectedVariant.discounted_price || selectedVariant.price)
+        : selectedVariant.price,
+      // Original price for strikethrough (only for subscribers)
+      original_price: (isPrivileged && selectedVariant.discounted_price) ? selectedVariant.price : null,
+      variant_id: selectedVariant.id,
+      // Store member price significantly for frustration UI
+      member_price: selectedVariant.discounted_price || selectedVariant.price,
+      has_discount: !!selectedVariant.discounted_price && selectedVariant.discounted_price < selectedVariant.price
     }
-    : { price: 0, original_price: null, variant_id: null };
+    : { price: 0, original_price: null, variant_id: null, member_price: 0, has_discount: false };
 
   // Total to Pay (Price * Quantity + Travel Fee)
   // Note: Travel Fee is usually per trip, not per person if same location. 
@@ -1263,6 +1274,18 @@ id,
                               </span>
                             )}
                           </div>
+
+                          {/* FRUSTRATION UI: Show for non-subscribers if a discount exists */}
+                          {!isPrivileged && priceInfo.has_discount && (
+                            <div className="mt-1 mb-2 flex flex-col items-end animate-pulse">
+                              <span className="text-sm text-pink-600 font-bold">
+                                Prix membre : {priceInfo.member_price}€
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                Tu économiserais {(priceInfo.price - priceInfo.member_price).toFixed(2)}€ en étant membre !
+                              </span>
+                            </div>
+                          )}
                           {installmentPlan !== '1x' && (
                             <p className="text-xs text-gray-500 mt-1 mb-2 max-w-[200px] text-right">
                               Puis {(parseInt(installmentPlan) || 1) - 1} mensualités de {(totalToPay / (parseInt(installmentPlan) || 1)).toFixed(2)}€
