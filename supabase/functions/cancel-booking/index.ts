@@ -208,13 +208,33 @@ serve(async (req: Request) => {
 
         const userName = userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() : (finalEmail || 'Client invalide');
 
-        // 7. Update Stock (if variant_id exists)
         if (booking.variant_id) {
             const { error: stockError } = await supabaseAdmin.rpc('increment_variant_stock', {
                 variant_id_input: booking.variant_id
             });
             if (stockError) console.error("Error restoring stock:", stockError);
             else console.log("Stock restored for variant:", booking.variant_id);
+        }
+
+        // 7c. Revert Loyalty Points (if refund eligible)
+        // We use award_points with negative value to decrement both balance and lifetime points
+        if (refundEligible && booking.amount > 0) {
+            const pointsToRevert = Math.floor(booking.amount);
+            console.log(`[LOYALTY] Reverting ${pointsToRevert} points for User ${user.id}`);
+
+            const { error: revError } = await supabaseAdmin.rpc('award_points', {
+                p_user_id: user.id,
+                p_amount: -pointsToRevert,
+                p_reason: `Annulation: ${offer.title}`,
+                p_metadata: { booking_id: bookingId, refund: true }
+            });
+
+            if (revError) {
+                console.warn("[LOYALTY] Failed to revert points (balance likely too low):", revError.message);
+                // We proceed without blocking cancellation
+            } else {
+                console.log("[LOYALTY] Points reverted successfully.");
+            }
         }
 
         // 7b. Sync with Calendly (if applicable)

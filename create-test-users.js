@@ -46,7 +46,7 @@ async function checkCredentials(email, password) {
 }
 
 const USERS = [
-  { email: "abonnex-test@nowme.fr", password: "Password123!", role: "subscriber" },
+  { email: "nowme.club@gmail.com", password: "Trafalgar1,", role: "subscriber" },
   { email: "partnerx-test@nowme.fr", password: "Password123!", role: "partner" },
   { email: "adminx-test@nowme.fr", password: "Password123!", role: "admin" }
 ]
@@ -154,21 +154,21 @@ async function waitForProfile(userId, email, role) {
     let data, error
 
     if (role === "subscriber" || role === "admin") {
-      ({ data, error } = await supabase
+      ({ data, error } = await adminSupabase
         .from("user_profiles")
         .select("id, email, user_id, created_at")
         .eq("user_id", userId)
         .maybeSingle())
     } else if (role === "partner") {
       // Vérifier via user_profiles car partners n'a pas user_id
-      const { data: profile } = await supabase
+      const { data: profile } = await adminSupabase
         .from("user_profiles")
         .select("partner_id")
         .eq("user_id", userId)
         .single();
 
       if (profile?.partner_id) {
-        ({ data, error } = await supabase
+        ({ data, error } = await adminSupabase
           .from("partners")
           .select("id, contact_email, status, created_at")
           .eq("id", profile.partner_id)

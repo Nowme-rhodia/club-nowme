@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
                     .eq('id', offer_id)
                     .single();
 
-                if (offerDetails && (offerDetails.booking_type === 'event' || offerDetails.requires_agenda)) {
+                if (offerDetails && (offerDetails.booking_type === 'event' || offerDetails.booking_type === 'simple_access' || offerDetails.requires_agenda)) {
                     console.log(`[Limit Check] Checking existing bookings for User ${user_id} on Offer ${offer_id}...`);
                     const { data: existingBooking } = await supabaseClient
                         .from('bookings')
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
                 const bookingObject = {
                     p_user_id: user_id,
                     p_offer_id: offer_id,
-                    p_booking_date: finalScheduledAt || null,
+                    p_booking_date: finalScheduledAt || nowIso,
                     p_status: 'confirmed',
                     p_source: 'stripe',
                     p_amount: amount,
@@ -434,6 +434,29 @@ Deno.serve(async (req) => {
                         } catch (stripeErr) {
                             console.error("[INSTALLMENT_PLAN] Stripe Schedule Creation Failed:", stripeErr);
                         }
+                    }
+                }
+
+                // 6. [NEW] LOYALTY POINTS AWARD
+                if (data?.booking_id && amount > 0) {
+                    try {
+                        const pointsEarned = Math.floor(amount); // 1€ = 1pt
+                        console.log(`[LOYALTY] Awarding ${pointsEarned} points to User ${user_id}`);
+
+                        const { error: loyaltyError } = await supabaseClient.rpc('award_points', {
+                            p_user_id: user_id,
+                            p_amount: pointsEarned,
+                            p_reason: `Achat: ${session.metadata.offer_id || 'Offre'}`,
+                            p_metadata: { booking_id: data.booking_id, amount_eur: amount }
+                        });
+
+                        if (loyaltyError) {
+                            console.error("[LOYALTY] Failed to award points:", loyaltyError);
+                        } else {
+                            console.log("[LOYALTY] Points awarded successfully.");
+                        }
+                    } catch (loyaltyErr) {
+                        console.error("[LOYALTY] Exception awarding points:", loyaltyErr);
                     }
                 }
 

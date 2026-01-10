@@ -650,6 +650,7 @@ export default function Subscription() {
                 <li className="flex items-start text-sm"><Check className="w-5 h-5 text-green-500 mr-2 shrink-0" /> <span>Accès complet immédiat</span></li>
                 <li className="flex items-start text-sm"><Check className="w-5 h-5 text-green-500 mr-2 shrink-0" /> <span>Events partout en Île-de-France</span></li>
                 <li className="flex items-start text-sm"><Check className="w-5 h-5 text-green-500 mr-2 shrink-0" /> <span className="font-bold">Masterclass & Apéros offerts</span></li>
+                <li className="flex items-start text-sm"><Check className="w-5 h-5 text-green-500 mr-2 shrink-0" /> <span className="font-bold text-pink-600">Nouveau : Programme Fidélité (1€ = 1pt)</span></li>
                 <li className="flex items-start text-sm"><Check className="w-5 h-5 text-green-500 mr-2 shrink-0" /> <span>Concours Box trimestriel</span></li>
                 <li className="flex items-start text-sm"><Check className="w-5 h-5 text-green-500 mr-2 shrink-0" /> <span>Communauté WhatsApp (App bientôt !)</span></li>
               </ul>

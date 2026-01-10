@@ -21,7 +21,6 @@ import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
 import { LocationSearch } from '../../components/LocationSearch';
-import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
 import toast from 'react-hot-toast';
 import CreateOffer from './CreateOffer';
 
@@ -46,7 +45,7 @@ interface Offer {
   booking_type?: 'calendly' | 'event' | 'promo' | 'purchase';
   external_link?: string;
   promo_code?: string;
-  calendly_url?: string;
+
   event_start_date?: string;
   event_end_date?: string;
 
@@ -132,10 +131,9 @@ export default function Offers() {
     department: '',
     city: '',
     coordinates: null as [number, number] | null,
-    calendly_url: '',
     event_start_date: '',
     event_end_date: '',
-    booking_type: 'calendly',
+    booking_type: 'event',
     external_link: '',
     promo_code: ''
   });
@@ -232,10 +230,9 @@ export default function Offers() {
       department: offer.department || '',
       city: offer.city || '',
       coordinates: offer.coordinates,
-      calendly_url: offer.calendly_url || '',
       event_start_date: offer.event_start_date || '',
       event_end_date: offer.event_end_date || '',
-      booking_type: offer.booking_type || 'calendly',
+      booking_type: offer.booking_type || 'event',
       external_link: offer.external_link || '',
       promo_code: offer.promo_code || ''
     });
@@ -258,10 +255,9 @@ export default function Offers() {
       department: '',
       city: '',
       coordinates: null,
-      calendly_url: '',
       event_start_date: '',
       event_end_date: '',
-      booking_type: 'calendly',
+      booking_type: 'event',
       external_link: '',
       promo_code: ''
     });
@@ -423,7 +419,6 @@ export default function Offers() {
             title: newOffer.title,
             description: newOffer.description,
             category_id: catId,
-            calendly_url: newOffer.calendly_url || null,
             event_start_date: newOffer.event_start_date || null,
             event_end_date: newOffer.event_end_date || null,
             street_address: newOffer.street_address,
@@ -458,7 +453,6 @@ export default function Offers() {
             title: newOffer.title,
             description: newOffer.description,
             category_id: catId,
-            calendly_url: newOffer.booking_type === 'calendly' ? newOffer.calendly_url : null,
             event_start_date: newOffer.booking_type === 'event' ? newOffer.event_start_date : null,
             event_end_date: newOffer.booking_type === 'event' ? newOffer.event_end_date : null,
             booking_type: newOffer.booking_type,
@@ -1078,19 +1072,7 @@ export default function Offers() {
                   </div>
 
                   {/* --- Affichage agenda si dispo --- */}
-                  {selectedOffer.calendly_url && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Réservations</h4>
-                      <a
-                        href={selectedOffer.calendly_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline"
-                      >
-                        Voir les créneaux disponibles
-                      </a>
-                    </div>
-                  )}
+
 
                   {selectedOffer.status === 'rejected' && selectedOffer.rejection_reason && (
                     <div className="p-4 bg-red-50 rounded-lg border border-red-200">

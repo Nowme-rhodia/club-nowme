@@ -138,7 +138,7 @@ export default function Dashboard() {
         // 👉 Récupérer le partenaire
         const { data: partnerData, error: partnerError } = await (supabase
           .from('partners') as any)
-          .select('id, calendly_url, business_name, commission_rate, pending_penalties')
+          .select('id, business_name, commission_rate, pending_penalties')
           .eq('id', profileData.partner_id)
           .single();
 
@@ -162,7 +162,6 @@ export default function Dashboard() {
 
         console.log('Partner data loaded:', { partnerId, businessName: businessNameValue });
 
-        setGlobalCalendly(partnerData.calendly_url || null);
         setBusinessName(businessNameValue);
 
         // 👉 Offres
@@ -445,23 +444,7 @@ export default function Dashboard() {
         )}
 
 
-        {/* 👉 Section Agenda Calendly */}
-        {hasAgenda && (
-          <div className="mt-10 bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5" /> Mon agenda
-            </h2>
-            <div className="w-full h-[700px]">
-              <iframe
-                src={globalCalendly || offers.find(o => o.requires_agenda)?.calendly_url || ''}
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                title="Calendly Agenda"
-              ></iframe>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );

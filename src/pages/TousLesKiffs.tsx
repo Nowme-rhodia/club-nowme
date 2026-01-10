@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Search, MapPin, Filter, X, SlidersHorizontal, Star, Sparkles, LayoutGrid, Music, Brain, Palette, ShoppingBag, Package, Home, Activity, Globe, Smile as Spa } from 'lucide-react';
+import { Search, MapPin, Filter, X, SlidersHorizontal, Star, Sparkles, LayoutGrid, Music, Brain, Palette, ShoppingBag, Package, Home, Activity, Globe, Smile as Spa, Utensils } from 'lucide-react';
 import { PriceRangeSlider } from '../components/PriceRangeSlider';
 import { Link, useSearchParams } from 'react-router-dom';
 import { categories } from '../data/categories';
@@ -523,9 +523,10 @@ export default function TousLesKiffs() {
                           'ShoppingBag': ShoppingBag,
                           'Package': Package,
                           'Home': Home,
-                          'Sparkles': Sparkles, // Already imported
+                          'Sparkles': Sparkles,
                           'Activity': Activity,
-                          'Globe': Globe
+                          'Globe': Globe,
+                          'Utensils': Utensils
                         }[category.icon || 'Sparkles'] || Sparkles;
 
                         return (

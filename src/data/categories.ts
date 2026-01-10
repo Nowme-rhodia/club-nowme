@@ -25,6 +25,7 @@ export const categories: Category[] = [
       { name: "Naturopathe, Sophrologue", slug: "naturopathe-sophrologue" },
       { name: "Réflexologie", slug: "reflexologie" },
       { name: "Salon de massage, Drainage lymphatique", slug: "salon-de-massage-drainage-lymphatique" },
+      { name: "Sophrologie", slug: "sophrologie" },
       { name: "Spa et centre de bien-être", slug: "spa-et-centre-de-bien-etre" },
       { name: "Thalassothérapie, Hammam", slug: "thalassotherapie-hammam" }
     ]
@@ -55,12 +56,26 @@ export const categories: Category[] = [
     subcategories: [
       { name: "Autre", slug: "autre-developpement-personnel" },
       { name: "Coach de vie, Personnel", slug: "coach-de-vie-personnel" },
+      { name: "Coach parentalité", slug: "coach-parentalite" },
       { name: "Coach sportif", slug: "coach-sportif" },
       { name: "Facilitateur de cercle de parole", slug: "facilitateur-de-cercle-de-parole" },
       { name: "Hypnothérapeute", slug: "hypnotherapeute" },
       { name: "Praticien de médecine alternative", slug: "praticien-de-medecine-alternative" },
       { name: "Psychologue", slug: "psychologue" },
+      { name: "Sophrologue", slug: "sophrologue" },
       { name: "Thérapeute", slug: "therapeute" }
+    ]
+  },
+  {
+    name: "Gastronomie & Art de la Table",
+    slug: "gastronomie-et-art-de-la-table",
+    icon: "Utensils",
+    description: "Expériences culinaires et dégustations",
+    subcategories: [
+      { name: "Brunchs & Food Tours", slug: "brunchs-food-tours" },
+      { name: "Cours de Cuisine", slug: "cours-de-cuisine" },
+      { name: "Dîners Privés", slug: "diners-prives" },
+      { name: "Oenologie & Dégustations", slug: "oenologie-degustations" }
     ]
   },
   {
@@ -72,6 +87,7 @@ export const categories: Category[] = [
       { name: "Autre", slug: "autre-loisirs-et-creativite" },
       { name: "Atelier de création (poterie, couture, peinture)", slug: "atelier-de-creation-poterie-couture-peinture" },
       { name: "Atelier d'écriture", slug: "atelier-decriture" },
+      { name: "Club de lecture / Book Club", slug: "club-de-lecture-book-club" },
       { name: "École de musique / Organisation", slug: "ecole-de-musique-organisation" },
       { name: "École de photographie", slug: "ecole-de-photographie" },
       { name: "Studio de photographie", slug: "studio-de-photographie" }
@@ -123,8 +139,7 @@ export const categories: Category[] = [
     subcategories: [
       { name: "Autre", slug: "autre-spiritualite-et-energie" },
       { name: "Astrologue/tarologue et autres pratiques", slug: "astrologue-tarologue-et-autres-pratiques" },
-      { name: "Magnétiseur", slug: "magnetiseur" },
-      { name: "Méditation", slug: "meditation" }
+      { name: "Magnétiseur", slug: "magnetiseur" }
     ]
   },
   {

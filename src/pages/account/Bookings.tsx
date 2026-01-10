@@ -40,6 +40,11 @@ interface Booking {
         };
     };
 }
+const isScheduledAtValid = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return !isNaN(d.getTime()) && d.getFullYear() > 1972;
+};
 
 export default function Bookings() {
     const { user } = useAuth();
@@ -104,7 +109,7 @@ export default function Bookings() {
                     )
                 `)
                 .eq('user_id', user.id)
-                .order('booking_date', { ascending: false });
+                .order('created_at', { ascending: false }); // Changed to created_at for reliability
 
             if (error) throw error;
             setBookings(data as any || []);
@@ -134,8 +139,8 @@ export default function Bookings() {
 
         if (isPurchaseOrPromo) return false;
 
-        // ✅ Fix: If date to define (no scheduled_at and no event date), always show in Upcoming
-        if (!booking.scheduled_at && !booking.offer?.event_start_date) {
+        // ✅ Fix: Manual scheduling (Calendly) or Undated Events -> Always Upcoming
+        if (booking.offer?.booking_type === 'calendly' || (!isScheduledAtValid(booking.scheduled_at) && !booking.offer?.event_start_date)) {
             return activeTab === 'upcoming';
         }
 
@@ -265,7 +270,6 @@ export default function Bookings() {
                     <Calendar className="w-8 h-8 text-primary" />
                     Mes Réservations
                 </h1>
-
                 {/* Tabs UI */}
                 <div className="flex border-b border-gray-200 mb-8 overflow-x-auto">
                     <button
@@ -387,9 +391,9 @@ export default function Bookings() {
                                                             }
                                                         </span>
                                                         <div className="flex flex-col">
-                                                            {booking.scheduled_at ? (
+                                                            {isScheduledAtValid(booking.scheduled_at) ? (
                                                                 <span className="font-medium capitalize text-lg text-primary">
-                                                                    {format(new Date(booking.scheduled_at), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })}
+                                                                    {format(new Date(booking.scheduled_at!), "EEEE d MMMM 'à' HH'h'mm", { locale: fr })}
                                                                 </span>
                                                             ) : booking.offer?.event_start_date ? (
                                                                 <span className="font-medium capitalize text-lg text-primary">
@@ -397,10 +401,12 @@ export default function Bookings() {
                                                                 </span>
                                                             ) : (
                                                                 <div className="flex flex-col">
-                                                                    <span className="font-medium capitalize text-lg text-gray-900">
-                                                                        {format(new Date(booking.booking_date), "d MMMM yyyy", { locale: fr })}
-                                                                    </span>
-                                                                    {(booking.offer?.booking_type === 'calendly' || !booking.offer?.booking_type) && (
+                                                                    {isScheduledAtValid(booking.booking_date) && (
+                                                                        <span className="font-medium capitalize text-lg text-gray-900">
+                                                                            {format(new Date(booking.booking_date), "d MMMM yyyy", { locale: fr })}
+                                                                        </span>
+                                                                    )}
+                                                                    {(booking.offer?.booking_type === 'calendly' || !booking.offer?.booking_type || !isScheduledAtValid(booking.scheduled_at)) && (
                                                                         <span className="text-xs text-orange-600 font-medium mt-0.5">
                                                                             Date de rendez-vous à définir
                                                                         </span>
@@ -451,8 +457,8 @@ export default function Bookings() {
 
                                                 )}
 
-                                                {/* External Link (Visio) */}
-                                                {(booking.offer?.external_link && booking.offer?.booking_type === 'event') && (
+                                                {/* External Link (Visio / Access) */}
+                                                {(booking.offer?.external_link) && (
                                                     <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                                         <div className="flex items-center gap-2 text-blue-800">
                                                             <div className="p-1.5 bg-white rounded-full">

@@ -155,6 +155,13 @@ export function OfferCard({
                     💳 Pack Ardoise
                   </span>
                 )}
+
+                {/* Simple Access Badge */}
+                {bookingType === 'simple_access' && (
+                  <span className="text-[10px] uppercase font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100 flex items-center gap-1">
+                    🎟️ Entrée Libre
+                  </span>
+                )}
               </div>
 
               {bookingType === 'promo' && promoConditions ? (

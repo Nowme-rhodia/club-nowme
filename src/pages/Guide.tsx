@@ -98,12 +98,28 @@ export function Guide() {
                     </div>
                 </div>
 
-                {/* Card 4: Offres & Codes */}
+                {/* Card 4: Programme Fidélité (NEW) */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 mb-4">
+                    <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center text-pink-600 mb-4">
                         <Gift className="w-6 h-6" />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-3">4. Ventes Privées</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-3">4. Programme Fidélité</h2>
+                    <p className="text-gray-600 text-sm mb-4">
+                        Ton kiff est récompensé !
+                    </p>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                        <li>💰 <strong>1€ dépensé = 1 point</strong></li>
+                        <li>📅 <strong>1 Sortie organisée = 50 points</strong></li>
+                        <li>🎁 <strong>Débloque jusqu'à 70€</strong> de bon d'achat !</li>
+                    </ul>
+                </div>
+
+                {/* Card 5: Ventes Privées */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 mb-4">
+                        <ShoppingBag className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-3">5. Ventes Privées</h2>
                     <ul className="space-y-2 text-sm text-gray-600">
                         <li><strong>Code Promo :</strong> Copier-coller sur le site partenaire.</li>
                         <li><strong>Lien secret :</strong> Accès direct aux tarifs négociés.</li>
@@ -111,12 +127,12 @@ export function Guide() {
                     </ul>
                 </div>
 
-                {/* Card 5: Mon Compte */}
+                {/* Card 6: Mon Compte */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 mb-4">
                         <Settings className="w-6 h-6" />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-3">5. Mon Compte</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-3">6. Mon Compte</h2>
                     <p className="text-gray-600 text-sm mb-4">
                         Accessible via ton profil en haut à droite.
                     </p>
@@ -151,6 +167,6 @@ export function Guide() {
                     Retour à l'accueil
                 </Link>
             </div>
-        </div>
+        </div >
     );
 }

@@ -94,73 +94,6 @@ export default function BookingSuccess() {
         init();
     }, [user, sessionId, offerIdParam, variantIdParam]);
 
-    // Load Calendly Script if needed
-    // Load and Init Calendly Widget
-    useEffect(() => {
-        if (status === 'success' && type === 'calendly' && offer?.calendly_url) {
-            const initWidget = () => {
-                if (window.Calendly && document.getElementById('calendly-inline-widget')) {
-                    window.Calendly.initInlineWidget({
-                        url: `${offer.calendly_url}${offer.calendly_url.includes('?') ? '&' : '?'}hide_landing_page_details=1&hide_gdpr_banner=1`,
-                        parentElement: document.getElementById('calendly-inline-widget'),
-                        prefill: {
-                            email: user?.email,
-                            name: (profile?.first_name && profile?.last_name) ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name
-                        },
-                        utm: {
-                            utmSource: user?.id,
-                            utmContent: offer.id,
-                            utmMedium: 'booking_success',
-                            utmCampaign: 'pay_first'
-                        }
-                    });
-                }
-            };
-
-            if (!window.Calendly) {
-                const script = document.createElement('script');
-                script.src = "https://assets.calendly.com/assets/external/widget.js";
-                script.async = true;
-                script.onload = initWidget; // Init after load
-                document.body.appendChild(script);
-            } else {
-                initWidget(); // Init immediately if already present
-            }
-        }
-    }, [status, type, offer]);
-
-    // Listener for Calendly events
-    useEffect(() => {
-        function isCalendlyEvent(e: any) {
-            return e.data.event && e.data.event.indexOf('calendly') === 0;
-        }
-
-        const handleEvent = (e: any) => {
-            if (isCalendlyEvent(e) && e.data.event === 'calendly.event_scheduled') {
-                // Show notification and redirect
-                const toastId = document.createElement('div');
-                toastId.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-50 animate-slide-in flex items-center gap-3';
-                toastId.innerHTML = `
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    <div>
-                        <h4 class="font-bold">Rendez-vous confirmé !</h4>
-                        <p class="text-sm opacity-90">Redirection vers vos réservations...</p>
-                    </div>
-                `;
-                document.body.appendChild(toastId);
-
-                // Redirect after short delay
-                setTimeout(() => {
-                    navigate('/mes-reservations');
-                    document.body.removeChild(toastId);
-                }, 3000);
-            }
-        };
-
-        window.addEventListener('message', handleEvent);
-        return () => window.removeEventListener('message', handleEvent);
-    }, [navigate]);
-
     if (status === 'loading') {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -203,10 +136,40 @@ export default function BookingSuccess() {
                     </p>
                 </div>
 
-                {/* Calendly logic merged above */}
+                {/* Contact Partner / Calendly Replacement Success */}
+                {(type === 'calendly' || (type === 'event' && !searchParams.get('scheduled_at') && !offer?.event_start_date)) && (
+                    <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
+                        <h2 className="text-xl font-bold mb-4">Réservation confirmée !</h2>
+                        <div className="bg-blue-50 border border-blue-100 p-6 rounded-xl mb-6 text-left">
+                            <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                                <span className="text-xl">📅</span>
+                                Étape suivante : Fixer la date
+                            </h3>
+                            <p className="text-blue-800 text-sm mb-4">
+                                Votre paiement a bien été validé. Pour finaliser l'organisation de votre Kiff, veuillez prendre contact avec le partenaire :
+                            </p>
 
-                {/* Event Info */}
-                {type === 'event' && (
+                            {offer?.partner?.phone && (
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="font-bold text-blue-900">Téléphone :</span>
+                                    <a href={`tel:${offer.partner.phone}`} className="text-blue-600 hover:underline">{offer.partner.phone}</a>
+                                </div>
+                            )}
+
+                            <div className="mt-4 p-3 bg-white rounded-lg border border-blue-100 text-sm text-gray-500 italic">
+                                "Bonjour, je viens de réserver l'offre {offer?.title} sur NowMe (Commande #{sessionId?.slice(-6).toUpperCase()}), je vous appelle pour convenir d'une date."
+                            </div>
+                        </div>
+
+                        <Link to="/mes-reservations" className="inline-flex items-center px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors">
+                            Voir mes réservations
+                            <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
+                        </Link>
+                    </div>
+                )}
+
+                {/* Event Info (Only if date is defined) */}
+                {type === 'event' && (searchParams.get('scheduled_at') || offer?.event_start_date) && (
                     <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
                         <h2 className="text-xl font-bold mb-4">Prochaines étapes</h2>
                         <p className="text-gray-600 mb-6">
@@ -249,26 +212,6 @@ export default function BookingSuccess() {
                             Voir mes réservations
                             <ArrowLeft className="w-4 h-4 ml-2 rotate-180" />
                         </Link>
-                    </div>
-                )}
-
-                {/* Calendly / Event / Purchase Success Combined */}
-                {/* Calendly Post-Payment Scheduling */}
-                {type === 'calendly' && (
-                    <div className="bg-white rounded-2xl p-8 shadow-xl text-center">
-                        <h2 className="text-xl font-bold mb-4">Dernière étape : Choisissez votre créneau</h2>
-                        <p className="text-gray-600 mb-6">
-                            Votre paiement est validé. Veuillez maintenant sélectionner la date et l'heure de votre rendez-vous ci-dessous.
-                        </p>
-
-                        <div
-                            id="calendly-inline-widget"
-                            style={{ minWidth: '320px', height: '700px', overflow: 'hidden' }}
-                        />
-
-                        <div className="mt-6 text-sm text-gray-400">
-                            Si le calendrier ne s'affiche pas, <a href={offer?.calendly_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">cliquez ici</a>.
-                        </div>
                     </div>
                 )}
 
@@ -322,8 +265,6 @@ export default function BookingSuccess() {
                         </div>
                     </div>
                 )}
-
-
 
             </div>
         </div>

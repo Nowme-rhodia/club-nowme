@@ -165,7 +165,7 @@ export default function Home() {
       {/* ... keeping Hero & EventGallery ... */}
       <SEO
         title="Nowme - Le Club Privé des Femmes qui Kiffent"
-        description="Rejoins le club n°1 des sorties entre filles en Île-de-France. Événements, amitié et bons plans !"
+        description="Rejoins Nowme, le Club privé n°1 pour femmes en Île-de-France. Sorties exclusives, nouvelles amitiés, dîners, voyages et bons plans. L'abonnement ultime pour reprendre le pouvoir sur ton temps libre !"
       />
 
       {/* Hero Section */}
@@ -240,6 +240,18 @@ export default function Home() {
               bg="bg-purple-100"
               title="📅 L'Agenda Secret"
               desc="Accès prioritaire à toutes les sorties. Sold Out pour le public ? Pas pour toi. Tu es VIP partout."
+            />
+
+            {/* HERO ITEM: Jackpot Fidélité (Large - NEW) */}
+            <BenefitCard
+              large={true}
+              className="md:col-span-2 lg:col-span-2 row-span-1 bg-gradient-to-br from-yellow-50 to-white"
+              icon="Trophy"
+              color="text-yellow-600"
+              bg="bg-yellow-100"
+              title="💰 Le Jackpot Fidélité"
+              desc="Ton kiff paie ! 1€ = 1 point. Débloque jusqu'à 70€ de bon d'achat juste en profitant de ta vie."
+              tags={['1€ = 1pt', 'Jackpot 70€']}
             />
 
             {/* Ventes Privées */}

@@ -88,7 +88,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   // Type & Specifics
   const [locationMode, setLocationMode] = useState<'physical' | 'online' | 'at_home'>('physical');
   const [serviceZones, setServiceZones] = useState<Array<{ code: string; fee: number }>>([]);
-  const [eventType, setEventType] = useState<'calendly' | 'event' | 'promo' | 'purchase' | 'wallet_pack'>('calendly');
+  const [eventType, setEventType] = useState<'calendly' | 'event' | 'promo' | 'purchase' | 'wallet_pack' | 'simple_access'>('event');
   const [eventDate, setEventDate] = useState('');
   const [eventEndDate, setEventEndDate] = useState('');
   const [calendlyUrl, setCalendlyUrl] = useState('');
@@ -164,20 +164,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           : null
       });
 
-      setEventType(offer.booking_type || 'calendly');
-
-      // Helper to format ISO date to YYYY-MM-DDTHH:mm for datetime-local input
-      const formatDateTimeForInput = (dateStr: string) => {
-        if (!dateStr) return '';
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return '';
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      };
-
-      setEventDate(offer.event_start_date ? formatDateTimeForInput(offer.event_start_date) : '');
-      setEventEndDate(offer.event_end_date ? formatDateTimeForInput(offer.event_end_date) : '');
-      setCalendlyUrl(offer.calendly_url || '');
+      setEventType(offer.booking_type === 'calendly' ? 'event' : (offer.booking_type || 'event'));
       setPromoCode(offer.promo_code || '');
       setPromoConditions(offer.promo_conditions || '');
       setDigitalProductFile(offer.digital_product_file || null);
@@ -321,8 +308,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         return;
       }
 
-      if (eventType === 'event' && locationMode === 'physical' && !locationState.street_address) {
-        toast.error('L\'adresse est obligatoire pour un événement physique');
+      if ((eventType === 'event' || eventType === 'simple_access') && locationMode === 'physical' && !locationState.street_address) {
+        toast.error('L\'adresse est obligatoire pour une expérience physique');
         setLoading(false);
         return;
       }
@@ -425,10 +412,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         description,
         category_id: categoryData.id,
         booking_type: eventType,
-        calendly_url: eventType === 'calendly' ? calendlyUrl : null,
         event_start_date: eventType === 'event' && eventDate ? new Date(eventDate).toISOString() : null,
         event_end_date: eventType === 'event' && eventEndDate ? new Date(eventEndDate).toISOString() : null,
-        external_link: (eventType === 'promo' || (eventType === 'event' && locationMode === 'online')) ? externalLink : null,
+        external_link: (eventType === 'promo' || eventType === 'simple_access' || (eventType === 'event' && locationMode === 'online')) ? externalLink : null,
         promo_code: eventType === 'promo' ? promoCode : null,
         promo_conditions: eventType === 'promo' ? promoConditions : null,
         digital_product_file: eventType === 'purchase' ? digitalProductFile : null,
@@ -458,7 +444,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         // UPDATE
         const { error: updateError } = await supabase
           .from('offers')
-          .update(offerData)
+          .update(offerData as any)
           .eq('id', offer.id);
 
         if (updateError) throw updateError;
@@ -467,7 +453,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         // CREATE
         const { data: newOffer, error: createError } = await supabase
           .from('offers')
-          .insert(offerData)
+          .insert(offerData as any)
           .select()
           .single();
 
@@ -955,6 +941,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
               {[
                 { id: 'calendly', label: locationMode === 'online' ? 'Visio (Calendly)' : 'Rendez-vous', show: true },
                 { id: 'event', label: locationMode === 'online' ? 'Live / Atelier En ligne' : 'Événement', show: true },
+                { id: 'simple_access', label: 'Billet / Sans RDV', show: locationMode === 'physical' },
                 { id: 'purchase', label: 'Produit Digital (PDF)', show: locationMode === 'online' },
                 { id: 'wallet_pack', label: 'Pack Ardoise', show: true },
                 { id: 'promo', label: 'Code Promo Web', show: locationMode === 'online' }
@@ -974,6 +961,65 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             </div>
 
             {/* Conditional Fields */}
+            {eventType === 'simple_access' && (
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-blue-900 mb-2">🎟️ Billet ou Entrée simple</h4>
+                <p className="text-sm text-blue-700 mb-2">
+                  Idéal pour les accès libres (Spa, Salle de sport, Musée...) sans réservation horaire spécifique.
+                  Le client achète son entrée et vient quand il veut (selon vos horaires).
+                </p>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-blue-900 mb-1">Durée de validité du billet</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="duration_type"
+                        value="lifetime"
+                        checked={durationType === 'lifetime'}
+                        onChange={() => setDurationType('lifetime')}
+                        className="mr-2 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-blue-800">illimité / à vie</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="duration_type"
+                        value="fixed"
+                        checked={durationType === 'fixed'}
+                        onChange={() => setDurationType('fixed')}
+                        className="mr-2 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm text-blue-800">Date fixe / Période</span>
+                    </label>
+                  </div>
+                </div>
+                {durationType && durationType !== 'lifetime' && (
+                  <div className="mt-2 grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-blue-700">Valable à partir du</label>
+                      <input
+                        type="date"
+                        value={validityStartDate ? validityStartDate.split('T')[0] : ''}
+                        onChange={e => setValidityStartDate(e.target.value)}
+                        className="w-full mt-1 border border-blue-200 rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-blue-700">Jusqu'au</label>
+                      <input
+                        type="date"
+                        value={validityEndDate ? validityEndDate.split('T')[0] : ''}
+                        onChange={e => setValidityEndDate(e.target.value)}
+                        className="w-full mt-1 border border-blue-200 rounded px-2 py-1 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {eventType === 'calendly' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">URL Calendly</label>
@@ -1131,14 +1177,26 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             {eventType === 'promo' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Lien de l'offre</label>
-                  <input
-                    type="url"
-                    value={externalLink}
-                    onChange={(e) => setExternalLink(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    placeholder="https://..."
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mt-4 mb-2">
+                    {eventType === 'simple_access' ? 'Lien d\'accès (facultatif)' : 'Lien de l\'offre'}
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Link className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="url"
+                      value={externalLink}
+                      onChange={(e) => setExternalLink(e.target.value)}
+                      className="pl-10 block w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                      placeholder="https://..."
+                    />
+                    {eventType === 'simple_access' && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Ce lien ne sera visible par le client qu'après l'achat.
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Code Promo</label>

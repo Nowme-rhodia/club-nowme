@@ -11,7 +11,8 @@ import {
     Menu,
     X,
     Sparkles,
-    CreditCard
+    CreditCard,
+    Gift
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 
@@ -31,6 +32,7 @@ export default function SubscriberLayout() {
         { icon: Calendar, label: 'Mes Réservations', to: '/mon-compte/reservations', roles: ['subscriber', 'admin', 'partner', 'guest'] },
         { icon: Sparkles, label: 'Mes Sorties Club', to: '/mon-compte/squads', roles: ['subscriber', 'admin'] },
         { icon: CreditCard, label: 'Mes Echéanciers', to: '/mon-compte/echeanciers', roles: ['subscriber', 'admin'] },
+        { icon: Gift, label: 'Mes Récompenses', to: '/mon-compte/recompenses', roles: ['subscriber', 'admin'] },
         { icon: Wallet, label: 'Mon Ardoise', to: '/mon-compte/ardoise', roles: ['subscriber', 'admin'] },
         { icon: User, label: 'Mon Profil', to: '/mon-compte/profil', roles: ['subscriber', 'admin', 'partner', 'guest'] },
     ];
