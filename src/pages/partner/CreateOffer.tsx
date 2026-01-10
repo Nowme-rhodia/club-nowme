@@ -95,6 +95,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   const [externalLink, setExternalLink] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [promoConditions, setPromoConditions] = useState('');
+  const [accessPassword, setAccessPassword] = useState(''); // Password for restricted content
   const [digitalProductFile, setDigitalProductFile] = useState<string | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [cancellationPolicy, setCancellationPolicy] = useState<'flexible' | 'moderate' | 'strict' | 'non_refundable'>('flexible');
@@ -167,6 +168,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setEventType(offer.booking_type === 'calendly' ? 'event' : (offer.booking_type || 'event'));
       setPromoCode(offer.promo_code || '');
       setPromoConditions(offer.promo_conditions || '');
+      setAccessPassword(offer.access_password || '');
       setDigitalProductFile(offer.digital_product_file || null);
       setCancellationPolicy(offer.cancellation_policy || 'flexible');
 
@@ -314,11 +316,14 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         return;
       }
 
+      /* Calendly validation removed as it is now manual contact */
+      /*
       if (eventType === 'calendly' && !calendlyUrl) {
         toast.error('L\'URL Calendly est obligatoire');
         setLoading(false);
         return;
-      }
+      } 
+      */
 
       const validVariants = variants.filter(v => v.name && v.price);
       if (eventType !== 'promo' && validVariants.length === 0) {
@@ -433,6 +438,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         service_zones: locationMode === 'at_home' ? serviceZones : [],
         image_url: uploadedImageUrl,
         cancellation_policy: cancellationPolicy,
+        access_password: eventType === 'simple_access' ? accessPassword : null,
         installment_options: installmentOptions,
         // Status remains mostly unchanged or resets to draft if needed, but let's keep it simple
         status: (offer && offer.status === 'rejected') ? 'draft' : (offer ? offer.status : 'draft')
@@ -939,9 +945,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             <h3 className="font-semibold text-gray-900 mb-4">Type de réservation</h3>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
               {[
-                { id: 'calendly', label: locationMode === 'online' ? 'Visio (Calendly)' : 'Rendez-vous', show: true },
+                { id: 'calendly', label: locationMode === 'online' ? 'Visio (à convenir)' : 'Rendez-vous', show: true },
                 { id: 'event', label: locationMode === 'online' ? 'Live / Atelier En ligne' : 'Événement', show: true },
-                { id: 'simple_access', label: 'Billet / Sans RDV', show: locationMode === 'physical' },
+                { id: 'simple_access', label: locationMode === 'online' ? 'Accès Page Web / Lien Privé' : 'Billet / Sans RDV', show: true },
                 { id: 'purchase', label: 'Produit Digital (PDF)', show: locationMode === 'online' },
                 { id: 'wallet_pack', label: 'Pack Ardoise', show: true },
                 { id: 'promo', label: 'Code Promo Web', show: locationMode === 'online' }
@@ -963,11 +969,42 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             {/* Conditional Fields */}
             {eventType === 'simple_access' && (
               <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-blue-900 mb-2">🎟️ Billet ou Entrée simple</h4>
+                <h4 className="font-medium text-blue-900 mb-2">
+                  {locationMode === 'online' ? '🌐 Accès Page Web / Lien Privé' : '🎟️ Billet ou Entrée simple'}
+                </h4>
                 <p className="text-sm text-blue-700 mb-2">
-                  Idéal pour les accès libres (Spa, Salle de sport, Musée...) sans réservation horaire spécifique.
-                  Le client achète son entrée et vient quand il veut (selon vos horaires).
+                  {locationMode === 'online'
+                    ? "Vendez l'accès à une URL spécifique (Dossier Drive, Page Notion, Lien privé...). Le client recevra le lien par email après l'achat."
+                    : "Idéal pour les accès libres (Spa, Salle de sport, Musée...) sans réservation horaire spécifique. Le client achète son entrée et vient quand il veut."
+                  }
                 </p>
+
+                {locationMode === 'online' && (
+                  <div className="mt-4 space-y-4 border-t border-blue-200 pt-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-blue-900 mb-1"> Lien d'accès (Obligatoire)</label>
+                      <input
+                        type="url"
+                        value={externalLink}
+                        onChange={(e) => setExternalLink(e.target.value)}
+                        className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="https://drive.google.com/..."
+                        required={eventType === 'simple_access' && locationMode === 'online'}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-blue-900 mb-1">Mot de passe d'accès (Facultatif)</label>
+                      <input
+                        type="text"
+                        value={accessPassword}
+                        onChange={(e) => setAccessPassword(e.target.value)}
+                        className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ex: NOWME2025"
+                      />
+                      <p className="text-xs text-blue-700 mt-1">Si votre lien est protégé par un mot de passe, indiquez-le ici.</p>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-blue-900 mb-1">Durée de validité du billet</label>
                   <div className="flex gap-4">
@@ -1020,26 +1057,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
               </div>
             )}
 
-            {eventType === 'calendly' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">URL Calendly</label>
-                <input
-                  type="url"
-                  value={calendlyUrl}
-                  onChange={(e) => setCalendlyUrl(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                  placeholder="https://calendly.com/..."
-                />
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <PartnerCalendlySettings
-                    partnerId={partnerId}
-                    initialToken={null}
-                    onUpdate={() => toast.success('Config mise à jour')}
-                  />
-                </div>
-              </div>
-            )}
 
             {eventType === 'purchase' && (
               <div className="mt-4 p-4 bg-white border border-dashed border-gray-300 rounded-lg">
@@ -1234,34 +1252,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                 {/* Auto-set policy hiddenly */}
               </div>
             ) : (eventType === 'purchase' || eventType === 'promo') ? (
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
-                <p className="text-gray-900 font-medium">
-                  {eventType === 'purchase' ? 'Non remboursable' : 'Voir conditions sur le site du Partenaire'}
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  {eventType === 'purchase'
-                    ? "Les achats simples (PDF, objets, droits, Bons d'achat) ne sont pas remboursables."
-                    : "La politique d'annulation dépend des conditions générales de votre site."}
-                </p>
-              </div>
-            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  {
-                    value: 'flexible',
-                    label: 'Flexible (15 jours)',
-                    desc: 'Remboursement intégral jusqu\'à 15 jours avant l\'événement.'
-                  },
-                  {
-                    value: 'moderate',
-                    label: 'Modérée (7 jours)',
-                    desc: 'Remboursement intégral jusqu\'à 7 jours avant l\'événement.'
-                  },
-                  {
-                    value: 'strict',
-                    label: 'Stricte (24h)',
-                    desc: 'Remboursement intégral jusqu\'à 24h avant l\'événement.'
-                  },
                   {
                     value: 'non_refundable',
                     label: 'Non remboursable',
@@ -1289,9 +1281,79 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                   </div>
                 ))}
               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  {
+                    value: 'flexible',
+                    label: 'Flexible (15 jours)',
+                    desc: 'Remboursement intégral jusqu\'à 15 jours avant l\'événement.'
+                  },
+                  {
+                    value: 'moderate',
+                    label: 'Modérée (7 jours)',
+                    desc: 'Remboursement intégral jusqu\'à 7 jours avant l\'événement.'
+                  },
+                  {
+                    value: 'strict',
+                    label: 'Stricte (24h)',
+                    desc: 'Remboursement intégral jusqu\'à 24h avant l\'événement.'
+                  }
+                ].map((policy) => (
+                  <div
+                    key={policy.value}
+                    onClick={() => setCancellationPolicy(policy.value as any)}
+                    className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${cancellationPolicy === policy.value
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`font-semibold ${cancellationPolicy === policy.value ? 'text-primary' : 'text-gray-900'
+                        }`}>
+                        {policy.label}
+                      </span>
+                      {cancellationPolicy === policy.value && (
+                        <div className="w-4 h-4 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">{policy.desc}</p>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
+          {eventType === 'calendly' && (
+            <div className="bg-white border border-gray-300 rounded-lg p-6 mb-6">
+              <h4 className="font-semibold text-gray-900 mb-4">
+                🔗 Lien de prise de rendez-vous
+              </h4>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lien de votre agenda (Calendly, Doctolib, Google Calendar...)
+                </label>
+                <input
+                  type="url"
+                  value={externalLink}
+                  onChange={(e) => setExternalLink(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                  placeholder="https://calendly.com/mon-lien-agenda..."
+                />
+                <p className="mt-2 text-sm text-gray-500">
+                  Ce lien sera envoyé au client par email et affiché dans ses réservations après le paiement.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 text-blue-800 text-sm p-4 rounded-lg">
+                <strong>💡 Comment ça marche ?</strong><br />
+                1. Le client achète sa séance ici.<br />
+                2. Il reçoit votre lien de réservation.<br />
+                3. Il réserve son créneau directement sur votre outil habituel.
+              </div>
+            </div>
+          )}
 
 
           {/* --- Variants --- */}

@@ -439,6 +439,23 @@ export default function Bookings() {
                                                     </div>
                                                 )}
 
+                                                {/* Access Password Display */}
+                                                {(booking.offer?.access_password) && (
+                                                    <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3 flex items-center justify-between group cursor-pointer hover:bg-indigo-100 transition-colors"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(booking.offer.access_password || '');
+                                                            toast.success('Mot de passe copié !');
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Lock className="w-4 h-4 text-indigo-600" />
+                                                            <span className="text-sm text-indigo-800">Mot de passe :</span>
+                                                            <span className="font-mono font-bold text-indigo-900">{booking.offer.access_password}</span>
+                                                        </div>
+                                                        <Copy className="w-4 h-4 text-indigo-400 group-hover:text-indigo-600" />
+                                                    </div>
+                                                )}
+
                                                 {/* Promo Code Display */}
                                                 {(booking.source === 'promo' && booking.offer?.promo_code) && (
                                                     <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center justify-between group cursor-pointer hover:bg-gray-100 transition-colors"
@@ -467,8 +484,20 @@ export default function Bookings() {
                                                                 </svg>
                                                             </div>
                                                             <div>
-                                                                <span className="font-semibold text-sm block">Lien de la visio disponible</span>
-                                                                <span className="text-xs opacity-75">Connectez-vous à l'heure du rendez-vous</span>
+                                                                <span className="font-semibold text-sm block">
+                                                                    {booking.offer?.booking_type === 'simple_access'
+                                                                        ? 'Lien d\'accès disponible'
+                                                                        : booking.offer?.booking_type === 'calendly'
+                                                                            ? 'Prise de rendez-vous'
+                                                                            : 'Lien de la visio disponible'}
+                                                                </span>
+                                                                <span className="text-xs opacity-75">
+                                                                    {booking.offer?.booking_type === 'simple_access'
+                                                                        ? 'Cliquez pour accéder au contenu'
+                                                                        : booking.offer?.booking_type === 'calendly'
+                                                                            ? 'Réservez votre créneau ici'
+                                                                            : 'Connectez-vous à l\'heure du rendez-vous'}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                         <a
@@ -477,7 +506,11 @@ export default function Bookings() {
                                                             rel="noopener noreferrer"
                                                             className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors whitespace-nowrap w-full sm:w-auto text-center"
                                                         >
-                                                            Accéder au lien visio
+                                                            {booking.offer?.booking_type === 'simple_access'
+                                                                ? 'Accéder au contenu'
+                                                                : booking.offer?.booking_type === 'calendly'
+                                                                    ? 'Prendre Rendez-vous'
+                                                                    : 'Accéder au lien visio'}
                                                         </a>
                                                     </div>
                                                 )}
