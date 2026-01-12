@@ -33,7 +33,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../lib/auth';
 import { PRICING_TIERS, YEARLY_SAVINGS } from '../data/pricing';
 import { EventGallery } from '../components/EventGallery';
-import { VideoTestimonials } from '../components/VideoTestimonials';
+// import { VideoTestimonials } from '../components/VideoTestimonials';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -567,7 +567,7 @@ export default function Subscription() {
       </motion.section>
 
       {/* Video Testimonials */}
-      <VideoTestimonials />
+      {/* <VideoTestimonials /> */}
 
       {/* Section "Founding Member" (New) */}
       <motion.section className="py-16 bg-gradient-to-r from-pink-50 to-white" {...fadeInUp}>

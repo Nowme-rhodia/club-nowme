@@ -2,7 +2,7 @@ import React from 'react';
 import { SEO } from '../components/SEO';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Calendar, CreditCard, Gift, ArrowRight, Lock, Heart, Users } from 'lucide-react';
-import { VideoTestimonials } from '../components/VideoTestimonials';
+// import { VideoTestimonials } from '../components/VideoTestimonials';
 
 export function PublicGuide() {
     return (
@@ -145,7 +145,7 @@ export function PublicGuide() {
             </div>
 
             {/* Social Proof Section */}
-            <div className="bg-gray-50 py-20">
+            {/* <div className="bg-gray-50 py-20">
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="text-center mb-12">
                         <Heart className="w-12 h-12 text-pink-500 mx-auto mb-4 fill-current animate-pulse" />
@@ -154,7 +154,7 @@ export function PublicGuide() {
                     </div>
                     <VideoTestimonials />
                 </div>
-            </div>
+            </div> */}
 
             {/* Final CTA */}
             <div className="bg-white py-20 px-4 text-center">

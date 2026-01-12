@@ -1,0 +1,406 @@
+[
+  {
+    "name": "Accessoires de yoga / sport",
+    "parent_name": "Produits"
+  },
+  {
+    "name": "Activités insolites",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Activités nautiques (aquagym, natation)",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Activités nautiques (aquagym, natation)",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Activités sur glace (ex: patinoire)",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Activités sur glace (ex: patinoire)",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Activités terrestres",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Agence de voyage",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Assistant personnel",
+    "parent_name": "Services à domicile"
+  },
+  {
+    "name": "Astrologue/tarologue et autres pratiques",
+    "parent_name": "Spiritualité et énergie"
+  },
+  {
+    "name": "Atelier de création (poterie, couture, peinture)",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Atelier d'écriture",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Atelier d'écriture",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Mode et shopping"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Produits"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Services à domicile"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Spiritualité et énergie"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Spiritualité et énergie"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Services à domicile"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Produits"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Mode et shopping"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Autre",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Bars",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Beauté et hygiène, cosmétique",
+    "parent_name": "Produits"
+  },
+  {
+    "name": "Bien-être et relaxation",
+    "parent_name": null
+  },
+  {
+    "name": "Boîte de nuit",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Box bien-être",
+    "parent_name": "Produits"
+  },
+  {
+    "name": "Brunchs & Food Tours",
+    "parent_name": "Gastronomie & Art de la Table"
+  },
+  {
+    "name": "Centre de yoga, Pilates",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Chef privé",
+    "parent_name": "Services à domicile"
+  },
+  {
+    "name": "Club de lecture / Book Club",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Coach de vie, Personnel",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Coach parentalité",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Coach sportif",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Coach sportif",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Coiffure à domicile",
+    "parent_name": "Services à domicile"
+  },
+  {
+    "name": "Cours de Cuisine",
+    "parent_name": "Gastronomie & Art de la Table"
+  },
+  {
+    "name": "Créateur/trice de vêtements, accessoires",
+    "parent_name": "Mode et shopping"
+  },
+  {
+    "name": "Créateur/trice de vêtements, accessoires",
+    "parent_name": "Mode et shopping"
+  },
+  {
+    "name": "Culture et divertissement",
+    "parent_name": null
+  },
+  {
+    "name": "Développement personnel et coaching",
+    "parent_name": null
+  },
+  {
+    "name": "Dîners Privés",
+    "parent_name": "Gastronomie & Art de la Table"
+  },
+  {
+    "name": "DJ, animateur de soirée",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "École de musique / Organisation",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "École de photographie",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Entreprise d'événementiel culturel",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Entreprise d'événementiel culturel",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Esthétique à domicile",
+    "parent_name": "Services à domicile"
+  },
+  {
+    "name": "Facilitateur de cercle de parole",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Game room",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Gastronomie",
+    "parent_name": null
+  },
+  {
+    "name": "Guide touristique",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Hôtels / Maisons d'hôte",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Hôtels / Maisons d'hôte",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Hypnothérapeute",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Institut de beauté, Esthétique",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Loisirs et créativité",
+    "parent_name": null
+  },
+  {
+    "name": "Magnétiseur",
+    "parent_name": "Spiritualité et énergie"
+  },
+  {
+    "name": "Massage à domicile",
+    "parent_name": "Services à domicile"
+  },
+  {
+    "name": "Méditation",
+    "parent_name": "Spiritualité et énergie"
+  },
+  {
+    "name": "Mode et shopping",
+    "parent_name": null
+  },
+  {
+    "name": "Naturopathe, Sophrologue",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Oenologie & Dégustations",
+    "parent_name": "Gastronomie & Art de la Table"
+  },
+  {
+    "name": "One (wo)man show",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Organisateur d'atelier de seconde main",
+    "parent_name": "Mode et shopping"
+  },
+  {
+    "name": "Organisateur d'atelier de seconde main",
+    "parent_name": "Mode et shopping"
+  },
+  {
+    "name": "Organisateur de concerts",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Organisateur de retraites bien-être",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Organisateur de soirées à thème",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Personal shopper",
+    "parent_name": "Mode et shopping"
+  },
+  {
+    "name": "Praticien de médecine alternative",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Produits",
+    "parent_name": null
+  },
+  {
+    "name": "Psychologue",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Réflexologie",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Salle de danse",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Salle de sport",
+    "parent_name": "Sport et activités physiques"
+  },
+  {
+    "name": "Salon de massage, Drainage lymphatique",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Séjours à la nature",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Séjours culturels",
+    "parent_name": "Voyages et expériences"
+  },
+  {
+    "name": "Services à domicile",
+    "parent_name": null
+  },
+  {
+    "name": "Sophrologie",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Sophrologue",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Spa et centre de bien-être",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Spiritualité et énergie",
+    "parent_name": null
+  },
+  {
+    "name": "Sport et activités physiques",
+    "parent_name": null
+  },
+  {
+    "name": "Studio de photographie",
+    "parent_name": "Loisirs et créativité"
+  },
+  {
+    "name": "Thalassothérapie, Hammam",
+    "parent_name": "Bien-être et relaxation"
+  },
+  {
+    "name": "Théâtre, salle de spectacle",
+    "parent_name": "Culture et divertissement"
+  },
+  {
+    "name": "Thérapeute",
+    "parent_name": "Développement personnel et coaching"
+  },
+  {
+    "name": "Voyages et expériences",
+    "parent_name": null
+  }
+]

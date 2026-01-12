@@ -70,8 +70,14 @@ export default function SignUp() {
       .from('offer_categories')
       .select('id, name, parent_name')
       .order('name')
-      .then(({ data }) => {
-        if (data) setCategories(data);
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Error fetching categories:', error);
+        }
+        if (data) {
+          console.log('Categories loaded:', data.length);
+          setCategories(data);
+        }
       });
   }, []);
 

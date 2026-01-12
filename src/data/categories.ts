@@ -73,9 +73,12 @@ export const categories: Category[] = [
     description: "Expériences culinaires et dégustations",
     subcategories: [
       { name: "Brunchs & Food Tours", slug: "brunchs-food-tours" },
+      { name: "Boulangerie", slug: "boulangerie" },
       { name: "Cours de Cuisine", slug: "cours-de-cuisine" },
       { name: "Dîners Privés", slug: "diners-prives" },
-      { name: "Oenologie & Dégustations", slug: "oenologie-degustations" }
+      { name: "Épicerie", slug: "epicerie" },
+      { name: "Oenologie & Dégustations", slug: "oenologie-degustations" },
+      { name: "Restaurants", slug: "restaurants" }
     ]
   },
   {

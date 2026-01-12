@@ -7,7 +7,7 @@ import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
 import { OfferCard } from '../components/OfferCard';
 import { EventGallery } from '../components/EventGallery';
-import { VideoTestimonials } from '../components/VideoTestimonials';
+// import { VideoTestimonials } from '../components/VideoTestimonials';
 
 // ✅ On tape explicitement les noms d’icônes
 type IconName = keyof typeof LucideIcons;
@@ -386,7 +386,7 @@ export default function Home() {
       <LatestOffers />
 
       {/* Social Proof (Video Testimonials) */}
-      <VideoTestimonials />
+      {/* <VideoTestimonials /> */}
 
       {/* CTA final */}
       <div className="py-20 bg-gradient-to-br from-pink-500 to-purple-600 text-white relative overflow-hidden">
