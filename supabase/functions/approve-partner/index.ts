@@ -181,7 +181,7 @@ serve(async (req) => {
       })
     }
 
-    const signInUrl = `${Deno.env.get('SITE_URL') || 'https://nowme.club'}/connexion`
+    const signInUrl = `${Deno.env.get('SITE_URL') || 'https://club.nowme.fr'}/connexion`
 
     let emailContent = ''
 
