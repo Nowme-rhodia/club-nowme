@@ -181,7 +181,7 @@ serve(async (req) => {
       })
     }
 
-    const loginUrl = `${Deno.env.get('SITE_URL') || 'https://nowme.club'}/login`
+    const signInUrl = `${Deno.env.get('SITE_URL') || 'https://nowme.club'}/connexion`
 
     let emailContent = ''
 
@@ -213,9 +213,9 @@ serve(async (req) => {
         
         <p>Il semble que vous ayez déjà un compte sur Nowme. Nous avons mis à jour vos droits pour vous donner accès à l'espace partenaire.</p>
 
-        <p>Vous pouvez utiliser le lien ci-dessous pour accéder directement à votre espace (et réinitialiser votre mot de passe si nécessaire) :</p>
+        <p>Vous pouvez utiliser le lien ci-dessous pour accéder directement à votre espace :</p>
 
-        <p><a href="${recoveryLink}" style="display: inline-block; padding: 12px 24px; background-color: #E91E63; color: white; text-decoration: none; border-radius: 8px; margin-top: 16px;">Accéder à mon espace partenaire</a></p>
+        <p><a href="${signInUrl}" style="display: inline-block; padding: 12px 24px; background-color: #E91E63; color: white; text-decoration: none; border-radius: 8px; margin-top: 16px;">Accéder à mon espace partenaire</a></p>
         
         <h3>Prochaines étapes :</h3>
         <ol>
