@@ -22,12 +22,30 @@ export default function PartnerContractSign() {
     }, [user]);
 
     const loadPartner = async () => {
-        const partnerId = user?.user_metadata?.partner_id;
+        let partnerId = user?.user_metadata?.partner_id;
+
+        // Fallback: Si pas de partner_id dans les métadonnées, on cherche dans user_profiles
+        if (!partnerId && user?.id) {
+            try {
+                const { data: profileData } = await supabase
+                    .from('user_profiles')
+                    .select('partner_id')
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (profileData?.partner_id) {
+                    partnerId = profileData.partner_id;
+                    console.log("Partner ID found via user_profiles:", partnerId);
+                }
+            } catch (err) {
+                console.error("Error fetching user profile:", err);
+            }
+        }
 
         if (!partnerId) {
             toast.error("Compte partenaire non lié.");
             setLoading(false);
-            setFetchError("Compte utilisateur non lié à un partenaire (metadata.partner_id manquant).");
+            setFetchError("Compte utilisateur non lié à un partenaire (metadata.partner_id manquant et pas de profil trouvé).");
             return;
         }
 
