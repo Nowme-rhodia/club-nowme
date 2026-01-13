@@ -66,6 +66,7 @@ const Payouts = React.lazy(() => import('./pages/admin/Payouts'));
 const AdminCommunity = React.lazy(() => import('./pages/admin/Community'));
 const AdminBlog = React.lazy(() => import('./pages/admin/Blog'));
 const AdminBlogEditor = React.lazy(() => import('./pages/admin/BlogEditor'));
+const ContractGenerator = React.lazy(() => import('./pages/admin/ContractGenerator'));
 
 // Partner pages
 
@@ -76,6 +77,8 @@ const PartnerBookings = React.lazy(() => import('./pages/partner/Bookings'));
 const PartnerBookingDetail = React.lazy(() => import('./pages/partner/BookingDetail'));
 const PartnerReviews = React.lazy(() => import('./pages/partner/Reviews'));
 const PartnerGuide = React.lazy(() => import('./pages/partner/PartnerGuide'));
+const PartnerContractSign = React.lazy(() => import('./pages/partner/ContractSign'));
+const PartnerContractView = React.lazy(() => import('./pages/partner/ContractView'));
 const PartnerPublicProfile = React.lazy(() => import('./pages/PartnerPublicProfile'));
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
@@ -188,6 +191,8 @@ function App() {
                       </PrivateRoute>
                     }
                   >
+                    <Route path="sign-contract" element={<PartnerContractSign />} />
+                    <Route path="contract" element={<PartnerContractView />} />
                     <Route path="dashboard" element={<PartnerDashboard />} />
                     <Route path="guide-partenaire" element={<PartnerGuide />} />
                     <Route path="offers" element={<PartnerOffers />} />
@@ -283,10 +288,16 @@ function App() {
                     <Route path="refunds" element={<RefundRequests />} />
                     <Route path="payouts" element={<Payouts />} />
                     <Route path="community" element={<AdminCommunity />} />
-                    <Route path="blog" element={<AdminBlog />} />
                     <Route path="blog/new" element={<AdminBlogEditor />} />
                     <Route path="blog/edit/:id" element={<AdminBlogEditor />} />
                   </Route>
+
+                  {/* Standalone Admin Pages (No Layout) */}
+                  <Route path="/admin/contract/:partnerId" element={
+                    <PrivateRoute allowedRoles={['admin']}>
+                      <ContractGenerator />
+                    </PrivateRoute>
+                  } />
 
                   {/* Legal routes */}
                   <Route path="/mentions-legales" element={<MentionsLegales />} />

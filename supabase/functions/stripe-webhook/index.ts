@@ -113,11 +113,18 @@ Deno.serve(async (req) => {
                 let commissionAmount = 0;
                 let commissionNote = "Standard (0%)";
 
-                if (offerDetails?.category) {
-                    const { commission_model, rate_first_order, rate_recurring } = offerDetails.category;
-                    const model = commission_model || 'transaction'; // Default
-                    const rateFirst = Number(rate_first_order) || 0;
-                    const rateRecur = Number(rate_recurring) || 0;
+                // Fetch PARTNER commission settings (overrides category logic)
+                const { data: partnerSettings } = await supabaseClient
+                    .from('partners')
+                    .select('commission_model, commission_rate, commission_rate_repeat')
+                    .eq('id', offerDetails?.partner_id)
+                    .single();
+
+                if (partnerSettings) {
+                    const { commission_model, commission_rate, commission_rate_repeat } = partnerSettings;
+                    const model = commission_model || 'fixed';
+                    const rateBase = Number(commission_rate) || 0;
+                    const rateRepeat = Number(commission_rate_repeat) || 0; // Only relevant for acquisition model
 
                     if (model === 'acquisition') {
                         // Check for previous confirmed bookings with this partner
@@ -125,23 +132,51 @@ Deno.serve(async (req) => {
                             .from('bookings')
                             .select('id', { count: 'exact', head: true })
                             .eq('user_id', user_id)
-                            .eq('partner_id', offerDetails.partner_id) // Ensure we use partner_id from offer
+                            .eq('partner_id', offerDetails.partner_id)
                             .eq('status', 'confirmed');
 
                         // Note: current booking is not yet inserted/confirmed, so count is historic.
                         const isFirstOrder = (count === 0);
 
                         if (isFirstOrder) {
-                            commissionAmount = amount * (rateFirst / 100);
-                            commissionNote = `Acquisition client (${rateFirst}%)`;
+                            commissionAmount = amount * (rateBase / 100);
+                            commissionNote = `Acquisition client (1er achat: ${rateBase}%)`;
                         } else {
-                            commissionAmount = amount * (rateRecur / 100);
-                            commissionNote = `Frais de suivi (${rateRecur}%)`;
+                            commissionAmount = amount * (rateRepeat / 100);
+                            commissionNote = `Fidélité (Suivi: ${rateRepeat}%)`;
                         }
                     } else {
-                        // Transaction Mode (Fixed)
-                        commissionAmount = amount * (rateFirst / 100); // Using first_order as the fixed rate
-                        commissionNote = `Commission de vente (${rateFirst}%)`;
+                        // Fixed Model
+                        commissionAmount = amount * (rateBase / 100);
+                        commissionNote = `Commission Fixe (${rateBase}%)`;
+                    }
+                } else if (offerDetails?.category) {
+                    // FALLBACK: Category defaults if partner has no settings (legacy support)
+                    const { commission_model, rate_first_order, rate_recurring } = offerDetails.category;
+                    const model = commission_model || 'transaction'; // Default
+                    const rateFirst = Number(rate_first_order) || 0;
+                    const rateRecur = Number(rate_recurring) || 0;
+
+                    if (model === 'acquisition') {
+                        const { count } = await supabaseClient
+                            .from('bookings')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('user_id', user_id)
+                            .eq('partner_id', offerDetails.partner_id)
+                            .eq('status', 'confirmed');
+
+                        const isFirstOrder = (count === 0);
+
+                        if (isFirstOrder) {
+                            commissionAmount = amount * (rateFirst / 100);
+                            commissionNote = `Acquisition client (Catégorie: ${rateFirst}%)`;
+                        } else {
+                            commissionAmount = amount * (rateRecur / 100);
+                            commissionNote = `Frais de suivi (Catégorie: ${rateRecur}%)`;
+                        }
+                    } else {
+                        commissionAmount = amount * (rateFirst / 100);
+                        commissionNote = `Commission de vente (Catégorie: ${rateFirst}%)`;
                     }
                 }
 

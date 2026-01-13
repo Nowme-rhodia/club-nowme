@@ -183,23 +183,56 @@ serve(async (req) => {
 
     const signInUrl = `${Deno.env.get('SITE_URL') || 'https://club.nowme.fr'}/connexion`
 
+    // Format commission terms for email
+    let commissionTermsHtml = '';
+    const model = partner.commission_model || 'fixed';
+    const rate = partner.commission_rate || 0;
+    const rateRepeat = partner.commission_rate_repeat || 0;
+
+    if (model === 'acquisition') {
+      commissionTermsHtml = `
+            <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <h3 style="margin-top: 0; color: #1f2937;">Vos Conditions de Partenariat</h3>
+                <p style="margin-bottom: 8px;"><strong>Modèle :</strong> Acquisition & Fidélisation</p>
+                <ul style="padding-left: 20px; margin: 0;">
+                    <li><strong>${rate}%</strong> de commission sur le 1er achat (Acquisition)</li>
+                    <li><strong>${rateRepeat}%</strong> de commission sur les achats suivants (Gestion)</li>
+                </ul>
+            </div>
+        `;
+    } else {
+      commissionTermsHtml = `
+            <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <h3 style="margin-top: 0; color: #1f2937;">Vos Conditions de Partenariat</h3>
+                <p style="margin-bottom: 8px;"><strong>Modèle :</strong> Commission Fixe</p>
+                <ul style="padding-left: 20px; margin: 0;">
+                    <li><strong>${rate}%</strong> de commission sur toutes les transactions</li>
+                </ul>
+            </div>
+        `;
+    }
+
+    const commonSteps = `
+        <h3>Prochaine étape obligatoire : Signature du Contrat ✍️</h3>
+        <p>Pour activer définitivement votre compte et accéder à votre tableau de bord, vous devez signer électroniquement votre mandat de gestion.</p>
+        <p>Cela se fait en un clic lors de votre première connexion.</p>
+    `;
+
     let emailContent = ''
 
     if (isNewUser) {
       emailContent = `
-        <h2>Félicitations ! Votre espace Partenaire Nowme est prêt 🔑</h2>
+        <h2>Félicitations ! Votre candidature est pré-approuvée 🔑</h2>
         <p>Bonjour ${partner.contact_name},</p>
-        <p>Nous sommes ravis de vous informer que votre demande de partenariat pour <strong>${partner.business_name}</strong> a été approuvée !</p>
+        <p>L'équipe Nowme a validé votre profil pour <strong>${partner.business_name}</strong>.</p>
         
-        <p>Nous sommes ravis de vous compter parmi nous. Cliquez ci-dessous pour configurer votre mot de passe et accéder à votre dashboard.</p>
+        ${commissionTermsHtml}
         
-        <p><a href="${recoveryLink}" style="display: inline-block; padding: 12px 24px; background-color: #E91E63; color: white; text-decoration: none; border-radius: 8px; margin-top: 16px;">Configurer mon mot de passe et accéder à mon espace</a></p>
+        ${commonSteps}
         
-        <h3>Prochaines étapes :</h3>
-        <ol>
-          <li>Complétez votre profil</li>
-          <li>Créez vos premières offres exclusives</li>
-        </ol>
+        <p>Cliquez ci-dessous pour créer votre mot de passe, signer votre contrat et commencer :</p>
+        
+        <p><a href="${recoveryLink}" style="display: inline-block; padding: 12px 24px; background-color: #E91E63; color: white; text-decoration: none; border-radius: 8px; margin-top: 16px;">Activer mon compte et Signer</a></p>
         
         <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
         <p>À très bientôt sur Nowme !</p>
@@ -207,20 +240,17 @@ serve(async (req) => {
       `
     } else {
       emailContent = `
-        <h2>Félicitations ! Votre espace Partenaire Nowme est prêt 🔑</h2>
+        <h2>Félicitations ! Votre candidature est pré-approuvée 🔑</h2>
         <p>Bonjour ${partner.contact_name},</p>
-        <p>Nous sommes ravis de vous informer que votre demande de partenariat pour <strong>${partner.business_name}</strong> a été approuvée !</p>
+        <p>L'équipe Nowme a validé votre profil pour <strong>${partner.business_name}</strong>.</p>
         
-        <p>Il semble que vous ayez déjà un compte sur Nowme. Nous avons mis à jour vos droits pour vous donner accès à l'espace partenaire.</p>
-
-        <p>Vous pouvez utiliser le lien ci-dessous pour accéder directement à votre espace :</p>
-
-        <p><a href="${signInUrl}" style="display: inline-block; padding: 12px 24px; background-color: #E91E63; color: white; text-decoration: none; border-radius: 8px; margin-top: 16px;">Accéder à mon espace partenaire</a></p>
+        ${commissionTermsHtml}
         
-        <h3>Prochaines étapes :</h3>
-        <ol>
-          <li>Complétez votre profil et créez vos offres</li>
-        </ol>
+        ${commonSteps}
+
+        <p>Connectez-vous pour signer le mandat et débloquer votre espace partenaire :</p>
+
+        <p><a href="${signInUrl}" style="display: inline-block; padding: 12px 24px; background-color: #E91E63; color: white; text-decoration: none; border-radius: 8px; margin-top: 16px;">Accéder à mon espace et Signer</a></p>
         
         <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
         <p>À très bientôt sur Nowme !</p>

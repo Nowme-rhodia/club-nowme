@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nowme Pricing Elementor Export</title>
+</head>
+
+<body>
+
+    <!-- COPIER A PARTIR D'ICI POUR ELEMENTOR -->
+    <style>
+        /* Styles pour l'intégration Elementor - Nowme Pricing */
+        .nowme-pricing-container {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: transparent;
+            /* Transparent pour s'intégrer au fond du site */
+            color: #1f2937;
+            box-sizing: border-box;
+        }
+
+        .nowme-pricing-container * {
+            box-sizing: border-box;
+        }
+
+        .nowme-pricing-header {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 60px;
+        }
+
+        .nowme-title {
+            font-size: 36px;
+            font-family: inherit;
+            font-weight: 800;
+            color: #111827;
+            margin: 0 0 24px 0;
+            line-height: 1.2;
+        }
+
+        .nowme-subtitle {
+            font-size: 20px;
+            color: #4b5563;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .nowme-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        @media (min-width: 768px) {
+            .nowme-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Carte Mensuelle */
+        .nowme-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 32px;
+            border: 2px solid rgba(229, 231, 235, 1);
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .nowme-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Carte Annuelle (Premium) */
+        .nowme-card.premium {
+            background: linear-gradient(135deg, rgba(255, 230, 235, 0.3) 0%, rgba(230, 240, 255, 0.3) 100%);
+            border: 2px solid #ec4899;
+            /* Couleur primaire Nowme */
+        }
+
+        .nowme-tag {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 4px 16px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .nowme-tag.premium {
+            background: linear-gradient(90deg, #ec4899, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .nowme-plan-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            margin: 8px 0 8px 0;
+        }
+
+        .nowme-price {
+            font-size: 48px;
+            font-weight: 800;
+            color: #111827;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .nowme-price.pink {
+            color: #ec4899;
+        }
+
+        .nowme-period {
+            font-size: 14px;
+            color: #6b7280;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .nowme-savings-box {
+            background-color: rgba(249, 250, 251, 0.8);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .nowme-card.premium .nowme-savings-box {
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .nowme-savings-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .nowme-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .nowme-row-label {
+            color: #4b5563;
+        }
+
+        .nowme-row-value {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .text-green {
+            color: #16a34a;
+        }
+
+        .text-pink {
+            color: #ec4899;
+        }
+
+        .nowme-divider {
+            height: 1px;
+            background-color: #e5e7eb;
+            margin: 8px 0;
+        }
+
+        .nowme-features {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 32px 0;
+            flex-grow: 1;
+        }
+
+        .nowme-feature-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.5;
+        }
+
+        .nowme-check {
+            margin-right: 10px;
+            color: #10b981;
+            /* Green check */
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .nowme-card.premium .nowme-check {
+            color: #ec4899;
+            /* Pink check for premium */
+        }
+
+        .nowme-btn {
+            display: block;
+            width: 100%;
+            padding: 16px 24px;
+            border-radius: 9999px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 16px;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-sizing: border-box;
+            cursor: pointer;
+            line-height: 1.2;
+            border-bottom: none;
+            /* Override some WP themes */
+        }
+
+        .nowme-btn-outline {
+            background: transparent;
+            border: 2px solid #ec4899;
+            color: #ec4899;
+        }
+
+        .nowme-btn-outline:hover {
+            background: #ec4899;
+            color: white;
+            border-color: #ec4899;
+        }
+
+        .nowme-btn-fill {
+            background: linear-gradient(90deg, #ec4899, #8b5cf6);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .nowme-btn-fill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            color: white;
+        }
+
+        .nowme-guarantee {
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 12px;
+        }
+    </style>
+
+    <div class="nowme-pricing-container">
+
+        <div class="nowme-grid">
+
+            <!-- PLAN MENSUEL -->
+            <div class="nowme-card">
+                <div class="nowme-tag">Sans engagement</div>
+
+                <h3 class="nowme-plan-title">Liberté Totale</h3>
+                <div class="nowme-price">12,99€</div>
+                <div class="nowme-period">le 1er mois, puis 39,99€/mois</div>
+
+                <div class="nowme-savings-box">
+                    <span class="nowme-savings-title">Ce que tu économises (réel) :</span>
+                    <div class="nowme-row">
+                        <span class="nowme-row-label">Events & Séjours</span>
+                        <span class="nowme-row-value">25€/mois</span>
+                    </div>
+                    <div class="nowme-row">
+                        <span class="nowme-row-label">Concours Box</span>
+                        <span class="nowme-row-value">10€/mois</span>
+                    </div>
+                    <div class="nowme-row">
+                        <span class="nowme-row-label">Réductions</span>
+                        <span class="nowme-row-value">50€+/mois</span>
+                    </div>
+                    <div class="nowme-divider"></div>
+                    <div class="nowme-row">
+                        <span class="nowme-row-value" style="color:#ec4899;">Valeur Totale</span>
+                        <span class="nowme-row-value" style="color:#ec4899; font-size:18px;">120€+/mois</span>
+                    </div>
+                </div>
+
+                <ul class="nowme-features">
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Accès complet immédiat</span>
+                    </li>
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Events partout en Île-de-France (et bientôt ailleurs)</span>
+                    </li>
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span><strong>Masterclass & Apéros offerts</strong></span>
+                    </li>
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span class="text-pink"><strong>Nouveau : Programme Fidélité</strong></span>
+                    </li>
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Communauté WhatsApp</span>
+                    </li>
+                </ul>
+
+                <!-- LIEN VERS APPLICATION REACT -->
+                <a href="https://club.nowme.fr/inscription?plan=monthly" class="nowme-btn nowme-btn-outline"
+                    target="_blank">
+                    Je teste (12,99€)
+                </a>
+            </div>
+
+            <!-- PLAN ANNUEL -->
+            <div class="nowme-card premium">
+                <div class="nowme-tag premium">✨ OFFRE POPULAIRE ✨</div>
+
+                <h3 class="nowme-plan-title">Club VIP Annuel</h3>
+                <div class="nowme-price pink">399€</div>
+                <div class="nowme-period">par an (soit <span class="text-green">2 mois offerts !</span>)</div>
+
+                <div class="nowme-savings-box">
+                    <span class="nowme-savings-title">Ta valeur ajoutée annuelle :</span>
+                    <div class="nowme-row">
+                        <span class="nowme-row-label">Valeur services (x12)</span>
+                        <span class="nowme-row-value">1440€</span>
+                    </div>
+                    <div class="nowme-row">
+                        <span class="nowme-row-label">Bonus Séjours</span>
+                        <span class="nowme-row-value text-green">+100€ OFF</span>
+                    </div>
+                    <div class="nowme-row">
+                        <span class="nowme-row-label">Économie abo</span>
+                        <span class="nowme-row-value text-green">+80€</span>
+                    </div>
+                    <div class="nowme-divider"></div>
+                    <div class="nowme-row">
+                        <span class="nowme-row-value" style="color:#ec4899;">Valeur réelle</span>
+                        <span class="nowme-row-value" style="color:#ec4899; font-size:18px;">1620€ / an</span>
+                    </div>
+                </div>
+
+                <ul class="nowme-features">
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span><strong>Tout du plan mensuel inclus</strong></span>
+                    </li>
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span><strong>100€ de réduction sur les séjours</strong></span>
+                    </li>
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Cadeau d'anniversaire exclusif</span>
+                    </li>
+                    <li class="nowme-feature-item">
+                        <svg class="nowme-check" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Accès prioritaire événements VIP</span>
+                    </li>
+                </ul>
+
+                <!-- LIEN VERS APPLICATION REACT -->
+                <a href="https://club.nowme.fr/inscription?plan=yearly" class="nowme-btn nowme-btn-fill"
+                    target="_blank">
+                    Profiter des 1620€ de valeur
+                </a>
+                <div class="nowme-guarantee">Paiement 100% sécurisé via Stripe • Satisfait ou remboursé.</div>
+            </div>
+
+        </div>
+    </div>
+    <!-- FIN DU CODE ELEMENTOR -->
+
+</body>
+
+</html>

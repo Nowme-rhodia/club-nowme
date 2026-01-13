@@ -10,7 +10,8 @@ import {
   Mail,
   CheckCircle2,
   XCircle,
-  Trash2
+  Trash2,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { approvePartner, rejectPartner } from '../../lib/partner';
@@ -382,54 +383,175 @@ export default function Partners() {
 
       {/* Modal */}
       {selectedPartner && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Détails du partenaire
-              </h2>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Entreprise</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {selectedPartner.business_name}
-                  </dd>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Détails du partenaire
+                </h2>
+                <button
+                  onClick={() => setSelectedPartner(null)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Information Générale */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Informations</h3>
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Entreprise</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedPartner.business_name}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Contact</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedPartner.contact_name}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Email</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedPartner.contact_email}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Téléphone</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedPartner.phone}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">SIRET</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedPartner.siret}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Adresse</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{selectedPartner.address}</dd>
+                    </div>
+                  </dl>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Contact</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {selectedPartner.contact_name}
-                  </dd>
+
+                {/* Configuration Commission */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                  <h3 className="text-lg font-medium text-blue-900 mb-4">Commission & Contrat</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-blue-900 mb-2">
+                        Modèle de Commission
+                      </label>
+                      <div className="flex gap-4">
+                        <label className="inline-flex items-center">
+                          <input
+                            type="radio"
+                            className="form-radio text-blue-600"
+                            checked={selectedPartner.commission_model === 'fixed'}
+                            onChange={async () => {
+                              const { error } = await supabase
+                                .from('partners')
+                                .update({ commission_model: 'fixed' })
+                                .eq('id', selectedPartner.id);
+                              if (!error) {
+                                setSelectedPartner({ ...selectedPartner, commission_model: 'fixed' });
+                                loadPartners();
+                              }
+                            }}
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Fixe (Taux unique)</span>
+                        </label>
+                        <label className="inline-flex items-center">
+                          <input
+                            type="radio"
+                            className="form-radio text-blue-600"
+                            checked={selectedPartner.commission_model === 'acquisition'}
+                            onChange={async () => {
+                              const { error } = await supabase
+                                .from('partners')
+                                .update({ commission_model: 'acquisition' })
+                                .eq('id', selectedPartner.id);
+                              if (!error) {
+                                setSelectedPartner({ ...selectedPartner, commission_model: 'acquisition' });
+                                loadPartners();
+                              }
+                            }}
+                          />
+                          <span className="ml-2 text-sm text-gray-700">Acquisition (Dégressif)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-blue-900">
+                          {selectedPartner.commission_model === 'acquisition'
+                            ? 'Taux 1ère visite (Acquisition)'
+                            : 'Taux de commission'}
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <input
+                            type="number"
+                            className="focus:ring-blue-500 focus:border-blue-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md"
+                            value={selectedPartner.commission_rate || 0}
+                            onChange={async (e) => {
+                              const val = parseFloat(e.target.value);
+                              const { error } = await supabase
+                                .from('partners')
+                                .update({ commission_rate: val })
+                                .eq('id', selectedPartner.id);
+                              if (!error) setSelectedPartner({ ...selectedPartner, commission_rate: val });
+                            }}
+                          />
+                          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {selectedPartner.commission_model === 'acquisition' && (
+                        <div>
+                          <label className="block text-sm font-medium text-blue-900">
+                            Taux visites suivantes (Fidélité)
+                          </label>
+                          <div className="mt-1 relative rounded-md shadow-sm">
+                            <input
+                              type="number"
+                              className="focus:ring-blue-500 focus:border-blue-500 block w-full pr-12 sm:text-sm border-gray-300 rounded-md"
+                              value={selectedPartner.commission_rate_repeat || 0}
+                              onChange={async (e) => {
+                                const val = parseFloat(e.target.value);
+                                const { error } = await supabase
+                                  .from('partners')
+                                  .update({ commission_rate_repeat: val })
+                                  .eq('id', selectedPartner.id);
+                                if (!error) setSelectedPartner({ ...selectedPartner, commission_rate_repeat: val });
+                              }}
+                            />
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 sm:text-sm">%</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-4">
+                      <button
+                        onClick={() => window.open(`/admin/contract/${selectedPartner.id}`, '_blank')}
+                        className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Générer le Contrat de Mandat
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {selectedPartner.contact_email}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Téléphone</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {selectedPartner.phone}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">SIRET</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {selectedPartner.siret}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Adresse</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {selectedPartner.address}
-                  </dd>
-                </div>
-              </dl>
+              </div>
 
               <div className="mt-6 flex justify-end">
                 <button
-                  onClick={() => setSelectedPartner(null)}
+                  onClick={() => {
+                    loadPartners(); // Refresh main list
+                    setSelectedPartner(null);
+                  }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
                   Fermer

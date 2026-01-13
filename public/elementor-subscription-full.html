@@ -1,0 +1,448 @@
+<!-- 
+VERSION SEO OPTIMISÉE (Keyphrase: "Club sorties entre filles")
+STRUCTURE "SAFE MODE" (Sans balises <html>/<body> pour éviter les bugs Elementor) - COPIER TOUT CE CODE 
+-->
+
+<style>
+    /* Import de police safe */
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+    /* --- IOLATION CSS --- */
+    #nowmelp-safe-root {
+        font-family: 'Plus Jakarta Sans', Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        color: #475569;
+        background-color: #ffffff;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    #nowmelp-safe-root *,
+    #nowmelp-safe-root *::before,
+    #nowmelp-safe-root *::after {
+        box-sizing: border-box;
+    }
+
+    /* VARIABLES LOCALES */
+    #nowmelp-safe-root {
+        --n-primary: #ec4899;
+        --n-secondary: #8b5cf6;
+        --n-dark: #0f172a;
+        --n-grad: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    }
+
+    /* TYPO */
+    #nowmelp-safe-root h1,
+    #nowmelp-safe-root h2,
+    #nowmelp-safe-root h3 {
+        font-family: 'Outfit', sans-serif;
+        color: #0f172a;
+        line-height: 1.2;
+        margin: 0 0 1rem 0;
+    }
+
+    /* CLASSES */
+    .nm-section {
+        padding: 60px 0;
+        position: relative;
+    }
+
+    .nm-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 20px;
+        position: relative;
+        z-index: 5;
+    }
+
+    .nm-gradient-text {
+        background: var(--n-grad);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: #ec4899;
+    }
+
+    .nm-btn {
+        display: inline-block;
+        padding: 14px 30px;
+        border-radius: 50px;
+        font-weight: 700;
+        text-decoration: none !important;
+        font-size: 16px;
+        transition: transform 0.2s;
+        border: none;
+        cursor: pointer;
+        text-align: center;
+    }
+
+    .nm-btn:hover {
+        transform: translateY(-3px);
+    }
+
+    .nm-btn-primary {
+        background: var(--n-grad);
+        color: white !important;
+        box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+    }
+
+    .nm-btn-outline {
+        background: white;
+        border: 2px solid #ec4899;
+        color: #ec4899 !important;
+    }
+
+    /* HERO */
+    .nm-hero {
+        background: radial-gradient(circle at top right, #fdf2f8, transparent 50%),
+            radial-gradient(circle at bottom left, #f5f3ff, transparent 50%);
+        min-height: 600px;
+        display: flex;
+        align-items: center;
+    }
+
+    .nm-grid {
+        display: grid;
+        gap: 40px;
+    }
+
+    @media (min-width: 900px) {
+        .nm-grid {
+            grid-template-columns: 1fr 1fr;
+            align-items: center;
+        }
+    }
+
+    .nm-badge {
+        display: inline-block;
+        background: white;
+        border: 1px solid #fce7f3;
+        color: #ec4899;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 30px;
+        font-size: 13px;
+        margin-bottom: 20px;
+    }
+
+    /* CARDS */
+    .nm-cards-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+        margin-top: -50px;
+        position: relative;
+        z-index: 10;
+        padding-bottom: 40px;
+    }
+
+    .nm-feature-card {
+        flex: 1 1 300px;
+        background: white;
+        padding: 25px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    /* IMAGES STACK */
+    .nm-img-stack {
+        position: relative;
+        height: 400px;
+        width: 100%;
+    }
+
+    .nm-img {
+        position: absolute;
+        border-radius: 20px;
+        background-size: cover;
+        background-position: center;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        border: 4px solid white;
+    }
+
+    .nm-img-1 {
+        width: 80%;
+        height: 90%;
+        top: 0;
+        right: 0;
+        transform: rotate(2deg);
+        z-index: 2;
+        background-image: url('https://club.nowme.fr/images/2024-Nowme-brunch%20(41).jpg');
+    }
+
+    .nm-img-2 {
+        width: 140px;
+        height: 180px;
+        bottom: 20px;
+        left: 10px;
+        transform: rotate(-5deg);
+        z-index: 3;
+        background-image: url('https://club.nowme.fr/images/NOWME-Karaoke-2024%20(69).jpg');
+    }
+
+    /* GALERIE */
+    .nm-marquee {
+        overflow: hidden;
+        white-space: nowrap;
+        padding: 40px 0;
+    }
+
+    .nm-track {
+        display: inline-block;
+        animation: nm-scroll 35s linear infinite;
+    }
+
+    .nm-track img {
+        height: 300px;
+        width: 220px;
+        object-fit: cover;
+        border-radius: 15px;
+        margin-right: 15px;
+    }
+
+    @keyframes nm-scroll {
+        0% {
+            transform: translateX(0);
+        }
+
+        100% {
+            transform: translateX(-50%);
+        }
+    }
+
+    /* PRIX */
+    .nm-pricing-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 30px;
+        justify-content: center;
+    }
+
+    .nm-price-card {
+        flex: 1 1 350px;
+        background: white;
+        border-radius: 25px;
+        padding: 35px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        max-width: 500px;
+    }
+
+    .nm-price-featured {
+        border: 2px solid #ec4899;
+        background: linear-gradient(to bottom, #fff, #fff1f2);
+        position: relative;
+    }
+
+    .nm-tag-top {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ec4899;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .nm-price-val {
+        font-size: 48px;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 10px 0;
+    }
+
+    .nm-list li {
+        list-style: none;
+        margin-bottom: 10px;
+        padding-left: 25px;
+        position: relative;
+    }
+
+    .nm-list li::before {
+        content: '✓';
+        color: #ec4899;
+        font-weight: bold;
+        position: absolute;
+        left: 0;
+    }
+
+    /* SEO TEXT BLOCK */
+    .nm-seo-content {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+        padding-top: 40px;
+        color: #64748b;
+        font-size: 15px;
+    }
+
+    .nm-seo-content a {
+        color: #ec4899;
+        text-decoration: underline;
+    }
+</style>
+
+<div id="nowmelp-safe-root">
+
+    <!-- HERO -->
+    <div class="nm-section nm-hero">
+        <div class="nm-container">
+            <div class="nm-grid">
+                <div>
+                    <div class="nm-badge">💖 We are Kiffeuses</div>
+                    <!-- SEO: H1 optimisé avec le mot clé -->
+                    <h1 style="font-size: clamp(32px, 5vw, 56px);">
+                        Rejoins le 1er <span class="nm-gradient-text">Club de Sorties entre Filles</span> qui réunit
+                        tous tes kiffs.
+                    </h1>
+                    <!-- SEO: Keyphrase dès le début -->
+                    <p style="font-size: 18px; margin-bottom: 30px;">
+                        Tu cherches un <b>club de sorties entre filles</b> pour bouger, voyager et rencontrer de
+                        nouvelles amies ?
+                        Imagine une plateforme unique qui rassemble tout ce qu'une femme peut désirer : sorties,
+                        voyages, rencontres...
+                        <b>Et ici, on te récompense pour kiffer.</b>
+                    </p>
+                    <a href="https://club.nowme.fr/inscription?plan=monthly" target="_blank"
+                        class="nm-btn nm-btn-primary">Je rejoins le cercle (12,99€)</a>
+                    <div style="font-size: 13px; color: #94a3b8; margin-top: 10px;">Satisfait ou remboursé • Sans
+                        engagement</div>
+                </div>
+                <!-- Images -->
+                <div class="nm-img-stack">
+                    <!-- SEO: Alt tags optimisés -->
+                    <div class="nm-img nm-img-1" role="img" aria-label="Brunch Nowme - Club de sorties entre filles">
+                    </div>
+                    <div class="nm-img nm-img-2" role="img" aria-label="Soirée Karaoké - Club de sorties entre filles">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AVANTAGES -->
+    <div class="nm-container">
+        <div class="nm-cards-row">
+            <div class="nm-feature-card">
+                <div style="font-size: 30px; margin-bottom: 15px;">🎡</div>
+                <h3>L'intégrale du Kiff</h3>
+                <p>Pourquoi jongler entre 10 sites ? Apéros, voyages, karaoké, sport... C'est le <b>club de sorties
+                        entre filles</b> ultime où tout est inclus.</p>
+            </div>
+            <div class="nm-feature-card">
+                <div style="font-size: 30px; margin-bottom: 15px;">🎁</div>
+                <h3>Récompensée pour Kiffer</h3>
+                <p>Ton bonheur rapporte ! Gagne des points à chaque sortie entre filles et échange-les contre des
+                    cadeaux et voyages.</p>
+            </div>
+            <div class="nm-feature-card">
+                <div style="font-size: 30px; margin-bottom: 15px;">👯‍♀️</div>
+                <!-- SEO: H3 Variation -->
+                <h3>Des sorties entre filles bienveillantes</h3>
+                <p>Une communauté 100% féminine. Tu viens seule au club, tu repars avec ta nouvelle squad d'amies pour
+                    la vie.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GALERIE -->
+    <div class="nm-section">
+        <div class="nm-container" style="text-align: center;">
+            <h2>La preuve par <span class="nm-gradient-text">l'image</span></h2>
+            <p>Découvre l'ambiance unique de notre club de sorties entre filles.</p>
+        </div>
+        <div class="nm-marquee">
+            <div class="nm-track">
+                <!-- SEO: Keyphrase dans tous les ALT -->
+                <img src="https://club.nowme.fr/images/NOWME-Karaoke-2024%20(69).jpg"
+                    alt="Karaoké Club sorties entre filles Paris">
+                <img src="https://club.nowme.fr/images/2025-fevrier-NOWME-clubbing%20(77).jpg"
+                    alt="Soirée Clubbing sorties entre filles">
+                <img src="https://club.nowme.fr/images/IMG_20241012_125525_1.jpg"
+                    alt="Voyage entre filles Marrakech Club Nowme">
+                <img src="https://club.nowme.fr/images/Sport-NOWME%20(34).jpg" alt="Sport et sorties entre filles">
+                <img src="https://club.nowme.fr/images/2024-Nowme-brunch%20(30).jpg"
+                    alt="Brunch Club sorties entre filles">
+                <!-- clone -->
+                <img src="https://club.nowme.fr/images/NOWME-Karaoke-2024%20(69).jpg"
+                    alt="Karaoké Club sorties entre filles">
+                <img src="https://club.nowme.fr/images/2025-fevrier-NOWME-clubbing%20(77).jpg"
+                    alt="Clubbing entre filles">
+                <img src="https://club.nowme.fr/images/IMG_20241012_125525_1.jpg" alt="Vacances club entre filles">
+            </div>
+        </div>
+    </div>
+
+    <!-- PRIX -->
+    <div class="nm-section" style="background: #f8fafc;">
+        <div class="nm-container">
+            <h2 style="text-align: center; margin-bottom: 40px;">Intègre le Cercle des Kiffeuses</h2>
+
+            <div class="nm-pricing-container">
+                <!-- Mensuel -->
+                <div class="nm-price-card">
+                    <span
+                        style="background: #e2e8f0; padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: bold;">POUR
+                        TESTER</span>
+                    <h3>Abonnement Mensuel</h3>
+                    <div class="nm-price-val">12,99€</div>
+                    <p style="color: #64748b;">le 1er mois, puis 39,99€</p>
+                    <ul class="nm-list" style="margin: 20px 0;">
+                        <li>Accès illimité au <b>club de sorties</b></li>
+                        <li>Tarifs Membres (-50%)</li>
+                        <li>Programme Fidélité</li>
+                    </ul>
+                    <a href="https://club.nowme.fr/inscription?plan=monthly" target="_blank"
+                        class="nm-btn nm-btn-outline" style="width: 100%;">Devenir Kiffeuse</a>
+                </div>
+
+                <!-- Annuel -->
+                <div class="nm-price-card nm-price-featured">
+                    <div class="nm-tag-top">OFFRE FONDATRICE</div>
+                    <h3>Club VIP Annuel</h3>
+                    <div class="nm-price-val" style="color: #ec4899;">399€</div>
+                    <p style="color: #64748b;">par an (2 mois offerts)</p>
+                    <ul class="nm-list" style="margin: 20px 0;">
+                        <li><b>Tout le pack mensuel</b></li>
+                        <li><b>100€ de réduction séjours</b></li>
+                        <li>Statut "Fondatrice"</li>
+                        <li>Points doublés sur tes sorties</li>
+                    </ul>
+                    <a href="https://club.nowme.fr/inscription?plan=yearly" target="_blank"
+                        class="nm-btn nm-btn-primary" style="width: 100%;">Je m'engage 1 an</a>
+                </div>
+            </div>
+
+            <!-- SEO CONTENT BLOCK INVISIBLE (or subtle) FOR WORD COUNT -->
+            <div class="nm-seo-content">
+                <h3>Pourquoi rejoindre un club de sorties entre filles ?</h3>
+                <p>
+                    De plus en plus de femmes cherchent à élargir leur cercle social. Un <b>club de sorties entre
+                        filles</b> comme Nowme permet de briser la routine et la solitude.
+                    Que vous soyez nouvelle dans votre ville ou simplement envie de nouveauté, participer à des
+                    activités de groupe est la meilleure façon de tisser des liens authentiques.
+                    Notre club organise chaque semaine des dizaines d'événements : afterworks, ateliers créatifs,
+                    séances de sport et voyages exclusifs.
+                </p>
+                <p>
+                    En devenant membre, vous accédez non seulement à un agenda rempli, mais aussi à une vraie famille.
+                    C'est ça la force d'un <b>club de sorties entre filles</b> : la bienveillance, le partage et
+                    surtout, le fun sans prise de tête.
+                    N'attendez plus pour vivre vos meilleurs moments.
+                </p>
+                <p style="margin-top:20px;">
+                    <a href="https://nowme.fr">Retour à l'accueil Nowme</a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+</div>

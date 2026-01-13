@@ -100,6 +100,9 @@ export type Database = {
           facebook: string | null;
           siret: string | null;
           commission_rate: number;
+          commission_model: 'fixed' | 'acquisition'; // New field
+          commission_rate_repeat: number | null;     // New field
+          contract_signed_at: string | null;         // New field
           payout_method: 'manual' | 'stripe';
           settlement_day: number;
           message: string | null;
@@ -129,6 +132,9 @@ export type Database = {
           facebook?: string | null;
           siret?: string | null;
           commission_rate?: number;
+          commission_model?: 'fixed' | 'acquisition';
+          commission_rate_repeat?: number | null;
+          contract_signed_at?: string | null;
           payout_method?: 'manual' | 'stripe';
           settlement_day?: number;
           message?: string | null;
@@ -158,6 +164,9 @@ export type Database = {
           facebook?: string | null;
           siret?: string | null;
           commission_rate?: number;
+          commission_model?: 'fixed' | 'acquisition';
+          commission_rate_repeat?: number | null;
+          contract_signed_at?: string | null;
           payout_method?: 'manual' | 'stripe';
           settlement_day?: number;
           message?: string | null;
