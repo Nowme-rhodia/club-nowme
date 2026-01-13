@@ -9,92 +9,31 @@ import toast from 'react-hot-toast';
 export default function PartnerContractSign() {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [partner, setPartner] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [signing, setSigning] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (user) {
-            loadPartner();
-        }
-    }, [user]);
-
-    const loadPartner = async () => {
-        // Determine which partner record belongs to this user
-        // Assuming partner_id is in user_metadata or we query by contact_email/owner_id
-        // But currently partners table doesn't have owner_id linked to auth.users strict FK often
-        // We usually link via user_metadata.partner_id or email.
-        // Let's assume user.id is NOT partner.id directly, but we might have stored it.
-        // Based on previous files, we often look up partner by user_id if we added a column, 
-        // OR we use the user's role metadata. 
-        // Let's try to fetch partner where user_id matches OR if we have to look up.
-
-        // Quick fix: User should be mapped. Let's try fetching by user properties or if we have a direct link.
-        // Browsing recent code, we usually rely on `user.user_metadata.partner_id`.
-
-        const partnerId = user?.user_metadata?.partner_id;
-
-        if (!partnerId) {
-            toast.error("Compte partenaire non lié.");
-            setLoading(false);
-            return;
-        }
-
-        const { data, error } = await supabase
-            .from('partners')
-            .select('*')
-            .eq('id', partnerId)
-            .single();
-
-        if (error) {
-            console.error('Error loading partner:', error);
-            toast.error("Erreur chargement partenaire");
-        } else {
-            if (data.contract_signed_at) {
-                // Already signed
-                navigate('/partner/dashboard');
-            }
-            setPartner(data);
-        }
-        setLoading(false);
-    };
-
-    const handleSign = async () => {
-        if (!permission) return;
-        setSigning(true);
-
-        try {
-            const { error } = await supabase
-                .from('partners')
-                .update({
-                    contract_signed_at: new Date().toISOString()
-                })
-                .eq('id', partner.id);
-
-            if (error) throw error;
-
-            toast.success("Contrat signé avec succès !");
-            // Redirect to dashboard
-            window.location.href = '/partner/dashboard'; // Force reload to refresh layout guards if needed
-        } catch (e) {
-            console.error("Signature error:", e);
-            toast.error("Erreur lors de la signature.");
-        } finally {
-            setSigning(false);
-        }
-    };
-
-    const [permission, setPermission] = useState(false);
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <Loader className="w-8 h-8 animate-spin text-blue-600" />
-            </div>
-        );
+    // ... inside loadPartner error handling
+    if (error) {
+        console.error('Error loading partner:', error);
+        setFetchError(error.message);
+        toast.error("Erreur chargement partenaire: " + error.message);
     }
 
-    if (!partner) return <div className="p-8 text-center">Partenaire introuvable.</div>;
+    // ...
+    if (!partner) return (
+        <div className="p-8 text-center">
+            <h2 className="text-xl font-bold text-red-600 mb-2">Partenaire introuvable</h2>
+            <p className="text-gray-600 mb-4">Impossible de charger les informations du partenaire.</p>
+            {fetchError && (
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200 inline-block text-left text-sm font-mono text-red-700">
+                    <strong>Erreur technique :</strong> {fetchError}
+                </div>
+            )}
+            <div className="mt-6">
+                <p className="text-sm text-gray-500">ID Utilisateur: {user?.id}</p>
+                <p className="text-sm text-gray-500">Partner ID Metadata: {user?.user_metadata?.partner_id || 'Non défini'}</p>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
