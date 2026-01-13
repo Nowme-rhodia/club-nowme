@@ -204,20 +204,25 @@ export default function SettingsPayments() {
               <div className="bg-primary/10 p-2.5 rounded-lg w-fit">
                 <Calendar className="w-5 h-5 text-primary" />
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Agenda global (Calendly)</h2>
-                <p className="text-sm text-gray-500">Lien par défaut pour les prises de rendez-vous.</p>
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-gray-900">Lien de réservation par défaut</h2>
+                <p className="text-sm text-gray-500">
+                  Ce lien sera utilisé par défaut si vous ne spécifiez pas de lien différent pour chaque offre.
+                  (Ex: Doctolib, Planity, Calendly, Google Agenda...)
+                </p>
               </div>
             </div>
             <div className="p-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">URL Calendly</label>
-              <input
-                type="url"
-                placeholder="https://calendly.com/votre-agenda"
-                value={calendlyUrl}
-                onChange={(e) => setCalendlyUrl(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-shadow"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Votre lien d'agenda</label>
+              <div className="relative">
+                <input
+                  type="url"
+                  placeholder="https://simulation-agenda.com/..."
+                  value={calendlyUrl}
+                  onChange={(e) => setCalendlyUrl(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary transition-shadow"
+                />
+              </div>
             </div>
           </section>
         </div>

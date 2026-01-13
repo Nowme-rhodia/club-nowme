@@ -116,7 +116,7 @@ export default function DashboardOverview() {
                         Bonjour, {profile?.first_name} ! 👋
                     </h1>
                     <p className="text-gray-500 mt-1">
-                        Prête pour votre prochaine expérience Nowme ?
+                        Prête pour ta prochaine expérience Nowme ? Maintenant c'est TOI !
                     </p>
                 </div>
                 <Link

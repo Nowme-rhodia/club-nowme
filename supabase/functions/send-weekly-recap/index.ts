@@ -61,10 +61,19 @@ serve(async (req) => {
         console.log(`📧 Sending recap to ${subscribers.length} subscribers.`);
 
         // 3. Generate Email Logic (Batch sending)
-        // For large lists, we should batch. Resend supports batching, or we loop.
-        // For MVP, we loop but with error handling.
-
         const emailSubject = "🔥 Le Récap des Kiffs de la semaine !";
+
+        const introMessages = [
+            "Prête pour ta dose hebdomadaire de kiffs ? Voici les nouveautés !",
+            "Quoi de neuf sur le Club ? On t'a déniché des pépites pour cette semaine.",
+            "Le mardi, c'est permis ! Découvre les dernières sorties et offres exclusives.",
+            "Hello ! Une nouvelle semaine commence, et avec elle de nouveaux bons plans Nowme.",
+            "Ne passe pas à côté ! Voici ce qui vient d'arriver sur le Club.",
+            "Ta semaine mérite un peu de piment. Regarde ce qu'on te propose !"
+        ];
+
+        // Pick a random message for the batch (or per user if we wanted, but batch is fine)
+        const randomIntro = introMessages[Math.floor(Math.random() * introMessages.length)];
 
         const generateHtml = (firstName: string) => `
       <!DOCTYPE html>
@@ -85,7 +94,7 @@ serve(async (req) => {
           <div class="container">
               <div class="header">
                   <h1>Salut ${firstName || 'la Kiffeuse'} ! 👋</h1>
-                  <p>Voici ce que tu as raté cette semaine sur le Club Nowme.</p>
+                  <p>${randomIntro}</p>
               </div>
 
               ${newOffers && newOffers.length > 0 ? `
@@ -114,18 +123,16 @@ serve(async (req) => {
 
               <div class="footer">
                   <p>Tu reçois cet email car tu es abonnée au Club Nowme.</p>
-                  <p>Pour gérer tes préférences, rendez-vous dans ton espace membre.</p>
+                  <p>Pour gérer tes préférences, rendez-vous dans ton <a href="https://club.nowme.fr/mon-compte/parametres">espace membre</a>.</p>
               </div>
           </div>
       </body>
       </html>
     `;
 
-        // Process in chunks of 50 to avoid rate limits if list grows large
-        // For now, simple loop is fine for < 1000 users.
+        // Process in chunks or individually
         let sentCount = 0;
 
-        // We can use Resend's Batch API if available in this SDK version, or parallel promises
         const emailPromises = subscribers.map(async (user) => {
             try {
                 await resend.emails.send({

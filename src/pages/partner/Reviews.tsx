@@ -76,11 +76,12 @@ export default function PartnerReviews() {
             setReviews(data as any);
 
             // Calculate stats
-            if (myReviews.length > 0) {
-                const totalRating = myReviews.reduce((acc: number, r: any) => acc + r.rating, 0);
+            // Calculate stats
+            if (data && data.length > 0) {
+                const totalRating = data.reduce((acc: number, r: any) => acc + r.rating, 0);
                 setStats({
-                    average: totalRating / myReviews.length,
-                    total: myReviews.length
+                    average: totalRating / data.length,
+                    total: data.length
                 });
             }
 

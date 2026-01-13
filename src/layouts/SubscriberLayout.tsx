@@ -35,6 +35,7 @@ export default function SubscriberLayout() {
         { icon: Gift, label: 'Mes Récompenses', to: '/mon-compte/recompenses', roles: ['subscriber', 'admin'] },
         { icon: Wallet, label: 'Mon Ardoise', to: '/mon-compte/ardoise', roles: ['subscriber', 'admin'] },
         { icon: User, label: 'Mon Profil', to: '/mon-compte/profil', roles: ['subscriber', 'admin', 'partner', 'guest'] },
+        { icon: Settings, label: 'Paramètres', to: '/mon-compte/parametres', roles: ['subscriber', 'admin', 'partner', 'guest'] },
     ];
 
     const currentRole = profile?.role || 'guest';

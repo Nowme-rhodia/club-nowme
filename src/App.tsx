@@ -32,6 +32,7 @@ const Bookings = React.lazy(() => import('./pages/account/Bookings'));
 const MySquads = React.lazy(() => import('./pages/account/MySquads'));
 const Rewards = React.lazy(() => import('./pages/account/Rewards'));
 const PaymentPlans = React.lazy(() => import('./pages/account/PaymentPlans'));
+const Settings = React.lazy(() => import('./pages/account/Settings'));
 const SubscriberLayout = React.lazy(() => import('./layouts/SubscriberLayout'));
 const QuiSommesNous = React.lazy(() => import('./pages/QuiSommesNous'));
 const CommunitySpace = React.lazy(() => import('./pages/CommunitySpace'));
@@ -217,6 +218,7 @@ function App() {
                         <Profile />
                       </GoogleMapsLoader>
                     } />
+                    <Route path="parametres" element={<Settings />} />
                   </Route>
 
                   {/* Redirect legacy routes */}
