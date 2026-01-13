@@ -322,6 +322,26 @@ export default function SettingsGeneral() {
     }
   };
 
+
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est IRRÉVERSIBLE.")) return;
+    if (!window.confirm("Vraiment sûr ? Toutes vos données seront perdues.")) return;
+
+    try {
+      const { error } = await supabase.rpc('delete_own_partner_account');
+      if (error) throw error;
+
+      toast.success("Compte supprimé avec succès.");
+      await supabase.auth.signOut();
+      window.location.href = '/';
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      // Fallback if RPC fails (e.g. permission denied on auth.users delete)
+      toast.error("Erreur lors de la suppression: " + err.message);
+    }
+  };
+
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);

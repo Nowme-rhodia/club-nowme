@@ -140,16 +140,7 @@ export default function PartnerLayout() {
                 <HelpCircle className="w-5 h-5" />
                 Guide
               </NavLink>
-              <NavLink
-                to="/partner/contract"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                  }`
-                }
-              >
-                <FileText className="w-5 h-5" />
-                Mon Contrat
-              </NavLink>
+
               <NavLink
                 to="/partner/offers"
                 className={({ isActive }) =>

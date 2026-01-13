@@ -30,6 +30,11 @@ export default function SignUp() {
       return;
     }
 
+    if (!formData.mainCategoryId) {
+      setError('Veuillez sélectionner une catégorie principale');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -203,49 +208,6 @@ export default function SignUp() {
                 />
               </div>
             </div>
-
-            {/* Catégories */}
-            <div>
-              <label htmlFor="mainCategoryId" className="block text-sm font-medium text-gray-700">
-                Catégorie Principale
-              </label>
-              <div className="mt-1">
-                <select
-                  id="mainCategoryId"
-                  name="mainCategoryId"
-                  required
-                  value={formData.mainCategoryId}
-                  onChange={(e) => setFormData({ ...formData, mainCategoryId: e.target.value, subcategoryIds: [] })}
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                >
-                  <option value="">Sélectionner une catégorie</option>
-                  {mainCategories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {formData.mainCategoryId && subCategories.length > 0 && (
-              <div>
-                <span className="block text-sm font-medium text-gray-700 mb-2">
-                  Sous-catégories (Plusieurs choix possibles)
-                </span>
-                <div className="grid grid-cols-2 gap-2 mt-1 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-md bg-gray-50">
-                  {subCategories.map(sub => (
-                    <label key={sub.id} className="flex items-center space-x-2 cursor-pointer p-1 hover:bg-gray-100 rounded">
-                      <input
-                        type="checkbox"
-                        checked={formData.subcategoryIds.includes(sub.id)}
-                        onChange={() => handleSubCategoryToggle(sub.id)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
-                      />
-                      <span className="text-sm text-gray-700">{sub.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Catégories */}
             <div>
