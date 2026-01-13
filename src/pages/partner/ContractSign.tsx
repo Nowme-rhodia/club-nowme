@@ -9,28 +9,96 @@ import toast from 'react-hot-toast';
 export default function PartnerContractSign() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const [partner, setPartner] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [signing, setSigning] = useState(false);
+    const [permission, setPermission] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
-    // ... inside loadPartner error handling
-    if (error) {
-        console.error('Error loading partner:', error);
-        setFetchError(error.message);
-        toast.error("Erreur chargement partenaire: " + error.message);
+    useEffect(() => {
+        if (user) {
+            loadPartner();
+        }
+    }, [user]);
+
+    const loadPartner = async () => {
+        const partnerId = user?.user_metadata?.partner_id;
+
+        if (!partnerId) {
+            toast.error("Compte partenaire non lié.");
+            setLoading(false);
+            setFetchError("Compte utilisateur non lié à un partenaire (metadata.partner_id manquant).");
+            return;
+        }
+
+        const { data, error } = await supabase
+            .from('partners')
+            .select('*')
+            .eq('id', partnerId)
+            .single();
+
+        if (error) {
+            console.error('Error loading partner:', error);
+            setFetchError(error.message);
+            toast.error("Erreur chargement partenaire: " + error.message);
+        } else {
+            if (data.contract_signed_at) {
+                // Already signed
+                navigate('/partner/dashboard');
+            }
+            setPartner(data);
+        }
+        setLoading(false);
+    };
+
+    const handleSign = async () => {
+        if (!permission) return;
+        setSigning(true);
+
+        try {
+            const { error } = await supabase
+                .from('partners')
+                .update({
+                    contract_signed_at: new Date().toISOString()
+                })
+                .eq('id', partner.id);
+
+            if (error) throw error;
+
+            toast.success("Contrat signé avec succès !");
+            // Redirect to dashboard
+            window.location.href = '/partner/dashboard';
+        } catch (e: any) {
+            console.error("Signature error:", e);
+            toast.error("Erreur lors de la signature.");
+        } finally {
+            setSigning(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <Loader className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
     }
 
-    // ...
     if (!partner) return (
-        <div className="p-8 text-center">
-            <h2 className="text-xl font-bold text-red-600 mb-2">Partenaire introuvable</h2>
-            <p className="text-gray-600 mb-4">Impossible de charger les informations du partenaire.</p>
-            {fetchError && (
-                <div className="bg-red-50 p-4 rounded-lg border border-red-200 inline-block text-left text-sm font-mono text-red-700">
-                    <strong>Erreur technique :</strong> {fetchError}
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
+            <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+                <h2 className="text-xl font-bold text-red-600 mb-2">Partenaire introuvable</h2>
+                <p className="text-gray-600 mb-4">Impossible de charger les informations du partenaire.</p>
+                {fetchError && (
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-left text-sm font-mono text-red-700 overflow-x-auto">
+                        <strong>Erreur technique :</strong><br />
+                        {fetchError}
+                    </div>
+                )}
+                <div className="mt-6 border-t pt-4">
+                    <p className="text-xs text-gray-400">User ID: {user?.id}</p>
+                    <p className="text-xs text-gray-400">Metadata Partner ID: {user?.user_metadata?.partner_id || 'N/A'}</p>
                 </div>
-            )}
-            <div className="mt-6">
-                <p className="text-sm text-gray-500">ID Utilisateur: {user?.id}</p>
-                <p className="text-sm text-gray-500">Partner ID Metadata: {user?.user_metadata?.partner_id || 'Non défini'}</p>
             </div>
         </div>
     );
