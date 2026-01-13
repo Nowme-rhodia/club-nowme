@@ -6,8 +6,8 @@ export const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_
 
 // Prix Stripe - PRODUCTION (vrais Price IDs)
 export const STRIPE_PRICES = {
-  monthly: 'price_1RqraiDaQ8XsywAvAAmxoAFW',  // 39,99€/mois (test)
-  yearly: 'price_1Rqrb6DaQ8XsywAvvF8fsaJi',   // 399€/an (test)
+  monthly: 'price_1Sow5YD3JHLNgQan3TgkmEFP',  // 39,99€/mois
+  yearly: 'price_1Sow6sD3JHLNgQanDeJNmEAZ',   // 399€/an
 };
 
 export const createCheckoutSession = async (planType: 'monthly' | 'yearly', userEmail?: string) => {

@@ -25,11 +25,11 @@ const corsHeaders = {
 function createSupabaseClient() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  
+
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new Error("Missing Supabase environment variables");
   }
-  
+
   return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       persistSession: false
@@ -56,7 +56,7 @@ const determineSubscriptionType = async (subscription) => {
   try {
     // Default to monthly if we can't determine
     let subscriptionType = "monthly";
-    
+
     // Check subscription items
     if (subscription.items?.data && subscription.items.data.length > 0) {
       const item = subscription.items.data[0];
@@ -65,7 +65,7 @@ const determineSubscriptionType = async (subscription) => {
         return subscriptionType;
       }
     }
-    
+
     return subscriptionType;
   } catch (error) {
     logger.error("Exception in determineSubscriptionType", error);
@@ -87,7 +87,7 @@ const mapSubscriptionStatus = (stripeStatus) => {
     'trialing': 'active',
     'paused': 'paused'
   };
-  
+
   return statusMap[stripeStatus] || 'pending';
 };
 
@@ -98,30 +98,30 @@ const syncSubscription = async (supabase, subscription) => {
   try {
     // Get customer details
     const customer = await stripe.customers.retrieve(subscription.customer);
-    
+
     if (!customer || customer.deleted) {
       logger.warn(`Customer ${subscription.customer} not found or deleted`);
       return { success: false, reason: 'customer_not_found' };
     }
-    
+
     const email = customer.email;
     if (!email) {
       logger.warn(`No email found for customer ${subscription.customer}`);
       return { success: false, reason: 'no_email' };
     }
-    
+
     // Find user by email
     const { data: user, error: userError } = await supabase
       .from("user_profiles")
       .select("*")
       .eq("email", email)
       .maybeSingle();
-    
+
     if (userError) {
       logger.error(`Error finding user with email ${email}`, userError);
       return { success: false, reason: 'db_error' };
     }
-    
+
     // Find user by customer ID if not found by email
     let userToUpdate = user;
     if (!userToUpdate) {
@@ -130,16 +130,16 @@ const syncSubscription = async (supabase, subscription) => {
         .select("*")
         .eq("stripe_customer_id", subscription.customer)
         .maybeSingle();
-      
+
       if (!customerIdError) {
         userToUpdate = userByCustomerId;
       }
     }
-    
+
     // Determine subscription type and status
     const subscriptionType = await determineSubscriptionType(subscription);
     const subscriptionStatus = mapSubscriptionStatus(subscription.status);
-    
+
     if (userToUpdate) {
       // Update existing user
       const { error: updateError } = await supabase
@@ -147,20 +147,21 @@ const syncSubscription = async (supabase, subscription) => {
         .update({
           subscription_status: subscriptionStatus,
           subscription_type: subscriptionType,
-          stripe_customer_id: subscription.customer,
+          // Ensure we only save the ID string, handling both string and object cases
+          stripe_customer_id: typeof subscription.customer === 'object' ? (subscription.customer as any).id : subscription.customer,
           stripe_subscription_id: subscription.id,
           subscription_updated_at: new Date().toISOString()
         })
         .eq("id", userToUpdate.id);
-      
+
       if (updateError) {
         logger.error(`Error updating user ${userToUpdate.id}`, updateError);
         return { success: false, reason: 'update_error' };
       }
-      
+
       logger.success(`Updated user ${userToUpdate.id} with subscription ${subscription.id}`);
-      return { 
-        success: true, 
+      return {
+        success: true,
         action: 'updated',
         userId: userToUpdate.id,
         email,
@@ -188,13 +189,13 @@ async function isAdmin(supabase, token) {
     if (authError || !user) {
       return false;
     }
-    
+
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('role')
       .eq('user_id', user.id)
       .single();
-    
+
     return !profileError && profile?.role === 'admin';
   } catch (error) {
     console.error("Error checking admin status:", error);
@@ -209,7 +210,7 @@ serve(async (req) => {
       headers: corsHeaders
     });
   }
-  
+
   // Check authorization
   const authHeader = req.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -218,13 +219,13 @@ serve(async (req) => {
       headers: corsHeaders
     });
   }
-  
+
   // Extract token
   const token = authHeader.split(' ')[1];
-  
+
   // Initialize Supabase client
   const supabase = createSupabaseClient();
-  
+
   // Verify admin role
   if (!await isAdmin(supabase, token)) {
     return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
@@ -232,22 +233,22 @@ serve(async (req) => {
       headers: corsHeaders
     });
   }
-  
+
   try {
     // Parse request body
     const { action, subscriptionId, limit = 100 } = await req.json();
-    
+
     // Sync specific subscription
     if (action === 'sync_subscription' && subscriptionId) {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       const result = await syncSubscription(supabase, subscription);
-      
+
       return new Response(JSON.stringify(result), {
         status: result.success ? 200 : 400,
         headers: corsHeaders
       });
     }
-    
+
     // Sync all active subscriptions
     if (action === 'sync_all') {
       const results = {
@@ -255,37 +256,37 @@ serve(async (req) => {
         failed: 0,
         details: []
       };
-      
+
       // Get all active subscriptions from Stripe
       let hasMore = true;
       let startingAfter = null;
-      
+
       while (hasMore) {
         const subscriptions = await stripe.subscriptions.list({
           limit: 100,
           status: 'active',
           ...(startingAfter ? { starting_after: startingAfter } : {})
         });
-        
+
         // Process each subscription
         for (const subscription of subscriptions.data) {
           const result = await syncSubscription(supabase, subscription);
-          
+
           if (result.success) {
             results.success++;
           } else {
             results.failed++;
           }
-          
+
           results.details.push(result);
-          
+
           // Stop if we've reached the limit
           if (results.success + results.failed >= limit) {
             hasMore = false;
             break;
           }
         }
-        
+
         // Check if there are more subscriptions
         if (subscriptions.has_more && hasMore) {
           startingAfter = subscriptions.data[subscriptions.data.length - 1].id;
@@ -293,30 +294,30 @@ serve(async (req) => {
           hasMore = false;
         }
       }
-      
+
       // Also sync cancelled subscriptions
       const cancelledSubscriptions = await stripe.subscriptions.list({
         limit: 100,
         status: 'canceled'
       });
-      
+
       for (const subscription of cancelledSubscriptions.data) {
         const result = await syncSubscription(supabase, subscription);
-        
+
         if (result.success) {
           results.success++;
         } else {
           results.failed++;
         }
-        
+
         results.details.push(result);
-        
+
         // Stop if we've reached the limit
         if (results.success + results.failed >= limit) {
           break;
         }
       }
-      
+
       return new Response(JSON.stringify({
         success: true,
         results
@@ -325,7 +326,7 @@ serve(async (req) => {
         headers: corsHeaders
       });
     }
-    
+
     // Fix inconsistencies
     if (action === 'fix_inconsistencies') {
       // Find users with active subscriptions in our DB
@@ -333,21 +334,21 @@ serve(async (req) => {
         .from("user_profiles")
         .select("id, email, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_type")
         .eq("subscription_status", "active");
-      
+
       if (activeError) {
         throw new Error(`Error fetching active users: ${activeError.message}`);
       }
-      
+
       const results = {
         checked: 0,
         fixed: 0,
         details: []
       };
-      
+
       // Check each active user's subscription in Stripe
       for (const user of activeUsers) {
         results.checked++;
-        
+
         if (!user.stripe_subscription_id) {
           results.details.push({
             userId: user.id,
@@ -357,13 +358,13 @@ serve(async (req) => {
           });
           continue;
         }
-        
+
         try {
           const subscription = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
-          
+
           // Check if subscription status matches
           const stripeStatus = mapSubscriptionStatus(subscription.status);
-          
+
           if (stripeStatus !== user.subscription_status) {
             // Update user profile with correct status
             const { error: updateError } = await supabase
@@ -373,7 +374,7 @@ serve(async (req) => {
                 subscription_updated_at: new Date().toISOString()
               })
               .eq("id", user.id);
-            
+
             if (updateError) {
               results.details.push({
                 userId: user.id,
@@ -416,13 +417,13 @@ serve(async (req) => {
             });
           }
         }
-        
+
         // Stop if we've reached the limit
         if (results.checked >= limit) {
           break;
         }
       }
-      
+
       return new Response(JSON.stringify({
         success: true,
         results
@@ -431,17 +432,17 @@ serve(async (req) => {
         headers: corsHeaders
       });
     }
-    
+
     return new Response(JSON.stringify({
       error: 'Invalid action. Use sync_subscription, sync_all, or fix_inconsistencies'
     }), {
       status: 400,
       headers: corsHeaders
     });
-    
+
   } catch (error) {
     logger.error("Error processing request", error);
-    
+
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : "Unknown error"
     }), {
