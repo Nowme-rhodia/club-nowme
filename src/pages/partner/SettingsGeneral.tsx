@@ -27,6 +27,7 @@ interface PartnerProfile {
     booking_cancellation: boolean;
     marketing: boolean;
   };
+  contract_signed_at?: string | null;
 }
 
 function CategorySection({ mainCategoryId, subcategoryIds, onChange }: {
@@ -225,7 +226,7 @@ export default function SettingsGeneral() {
       // 2. Fetch Partner Data using the Partner ID (NOT user_id)
       const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
-        .select('id, business_name, contact_name, contact_email, phone, address, website, instagram, cover_image_url, description, siret, tva_intra, notification_settings, main_category_id, subcategory_ids')
+        .select('id, business_name, contact_name, contact_email, phone, address, website, instagram, cover_image_url, description, siret, tva_intra, notification_settings, main_category_id, subcategory_ids, contract_signed_at')
         .eq('id', currentPartnerId)
         .single();
 
@@ -254,8 +255,10 @@ export default function SettingsGeneral() {
             new_booking: true,
             booking_reminder: true,
             booking_cancellation: true,
+            booking_cancellation: true,
             marketing: false
-          }
+          },
+          contract_signed_at: partner.contract_signed_at
         });
       }
     } catch (err: any) {
@@ -722,151 +725,191 @@ export default function SettingsGeneral() {
           </section>
 
           {/* Section Sécurité */}
-          <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="bg-primary/10 p-2.5 rounded-lg w-fit">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Sécurité du compte</h2>
-                <p className="text-sm text-gray-500">Gérez votre mot de passe et l'accès à votre compte.</p>
-              </div>
-            </div>
+        </section>
 
-            <div className="p-6">
+        {/* Section Contrats */}
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-50 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="bg-primary/10 p-2.5 rounded-lg w-fit">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Affiliation & Contrat</h2>
+              <p className="text-sm text-gray-500">Gérez votre contrat partenarial.</p>
+            </div>
+          </div>
+          <div className="p-6 flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-gray-900">Mandat de Gestion</h3>
+              <p className="text-sm text-gray-500 mt-1">Consultez votre contrat signé électroniquement.</p>
+              {profileForm.contract_signed_at && (
+                <p className="text-xs text-green-600 mt-2 flex items-center">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Signé le {new Date(profileForm.contract_signed_at).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+            <Link
+              to="/partner/contract"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Voir mon contrat
+            </Link>
+          </div>
+        </section>
+
+        {/* Zone de Danger */}
+        <section className="bg-red-50 rounded-xl shadow-sm border border-red-100 overflow-hidden">
+          <div className="p-6 border-b border-red-100 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="bg-white p-2.5 rounded-lg w-fit border border-red-100">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-red-900">Zone de Danger</h2>
+              <p className="text-sm text-red-700">Actions irréversibles.</p>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-red-900">Supprimer mon compte partenaire</h3>
+                <p className="text-sm text-red-700 mt-1 max-w-xl">
+                  Attention : cette action supprimera définitivement votre compte, vos offres, vos réservations et toutes vos données associées.
+                </p>
+              </div>
               <button
-                onClick={() => setIsPasswordModalOpen(true)}
-                className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-primary/30 hover:bg-gray-50 hover:shadow-md flex justify-between items-center transition-all group duration-300"
+                type="button"
+                onClick={handleDeleteAccount}
+                className="px-4 py-2 bg-white border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors shadow-sm"
               >
-                <div>
-                  <span className="font-semibold text-gray-900 block mb-1">Mot de passe</span>
-                  <span className="text-sm text-gray-500">Modifiez votre mot de passe régulièrement pour plus de sécurité.</span>
-                </div>
-                <span className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-colors">Modifier</span>
+                Supprimer mon compte
               </button>
             </div>
-          </section>
-
-        </div>
+          </div>
+        </section>
 
       </div>
 
-      {/* Sticky Save Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 md:pl-64">
-        <div className="max-w-4xl mx-auto flex justify-end">
+    </div>
+
+      {/* Sticky Save Bar */ }
+  <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40 md:pl-64">
+    <div className="max-w-4xl mx-auto flex justify-end">
+      <button
+        onClick={handleSave}
+        className="px-8 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-all shadow-lg hover:shadow-primary/25 transform active:scale-95 flex items-center gap-2"
+      >
+        <CheckCircle className="w-5 h-5" />
+        Enregistrer les modifications
+      </button>
+    </div>
+  </div>
+
+  {/* Password Change Modal */ }
+  {
+    isPasswordModalOpen && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 backdrop-blur-sm">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-in zoom-in-95 duration-200">
           <button
-            onClick={handleSave}
-            className="px-8 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition-all shadow-lg hover:shadow-primary/25 transform active:scale-95 flex items-center gap-2"
+            onClick={() => setIsPasswordModalOpen(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <CheckCircle className="w-5 h-5" />
-            Enregistrer les modifications
+            <X className="w-6 h-6" />
           </button>
-        </div>
-      </div>
 
-      {/* Password Change Modal */}
-      {isPasswordModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-in zoom-in-95 duration-200">
-            <button
-              onClick={() => setIsPasswordModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <Lock className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Changer le mot de passe</h2>
-                <p className="text-sm text-gray-500">Sécurisez votre compte.</p>
-              </div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-primary/10 p-3 rounded-full">
+              <Lock className="w-6 h-6 text-primary" />
             </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Changer le mot de passe</h2>
+              <p className="text-sm text-gray-500">Sécurisez votre compte.</p>
+            </div>
+          </div>
 
-            {passwordSuccess ? (
-              <div className="p-4 bg-green-50 rounded-lg flex items-center mb-6 animate-in slide-in-from-top-2">
-                <CheckCircle className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" />
-                <p className="text-green-700 font-medium">{passwordSuccess}</p>
-              </div>
-            ) : (
-              <form onSubmit={handleUpdatePassword} className="space-y-5">
-                {passwordError && (
-                  <div className="p-3 bg-red-50 rounded-lg flex items-center text-sm text-red-600 border border-red-100">
-                    <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                    {passwordError}
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau mot de passe</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition-shadow"
-                      placeholder="••••••••"
-                      required
-                      minLength={6}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
+          {passwordSuccess ? (
+            <div className="p-4 bg-green-50 rounded-lg flex items-center mb-6 animate-in slide-in-from-top-2">
+              <CheckCircle className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" />
+              <p className="text-green-700 font-medium">{passwordSuccess}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleUpdatePassword} className="space-y-5">
+              {passwordError && (
+                <div className="p-3 bg-red-50 rounded-lg flex items-center text-sm text-red-600 border border-red-100">
+                  <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                  {passwordError}
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition-shadow"
-                      placeholder="••••••••"
-                      required
-                      minLength={6}
-                    />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau mot de passe</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
                   </div>
-                </div>
-
-                <div className="flex gap-3 pt-4">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition-shadow"
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
                   <button
                     type="button"
-                    onClick={() => setIsPasswordModalOpen(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                   >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isUpdatingPassword}
-                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition flex justify-center items-center shadow-md"
-                  >
-                    {isUpdatingPassword ? (
-                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      "Valider"
-                    )}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
-              </form>
-            )}
-          </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le mot de passe</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary transition-shadow"
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingPassword}
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition flex justify-center items-center shadow-md"
+                >
+                  {isUpdatingPassword ? (
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    "Valider"
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    )
+  }
+    </div >
   );
 }

@@ -24,7 +24,7 @@ export default function PartnerGuide() {
                     Guide Partenaire Club Nowme 🚀
                 </h1>
                 <p className="text-white/90 text-lg max-w-2xl mx-auto">
-                    Tout ce que tu dois savoir pour réussir ton partenariat, gérer tes offres et booster ton chiffre d'affaires avec la communauté.
+                    Tout ce qu'il faut savoir pour réussir votre partenariat, gérer vos offres et booster votre chiffre d'affaires avec la communauté.
                 </p>
             </div>
 
@@ -37,13 +37,13 @@ export default function PartnerGuide() {
                             <User className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                            1. Ton Profil & Ta Visibilité
+                            1. Votre Profil & Votre Visibilité
                         </h2>
                     </div>
                     <div className="pl-0 md:pl-4 space-y-4 text-gray-600 leading-relaxed">
                         <p>
-                            Ton profil est ta carte de visite. C'est la première chose que les abonnées voient.
-                            Un profil complet inspire confiance et augmente tes réservations.
+                            Votre profil est votre carte de visite. C'est la première chose que les abonnées voient.
+                            Un profil complet inspire confiance et augmente vos réservations.
                         </p>
                         <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
                             <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
@@ -51,9 +51,9 @@ export default function PartnerGuide() {
                                 À vérifier absolument :
                             </h3>
                             <ul className="space-y-2 list-disc list-inside">
-                                <li><strong>Photo de profil :</strong> Mets ton logo ou une photo de toi (souriante !).</li>
-                                <li><strong>Adresse & Contact :</strong> Vérifie que ton numéro et adresse sont à jour pour qu'on puisse te trouver.</li>
-                                <li><strong>Liens réseaux sociaux :</strong> Ajoute ton Instagram pour que les filles puissent voir ton univers.</li>
+                                <li><strong>Photo de profil :</strong> Mettez votre logo ou une photo de vous (accueillante !).</li>
+                                <li><strong>Adresse & Contact :</strong> Vérifiez que votre numéro et adresse sont à jour pour faciliter la localisation.</li>
+                                <li><strong>Liens réseaux sociaux :</strong> Ajoutez votre Instagram pour partager votre univers avec les membres.</li>
                             </ul>
                             <div className="mt-4">
                                 <Link to="/partner/settings/general" className="text-blue-700 font-semibold hover:underline">
@@ -76,7 +76,7 @@ export default function PartnerGuide() {
                     </div>
                     <div className="pl-0 md:pl-4 space-y-6 text-gray-600 leading-relaxed">
                         <p>
-                            Pour ajouter une prestation, va dans l'onglet <strong>"Mes Offres"</strong> et clique sur <strong>"Nouvelle Offre"</strong>.
+                            Pour ajouter une prestation, rendez-vous dans l'onglet <strong>"Mes Offres"</strong> et cliquez sur <strong>"Nouvelle Offre"</strong>.
                         </p>
 
                         <div className="grid md:grid-cols-2 gap-6">
@@ -86,7 +86,7 @@ export default function PartnerGuide() {
                                     Les Visuels
                                 </h4>
                                 <p className="text-sm">
-                                    Utilise des photos lumineuses et de haute qualité. Une belle photo augmente le taux de clic de <strong>40%</strong> ! Évite les images floues ou trop sombres.
+                                    Utilisez des photos lumineuses et de haute qualité. Une belle photo augmente le taux de clic de <strong>40%</strong> ! Évitez les images floues ou trop sombres.
                                 </p>
                             </div>
                             <div className="bg-gray-50 p-5 rounded-2xl">
@@ -95,7 +95,7 @@ export default function PartnerGuide() {
                                     La Description
                                 </h4>
                                 <p className="text-sm">
-                                    Sois précise : durée, déroulement, tenue conseillée... Utilise le "Tu" pour parler directement à l'abonnée. Fais rêver !
+                                    Soyez précis(e) : durée, déroulement, tenue conseillée... Utilisez le "Tu" pour parler directement à l'abonnée dans la description est conseillé pour créer de la proximité, mais restez professionnel(le). Faites rêver !
                                 </p>
                             </div>
                         </div>
@@ -107,19 +107,19 @@ export default function PartnerGuide() {
                             <ul className="space-y-3">
                                 <li className="flex items-start gap-3">
                                     <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs font-bold mt-1">BROUILLON</span>
-                                    <span>Ton offre est sauvegardée mais visible <strong>uniquement par toi</strong>. Prends le temps de la peaufiner.</span>
+                                    <span>Votre offre est sauvegardée mais visible <strong>uniquement par vous</strong>. Prenez le temps de la peaufiner.</span>
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-bold mt-1">PRÊTE</span>
-                                    <span>Tu as fini la rédaction. Tu peux maintenant cliquer sur <strong>"Soumettre"</strong> pour l'envoyer à l'équipe Nowme.</span>
+                                    <span>Vous avez fini la rédaction. Vous pouvez maintenant cliquer sur <strong>"Soumettre"</strong> pour l'envoyer à l'équipe Nowme.</span>
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs font-bold mt-1">EN VALIDATION</span>
-                                    <span>L'équipe Nowme relit ton offre (orthographe, qualité, conformité). On te répond sous 24h/48h.</span>
+                                    <span>L'équipe Nowme relit votre offre (orthographe, qualité, conformité). Nous vous répondons sous 24h/48h.</span>
                                 </li>
                                 <li className="flex items-start gap-3">
                                     <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-bold mt-1">APPROUVÉE</span>
-                                    <span>Félicitations ! Ton offre est en ligne et visible par toutes les abonnées.</span>
+                                    <span>Félicitations ! Votre offre est en ligne et visible par toutes les abonnées.</span>
                                 </li>
                             </ul>
                         </div>
@@ -133,24 +133,24 @@ export default function PartnerGuide() {
                             <Calendar className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                            3. Gérer tes Réservations
+                            3. Gérer vos Réservations
                         </h2>
                     </div>
                     <div className="pl-0 md:pl-4 space-y-6 text-gray-600 leading-relaxed">
                         <p>
-                            Tu as deux façons principales de gérer tes créneaux sur Club Nowme :
+                            Vous avez deux façons principales de gérer vos créneaux sur Club Nowme :
                         </p>
 
                         <div className="space-y-4">
                             <div className="border border-green-200 rounded-xl p-5 hover:bg-green-50/50 transition-colors">
                                 <h3 className="font-bold text-gray-900 text-lg mb-2">🔗 Option 1 : Lien de Réservation Externe</h3>
                                 <p className="mb-3">
-                                    Idéal si tu as ton propre système (Doctolib, Planity, Calendly, etc.). Ajoute simplement ton lien dans l'offre.
+                                    Idéal si vous avez votre propre système (Doctolib, Planity, Calendly, etc.). Ajoutez simplement votre lien dans l'offre.
                                 </p>
                                 <ul className="list-disc list-inside text-sm space-y-1">
-                                    <li>L'abonnée réserve son créneau via ton lien habituel.</li>
+                                    <li>L'abonnée réserve son créneau via votre lien habituel.</li>
                                     <li>Elle règle la prestation selon vos modalités ou via le Club si configuré.</li>
-                                    <li>Simple et efficace si tu as déjà un agenda bien rempli.</li>
+                                    <li>Simple et efficace si vous avez déjà un agenda bien rempli.</li>
                                 </ul>
                             </div>
 
@@ -160,8 +160,8 @@ export default function PartnerGuide() {
                                     Idéal pour un atelier ponctuel ("Samedi 12 Juin à 14h") ou un événement de groupe.
                                 </p>
                                 <ul className="list-disc list-inside text-sm space-y-1">
-                                    <li>Tu définis la date et l'heure précise dans l'offre.</li>
-                                    <li>Tu gères le stock (nombre de places) via les variantes.</li>
+                                    <li>Vous définissez la date et l'heure précise dans l'offre.</li>
+                                    <li>Vous gérez le stock (nombre de places) via les variantes.</li>
                                     <li>Une fois complet, l'offre affiche "Épuisé".</li>
                                 </ul>
                             </div>
@@ -172,8 +172,8 @@ export default function PartnerGuide() {
                             <div>
                                 <h4 className="font-bold text-red-900 text-sm">Politique d'annulation</h4>
                                 <p className="text-sm text-red-800 mt-1">
-                                    Si TU dois annuler : préviens l'abonnée le plus tôt possible et propose un autre créneau.
-                                    Si l'ABONNÉE annule : voir les conditions d'annulation définies dans ton offre.
+                                    Si VOUS devez annuler : prévenez l'abonnée le plus tôt possible et proposez un autre créneau.
+                                    Si l'ABONNÉE annule : voir les conditions d'annulation définies dans votre offre.
                                 </p>
                             </div>
                         </div>
@@ -187,7 +187,7 @@ export default function PartnerGuide() {
                             <HelpCircle className="w-8 h-8" />
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-                            4. Tes Avis & Ta Réputation
+                            4. Vos Avis & Votre Réputation
                         </h2>
                     </div>
                     <div className="pl-0 md:pl-4 space-y-6 text-gray-600 leading-relaxed">
@@ -197,9 +197,9 @@ export default function PartnerGuide() {
                         <div className="bg-yellow-50 p-6 rounded-2xl border border-yellow-100">
                             <h3 className="font-bold text-gray-900 mb-3 text-lg">Comment avoir de bons avis ?</h3>
                             <ul className="space-y-3 list-disc list-inside">
-                                <li><strong>Soigne l'accueil :</strong> Un sourire et une petite attention font la différence.</li>
-                                <li><strong>Sollicite-les :</strong> Après la prestation, n'hésite pas à dire : "Si ça t'a plu, un petit avis sur le Club me ferait très plaisir !".</li>
-                                <li><strong>Réponds :</strong> Prends le temps de répondre aux avis (même les courts) pour montrer que tu es engagée.</li>
+                                <li><strong>Soignez l'accueil :</strong> Un sourire et une petite attention font la différence.</li>
+                                <li><strong>Sollicitez-les :</strong> Après la prestation, n'hésitez pas à dire : "Si ça t'a plu, un petit avis sur le Club me ferait très plaisir !".</li>
+                                <li><strong>Répondez :</strong> Prenez le temps de répondre aux avis (même les courts) pour montrer votre engagement.</li>
                             </ul>
                             <div className="mt-4">
                                 <Link to="/partner/reviews" className="text-yellow-700 font-semibold hover:underline">
@@ -224,12 +224,12 @@ export default function PartnerGuide() {
                         <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 p-6 rounded-2xl">
                             <h3 className="font-bold text-gray-900 text-lg mb-3">💡 Qu'est-ce qu'un Pack Ardoise ?</h3>
                             <p className="mb-3">
-                                C'est une offre spéciale qui permet à l'abonnée d'acheter un crédit à dépenser chez toi (ex: "Payez 40€, dépensez 50€").
+                                C'est une offre spéciale qui permet à l'abonnée d'acheter un crédit à dépenser chez vous (ex: "Payez 40€, dépensez 50€").
                             </p>
                             <ul className="list-disc pl-5 mt-2 space-y-2 text-sm">
                                 <li><strong>Comment ça marche ?</strong> L'abonnée achète le pack sur l'appli. L'argent est sécurisé chez NowMe.</li>
                                 <li><strong>Validité :</strong> Chaque pack est valable 6 mois à partir de la date d'achat.</li>
-                                <li><strong>Paiement :</strong> Tu es payée uniquement lors de la <strong>consommation réelle</strong> par la cliente.</li>
+                                <li><strong>Paiement :</strong> Vous êtes payé(e) uniquement lors de la <strong>consommation réelle</strong> par la cliente.</li>
                             </ul>
                         </div>
 
@@ -237,11 +237,11 @@ export default function PartnerGuide() {
                             <div>
                                 <h4 className="font-bold text-gray-900 mb-3">✅ Comment encaisser une cliente ?</h4>
                                 <ol className="list-decimal pl-5 space-y-2 text-sm">
-                                    <li>La cliente vient dans ton établissement.</li>
+                                    <li>La cliente se présente dans votre établissement.</li>
                                     <li>Au moment de payer, elle ouvre son appli <strong>Mon Ardoise</strong>.</li>
-                                    <li>Elle saisit le montant de l'addition et valide devant toi.</li>
+                                    <li>Elle saisit le montant de l'addition et valide devant vous.</li>
                                     <li>Un <strong>Écran Vert de Validation</strong> apparaît instantanément sur son téléphone.</li>
-                                    <li>C'est validé ! La somme est déduite de son Ardoise et créditée sur ton compte.</li>
+                                    <li>C'est validé ! La somme est déduite de son Ardoise et créditée sur votre compte.</li>
                                 </ol>
                             </div>
                             <div>
@@ -250,11 +250,11 @@ export default function PartnerGuide() {
                                     Nous utilisons <strong>Stripe Connect</strong> pour des virements sécurisés.
                                 </p>
                                 <ul className="list-disc pl-5 space-y-1 text-sm">
-                                    <li><strong>Achats directs :</strong> Tu reçois l'argent (moins la commission) quelques jours après l'achat.</li>
-                                    <li><strong>Packs Ardoise :</strong> Tu reçois l'argent (moins la commission) quelques jours après le <strong>passage en caisse (validation Ardoise)</strong>.</li>
+                                    <li><strong>Achats directs :</strong> Vous recevez l'argent (moins la commission) quelques jours après l'achat.</li>
+                                    <li><strong>Packs Ardoise :</strong> Vous recevez l'argent (moins la commission) quelques jours après le <strong>passage en caisse (validation Ardoise)</strong>.</li>
                                 </ul>
                                 <p className="text-xs text-gray-500 mt-2 italic">
-                                    Les virements vers ton compte bancaire sont effectués automatiquement par Stripe selon ta fréquence choisie (quotidienne, hebdo...).
+                                    Les virements vers votre compte bancaire sont effectués automatiquement par Stripe selon votre fréquence choisie (quotidienne, hebdo...).
                                 </p>
                             </div>
                         </div>
@@ -271,7 +271,7 @@ export default function PartnerGuide() {
                                 <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
                             </summary>
                             <p className="mt-3 text-gray-600">
-                                Vérifie que la cliente a bien du réseau internet. Si le problème persiste, note son nom, le montant et l'heure, et contacte-nous via WhatsApp ou email.
+                                Vérifiez que la cliente a bien du réseau internet. Si le problème persiste, notez son nom, le montant et l'heure, et contactez-nous via WhatsApp ou email.
                             </p>
                         </details>
 
@@ -281,7 +281,7 @@ export default function PartnerGuide() {
                                 <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
                             </summary>
                             <p className="mt-3 text-gray-600">
-                                Oui, vas dans "Mes Offres" et clique sur l'icône crayon. Attention, toute modification sur une offre "Active" devra être re-validée par l'équipe, ce qui la rendra temporairement indisponible.
+                                Oui, allez dans "Mes Offres" et cliquez sur l'icône crayon. Attention, toute modification sur une offre "Active" devra être re-validée par l'équipe, ce qui la rendra temporairement indisponible.
                             </p>
                         </details>
 
@@ -291,7 +291,7 @@ export default function PartnerGuide() {
                                 <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
                             </summary>
                             <p className="mt-3 text-gray-600">
-                                L'inscription et la création d'offres sont 100% gratuites ! Nous prélevons uniquement une commission sur les encaissements réalisés via la plateforme. Zéro risque pour toi.
+                                L'inscription et la création d'offres sont 100% gratuites ! Nous prélevons uniquement une commission sur les encaissements réalisés via la plateforme. Zéro risque pour vous.
                             </p>
                         </details>
 
@@ -301,7 +301,7 @@ export default function PartnerGuide() {
                                 <span className="text-primary group-open:rotate-180 transition-transform">▼</span>
                             </summary>
                             <p className="mt-3 text-gray-600">
-                                Tu peux contacter l'équipe support directement par email à <strong>contact@nowme.fr</strong>.
+                                Vous pouvez contacter l'équipe support directement par email à <strong>contact@nowme.fr</strong>.
                             </p>
                         </details>
                     </div>
