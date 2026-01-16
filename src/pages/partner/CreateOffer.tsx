@@ -228,7 +228,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           price: v.price != null ? v.price.toString() : '',
           discounted_price: v.discounted_price != null ? v.discounted_price.toString() : '',
           stock: v.stock !== null ? v.stock.toString() : '',
-          has_stock: v.stock !== null
+          has_stock: v.stock !== null,
+          content: v.content || []
         })));
       }
 

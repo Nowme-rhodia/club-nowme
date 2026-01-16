@@ -198,10 +198,15 @@ export default function Offers() {
 
     // Parse variants if string or use as is
     const currentVariants = offer.variants?.map((v: any) => ({
+      ...v, // Preserve ID and other fields
       name: v.name,
+      description: v.description || '', // Ensure description is carried over
       price: v.price.toString(),
-      discounted_price: v.discounted_price ? v.discounted_price.toString() : ''
-    })) || [{ name: '', price: '', discounted_price: '' }];
+      discounted_price: v.discounted_price ? v.discounted_price.toString() : '',
+      stock: v.stock !== null ? v.stock.toString() : '',
+      has_stock: v.stock !== null,
+      content: v.content || [] // Ensure content is preserved
+    })) || [{ name: '', description: '', price: '', discounted_price: '', stock: '', has_stock: false, content: [] }];
 
     // Derive category slugs from joined category object
     // @ts-ignore

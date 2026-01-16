@@ -683,8 +683,8 @@ export default function OfferPage() {
           </div>
 
           <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-              <div className="relative h-96 lg:h-full overflow-hidden bg-gray-900 group">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 relative">
+              <div className="relative h-96 lg:h-auto lg:min-h-[500px] lg:max-h-[85vh] lg:sticky lg:top-24 overflow-hidden bg-gray-900 group">
                 {images.length > 0 ? (
                   <>
                     <img
@@ -826,7 +826,7 @@ export default function OfferPage() {
                     <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
                       <h2 className="text-sm font-semibold text-gray-900 mb-1">Conditions d'annulation</h2>
                       <p className="text-sm text-gray-600">
-                        {offer.booking_type === 'purchase'
+                        {offer.booking_type === 'purchase' || offer.booking_type === 'simple_access'
                           ? 'Non remboursable'
                           : offer.booking_type === 'promo'
                             ? 'Voir conditions sur le site partenaire'
