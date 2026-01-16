@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
-import { Calendar, MapPin, Mail, ArrowRight, Sparkles, Copy, Ticket, AlertTriangle, X } from 'lucide-react';
+import { Calendar, MapPin, Mail, ArrowRight, Sparkles, Copy, Ticket, AlertTriangle, X, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,6 +19,11 @@ interface Booking {
     customer_email: string;
     source?: string;
     external_id?: string;
+    variant_id?: string;
+    variant?: {
+        name: string;
+        content: any;
+    };
     offer: {
         id: string;
         title: string;
@@ -30,6 +35,7 @@ interface Booking {
         digital_product_file?: string;
         external_link?: string;
         is_online?: boolean;
+        access_password?: string;
 
         event_end_date?: string;
         cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
@@ -86,8 +92,14 @@ export default function Bookings() {
                     status,
                     cancelled_by_partner,
                     customer_email,
+                    customer_email,
                     source,
                     external_id,
+                    variant_id,
+                    variant: offer_variants (
+                        name,
+                        content
+                    ),
                     offer: offers (
                         id,
                         title,
@@ -472,6 +484,54 @@ export default function Bookings() {
                                                         <Copy className="w-4 h-4 text-gray-400 group-hover:text-primary" />
                                                     </div>
 
+                                                )}
+
+                                                {/* Variant Content Items (Multi-Item Support) */}
+                                                {booking.variant?.content && Array.isArray(booking.variant.content) && booking.variant.content.length > 0 && (
+                                                    <div className="mt-3 space-y-2">
+                                                        {booking.variant.content.map((item: any, idx: number) => (
+                                                            <div key={idx} className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="p-1.5 bg-white rounded-full text-indigo-600">
+                                                                        {item.file_url ? (
+                                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                                            </svg>
+                                                                        ) : (
+                                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="font-semibold text-sm text-indigo-900">{item.name}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                                    {item.url && (
+                                                                        <a
+                                                                            href={item.url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="flex-1 sm:flex-none text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded-lg transition-colors text-center whitespace-nowrap"
+                                                                        >
+                                                                            Accéder au lien
+                                                                        </a>
+                                                                    )}
+                                                                    {item.file_url && (
+                                                                        <a
+                                                                            href={item.file_url}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            download
+                                                                            className="flex-1 sm:flex-none text-xs font-bold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 px-3 py-2 rounded-lg transition-colors text-center whitespace-nowrap"
+                                                                        >
+                                                                            Télécharger (PDF)
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 )}
 
                                                 {/* External Link (Visio / Access) */}

@@ -9,7 +9,10 @@ import {
   XCircle,
   Clock,
   Eye,
-  Trash2
+  Trash2,
+  CreditCard,
+  CalendarCheck,
+  Users
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import DeletionReasonModal from '../../components/admin/DeletionReasonModal';
@@ -67,11 +70,37 @@ export default function Subscribers() {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedSubscriber, setSelectedSubscriber] = useState<Subscriber | null>(null);
+  const [subscriberStats, setSubscriberStats] = useState<any>(null);
   const [confirmArchive, setConfirmArchive] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     loadSubscribers();
   }, []);
+
+  useEffect(() => {
+    if (selectedSubscriber) {
+      loadSubscriberStats(selectedSubscriber.user_id);
+    } else {
+      setSubscriberStats(null);
+    }
+  }, [selectedSubscriber]);
+
+  const loadSubscriberStats = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_subscriber_stats')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching subscriber stats:', error);
+      }
+      setSubscriberStats(data || { total_bookings: 0, total_spent: 0, organized_squads: 0 });
+    } catch (err) {
+      console.error('Error loading subscriber stats:', err);
+    }
+  };
 
   const loadSubscribers = async () => {
     try {
@@ -259,8 +288,8 @@ export default function Subscribers() {
             <button
               onClick={() => setStatusFilter('all')}
               className={`${statusFilter === 'all'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
               Tous
@@ -268,8 +297,8 @@ export default function Subscribers() {
             <button
               onClick={() => setStatusFilter('active')}
               className={`${statusFilter === 'active'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
               Actifs
@@ -277,8 +306,8 @@ export default function Subscribers() {
             <button
               onClick={() => setStatusFilter('cancelled')}
               className={`${statusFilter === 'cancelled'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
               Annulés
@@ -286,8 +315,8 @@ export default function Subscribers() {
             <button
               onClick={() => setStatusFilter('archived')}
               className={`${statusFilter === 'archived'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             >
               Corbeille
@@ -381,6 +410,30 @@ export default function Subscribers() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Détails de l'abonnée
               </h2>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center text-gray-500 mb-1">
+                    <CalendarCheck className="w-4 h-4 mr-1" />
+                    <span className="text-xs font-semibold uppercase">Réservations</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">{subscriberStats?.total_bookings || 0}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center text-gray-500 mb-1">
+                    <CreditCard className="w-4 h-4 mr-1" />
+                    <span className="text-xs font-semibold uppercase">Dépensé</span>
+                  </div>
+                  <p className="text-xl font-bold text-blue-600">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(subscriberStats?.total_spent || 0)}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center text-gray-500 mb-1">
+                    <Users className="w-4 h-4 mr-1" />
+                    <span className="text-xs font-semibold uppercase">Sorties organisées</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">{subscriberStats?.organized_squads || 0}</p>
+                </div>
+              </div>
 
               <div className="space-y-6">
                 <div>

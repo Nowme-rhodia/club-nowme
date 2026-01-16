@@ -92,7 +92,7 @@ export function Guide() {
                         Utilise "Mon Ardoise" pour payer tes consommations et gagner du bonus.
                     </p>
                     <div className="space-y-2 text-sm text-gray-600">
-                        <p>1. Achète un crédit (ex: paye 40€, reçois 50€).</p>
+                        <p>1. Achète un crédit (ex: paye 40€, reçois l'offre du partenaire).</p>
                         <p>2. Au moment de payer, ouvre l'app.</p>
                         <p>3. Saisis le montant et montre <strong className="text-green-600">l'Écran Vert ✅</strong> au serveur.</p>
                     </div>

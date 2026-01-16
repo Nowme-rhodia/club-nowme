@@ -34,6 +34,13 @@ interface Variant {
   discounted_price?: string;
   stock: string;
   has_stock: boolean;
+  content: ContentItem[];
+}
+
+interface ContentItem {
+  name: string;
+  url: string;
+  file_url: string;
 }
 
 const modules = {
@@ -53,6 +60,12 @@ const formats = [
   'list', 'bullet',
   'link'
 ];
+
+const formatDateTimeForInput = (dateStr: string) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toISOString().slice(0, 16);
+};
 
 export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferProps) {
   const { user } = useAuth();
@@ -107,7 +120,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
   // Variants
   const [variants, setVariants] = useState<Variant[]>([
-    { name: 'Tarif Standard', description: '', price: '', discounted_price: '', stock: '', has_stock: false }
+    { name: 'Tarif Standard', description: '', price: '', discounted_price: '', stock: '', has_stock: false, content: [] }
   ]);
 
   const [installmentOptions, setInstallmentOptions] = useState<string[]>([]);
@@ -126,11 +139,11 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       const { data, error } = await supabase
         .from('user_profiles')
         .select('partner_id')
-        .eq('user_id', user.id)
+        .eq('user_id', (user as any).id)
         .single();
 
-      if (data?.partner_id) {
-        setPartnerId(data.partner_id);
+      if ((data as any)?.partner_id) {
+        setPartnerId((data as any).partner_id);
       }
     }
     fetchPartnerId();
@@ -203,7 +216,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           price: v.price != null ? v.price.toString() : '',
           discounted_price: v.discounted_price != null ? v.discounted_price.toString() : '',
           stock: v.stock !== null ? v.stock.toString() : '',
-          has_stock: v.stock !== null
+          has_stock: v.stock !== null,
+          content: v.content || []
         })));
       } else if (offer.variants && offer.variants.length > 0) {
         // Fallback for when variants are passed via offers query alias
@@ -277,7 +291,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   };
 
   const addVariant = () => {
-    setVariants([...variants, { name: '', description: '', price: '', discounted_price: '', stock: '', has_stock: false }]);
+    setVariants([...variants, { name: '', description: '', price: '', discounted_price: '', stock: '', has_stock: false, content: [] }]);
   };
 
   const removeVariant = (index: number) => {
@@ -346,7 +360,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       } else if (coverImage) {
         setIsUploading(true);
         const fileExt = coverImage.name.split('.').pop();
-        const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
+        const fileName = `${(user as any)?.id}/${Date.now()}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('offer-images')
@@ -389,10 +403,10 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
         .select('partner_id')
-        .eq('user_id', user?.id)
+        .eq('user_id', (user as any)?.id)
         .single();
 
-      if (profileError || !profileData?.partner_id) {
+      if (profileError || !(profileData as any)?.partner_id) {
         toast.error('Profil partenaire introuvable');
         setLoading(false);
         return;
@@ -512,7 +526,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             discounted_price: v.discounted_price ? parseFloat(v.discounted_price) : null,
             stock: v.has_stock && v.stock ? parseInt(v.stock) : null,
             // For Wallet Pack, credit amount = price (1:1 per user requirement)
-            credit_amount: eventType === 'wallet_pack' ? parseFloat(v.price) : null
+            credit_amount: eventType === 'wallet_pack' ? parseFloat(v.price) : null,
+            content: v.content
           };
           // Only include ID if it's a real Update (not a new variant)
           if (v.id) {
@@ -1196,7 +1211,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mt-4 mb-2">
-                    {eventType === 'simple_access' ? 'Lien d\'accès (facultatif)' : 'Lien de l\'offre'}
+                    Lien de l'offre
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1209,11 +1224,6 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                       className="pl-10 block w-full border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
                       placeholder="https://..."
                     />
-                    {eventType === 'simple_access' && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Ce lien ne sera visible par le client qu'après l'achat.
-                      </p>
-                    )}
                   </div>
                 </div>
                 <div>
@@ -1335,7 +1345,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                   Lien de réservation (Doctolib, Planity, Calendly...)
                 </label>
                 <div className="relative">
-                  <LinkIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                  <Link className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                   <input
                     type="url"
                     value={calendlyUrl}
@@ -1375,46 +1385,30 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
               <div className="space-y-4">
                 {variants.map((variant, index) => (
-                  <div key={index} className="flex gap-4 items-start bg-gray-50 p-4 rounded-lg group">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div key={index} className="bg-gray-50 p-4 rounded-lg group space-y-4">
+                    <div className="flex gap-4 items-start">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                      <div className="col-span-1 md:col-span-2">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Nom de l'option</label>
-                        <input
-                          type="text"
-                          value={variant.name}
-                          onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                          placeholder={eventType === 'wallet_pack' ? "Ex: Pack Découverte 50€" : "Ex: Tarif Solo"}
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">
-                          {eventType === 'wallet_pack' ? 'Prix du Pack (€)' : 'Prix (€)'}
-                        </label>
-                        <div className="relative">
+                        <div className="col-span-1 md:col-span-2">
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Nom de l'option</label>
                           <input
-                            type="number"
-                            value={variant.price}
-                            onChange={(e) => updateVariant(index, 'price', e.target.value)}
-                            className="w-full pl-3 pr-8 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
+                            type="text"
+                            value={variant.name}
+                            onChange={(e) => updateVariant(index, 'name', e.target.value)}
+                            placeholder={eventType === 'wallet_pack' ? "Ex: Pack Découverte 50€" : "Ex: Tarif Solo"}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                           />
-                          <span className="absolute right-3 top-2 text-gray-400">€</span>
                         </div>
-                      </div>
 
-                      {eventType !== 'wallet_pack' && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Prix barré (Optionnel)</label>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">
+                            {eventType === 'wallet_pack' ? 'Prix du Pack (€)' : 'Prix (€)'}
+                          </label>
                           <div className="relative">
                             <input
                               type="number"
-                              value={variant.discounted_price}
-                              onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
+                              value={variant.price}
+                              onChange={(e) => updateVariant(index, 'price', e.target.value)}
                               className="w-full pl-3 pr-8 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                               placeholder="0.00"
                               min="0"
@@ -1423,38 +1417,190 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                             <span className="absolute right-3 top-2 text-gray-400">€</span>
                           </div>
                         </div>
-                      )}
 
-                      {eventType !== 'purchase' && eventType !== 'wallet_pack' && (
-                        <div className="flex items-center gap-2 mt-6">
-                          <input
-                            type="checkbox"
-                            checked={variant.has_stock}
-                            onChange={(e) => updateVariant(index, 'has_stock', e.target.checked)}
-                            className="rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm text-gray-600">Limiter les places ?</span>
-                        </div>
-                      )}
+                        {eventType !== 'wallet_pack' && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Prix barré (Optionnel)</label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={variant.discounted_price}
+                                onChange={(e) => updateVariant(index, 'discounted_price', e.target.value)}
+                                className="w-full pl-3 pr-8 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                                placeholder="0.00"
+                                min="0"
+                                step="0.01"
+                              />
+                              <span className="absolute right-3 top-2 text-gray-400">€</span>
+                            </div>
+                          </div>
+                        )}
 
-                      {variant.has_stock && (
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500 mb-1">Quantité dispo</label>
-                          <input
-                            type="number"
-                            value={variant.stock}
-                            onChange={(e) => updateVariant(index, 'stock', e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
-                          />
-                        </div>
+                        {eventType !== 'purchase' && eventType !== 'wallet_pack' && (
+                          <div className="flex items-center gap-2 mt-6">
+                            <input
+                              type="checkbox"
+                              checked={variant.has_stock}
+                              onChange={(e) => updateVariant(index, 'has_stock', e.target.checked)}
+                              className="rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <span className="text-sm text-gray-600">Limiter les places ?</span>
+                          </div>
+                        )}
+
+                        {variant.has_stock && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Quantité dispo</label>
+                            <input
+                              type="number"
+                              value={variant.stock}
+                              onChange={(e) => updateVariant(index, 'stock', e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {variants.length > 1 && (
+                        <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-gray-400 hover:text-red-500 flex-shrink-0">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       )}
                     </div>
 
-                    {variants.length > 1 && (
-                      <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-gray-400 hover:text-red-500">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
+                    {/* --- Content Items (New) --- */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 w-full">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Contenu de l'offre (Liens / Fichiers)
+                      </label>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Ajoutez ici les éléments que le client recevra pour cette option (ex: un lien Masterclass + un PDF).
+                      </p>
+
+                      <div className="space-y-3">
+                        {variant.content && variant.content.map((item, cIndex) => (
+                          <div key={cIndex} className="flex flex-col gap-3 p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="flex gap-3">
+                              <div className="flex-1">
+                                <input
+                                  type="text"
+                                  placeholder="Nom (ex: Vidéo Chapitre 1)"
+                                  value={item.name}
+                                  onChange={(e) => {
+                                    const newVariants = [...variants];
+                                    newVariants[index].content[cIndex].name = e.target.value;
+                                    setVariants(newVariants);
+                                  }}
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-primary focus:border-primary"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newVariants = [...variants];
+                                  newVariants[index].content = newVariants[index].content.filter((_, i) => i !== cIndex);
+                                  setVariants(newVariants);
+                                }}
+                                className="text-gray-400 hover:text-red-500 p-1"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="relative">
+                                <div className="absolute left-3 top-2.5 text-gray-400">
+                                  <Link className="h-4 w-4" />
+                                </div>
+                                <input
+                                  type="url"
+                                  placeholder="https://..."
+                                  value={item.url}
+                                  onChange={(e) => {
+                                    const newVariants = [...variants];
+                                    newVariants[index].content[cIndex].url = e.target.value;
+                                    setVariants(newVariants);
+                                  }}
+                                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded focus:ring-primary focus:border-primary"
+                                />
+                              </div>
+
+                              <div className="relative">
+                                {item.file_url ? (
+                                  <div className="flex items-center justify-between px-3 py-2 text-sm border border-green-200 bg-green-50 rounded text-green-700 truncate">
+                                    <span className="truncate max-w-[150px]">{item.file_url.split('/').pop()}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newVariants = [...variants];
+                                        newVariants[index].content[cIndex].file_url = '';
+                                        setVariants(newVariants);
+                                      }}
+                                      className="ml-2 text-green-600 hover:text-red-500"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label className="flex items-center justify-center gap-2 px-3 py-2 text-sm border border-dashed border-gray-300 rounded cursor-pointer hover:border-primary hover:bg-gray-50 text-gray-500 hover:text-primary transition-colors">
+                                    <Upload className="w-4 h-4" />
+                                    <span>Upload PDF</span>
+                                    <input
+                                      type="file"
+                                      accept=".pdf,.zip"
+                                      className="hidden"
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+
+                                        const toastId = toast.loading('Upload en cours...');
+                                        try {
+                                          const fileExt = file.name.split('.').pop();
+                                          const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+                                          const filePath = `${partnerId}/${fileName}`;
+
+                                          const { error } = await supabase.storage
+                                            .from('offer-attachments')
+                                            .upload(filePath, file);
+
+                                          if (error) throw error;
+
+                                          const { data: { publicUrl } } = supabase.storage
+                                            .from('offer-attachments')
+                                            .getPublicUrl(filePath);
+
+                                          const newVariants = [...variants];
+                                          newVariants[index].content[cIndex].file_url = publicUrl;
+                                          setVariants(newVariants);
+                                          toast.success('Fichier ajouté !', { id: toastId });
+                                        } catch (error) {
+                                          console.error('Upload error', error);
+                                          toast.error("Erreur", { id: toastId });
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newVariants = [...variants];
+                            if (!newVariants[index].content) newVariants[index].content = [];
+                            newVariants[index].content.push({ name: '', url: '', file_url: '' });
+                            setVariants(newVariants);
+                          }}
+                          className="text-sm text-primary flex items-center gap-1 font-medium hover:underline"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Ajouter un contenu
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

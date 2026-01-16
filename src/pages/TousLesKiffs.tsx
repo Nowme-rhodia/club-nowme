@@ -233,6 +233,11 @@ export default function TousLesKiffs() {
     // 6. Department Filter
     if (selectedDepartment !== 'all') {
       filtered = filtered.filter(offer => {
+        // Les offres en ligne ou sans adresse doivent apparaître dans tous les départements
+        if (offer.is_online || offer.location.address === 'Adresse non spécifiée') {
+          return true;
+        }
+
         const postcode = offer.location.address.match(/\b(97|2A|2B|[0-9]{2})[0-9]{3}\b/)?.[1];
         return postcode === selectedDepartment;
       });

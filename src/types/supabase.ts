@@ -265,6 +265,7 @@ export type Database = {
           name: string;
           price: number;
           discounted_price: number | null;
+          content: Json; // New field
           created_at: string;
           updated_at: string;
         };
@@ -274,6 +275,7 @@ export type Database = {
           name: string;
           price: number;
           discounted_price?: number | null;
+          content?: Json;
           created_at?: string;
           updated_at?: string;
         };
@@ -283,6 +285,7 @@ export type Database = {
           name?: string;
           price?: number;
           discounted_price?: number | null;
+          content?: Json;
           created_at?: string;
           updated_at?: string;
         };

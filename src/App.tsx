@@ -288,6 +288,7 @@ function App() {
                     <Route path="refunds" element={<RefundRequests />} />
                     <Route path="payouts" element={<Payouts />} />
                     <Route path="community" element={<AdminCommunity />} />
+                    <Route path="blog" element={<AdminBlog />} />
                     <Route path="blog/new" element={<AdminBlogEditor />} />
                     <Route path="blog/edit/:id" element={<AdminBlogEditor />} />
                   </Route>

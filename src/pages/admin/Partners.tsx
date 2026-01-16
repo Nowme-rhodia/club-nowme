@@ -11,7 +11,10 @@ import {
   CheckCircle2,
   XCircle,
   Trash2,
-  FileText
+  FileText,
+  TrendingUp,
+  ShoppingBag,
+  Star
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { approvePartner, rejectPartner } from '../../lib/partner';
@@ -62,6 +65,7 @@ export default function Partners() {
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [partnerStats, setPartnerStats] = useState<any>(null); // New state for stats
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState<{ id: string; name: string } | null>(null);
 
@@ -69,6 +73,32 @@ export default function Partners() {
     loadPartners();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
+
+  // Load stats when a partner is selected
+  useEffect(() => {
+    if (selectedPartner) {
+      loadPartnerStats(selectedPartner.id);
+    } else {
+      setPartnerStats(null);
+    }
+  }, [selectedPartner]);
+
+  const loadPartnerStats = async (partnerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_partner_stats')
+        .select('*')
+        .eq('partner_id', partnerId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Ignore no rows found
+        console.error('Error loading stats:', error);
+      }
+      setPartnerStats(data || { total_bookings: 0, total_revenue: 0, active_offers: 0, total_reviews: 0, average_rating: 0 });
+    } catch (err) {
+      console.error('Error fetching partner stats:', err);
+    }
+  };
 
   const loadPartners = async () => {
     try {
@@ -396,6 +426,38 @@ export default function Partners() {
                 >
                   <XCircle className="w-6 h-6" />
                 </button>
+              </div>
+
+              {/* STATS SECTION */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center text-gray-500 mb-1">
+                    <ShoppingBag className="w-4 h-4 mr-1" />
+                    <span className="text-xs font-semibold uppercase">Ventes</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">{partnerStats?.total_bookings || 0}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center text-gray-500 mb-1">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    <span className="text-xs font-semibold uppercase">CA (Total)</span>
+                  </div>
+                  <p className="text-xl font-bold text-primary">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(partnerStats?.total_revenue || 0)}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center text-gray-500 mb-1">
+                    <Star className="w-4 h-4 mr-1" />
+                    <span className="text-xs font-semibold uppercase">Avis</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">{partnerStats?.total_reviews || 0} <span className="text-xs font-normal text-gray-500">({(partnerStats?.average_rating || 0).toFixed(1)}/5)</span></p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center text-gray-500 mb-1">
+                    <FileText className="w-4 h-4 mr-1" />
+                    <span className="text-xs font-semibold uppercase">Offres</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">{partnerStats?.active_offers || 0}</p>
+                </div>
               </div>
 
               <div className="space-y-6">

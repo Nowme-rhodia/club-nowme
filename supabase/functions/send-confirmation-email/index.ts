@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
             supabase.from('user_profiles').select('first_name, last_name, email').eq('user_id', bookingData.user_id).single(),
             supabase.from('offers').select('title, is_online, booking_type, calendly_url, external_link, digital_product_file').eq('id', bookingData.offer_id).single(),
             supabase.from('partners').select('business_name, description, website, address, contact_email, notification_settings, siret, tva_intra').eq('id', bookingData.partner_id).single(),
-            bookingData.variant_id ? supabase.from('offer_variants').select('name, price').eq('id', bookingData.variant_id).single() : Promise.resolve({ data: null, error: null })
+            bookingData.variant_id ? supabase.from('offer_variants').select('name, price, content').eq('id', bookingData.variant_id).single() : Promise.resolve({ data: null, error: null })
         ])
 
         if (userResponse.error) console.error("User fetch error:", userResponse.error)
@@ -83,15 +83,6 @@ Deno.serve(async (req) => {
         const partnerSiret = partner?.siret || ''
         const partnerTva = partner?.tva_intra || ''
         const partnerEmail = partner?.contact_email || 'Pas d\'email de contact'
-
-        // ... PDF Logic omitted for brevity, variable scope preservation required ...
-        // To avoid replacing the whole PDF block which is huge, I will use a smaller replace block if possible.
-        // But the variables `fullItemName` and `installmentNote` are needed inside PDF block logic?
-        // Actually PDF block uses `fullItemName`. So updating `fullItemName` definition is good.
-        // But I need to preserve lines 76-199 (PDF generation).
-
-        // RE-GENERATING PDF CONTENT W/ FULL ITEM NAME
-        // ... (PDF code assumed unchanged as it uses fullItemName)
 
         // Generate PDF
         const pdfDoc = await PDFDocument.create()
@@ -170,11 +161,6 @@ Deno.serve(async (req) => {
         const isAtHome = serviceZones.length > 0;
         const eventDate = bookingData.scheduled_at || bookingData.booking_date || offerDetails?.event_start_date;
 
-        // Helper to check if date is "valid" (not just Today/Now if it was purchase time)
-        // With new flow, scheduled_at holds the real date. booking_date holds transaction date usually.
-        // But for Event bookings, booking_date IS the event date.
-        // So we prioritize scheduled_at. If null, check if type is 'event' or 'calendly'.
-
         let validDateToDisplay = null;
         // 1. If scheduled_at exists, it ALWAYS wins (Calendly booked or Event booked)
         if (bookingData.scheduled_at) validDateToDisplay = bookingData.scheduled_at;
@@ -188,10 +174,15 @@ Deno.serve(async (req) => {
         }
 
         if (validDateToDisplay) {
-            const dateObj = new Date(validDateToDisplay);
-            const frenchDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(dateObj);
-            const frenchTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(dateObj).replace(':', 'h');
-            dateDisplay = `${frenchDate} à ${frenchTime}`;
+            try {
+                const dateObj = new Date(validDateToDisplay);
+                const frenchDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }).format(dateObj);
+                const frenchTime = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' }).format(dateObj).replace(':', 'h');
+                dateDisplay = `${frenchDate} à ${frenchTime}`;
+            } catch (e) {
+                console.error("Date formatting error", e);
+                dateDisplay = validDateToDisplay;
+            }
         } else if (offer.calendly_url || isAtHome) {
             dateDisplay = "À choisir lors de la prise de RDV";
         }
@@ -205,7 +196,6 @@ Deno.serve(async (req) => {
         }
 
         if (offer.digital_product_file) {
-            // DIGITAL PRODUCT
             logisticsHtml = `
                 <h3>Votre contenu est prêt !</h3>
                 <p>Merci pour votre commande. Vous pouvez télécharger votre fichier dès maintenant :</p>
@@ -235,6 +225,29 @@ Deno.serve(async (req) => {
                 <p>L'équipe <strong>${partnerName}</strong> a hâte de vous accueillir.</p>
                 <p>Pensez à présenter ce mail ou votre espace client lors de votre arrivée.</p>
                 <p style="margin-top: 30px;"><a href="${Deno.env.get("PUBLIC_SITE_URL")}/mes-reservations" style="background-color: #0F172A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Voir ma réservation</a></p>
+             `;
+        }
+
+        // Logic for Variant Content Items
+        if (variant?.content && Array.isArray(variant.content) && variant.content.length > 0) {
+            let itemsHtml = '<ul style="padding-left: 20px; margin-top: 10px;">';
+            variant.content.forEach((item: any) => {
+                const name = item.name || 'Contenu';
+                if (item.url) {
+                    itemsHtml += `<li style="margin-bottom: 8px;"><strong>${name} :</strong> <a href="${item.url}" style="color: #2563EB;">Accéder au lien</a></li>`;
+                }
+                if (item.file_url) {
+                    itemsHtml += `<li style="margin-bottom: 8px;"><strong>${name} :</strong> <a href="${item.file_url}" style="color: #D946EF;">Télécharger le fichier</a></li>`;
+                }
+            });
+            itemsHtml += '</ul>';
+
+            logisticsHtml += `
+                <div style="background-color: #f0fdfa; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #ccfbf1;">
+                    <h3 style="margin-top: 0; color: #0f766e; font-size: 16px;">Contenus inclus dans votre option</h3>
+                    ${itemsHtml}
+                    <p style="font-size: 13px; color: #64748b; margin-top: 10px;">Retrouvez tous ces contenus dans votre espace "Mes Achats".</p>
+                </div>
              `;
         }
 
@@ -271,9 +284,7 @@ Deno.serve(async (req) => {
 
         if (!user.email) {
             console.warn("WARNING: No user email found. Aborting user email send.")
-            // We don't abort the whole function, we just skip user email, but we should probably log this as an issue.
         } else {
-            // --- USER EMAIL ---
             console.log(`Attempting to send USER email to: ${user.email}`)
             try {
                 const emailData = await resend.emails.send({
@@ -300,7 +311,6 @@ Deno.serve(async (req) => {
 
         if (partnerSettings.new_booking !== false) {
             if (partner.contact_email) {
-                // --- PARTNER EMAIL ---
                 console.log(`Attempting to send PARTNER email to: ${partner.contact_email}`)
                 try {
                     const partnerHtmlContent = `
@@ -342,7 +352,6 @@ Deno.serve(async (req) => {
                 console.warn(`WARNING: Skipping Partner Email. No contact_email defined for partner ID: ${bookingData.partner_id}`)
             }
 
-            // Notification In-App (Fail-safe, always attempt)
             try {
                 await supabase.from('partner_notifications').insert({
                     partner_id: bookingData.partner_id,
