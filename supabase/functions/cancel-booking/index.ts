@@ -185,7 +185,8 @@ serve(async (req: Request) => {
             .update({
                 status: 'cancelled',
                 cancellation_reason: reason,
-                cancelled_at: new Date().toISOString()
+                cancelled_at: new Date().toISOString(),
+                is_payout_eligible: !refundEligible // If NOT refunded, partner gets paid
             })
             .eq('id', bookingId);
 

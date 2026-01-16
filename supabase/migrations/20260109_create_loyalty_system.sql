@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.member_rewards (
 -- RLS for member_rewards
 ALTER TABLE public.member_rewards ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own rewards" ON public.member_rewards;
 CREATE POLICY "Users can view their own rewards"
     ON public.member_rewards FOR SELECT
     USING (auth.uid() = user_id);
@@ -31,6 +32,7 @@ CREATE TABLE IF NOT EXISTS public.reward_history (
 -- RLS for reward_history
 ALTER TABLE public.reward_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view their own history" ON public.reward_history;
 CREATE POLICY "Users can view their own history"
     ON public.reward_history FOR SELECT
     USING (auth.uid() = user_id);
