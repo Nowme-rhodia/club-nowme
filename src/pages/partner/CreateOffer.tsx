@@ -1004,8 +1004,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                         onChange={(e) => setExternalLink(e.target.value)}
                         className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                         placeholder="https://drive.google.com/..."
-                        required={eventType === 'simple_access' && locationMode === 'online'}
+                        required={eventType === 'simple_access' && locationMode === 'online' && variants.length === 0}
                       />
+                      <p className="text-xs text-blue-700 mt-1">Laissez vide si vous utilisez plusieurs options avec des liens différents plus bas.</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-blue-900 mb-1">Mot de passe d'accès (Facultatif)</label>
@@ -1261,7 +1262,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                 </p>
                 {/* Auto-set policy hiddenly */}
               </div>
-            ) : (eventType === 'purchase' || eventType === 'promo') ? (
+            ) : (eventType === 'purchase' || eventType === 'promo' || eventType === 'simple_access') ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   {
@@ -1395,8 +1396,20 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                             type="text"
                             value={variant.name}
                             onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                            placeholder={eventType === 'wallet_pack' ? "Ex: Pack Découverte 50€" : "Ex: Tarif Solo"}
+                            placeholder={eventType === 'wallet_pack' ? "Ex: Pack Découverte 50€" : "Ex: Tarif Solo (ou nom de l'article)"}
                             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                          />
+                        </div>
+
+                        {/* Description field for simple_access (and others if useful) */}
+                        <div className="col-span-1 md:col-span-2">
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Description (Optionnel)</label>
+                          <textarea
+                            value={variant.description || ''}
+                            onChange={(e) => updateVariant(index, 'description', e.target.value)}
+                            placeholder="Courte description de ce que contient cette option..."
+                            rows={2}
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:ring-primary focus:border-primary text-sm"
                           />
                         </div>
 
