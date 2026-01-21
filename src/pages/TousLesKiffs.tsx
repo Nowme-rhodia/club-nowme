@@ -65,7 +65,7 @@ export default function TousLesKiffs() {
 
   const [selectedOffer, setSelectedOffer] = useState<OfferDetails | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 3000]);
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'all');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(searchParams.get('subcategory') || null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -557,7 +557,7 @@ export default function TousLesKiffs() {
                       <h3 className="text-sm font-medium text-gray-700 mb-4">Budget</h3>
                       <PriceRangeSlider
                         min={0}
-                        max={1000}
+                        max={3000}
                         value={priceRange}
                         onChange={setPriceRange}
                       />
@@ -603,7 +603,7 @@ export default function TousLesKiffs() {
                     <button
                       onClick={() => {
                         setSearchTerm('');
-                        setPriceRange([0, 1000]);
+                        setPriceRange([0, 3000]);
                         setSortOption('newest');
                         setDateFilter('all');
                         setIsOfficialFilter(false);
@@ -692,7 +692,7 @@ export default function TousLesKiffs() {
             <button
               onClick={() => {
                 setSearchTerm('');
-                setPriceRange([0, 1000]);
+                setPriceRange([0, 3000]);
                 setSortOption('newest');
                 setDateFilter('all');
                 setIsOfficialFilter(false);

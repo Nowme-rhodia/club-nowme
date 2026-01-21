@@ -24,6 +24,7 @@ interface OfferDetails {
     promoConditions?: string;
     bookingType?: string;
     date?: string;
+    slug?: string;
 }
 
 export default function Agenda() {
@@ -117,7 +118,8 @@ export default function Agenda() {
                             category: catName,
                             promoConditions: offer.promo_conditions,
                             bookingType: offer.booking_type,
-                            date: offer.event_start_date
+                            date: offer.event_start_date,
+                            slug: offer.slug
                         };
                     });
 
