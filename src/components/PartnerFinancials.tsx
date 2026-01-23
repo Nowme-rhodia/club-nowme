@@ -63,6 +63,7 @@ export default function PartnerFinancials() {
             console.error('Error creating connect account:', error);
             // Try to extract the error message from the response if possible (Supabase functions sometimes return it in specific ways)
             const message = error?.context?.json?.error || error?.message || "Erreur inconnue";
+            console.error('Full Error Object:', error);
             alert(`Erreur Stripe : ${message}`);
         } finally {
             setLoading(false);

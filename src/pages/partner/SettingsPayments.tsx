@@ -12,6 +12,27 @@ export default function SettingsPayments() {
   const [calendlyUrl, setCalendlyUrl] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadingStripe, setLoadingStripe] = useState(false);
+
+  const handleConnectStripe = async () => {
+    try {
+      setLoadingStripe(true);
+      const { data, error } = await supabase.functions.invoke('create-connect-account', {
+        method: 'POST',
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: any) {
+      console.error('Error creating connect account:', err);
+      const message = err?.context?.json?.error || err?.message || "Erreur inconnue";
+      setError(`Erreur Stripe : ${message}`);
+    } finally {
+      setLoadingStripe(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -186,8 +207,12 @@ export default function SettingsPayments() {
                       Actif
                     </span>
                   ) : (
-                    <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm font-medium whitespace-nowrap">
-                      Connecter Stripe
+                    <button
+                      onClick={handleConnectStripe}
+                      disabled={loadingStripe}
+                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm font-medium whitespace-nowrap disabled:opacity-50"
+                    >
+                      {loadingStripe ? 'Connexion en cours...' : 'Connecter Stripe'}
                     </button>
                   )}
                 </div>
