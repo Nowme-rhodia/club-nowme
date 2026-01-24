@@ -173,7 +173,7 @@ export default function SignIn() {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
               <div className="mt-1 relative">
                 <input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" />
+                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base sm:text-sm" />
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               </div>
             </div>
@@ -182,7 +182,7 @@ export default function SignIn() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">Mot de passe</label>
               <div className="mt-1 relative">
                 <input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 pr-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" />
+                  className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 pr-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary text-base sm:text-sm" />
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <button
                   type="button"

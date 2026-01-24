@@ -127,7 +127,7 @@ export default function Home() {
   }) => {
     const Icon = LucideIcons[icon] as React.ComponentType<{ className?: string }>;
     return (
-      <div className={`relative overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:shadow-xl group ${large ? 'bg-gradient-to-br from-gray-50 to-white border border-gray-100' : 'bg-white border border-gray-100 hover:border-pink-100'} ${className}`}>
+      <div className={`relative overflow-hidden rounded-3xl p-5 md:p-6 transition-all duration-300 hover:shadow-xl group ${large ? 'bg-gradient-to-br from-gray-50 to-white border border-gray-100' : 'bg-white border border-gray-100 hover:border-pink-100'} ${className}`}>
 
         {/* Background Decorative Blob for Large Cards */}
         {large && (
@@ -177,7 +177,7 @@ export default function Home() {
             <span className="inline-block px-4 py-1 rounded-full bg-pink-100 text-pink-600 font-bold text-sm mb-6 animate-fade-in-down">
               👑 Le Club des femmes qui kiffent
             </span>
-            <h1 className={`text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight mb-6 animate-fade-in-down ${scrollY > 50 ? 'opacity-0' : 'opacity-100'}`}>
+            <h1 className={`text-4xl sm:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight mb-6 animate-fade-in-down ${scrollY > 50 ? 'opacity-0' : 'opacity-100'}`}>
               Le Club n°1 des <span className="text-pink-500">sorties entre filles +30 ans</span><br />
               & rencontres amicales
             </h1>

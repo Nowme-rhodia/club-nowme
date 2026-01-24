@@ -136,7 +136,7 @@ export function Header() {
                     <Link
                       key={item.name}
                       to={item.path}
-                      className="text-gray-700 hover:text-primary px-2 py-1 rounded-md transition-colors duration-200 font-medium"
+                      className="text-gray-700 hover:text-primary px-2 py-3 rounded-md transition-colors duration-200 font-medium border-b border-gray-50 last:border-0"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {item.name}
@@ -155,7 +155,7 @@ export function Header() {
               {!isPartner && isSubscriber && !profile?.is_ambassador && (
                 <Link
                   to="/devenir-ambassadrice"
-                  className="text-primary hover:text-primary-dark font-medium px-2 py-1"
+                  className="text-primary hover:text-primary-dark font-medium px-2 py-3 border-b border-gray-50"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Devenir ambassadrice
@@ -164,7 +164,7 @@ export function Header() {
               {!isPartner && !isSubscriber && (
                 <Link
                   to="/devenir-partenaire"
-                  className="text-primary hover:text-primary-dark font-medium px-2 py-1"
+                  className="text-primary hover:text-primary-dark font-medium px-2 py-3 border-b border-gray-50"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Devenir partenaire
@@ -192,7 +192,7 @@ export function Header() {
               {user ? (
                 <Link
                   to={getAccountPath()}
-                  className="text-primary hover:text-primary-dark font-medium px-2 py-1 flex items-center"
+                  className="text-primary hover:text-primary-dark font-medium px-2 py-3 flex items-center border-b border-gray-50"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <User className="w-5 h-5 mr-2" />
@@ -201,7 +201,7 @@ export function Header() {
               ) : (
                 <Link
                   to="/connexion"
-                  className="text-primary hover:text-primary-dark font-medium px-2 py-1 flex items-center"
+                  className="text-primary hover:text-primary-dark font-medium px-2 py-3 flex items-center border-b border-gray-50"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <LogIn className="w-5 h-5 mr-2" />
