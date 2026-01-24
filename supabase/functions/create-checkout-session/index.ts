@@ -1,7 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import Stripe from "npm:stripe@^17.5.0";
 
-console.log("Create Checkout Session Function Invoked (v7 - Standardized Import)")
+console.log("Create Checkout Session Function Invoked (v10 - Full Restoration)")
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -17,23 +17,28 @@ Deno.serve(async (req) => {
         const reqBody = await req.json()
         const { offer_id, price, user_id, user_email, success_url, cancel_url, booking_type, variant_id, travel_fee, department_code, scheduled_at } = reqBody
 
-        // Initialisation propre via Import Map (Standard)
-        const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
+        const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+        if (!stripeKey) {
+            console.error("CRITICAL: STRIPE_SECRET_KEY is missing");
+            throw new Error("Configuration Error: Missing Stripe Key");
+        }
+
+        // Initialize Stripe
+        const stripe = new Stripe(stripeKey, {
+            apiVersion: '2024-06-20',
             httpClient: Stripe.createFetchHttpClient(),
         })
 
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-            {
-                // No global headers needed as we are using Service Role
-            }
+            {}
         )
 
         // 1. Fetch Offer
         const { data: offer, error: offerError } = await supabaseClient
             .from('offers')
-            .select('title, image_url, description, service_zones, is_official') // Added is_official
+            .select('title, image_url, description, service_zones, is_official, event_start_date')
             .eq('id', offer_id)
             .single();
 
@@ -68,8 +73,6 @@ Deno.serve(async (req) => {
             }
 
             // Determine Price based on Status
-            // Use discounted_price ONLY if user is subscriber AND discounted_price is defined
-            // Otherwise use standard variant price
             let expectedPrice = variant.price;
             if (isSubscriber && variant.discounted_price) {
                 expectedPrice = variant.discounted_price;
@@ -80,18 +83,12 @@ Deno.serve(async (req) => {
 
             unitAmount = Math.round(expectedPrice * 100);
             variantName = ` - ${variant.name}`;
-
-            // Note: If variant logic overrides price passed in body, ensure we use correct base price for discount.
-            // But usually price passed in body is trusted if verified, or we overwrite unitAmount here.
-            // The existing code sets unitAmount. We should also enforce 'price' variable if we use it later?
-            // Existing code used `amount=${price}` in success_url. We should probably use unitAmount/100 or keep consistency.
-            // For now, let's focus on unitAmount modification.
         }
 
-        // --- NEW: Ambassador Discount Logic ---
+        // --- Ambassador Discount Logic ---
         let userData: any = null;
         if (user_id) {
-            console.log(`[DEBUG] Checking Ambassador Status for user_id: ${user_id}`);
+            console.log(`[DEBUG] Checking Status for user_id: ${user_id}`);
             const { data, error } = await supabaseClient
                 .from('user_profiles')
                 .select('email, is_ambassador')
@@ -105,27 +102,19 @@ Deno.serve(async (req) => {
             }
         }
 
-        let appliedDiscount = 0;
         if (userData?.is_ambassador && offer.is_official) {
             console.log(`[DEBUG] Applying Ambassador Discount for Official Event`);
-            // Rule: Free if < 50€, else -50€
             const discountThreshold = 5000; // 50.00 EUR in cents
 
             if (unitAmount <= discountThreshold) {
                 unitAmount = 0;
-                appliedDiscount = price; // Full price discount
             } else {
                 unitAmount = unitAmount - discountThreshold;
-                appliedDiscount = 50;
             }
             console.log(`[DEBUG] New Unit Amount: ${unitAmount}`);
         }
 
-
-
-        // ... Ambassador Logic ...
-
-        // --- NEW: Installment Logic (2x, 3x, 4x) ---
+        // --- Installment Logic (2x, 3x, 4x) ---
         const installment_plan = reqBody.installment_plan; // '2x', '3x', '4x'
         let planType = '1x';
 
@@ -151,18 +140,13 @@ Deno.serve(async (req) => {
             }
 
             // 2. Adjust Price
-            // Simple split for now. We assume the remaining payments will be scheduled for same amount.
-            // Note: Stripe Subscription/Schedule should handle standard amount.
-            // We use Math.floor to ensure we don't overcharge, but ideally we handle the remainder on first payment.
-            // Let's do: Amount = Total / Parts.
             unitAmount = Math.round(unitAmount / parts);
             planType = installment_plan;
         }
 
-        // 1b. Travel Fee (Remaining logic unchanged, just ensuring unitAmount is used)
+        // 1b. Travel Fee
         let travelFeeLineItem = null;
         if (travel_fee && travel_fee > 0) {
-            // ...
             travelFeeLineItem = {
                 price_data: {
                     currency: 'eur',
@@ -199,12 +183,6 @@ Deno.serve(async (req) => {
         ];
 
         if (travelFeeLineItem) {
-            // NOTE: Travel fee is usually paid UPFRONT fully. 
-            // If we are in installment mode, should we split travel fee? 
-            // Usually, fees are paid immediately. 
-            // For simplicity in this iteration, we leave it as is (added to first payment).
-            // But if we want total split, we should have added it to unitAmount before splitting.
-            // Current behavior: Product split in N, Fee paid 100% now.
             line_items.push(travelFeeLineItem);
         }
 
@@ -223,7 +201,7 @@ Deno.serve(async (req) => {
 
         // Session Config
         const sessionConfig: any = {
-            automatic_payment_methods: { enabled: true },
+            payment_method_types: ['card', 'paypal'],
             line_items: line_items,
             mode: 'payment',
             locale: 'fr',
@@ -243,7 +221,7 @@ Deno.serve(async (req) => {
                 is_ambassador_discount: userData?.is_ambassador && offer.is_official ? 'true' : 'false',
                 plan_type: planType, // '2x', '3x', '4x' or '1x'
                 installment_amount: planType !== '1x' ? String(unitAmount) : '0',
-                scheduled_at: scheduled_at || '' // NEW: Pass scheduled date to webhook
+                scheduled_at: scheduled_at || ''
             },
         };
 
@@ -254,7 +232,11 @@ Deno.serve(async (req) => {
             };
         }
 
-        const session = await stripe.checkout.sessions.create(sessionConfig)
+        console.log(`[DEBUG] Session Config:`, JSON.stringify(sessionConfig));
+
+        const session = await stripe.checkout.sessions.create(sessionConfig, {
+            apiVersion: '2024-06-20'
+        });
 
         return new Response(
             JSON.stringify({ sessionId: session.id, url: session.url }),

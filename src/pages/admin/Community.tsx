@@ -9,7 +9,8 @@ import {
     Trash2,
     Eye,
     EyeOff,
-    Plus
+    Plus,
+    Pencil
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -45,6 +46,7 @@ export default function AdminCommunity() {
 
     // Form State
     const [showForm, setShowForm] = useState(false);
+    const [editId, setEditId] = useState<string | null>(null);
     const [newContent, setNewContent] = useState({
         type: 'announcement' as 'announcement' | 'kiff',
         title: '',
@@ -85,20 +87,41 @@ export default function AdminCommunity() {
     const handleCreateContent = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const { error } = await supabase
-                .from('community_content')
-                .insert([newContent] as any);
+            if (editId) {
+                const { error } = await supabase
+                    .from('community_content')
+                    .update(newContent as any)
+                    .eq('id', editId);
+                if (error) throw error;
+                toast.success('Contenu mis à jour !');
+            } else {
+                const { error } = await supabase
+                    .from('community_content')
+                    .insert([newContent] as any);
+                if (error) throw error;
+                toast.success('Contenu publié !');
+            }
 
-            if (error) throw error;
-
-            toast.success('Contenu publié !');
             setShowForm(false);
+            setEditId(null);
             setNewContent({ type: 'announcement', title: '', content: '', image_url: '' });
             fetchData();
         } catch (error) {
-            console.error('Error creating content:', error);
-            toast.error('Erreur publication');
+            console.error('Error saving content:', error);
+            toast.error('Erreur sauvegarde');
         }
+    };
+
+    const handleEdit = (item: CommunityContent) => {
+        setNewContent({
+            type: item.type,
+            title: item.title,
+            content: item.content,
+            image_url: item.image_url || ''
+        });
+        setEditId(item.id);
+        setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const toggleActive = async (id: string, currentState: boolean) => {
@@ -176,7 +199,11 @@ export default function AdminCommunity() {
                 <div className="space-y-6">
                     <div className="flex justify-end">
                         <button
-                            onClick={() => setShowForm(!showForm)}
+                            onClick={() => {
+                                setShowForm(!showForm);
+                                setEditId(null);
+                                setNewContent({ type: 'announcement', title: '', content: '', image_url: '' });
+                            }}
                             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors"
                         >
                             <Plus className="w-5 h-5" />
@@ -187,7 +214,7 @@ export default function AdminCommunity() {
                     {/* CREATE FORM */}
                     {showForm && (
                         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-fade-in">
-                            <h3 className="text-lg font-bold mb-4">Créer une publication</h3>
+                            <h3 className="text-lg font-bold mb-4">{editId ? 'Modifier la publication' : 'Créer une publication'}</h3>
                             <form onSubmit={handleCreateContent} className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
@@ -242,7 +269,11 @@ export default function AdminCommunity() {
                                 <div className="flex justify-end gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setShowForm(false)}
+                                        onClick={() => {
+                                            setShowForm(false);
+                                            setEditId(null);
+                                            setNewContent({ type: 'announcement', title: '', content: '', image_url: '' });
+                                        }}
                                         className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
                                     >
                                         Annuler
@@ -251,7 +282,7 @@ export default function AdminCommunity() {
                                         type="submit"
                                         className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
                                     >
-                                        Publier
+                                        {editId ? 'Mettre à jour' : 'Publier'}
                                     </button>
                                 </div>
                             </form>
@@ -279,8 +310,16 @@ export default function AdminCommunity() {
                                     <button
                                         onClick={() => toggleActive(item.id, item.is_active)}
                                         className="p-2 text-gray-400 hover:text-primary transition-colors"
+                                        title={item.is_active ? "Masquer" : "Afficher"}
                                     >
                                         {item.is_active ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                                    </button>
+                                    <button
+                                        onClick={() => handleEdit(item)}
+                                        className="p-2 text-gray-400 hover:text-primary transition-colors"
+                                        title="Modifier"
+                                    >
+                                        <Pencil className="w-5 h-5" />
                                     </button>
                                     <button
                                         onClick={() => deleteContent(item.id)}
