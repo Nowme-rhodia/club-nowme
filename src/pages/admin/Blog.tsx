@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -16,6 +16,7 @@ interface BlogPost {
 }
 
 export default function AdminBlog() {
+    const navigate = useNavigate();
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -73,7 +74,7 @@ export default function AdminBlog() {
                 </Link>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
@@ -86,7 +87,14 @@ export default function AdminBlog() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {posts.map((post) => (
-                            <tr key={post.id} className="hover:bg-gray-50">
+                            <tr
+                                key={post.id}
+                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                onClick={(e) => {
+                                    if ((e.target as HTMLElement).closest('a, button')) return;
+                                    navigate(`/admin/blog/edit/${post.id}`);
+                                }}
+                            >
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="font-medium text-gray-900">{post.title}</div>
                                     <div className="text-xs text-gray-500">/{post.slug}</div>
@@ -105,13 +113,13 @@ export default function AdminBlog() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex justify-end gap-2">
-                                        <Link to={`/blog/${post.slug}`} target="_blank" className="text-gray-400 hover:text-gray-600">
+                                        <Link to={`/blog/${post.slug}`} target="_blank" className="text-gray-400 hover:text-gray-600" onClick={e => e.stopPropagation()}>
                                             <Eye className="w-5 h-5" />
                                         </Link>
-                                        <Link to={`/admin/blog/edit/${post.id}`} className="text-blue-600 hover:text-blue-900">
+                                        <Link to={`/admin/blog/edit/${post.id}`} className="text-blue-600 hover:text-blue-900" onClick={e => e.stopPropagation()}>
                                             <Edit className="w-5 h-5" />
                                         </Link>
-                                        <button onClick={() => handleDelete(post.id)} className="text-red-600 hover:text-red-900">
+                                        <button onClick={(e) => { e.stopPropagation(); handleDelete(post.id); }} className="text-red-600 hover:text-red-900">
                                             <Trash2 className="w-5 h-5" />
                                         </button>
                                     </div>
