@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { CommunityMap } from '../components/CommunityMap';
 import { LocationPicker } from '../components/LocationPicker';
-import { useLoadScript } from '@react-google-maps/api';
+
 import {
   Sparkles,
   MapPin,
@@ -128,7 +128,9 @@ const KiffModal = ({ kiff, onClose }: { kiff: CommunityContent, onClose: () => v
 );
 
 
-const LIBRARIES: ("places")[] = ["places"];
+import { useGoogleMapsScript } from '../hooks/useGoogleMapsScript';
+
+// ... (existing imports)
 
 export default function CommunitySpace() {
   const { profile, loading: authLoading, user, isAdmin, refreshProfile } = useAuth();
@@ -150,10 +152,8 @@ export default function CommunitySpace() {
   const [pastEvents, setPastEvents] = useState<CommunityContent[]>([]);
   const [mapRefreshKey, setMapRefreshKey] = useState(0);
 
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries: LIBRARIES, // Load places library once here for both map and picker
-  });
+  const { isLoaded, loadError } = useGoogleMapsScript();
+
 
   useEffect(() => {
     fetchContent();
