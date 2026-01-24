@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import Stripe from "stripe";
+import Stripe from "npm:stripe@^14.10.0";
 
 console.log("Create Checkout Session Function Invoked (v7 - Standardized Import)")
 
@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
         // Initialisation propre via Import Map (Standard)
         const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
             apiVersion: '2023-10-16',
+            httpClient: Stripe.createFetchHttpClient(),
         })
 
         const supabaseClient = createClient(
@@ -233,7 +234,7 @@ Deno.serve(async (req) => {
             JSON.stringify({ sessionId: session.id, url: session.url }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         )
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error:", error.message)
         return new Response(
             JSON.stringify({ error: error.message }),
