@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
 
         // Session Config
         const sessionConfig: any = {
-            payment_method_types: ['card', 'paypal'],
+            automatic_payment_methods: { enabled: true },
             line_items: line_items,
             mode: 'payment',
             customer_email: customerEmail,
