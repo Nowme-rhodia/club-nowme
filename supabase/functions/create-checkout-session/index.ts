@@ -52,7 +52,33 @@ Deno.serve(async (req) => {
                 .single();
 
             if (variantError || !variant) throw new Error("Variant not found");
-            const expectedPrice = variant.discounted_price || variant.price;
+
+            // --- SUBSCRIBER CHECK ---
+            // Only apply discounted_price if user has an ACTIVE subscription
+            let isSubscriber = false;
+            if (user_id) {
+                const { data: sub } = await supabaseClient
+                    .from('subscriptions')
+                    .select('status')
+                    .eq('user_id', user_id)
+                    .in('status', ['active', 'trialing'])
+                    .maybeSingle();
+
+                if (sub) isSubscriber = true;
+                console.log(`[PRICING] User ${user_id} Subscriber Status: ${isSubscriber}`);
+            }
+
+            // Determine Price based on Status
+            // Use discounted_price ONLY if user is subscriber AND discounted_price is defined
+            // Otherwise use standard variant price
+            let expectedPrice = variant.price;
+            if (isSubscriber && variant.discounted_price) {
+                expectedPrice = variant.discounted_price;
+                console.log(`[PRICING] Applied Member Price: ${expectedPrice}`);
+            } else {
+                console.log(`[PRICING] Applied Standard Price: ${expectedPrice}`);
+            }
+
             unitAmount = Math.round(expectedPrice * 100);
             variantName = ` - ${variant.name}`;
 
