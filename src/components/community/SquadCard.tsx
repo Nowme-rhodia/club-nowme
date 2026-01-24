@@ -129,7 +129,7 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
 
 
     return (
-        <div className="flex flex-col bg-white rounded-xl shadow-md border border-gray-100 min-w-[300px] w-[300px] p-5 hover:shadow-lg transition-shadow relative group">
+        <div className="flex flex-col bg-white rounded-xl shadow-md border border-gray-100 min-w-[280px] w-[280px] sm:min-w-[300px] sm:w-[300px] p-5 hover:shadow-lg transition-shadow relative group">
             {/* ADMIN DELETE BUTTON */}
             {profile?.is_admin && (
                 <button
@@ -179,7 +179,7 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
                 <div className="flex flex-wrap gap-2">
                     {/* Theme Badge (Hub Name) */}
                     {(squad as any).hub?.name && (
-                        <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] uppercase font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
                             🏷️ {(squad as any).hub.name.split(' - ')[0]}
                         </span>
                     )}
@@ -205,7 +205,7 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
 
                         if (dept) {
                             return (
-                                <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+                                <span className="text-[11px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
                                     📍 {dept}
                                 </span>
                             );
@@ -214,7 +214,7 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
                     })()}
 
                     {squad.is_official && (
-                        <span className="text-[10px] font-bold text-white bg-gradient-to-r from-pink-500 to-purple-500 px-2 py-0.5 rounded-full shadow-sm">
+                        <span className="text-[11px] font-bold text-white bg-gradient-to-r from-pink-500 to-purple-500 px-2 py-0.5 rounded-full shadow-sm">
                             👑 Officiel
                         </span>
                     )}

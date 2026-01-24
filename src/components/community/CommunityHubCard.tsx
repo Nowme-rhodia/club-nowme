@@ -43,12 +43,12 @@ export const CommunityHubCard: React.FC<CommunityHubCardProps> = ({ hub }) => {
     };
 
     return (
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
-            <div className="mb-4 md:mb-0">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <div className="mb-4 md:mb-0 w-full md:w-auto">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center flex-wrap gap-2">
                     {hub.name.split(' - ')[0]}
                     {hub.city && (
-                        <span className="ml-3 text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full whitespace-nowrap">
                             {hub.city.split(' - ')[0]}
                         </span>
                     )}
@@ -61,7 +61,7 @@ export const CommunityHubCard: React.FC<CommunityHubCardProps> = ({ hub }) => {
             <button
                 onClick={handleJoinHub}
                 disabled={loading}
-                className="flex items-center px-6 py-3 bg-green-500 text-white rounded-full font-bold hover:bg-green-600 transition-colors shadow-sm hover:shadow-md min-w-[200px] justify-center"
+                className="flex items-center px-6 py-3 bg-green-500 text-white rounded-full font-bold hover:bg-green-600 transition-colors shadow-sm hover:shadow-md w-full md:w-auto md:min-w-[200px] justify-center"
             >
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WA" className="w-5 h-5 mr-3 filter brightness-0 invert" />
                 Rejoindre le Hub

@@ -190,7 +190,7 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpe
                             {errors.location && <span className="text-red-500 text-xs">{errors.location.message}</span>}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                                 <input
