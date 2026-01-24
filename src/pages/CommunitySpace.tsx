@@ -64,6 +64,31 @@ const AnnouncementBanner = ({ text }: { text: string }) => (
   </div>
 );
 
+const Linkify = ({ children }: { children: string }) => {
+  const parts = children.split(/(https?:\/\/[^\s]+)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.match(/https?:\/\/[^\s]+/)) {
+          return (
+            <a
+              key={i}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline break-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+};
+
 const KiffModal = ({ kiff, onClose }: { kiff: CommunityContent, onClose: () => void }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
     <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl relative" onClick={e => e.stopPropagation()}>
@@ -90,7 +115,7 @@ const KiffModal = ({ kiff, onClose }: { kiff: CommunityContent, onClose: () => v
       <div className="p-8">
         {!kiff.image_url && <h2 className="text-2xl font-bold mb-6">{kiff.title}</h2>}
         <div className="prose prose-purple max-w-none text-gray-600 leading-relaxed whitespace-pre-wrap">
-          {kiff.content}
+          <Linkify>{kiff.content}</Linkify>
         </div>
         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
           <button onClick={onClose} className="text-gray-500 hover:text-primary font-medium">
@@ -101,6 +126,7 @@ const KiffModal = ({ kiff, onClose }: { kiff: CommunityContent, onClose: () => v
     </div>
   </div>
 );
+
 
 const LIBRARIES: ("places")[] = ["places"];
 
