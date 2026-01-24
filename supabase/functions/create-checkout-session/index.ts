@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import Stripe from "npm:stripe@^14.10.0";
+import Stripe from "npm:stripe@^17.5.0";
 
 console.log("Create Checkout Session Function Invoked (v7 - Standardized Import)")
 
