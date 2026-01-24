@@ -79,7 +79,8 @@ export const CommunitySection: React.FC<CommunitySectionProps> = ({ profile }) =
                         <MicroSquadList
                             hubId={hub.id}
                             hubName={hub.name}
-                            hubCity={hub.city}
+                            hubCity={hub.city || undefined}
+
                         />
                     </div>
                 </div>

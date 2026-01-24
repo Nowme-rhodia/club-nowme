@@ -23,7 +23,9 @@ export const CommunityHubCard: React.FC<CommunityHubCardProps> = ({ hub }) => {
         try {
             // Fetch link securely
             const { data, error } = await supabase
-                .rpc('get_hub_link', { hub_id_input: hub.id });
+                .rpc('get_hub_link' as any, { hub_id_input: hub.id } as any);
+
+
 
             if (error) throw error;
 

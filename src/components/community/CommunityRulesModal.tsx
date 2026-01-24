@@ -17,10 +17,12 @@ export function CommunityRulesModal({ onAccept }: CommunityRulesModalProps) {
 
         setAccepting(true);
         try {
-            const { error } = await supabase
-                .from('user_profiles')
-                .update({ accepted_community_rules_at: new Date().toISOString() } as any)
+            const { error } = await (supabase
+                .from('user_profiles') as any)
+                .update({ accepted_community_rules_at: new Date().toISOString() })
                 .eq('user_id', profile.user_id);
+
+
 
             if (error) throw error;
 

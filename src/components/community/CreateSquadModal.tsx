@@ -84,6 +84,7 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpe
             const { data: squadData, error } = await supabase
                 .from('micro_squads')
                 .insert({
+
                     hub_id: hubId,
                     creator_id: profile.user_id,
                     title: data.title,
@@ -106,9 +107,10 @@ export const CreateSquadModal: React.FC<CreateSquadModalProps> = ({ hubId, isOpe
                 await (supabase
                     .from('squad_members') as any)
                     .insert({
-                        squad_id: squadData.id,
+                        squad_id: (squadData as any).id,
                         user_id: profile.user_id
                     });
+
             }
 
             toast.success("Sortie créée avec succès !");

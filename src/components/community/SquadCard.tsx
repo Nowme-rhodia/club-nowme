@@ -48,6 +48,7 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
                         user_id: profile.user_id
                     } as any);
 
+
                 if (error) throw error;
                 toast.success("Tu as rejoint la sortie !");
                 onJoin(); // Refresh list
@@ -87,10 +88,12 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
         if (!window.confirm("Es-tu sûre de vouloir annuler cette sortie ? Cela préviendra les participantes.")) return;
         setLoading(true);
         try {
-            const { error } = await supabase
-                .from('micro_squads')
-                .update({ status: 'cancelled' } as any)
+            const { error } = await (supabase
+                .from('micro_squads') as any)
+                .update({ status: 'cancelled' })
                 .eq('id', squad.id);
+
+
             if (error) throw error;
             toast.success("Sortie annulée.");
             onJoin();
@@ -122,7 +125,8 @@ export const SquadCard: React.FC<SquadCardProps> = ({ squad, onJoin }) => {
         }
     };
 
-    if (squad.status === 'cancelled') return null; // Or show cancelled state
+    if ((squad.status as string) === 'cancelled') return null; // Or show cancelled state
+
 
     return (
         <div className="flex flex-col bg-white rounded-xl shadow-md border border-gray-100 min-w-[300px] w-[300px] p-5 hover:shadow-lg transition-shadow relative group">

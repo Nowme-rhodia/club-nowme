@@ -43,6 +43,8 @@ export default function AdminCommunity() {
     const [contents, setContents] = useState<CommunityContent[]>([]);
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [loading, setLoading] = useState(true);
+    const [uploading, setUploading] = useState(false);
+
 
     // Form State
     const [showForm, setShowForm] = useState(false);
@@ -88,10 +90,11 @@ export default function AdminCommunity() {
         e.preventDefault();
         try {
             if (editId) {
-                const { error } = await supabase
-                    .from('community_content')
-                    .update(newContent as any)
+                const { error } = await (supabase
+                    .from('community_content') as any)
+                    .update(newContent)
                     .eq('id', editId);
+
                 if (error) throw error;
                 toast.success('Contenu mis à jour !');
             } else {
@@ -126,10 +129,11 @@ export default function AdminCommunity() {
 
     const toggleActive = async (id: string, currentState: boolean) => {
         try {
-            const { error } = await supabase
-                .from('community_content')
-                .update({ is_active: !currentState } as any)
+            const { error } = await (supabase
+                .from('community_content') as any)
+                .update({ is_active: !currentState })
                 .eq('id', id);
+
 
             if (error) throw error;
             fetchData();
@@ -256,14 +260,63 @@ export default function AdminCommunity() {
                                 {newContent.type === 'kiff' && (
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                                        <input
-                                            type="url"
-                                            value={newContent.image_url}
-                                            onChange={(e) => setNewContent({ ...newContent, image_url: e.target.value })}
-                                            className="w-full rounded-lg border-gray-300 focus:ring-primary focus:border-primary"
-                                            placeholder="https://..."
-                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="url"
+                                                value={newContent.image_url}
+                                                onChange={(e) => setNewContent({ ...newContent, image_url: e.target.value })}
+                                                className="flex-1 rounded-lg border-gray-300 focus:ring-primary focus:border-primary"
+                                                placeholder="https://..."
+                                            />
+                                            <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                                                <ImageIcon className="w-5 h-5" />
+                                                <span className="text-sm font-medium">{uploading ? '...' : 'Upload'}</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+
+                                                        setUploading(true);
+                                                        try {
+                                                            const fileExt = file.name.split('.').pop();
+                                                            const fileName = `community/${Date.now()}.${fileExt}`;
+
+                                                            const { error: uploadError } = await supabase.storage
+                                                                .from('offer-images')
+                                                                .upload(fileName, file);
+
+                                                            if (uploadError) throw uploadError;
+
+                                                            const { data: { publicUrl } } = supabase.storage
+                                                                .from('offer-images')
+                                                                .getPublicUrl(fileName);
+
+                                                            setNewContent(prev => ({ ...prev, image_url: publicUrl }));
+                                                            toast.success('Image uploadée !');
+                                                        } catch (error) {
+                                                            console.error('Upload failed:', error);
+                                                            toast.error("Erreur lors de l'upload");
+                                                        } finally {
+                                                            setUploading(false);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                        {newContent.image_url && (
+                                            <div className="mt-2 relative w-full h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                                <img
+                                                    src={newContent.image_url}
+                                                    alt="Preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
+
                                 )}
 
                                 <div className="flex justify-end gap-3">
