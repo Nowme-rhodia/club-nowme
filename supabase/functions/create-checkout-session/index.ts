@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
 
         // Initialisation propre via Import Map (Standard)
         const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-            apiVersion: '2023-10-16',
+            apiVersion: '2024-06-20',
             httpClient: Stripe.createFetchHttpClient(),
         })
 
@@ -227,6 +227,7 @@ Deno.serve(async (req) => {
             automatic_payment_methods: { enabled: true },
             line_items: line_items,
             mode: 'payment',
+            locale: 'fr',
             customer_email: customerEmail,
             success_url: `${success_url}?session_id={CHECKOUT_SESSION_ID}&offer_id=${offer_id}&type=${booking_type}&amount=${finalTotal}&status=success&variant_id=${variant_id ? String(variant_id) : 'null'}&scheduled_at=${scheduled_at || ''}`,
             cancel_url: cancel_url,
