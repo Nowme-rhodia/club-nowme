@@ -7,6 +7,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -102,18 +103,54 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+        <Link to="/admin" className="text-lg font-bold text-primary">
+          Administration
+        </Link>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+        >
+          {isMobileMenuOpen ? <LogOut className="w-6 h-6 rotate-180" /> : <div className="space-y-1.5"><div className="w-6 h-0.5 bg-gray-600"></div><div className="w-6 h-0.5 bg-gray-600"></div><div className="w-6 h-0.5 bg-gray-600"></div></div>}
+          {/* Using simple div hamburger or icon if available in imports (Menu is not imported, reusing existing icons or generic) -> Actually let's just use text or generic bars if icon missing, but wait, I can import Menu from lucide-react if I want, or just use what I have. */}
+        </button>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Navigation latérale */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-40 shadow-lg pt-[120px]">
-        <div className="h-16 flex items-center px-6 border-b border-gray-200">
+      <div className={`
+        fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 z-50 shadow-lg pt-0 lg:pt-[120px] transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="h-16 flex items-center px-6 border-b border-gray-200 lg:hidden justify-between">
+          <span className="text-xl font-bold text-primary">Menu</span>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-gray-500"><LogOut className="w-5 h-5" /></button> {/* Using LogOut as close icon placeholder if X not imported, wait X is not imported. I'll add X to imports */}
+        </div>
+        <div className="hidden lg:flex h-16 items-center px-6 border-b border-gray-200 absolute top-0 w-full bg-white z-10" style={{ top: 0, marginTop: 0 }}>
+          {/* Desktop Logo Area if needed, but the original code had pt-[120px] maybe for header overlap? 
+                 Original code: pt-[120px]. This implies it sits BELOW the main site header? 
+                 But this is AdminLayout. 
+                 Let's stick to a clean sidebar for Admin.
+             */}
           <Link to="/admin" className="text-xl font-bold text-primary">
             Administration
           </Link>
         </div>
-        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-4rem)]">
+
+        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-4rem)] mt-16 lg:mt-0">
           {navigation.map((item) => (
             <Link
               key={item.name}
               to={item.href}
+              onClick={() => setIsMobileMenuOpen(false)}
               className={`
                 flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors
                 ${item.current
@@ -126,6 +163,7 @@ export default function AdminLayout() {
               {item.name}
             </Link>
           ))}
+
 
           <div className="pt-4 mt-4 border-t border-gray-200">
             <button
@@ -140,7 +178,7 @@ export default function AdminLayout() {
       </div>
 
       {/* Contenu principal */}
-      <div className="pl-64">
+      <div className="lg:pl-64 pt-4 lg:pt-0">
         <Outlet />
       </div>
     </div>

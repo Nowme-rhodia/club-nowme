@@ -115,9 +115,9 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto space-y-10">
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-6 md:space-y-10">
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
               <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
 
                   if (p && p.length > 0) {
                     // 2. Check offers
-                    const { data: o, error: oe } = await supabase.from('offers').select('id, title, partner_id, status, is_approved').eq('partner_id', p[0].id);
+                    const { data: o, error: oe } = await supabase.from('offers').select('id, title, partner_id, status, is_approved').eq('partner_id', (p as any)[0].id);
                     console.log('Offers check:', o, oe);
                     alert('Offers check: ' + JSON.stringify(o));
                   }
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Actions rapides</h2>

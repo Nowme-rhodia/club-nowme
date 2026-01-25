@@ -414,7 +414,7 @@ export default function Dashboard() {
               {monthlyReports.map((report, idx) => (
                 <div key={idx} className="bg-white shadow rounded-lg p-6 border border-gray-100">
                   <h3 className="text-lg font-bold mb-4 capitalize">{report.period_label}</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 uppercase">Ventes</p>
                       <p className="font-semibold">{report.count} réservations</p>

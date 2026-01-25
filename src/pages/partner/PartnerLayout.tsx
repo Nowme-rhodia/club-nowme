@@ -12,6 +12,7 @@ export default function PartnerLayout() {
   const location = useLocation();
   const [businessName, setBusinessName] = useState<string>("Chargement...");
   const [hasSignedContract, setHasSignedContract] = useState<boolean>(true); // Default true to avoid flash, validated in effect
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -92,7 +93,19 @@ export default function PartnerLayout() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <header className="bg-white shadow-soft px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-primary">{businessName}</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
+              <div className="space-y-1.5">
+                <div className="w-6 h-0.5 bg-gray-600"></div>
+                <div className="w-6 h-0.5 bg-gray-600"></div>
+                <div className="w-6 h-0.5 bg-gray-600"></div>
+              </div>
+            </button>
+            <h1 className="text-lg font-bold text-primary">{businessName}</h1>
+          </div>
           {user && (
             <p className="text-sm text-gray-500">
               Connecté en tant que partenaire&nbsp;: {user.email}
@@ -118,71 +131,84 @@ export default function PartnerLayout() {
       <div className="flex flex-1">
         {/* Sidebar - Only show if contract signed */}
         {hasSignedContract && (
-          <aside className="w-64 bg-white shadow-md">
-            <nav className="p-4 space-y-2">
-              <NavLink
-                to="/partner/dashboard"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                  }`
-                }
-              >
-                <LayoutDashboard className="w-5 h-5" />
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/partner/guide-partenaire"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                  }`
-                }
-              >
-                <HelpCircle className="w-5 h-5" />
-                Guide
-              </NavLink>
+          <>
+            {/* Mobile Overlay */}
+            {isMobileMenuOpen && (
+              <div
+                className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+            )}
 
-              <NavLink
-                to="/partner/offers"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                  }`
-                }
-              >
-                <Briefcase className="w-5 h-5" />
-                Mes offres
-              </NavLink>
-              <NavLink
-                to="/partner/bookings"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                  }`
-                }
-              >
-                <Calendar className="w-5 h-5" />
-                Réservations
-              </NavLink>
-              <NavLink
-                to="/partner/reviews"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                  }`
-                }
-              >
-                <Briefcase className="w-5 h-5" />
-                Mes Avis
-              </NavLink>
-              <NavLink
-                to="/partner/settings/general"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                  }`
-                }
-              >
-                <Settings className="w-5 h-5" />
-                Paramètres
-              </NavLink>
-            </nav>
-          </aside>
+            <aside className={`
+              fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white shadow-md transform transition-transform duration-300 ease-in-out
+              ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            `}>
+              <nav className="p-4 space-y-2 pt-20 lg:pt-4">
+                <NavLink
+                  to="/partner/dashboard"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                    }`
+                  }
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  Dashboard
+                </NavLink>
+                <NavLink
+                  to="/partner/guide-partenaire"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                    }`
+                  }
+                >
+                  <HelpCircle className="w-5 h-5" />
+                  Guide
+                </NavLink>
+
+                <NavLink
+                  to="/partner/offers"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                    }`
+                  }
+                >
+                  <Briefcase className="w-5 h-5" />
+                  Mes offres
+                </NavLink>
+                <NavLink
+                  to="/partner/bookings"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                    }`
+                  }
+                >
+                  <Calendar className="w-5 h-5" />
+                  Réservations
+                </NavLink>
+                <NavLink
+                  to="/partner/reviews"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                    }`
+                  }
+                >
+                  <Briefcase className="w-5 h-5" />
+                  Mes Avis
+                </NavLink>
+                <NavLink
+                  to="/partner/settings/general"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                    }`
+                  }
+                >
+                  <Settings className="w-5 h-5" />
+                  Paramètres
+                </NavLink>
+              </nav>
+            </aside>
+          </>
         )}
 
         {/* Contenu */}
