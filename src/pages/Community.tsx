@@ -316,7 +316,7 @@ export default function Subscription() {
                 {/* Bulle de témoignage */}
                 <div className="absolute -bottom-4 right-4 bg-white p-4 rounded-xl shadow-lg max-w-xs transform rotate-2">
                   <p className="text-sm font-semibold text-gray-900">"Enfin des copines qui me comprennent !"</p>
-                  <p className="text-xs text-gray-600">- Marie, membre depuis 6 mois</p>
+                  <p className="text-xs text-gray-600">- Marie, participante depuis 6 mois</p>
                 </div>
               </div>
             </motion.div>
