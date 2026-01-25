@@ -109,6 +109,36 @@ export default function Checkout() {
           </p>
         </div>
 
+        <div className="text-center mb-8">
+          <button
+            onClick={handleCheckout}
+            disabled={loading}
+            className={`
+              w-full px-8 py-4 rounded-full font-bold text-lg transition-all
+              ${loading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg transform hover:scale-105'
+              }
+            `}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Redirection vers le paiement...
+              </div>
+            ) : (
+              <>
+                <CreditCard className="w-5 h-5 inline mr-2" />
+                Finaliser mon abonnement ({currentTier.price}€)
+              </>
+            )}
+          </button>
+
+          <p className="text-xs text-gray-500 mt-4">
+            Vous serez redirigé vers Stripe pour finaliser le paiement de manière sécurisée
+          </p>
+        </div>
+
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">Plan sélectionné</h2>
@@ -185,35 +215,7 @@ export default function Checkout() {
           </div>
         </div>
 
-        <div className="text-center">
-          <button
-            onClick={handleCheckout}
-            disabled={loading}
-            className={`
-              w-full px-8 py-4 rounded-full font-bold text-lg transition-all
-              ${loading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg transform hover:scale-105'
-              }
-            `}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Redirection vers le paiement...
-              </div>
-            ) : (
-              <>
-                <CreditCard className="w-5 h-5 inline mr-2" />
-                Finaliser mon abonnement ({currentTier.price}€)
-              </>
-            )}
-          </button>
 
-          <p className="text-xs text-gray-500 mt-4">
-            Vous serez redirigé vers Stripe pour finaliser le paiement de manière sécurisée
-          </p>
-        </div>
 
         <div className="mt-12 bg-gray-50 rounded-xl p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Questions fréquentes</h3>
