@@ -132,6 +132,33 @@ export default function BlogPost() {
                 description={post.excerpt}
                 image={post.cover_image || ''}
             />
+            {/* Structured Data (JSON-LD) for Blog Post */}
+            <script type="application/ld+json">
+                {JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "BlogPosting",
+                    "headline": post.title,
+                    "description": post.excerpt,
+                    "image": post.cover_image || 'https://images.unsplash.com/photo-1544367563-12123d8965cd',
+                    "datePublished": post.published_at,
+                    "author": {
+                        "@type": "Person",
+                        "name": post.author_name || "L'équipe Nowme"
+                    },
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": "Nowme",
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": "https://i.imgur.com/or3q8gE.png"
+                        }
+                    },
+                    "mainEntityOfPage": {
+                        "@type": "WebPage",
+                        "@id": window.location.href
+                    }
+                })}
+            </script>
 
             {/* Hero Image */}
             <div className="w-full h-[40vh] sm:h-[50vh] relative bg-gray-900">
