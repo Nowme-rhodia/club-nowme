@@ -1139,13 +1139,22 @@ export default function OfferPage() {
 
                           {/* FRUSTRATION UI: Show for non-subscribers if a discount exists */}
                           {!isPrivileged && priceInfo.has_discount && (
-                            <div className="mt-1 mb-2 flex flex-col items-end animate-pulse">
-                              <span className="text-sm text-pink-600 font-bold">
-                                Prix membre : {priceInfo.member_price}€
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                Tu économiserais {(priceInfo.price - priceInfo.member_price).toFixed(2)}€ en étant membre !
-                              </span>
+                            <div className="mt-1 mb-2 flex flex-col items-end">
+                              <div className="flex flex-col items-end animate-pulse">
+                                <span className="text-sm text-pink-600 font-bold">
+                                  Prix membre : {priceInfo.member_price}€
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Tu économiserais {(priceInfo.price - priceInfo.member_price).toFixed(2)}€ en étant membre !
+                                </span>
+                              </div>
+                              <Link
+                                to="/subscription"
+                                className="mt-2 text-xs bg-pink-600 text-white px-3 py-1.5 rounded-full font-bold hover:bg-pink-700 transition shadow-sm flex items-center gap-1"
+                              >
+                                Devenir membre
+                                <ExternalLink className="w-3 h-3" />
+                              </Link>
                             </div>
                           )}
                           {installmentPlan !== '1x' && (
