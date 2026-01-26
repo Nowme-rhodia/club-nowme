@@ -57,7 +57,7 @@ export default function Agenda() {
                     .select(`
             *,
             offer_variants(price, discounted_price),
-            partner:partners(business_name, address),
+            partner:partners!offers_partner_id_fkey(business_name, address),
             offer_media(url),
             category:offer_categories(name)
           `)
