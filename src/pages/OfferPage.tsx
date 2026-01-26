@@ -138,10 +138,8 @@ export default function OfferPage() {
         duration_type,
         validity_start_date,
         validity_end_date,
-        validity_start_date,
-        validity_end_date,
         partner:partners(id, business_name, contact_email),
-        co_organizers:offer_co_organizers(partner:partners(id, business_name, image_url))
+        co_organizers:offer_co_organizers(partner:partners(id, business_name, logo_url))
       `);
 
       if (isUUID) {

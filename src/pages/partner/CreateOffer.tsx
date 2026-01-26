@@ -281,7 +281,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setIsSearchingPartners(true);
       const { data } = await supabase
         .from('partners')
-        .select('id, business_name, image_url')
+        .select('id, business_name, logo_url')
         .ilike('business_name', `%${searchPartnerTerm}%`)
         .neq('id', partnerId) // Exclude self
         .limit(5);
@@ -882,8 +882,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
                       >
                         <div className="w-6 h-6 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
-                          {partner.image_url ? (
-                            <img src={partner.image_url} alt="" className="w-full h-full object-cover" />
+                          {partner.logo_url ? (
+                            <img src={partner.logo_url} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">
                               {partner.business_name?.substring(0, 2).toUpperCase()}
