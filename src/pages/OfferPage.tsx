@@ -15,6 +15,7 @@ import { SEO } from '../components/SEO';
 import GuestBookingModal from '../components/GuestBookingModal';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import DOMPurify from 'dompurify'; // Safe HTML rendering
+import { stripHtmlAndDecode } from '../utils/textFormatters';
 
 // Type definition to avoid errors
 declare global {
@@ -587,7 +588,7 @@ export default function OfferPage() {
   };
 
   // SEO Description construction
-  const seoDescription = offer ? `${offer.description.substring(0, 150)}... Découvrez ce kiff exclusif sur Club Nowme !` : '';
+  const seoDescription = offer ? `${stripHtmlAndDecode(offer.description).substring(0, 150)}... Découvrez ce kiff exclusif sur Club Nowme !` : '';
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -821,7 +822,7 @@ export default function OfferPage() {
                     <h2 className="text-lg font-semibold text-gray-900 mb-2">Description</h2>
                     {/* Rich Text Display */}
                     <div
-                      className="text-gray-600 leading-relaxed prose prose-sm max-w-none prose-p:mb-2 prose-ul:list-disc prose-ul:pl-4 prose-ol:list-decimal prose-ol:pl-4"
+                      className="text-gray-600 leading-relaxed prose prose-sm max-w-none prose-p:mb-2 prose-ul:list-disc prose-ul:pl-4 prose-ol:list-decimal prose-ol:pl-4 break-words overflow-visible"
                       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(offer.description) }}
                     />
                   </div>

@@ -8,6 +8,20 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+
+function cleanText(text: string): string {
+    if (!text) return '';
+    return text
+        .replace(/<[^>]+>/g, '') // Strip tags
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+}
+
 Deno.serve(async (req) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
@@ -173,7 +187,7 @@ Deno.serve(async (req) => {
                     currency: 'eur',
                     product_data: {
                         name: `${offer.title}${variantName} (${planType === '1x' ? 'Comptant' : 'Paiement ' + planType})`,
-                        description: offer.description ? offer.description.replace(/<[^>]*>?/gm, '').substring(0, 400) : undefined,
+                        description: offer.description ? cleanText(offer.description).substring(0, 400) : undefined,
                         images: offer.image_url ? [offer.image_url] : [],
                     },
                     unit_amount: unitAmount,
