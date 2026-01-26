@@ -109,7 +109,7 @@ export default function TousLesKiffs() {
             booking_type,
             category:offer_categories!offers_category_id_fkey(*),
             offer_variants(price, discounted_price),
-            partner:partners(business_name, address, contact_email)
+            partner:partners!offers_partner_id_fkey(business_name, address, contact_email)
           `)
           .eq('status', 'approved')
           .order('created_at', { ascending: false }); // Tri par défaut : les plus récents d'abord

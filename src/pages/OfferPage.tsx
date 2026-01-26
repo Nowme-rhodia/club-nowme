@@ -138,7 +138,7 @@ export default function OfferPage() {
         duration_type,
         validity_start_date,
         validity_end_date,
-        partner:partners(id, business_name, contact_email),
+        partner:partners!offers_partner_id_fkey(id, business_name, contact_email),
         co_organizers:offer_co_organizers(partner:partners(id, business_name, logo_url))
       `);
 

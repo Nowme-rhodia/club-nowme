@@ -10,8 +10,8 @@ import { LocationSearch } from '../../components/LocationSearch';
 import { PartnerCalendlySettings } from '../../components/partner/PartnerCalendlySettings';
 import { translateError } from '../../lib/errorTranslations';
 
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import DOMPurify from 'dompurify'; // Imported safely
 
 interface CreateOfferProps {
@@ -57,7 +57,7 @@ const formats = [
   'header',
   'bold', 'italic', 'underline', 'strike',
   'color', 'background',
-  'list', 'bullet',
+  'list',
   'link'
 ];
 
@@ -482,10 +482,10 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       }
 
       const offerData = {
-        partner_id: profileData.partner_id,
+        partner_id: (profileData as any)?.partner_id,
         title,
         description,
-        category_id: categoryData.id,
+        category_id: (categoryData as any).id,
         booking_type: eventType,
         event_start_date: eventType === 'event' && eventDate ? new Date(eventDate).toISOString() : null,
         event_end_date: eventType === 'event' && eventEndDate ? new Date(eventEndDate).toISOString() : null,
@@ -518,18 +518,18 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
       if (offer) {
         // UPDATE
-        const { error: updateError } = await supabase
-          .from('offers')
-          .update(offerData as any)
+        const { error: updateError } = await (supabase
+          .from('offers') as any)
+          .update(offerData)
           .eq('id', offer.id);
 
         if (updateError) throw updateError;
         toast.success("Offre mise à jour");
       } else {
         // CREATE
-        const { data: newOffer, error: createError } = await supabase
-          .from('offers')
-          .insert(offerData as any)
+        const { data: newOffer, error: createError } = await (supabase
+          .from('offers') as any)
+          .insert(offerData)
           .select()
           .single();
 
@@ -593,8 +593,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         });
 
         // Separate new and existing variants if needed or just upsert with ID
-        const { error: variantsError } = await supabase
-          .from('offer_variants')
+        const { error: variantsError } = await (supabase
+          .from('offer_variants') as any)
           .upsert(variantsToUpsert); // upsert works if ID matches
 
         if (variantsError) throw variantsError;
@@ -608,7 +608,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           type: 'image',
           order_index: idx
         }));
-        const { error: mediaError } = await supabase.from('offer_media').insert(mediaToInsert);
+        const { error: mediaError } = await (supabase.from('offer_media') as any).insert(mediaToInsert);
         if (mediaError) console.error("Error saving media:", mediaError);
       }
 
@@ -624,7 +624,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           partner_id: p.id
         }));
 
-        const { error: coOrgError } = await supabase.from('offer_co_organizers').insert(coOrganizersToInsert);
+        const { error: coOrgError } = await (supabase.from('offer_co_organizers') as any).insert(coOrganizersToInsert);
         if (coOrgError) console.error("Error saving co-organizers:", coOrgError);
       }
 
@@ -1499,13 +1499,13 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
 
           {/* --- Variants --- */}
-          {eventType !== 'promo' && (
+          {eventType !== ('promo' as any) && (
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-gray-900">
                   {eventType === 'wallet_pack' ? 'Configuration du Pack' : 'Tarifs & Options'}
                 </h3>
-                {eventType !== 'promo' && (
+                {eventType !== ('promo' as any) && (
                   <button type="button" onClick={addVariant} className="text-sm text-primary font-medium hover:text-primary-dark">
                     + Ajouter une option
                   </button>
