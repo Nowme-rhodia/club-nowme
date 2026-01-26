@@ -138,7 +138,10 @@ export default function OfferPage() {
         duration_type,
         validity_start_date,
         validity_end_date,
-        partner:partners(id, business_name, contact_email)
+        validity_start_date,
+        validity_end_date,
+        partner:partners(id, business_name, contact_email),
+        co_organizers:offer_co_organizers(partner:partners(id, business_name, image_url))
       `);
 
       if (isUUID) {
@@ -783,16 +786,37 @@ export default function OfferPage() {
                   </div>
 
                   {offer.partner && offer.partner.business_name && (
-                    <Link
-                      to={`/partenaire/${offer.partner.id}`}
-                      className="inline-flex items-center gap-2 mb-6 text-gray-600 hover:text-primary transition-colors group"
-                    >
-                      <Building className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      <span className="font-semibold text-lg border-b border-transparent group-hover:border-primary">
-                        {offer.partner.business_name}
-                      </span>
-                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                    </Link>
+                    <div className="mb-6 flex flex-wrap items-center gap-4">
+                      <Link
+                        to={`/partenaire/${offer.partner.id}`}
+                        className="inline-flex items-center gap-2 text-gray-600 hover:text-primary transition-colors group"
+                      >
+                        <Building className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        <span className="font-semibold text-lg border-b border-transparent group-hover:border-primary">
+                          {offer.partner.business_name}
+                        </span>
+                      </Link>
+
+                      {offer.co_organizers && offer.co_organizers.length > 0 && (
+                        <>
+                          <span className="text-gray-400">&</span>
+                          {offer.co_organizers.map((item: any) => (
+                            <Link
+                              key={item.partner.id}
+                              to={`/partenaire/${item.partner.id}`}
+                              className="inline-flex items-center gap-2 text-gray-600 hover:text-primary transition-colors group"
+                            >
+                              {item.partner.image_url && (
+                                <img src={item.partner.image_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                              )}
+                              <span className="font-semibold text-lg border-b border-transparent group-hover:border-primary">
+                                {item.partner.business_name}
+                              </span>
+                            </Link>
+                          ))}
+                        </>
+                      )}
+                    </div>
                   )}
 
                   <div className="mb-6">

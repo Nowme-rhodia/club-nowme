@@ -711,6 +711,39 @@ export type Database = {
           },
         ]
       }
+      offer_co_organizers: {
+        Row: {
+          created_at: string
+          offer_id: string
+          partner_id: string
+        }
+        Insert: {
+          created_at?: string
+          offer_id: string
+          partner_id: string
+        }
+        Update: {
+          created_at?: string
+          offer_id?: string
+          partner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_co_organizers_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_co_organizers_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_variants: {
         Row: {
           created_at: string | null
@@ -1694,8 +1727,8 @@ export type Database = {
         }[]
       }
       generate_monthly_partner_payouts:
-        | { Args: never; Returns: undefined }
-        | { Args: { p_ref_date?: string }; Returns: Json }
+      | { Args: never; Returns: undefined }
+      | { Args: { p_ref_date?: string }; Returns: Json }
       generate_partner_payout: {
         Args: {
           v_partner_id: string
@@ -1777,33 +1810,33 @@ export type Database = {
         Returns: undefined
       }
       handle_payment_succeeded:
-        | { Args: { event: Json }; Returns: undefined }
-        | {
-            Args: {
-              customer_email: string
-              customer_id: string
-              event_id: string
-              subscription_id: string
-            }
-            Returns: undefined
-          }
+      | { Args: { event: Json }; Returns: undefined }
+      | {
+        Args: {
+          customer_email: string
+          customer_id: string
+          event_id: string
+          subscription_id: string
+        }
+        Returns: undefined
+      }
       handle_subscription_created:
-        | {
-            Args: {
-              customer_id: string
-              event_id: string
-              subscription_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              customer_id: string
-              event_id: string
-              subscription_id: string
-            }
-            Returns: undefined
-          }
+      | {
+        Args: {
+          customer_id: string
+          event_id: string
+          subscription_id: string
+        }
+        Returns: undefined
+      }
+      | {
+        Args: {
+          customer_id: string
+          event_id: string
+          subscription_id: string
+        }
+        Returns: undefined
+      }
       handle_subscription_deleted: {
         Args: { customer_id: string; event_id: string }
         Returns: undefined
@@ -1820,47 +1853,47 @@ export type Database = {
         }
       }
       http_delete:
-        | {
-            Args: { uri: string }
-            Returns: Database["public"]["CompositeTypes"]["http_response"]
-            SetofOptions: {
-              from: "*"
-              to: "http_response"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: { content: string; content_type: string; uri: string }
-            Returns: Database["public"]["CompositeTypes"]["http_response"]
-            SetofOptions: {
-              from: "*"
-              to: "http_response"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      | {
+        Args: { uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      | {
+        Args: { content: string; content_type: string; uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       http_get:
-        | {
-            Args: { uri: string }
-            Returns: Database["public"]["CompositeTypes"]["http_response"]
-            SetofOptions: {
-              from: "*"
-              to: "http_response"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: { data: Json; uri: string }
-            Returns: Database["public"]["CompositeTypes"]["http_response"]
-            SetofOptions: {
-              from: "*"
-              to: "http_response"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      | {
+        Args: { uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      | {
+        Args: { data: Json; uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       http_head: {
         Args: { uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
@@ -1899,26 +1932,26 @@ export type Database = {
         }
       }
       http_post:
-        | {
-            Args: { content: string; content_type: string; uri: string }
-            Returns: Database["public"]["CompositeTypes"]["http_response"]
-            SetofOptions: {
-              from: "*"
-              to: "http_response"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: { data: Json; uri: string }
-            Returns: Database["public"]["CompositeTypes"]["http_response"]
-            SetofOptions: {
-              from: "*"
-              to: "http_response"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      | {
+        Args: { content: string; content_type: string; uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      | {
+        Args: { data: Json; uri: string }
+        Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       http_put: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
@@ -1942,8 +1975,8 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_admin_secure: { Args: never; Returns: boolean }
       is_partner:
-        | { Args: never; Returns: boolean }
-        | { Args: { uid: string }; Returns: boolean }
+      | { Args: never; Returns: boolean }
+      | { Args: { uid: string }; Returns: boolean }
       is_premium_member: { Args: never; Returns: boolean }
       is_service_role: { Args: never; Returns: boolean }
       is_standard_user: { Args: never; Returns: boolean }
@@ -2030,45 +2063,45 @@ export type Database = {
         }
       }
       urlencode:
-        | { Args: { data: Json }; Returns: string }
-        | {
-            Args: { string: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-          }
-        | {
-            Args: { string: string }
-            Returns: {
-              error: true
-            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
-          }
+      | { Args: { data: Json }; Returns: string }
+      | {
+        Args: { string: string }
+        Returns: {
+          error: true
+        } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+      }
+      | {
+        Args: { string: string }
+        Returns: {
+          error: true
+        } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+      }
     }
     Enums: {
       booking_status:
-        | "pending"
-        | "requires_payment"
-        | "paid"
-        | "canceled"
-        | "refunded"
-        | "failed"
+      | "pending"
+      | "requires_payment"
+      | "paid"
+      | "canceled"
+      | "refunded"
+      | "failed"
       cancellation_policy: "flexible" | "moderate" | "strict" | "non_refundable"
       email_status: "pending" | "sent" | "failed"
       media_type: "image" | "video"
       offer_status:
-        | "draft"
-        | "ready"
-        | "pending"
-        | "approved"
-        | "rejected"
-        | "archived"
+      | "draft"
+      | "ready"
+      | "pending"
+      | "approved"
+      | "rejected"
+      | "archived"
       partner_payout_item_kind: "sale" | "adjustment"
       partner_payout_status:
-        | "draft"
-        | "finalized"
-        | "paid"
-        | "cancelled"
-        | "failed"
+      | "draft"
+      | "finalized"
+      | "paid"
+      | "cancelled"
+      | "failed"
       partner_status: "pending" | "approved" | "rejected"
       payout_method: "manual" | "sepa" | "stripe_connect"
       pending_partner_status: "pending" | "approved" | "rejected"
@@ -2101,116 +2134,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-    ? R
-    : never
+  ? R
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+    DefaultSchema["Views"])
+  ? (DefaultSchema["Tables"] &
+    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
+    Insert: infer I
+  }
+  ? I
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
+    Update: infer U
+  }
+  ? U
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Enums"]
+  | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["CompositeTypes"]
+  | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+  : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never
 
 export const Constants = {
   public: {

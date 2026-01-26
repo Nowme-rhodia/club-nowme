@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
 import { categories } from '../../data/categories';
-import { Plus, Trash2, Info, X, Euro, Upload, Save, ArrowLeft, Image as ImageIcon, Link } from 'lucide-react';
+import { Plus, Trash2, Info, X, Euro, Upload, Save, ArrowLeft, Image as ImageIcon, Link, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AddressAutocomplete } from '../../components/AddressAutocomplete';
 import { LocationSearch } from '../../components/LocationSearch';
@@ -84,6 +84,12 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   const [existingMedia, setExistingMedia] = useState<OfferMedia[]>([]);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newGalleryUrl, setNewGalleryUrl] = useState('');
+
+  // Co-organizers
+  const [coOrganizers, setCoOrganizers] = useState<any[]>([]);
+  const [searchPartnerTerm, setSearchPartnerTerm] = useState('');
+  const [partnerSearchResults, setPartnerSearchResults] = useState<any[]>([]);
+  const [isSearchingPartners, setIsSearchingPartners] = useState(false);
 
   // Basic Info
   const [categorySlug, setCategorySlug] = useState('');
@@ -248,8 +254,57 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         // Filter out main image if needed, or just map all
         setExistingMedia(mediaList.map((m: any) => ({ id: m.id, url: m.url, type: m.type || 'image' })));
       }
+
+      // Load Co-organizers
+      const loadCoOrganizers = async () => {
+        const { data } = await supabase
+          .from('offer_co_organizers')
+          .select('partner:partners(id, business_name, image_url)')
+          .eq('offer_id', offer.id);
+
+        if (data) {
+          setCoOrganizers(data.map((item: any) => item.partner));
+        }
+      };
+      loadCoOrganizers();
     }
   }, [offer]);
+
+  // Search Partners
+  useEffect(() => {
+    const searchPartners = async () => {
+      if (searchPartnerTerm.length < 2) {
+        setPartnerSearchResults([]);
+        return;
+      }
+
+      setIsSearchingPartners(true);
+      const { data } = await supabase
+        .from('partners')
+        .select('id, business_name, image_url')
+        .ilike('business_name', `%${searchPartnerTerm}%`)
+        .neq('id', partnerId) // Exclude self
+        .limit(5);
+
+      setPartnerSearchResults(data || []);
+      setIsSearchingPartners(false);
+    };
+
+    const timeoutId = setTimeout(searchPartners, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchPartnerTerm, partnerId]);
+
+  const addCoOrganizer = (partner: any) => {
+    if (!coOrganizers.find(p => p.id === partner.id)) {
+      setCoOrganizers([...coOrganizers, partner]);
+    }
+    setSearchPartnerTerm('');
+    setPartnerSearchResults([]);
+  };
+
+  const removeCoOrganizer = (partnerId: string) => {
+    setCoOrganizers(coOrganizers.filter(p => p.id !== partnerId));
+  };
 
   const handleAdditionalImagesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -557,6 +612,22 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         if (mediaError) console.error("Error saving media:", mediaError);
       }
 
+      // 7. Handle Co-organizers
+      // First delete existing
+      if (offer) {
+        await supabase.from('offer_co_organizers').delete().eq('offer_id', outputOfferId);
+      }
+
+      if (coOrganizers.length > 0) {
+        const coOrganizersToInsert = coOrganizers.map(p => ({
+          offer_id: outputOfferId,
+          partner_id: p.id
+        }));
+
+        const { error: coOrgError } = await supabase.from('offer_co_organizers').insert(coOrganizersToInsert);
+        if (coOrgError) console.error("Error saving co-organizers:", coOrgError);
+      }
+
       onSuccess();
     } catch (error: any) {
       console.error('Error:', error);
@@ -772,6 +843,62 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
               placeholder="Ex: Séance de Yoga Vinyasa"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Co-organisateurs (Partenaires)</label>
+            <div className="relative">
+              <div className="flex flex-wrap gap-2 mb-2">
+                {coOrganizers.map(p => (
+                  <div key={p.id} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                    <span>{p.business_name}</span>
+                    <button type="button" onClick={() => removeCoOrganizer(p.id)} className="hover:text-blue-900">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchPartnerTerm}
+                  onChange={(e) => setSearchPartnerTerm(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm"
+                  placeholder="Rechercher un partenaire à taguer..."
+                />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              </div>
+
+              {searchPartnerTerm.length >= 2 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {isSearchingPartners ? (
+                    <div className="p-2 text-sm text-gray-500 text-center">Recherche...</div>
+                  ) : partnerSearchResults.length > 0 ? (
+                    partnerSearchResults.map(partner => (
+                      <button
+                        key={partner.id}
+                        type="button"
+                        onClick={() => addCoOrganizer(partner)}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                      >
+                        <div className="w-6 h-6 bg-gray-200 rounded-full overflow-hidden flex-shrink-0">
+                          {partner.image_url ? (
+                            <img src={partner.image_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">
+                              {partner.business_name?.substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <span>{partner.business_name}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-gray-500 text-center">Aucun partenaire trouvé</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
