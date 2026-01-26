@@ -22,7 +22,25 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    // Ici on pourrait envoyer l'erreur à un service de logging
+
+    // Détection des erreurs de chargement de module (souvent dû à un nouveau déploiement)
+    const isChunkLoadError = error.message.includes('Failed to fetch dynamically imported module') ||
+      error.message.includes('Importing a module script failed');
+
+    if (isChunkLoadError) {
+      const lastReload = sessionStorage.getItem('last_chunk_reload');
+      const timeSinceLastReload = lastReload ? Date.now() - parseInt(lastReload) : null;
+
+      // Si on n'a jamais rechargé ou si le dernier rechargement date de plus de 10 secondes
+      if (!timeSinceLastReload || timeSinceLastReload > 10000) {
+        console.log('Chunk load error detected, reloading page...');
+        sessionStorage.setItem('last_chunk_reload', Date.now().toString());
+        window.location.reload();
+        return;
+      } else {
+        console.warn('Chunk load error loop detected, not reloading.');
+      }
+    }
   }
 
   render() {
@@ -37,7 +55,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               Oups ! Une erreur est survenue
             </h1>
             <p className="text-gray-600 mb-8">
-              Nous sommes désolés, mais quelque chose s'est mal passé. 
+              Nous sommes désolés, mais quelque chose s'est mal passé.
               Veuillez réessayer ou retourner à l'accueil.
             </p>
             <Link
