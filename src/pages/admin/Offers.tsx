@@ -82,7 +82,7 @@ export default function Offers() {
         .select(`
           *,
           category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
-          partner:partners(*),
+          partner:partners!offers_partner_id_fkey(*),
           variants:offer_variants(*),
           offer_media(*)
         `)
