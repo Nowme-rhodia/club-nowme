@@ -517,7 +517,30 @@ Deno.serve(async (req) => {
                 const customerId = session.customer as string;
                 const subscriptionType = session.metadata.subscription_type || 'monthly';
 
-                console.log(`[SUBSCRIPTION_FLOW] Updating profile for User ${user_id} -> Status: ACTIVE, SubID: ${subscriptionId}`);
+                // --- CRITICAL FIX 2: Strict Payment Verification ---
+                console.log(`[SUBSCRIPTION_FLOW] Verifying payment status... Current: ${session.payment_status}`);
+
+                if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+                    console.warn(`[SECURITY_BLOCK] Payment NOT confirmed (Status: ${session.payment_status}). Access will be withheld/pending.`);
+                    // Ideally set to 'payment_pending' instead of 'active'
+                    const { error: pendingError } = await supabaseClient
+                        .from('user_profiles')
+                        .update({
+                            subscription_status: 'payment_pending', // Changed from active
+                            subscription_type: subscriptionType,
+                            stripe_subscription_id: subscriptionId,
+                            stripe_customer_id: customerId,
+                            subscription_updated_at: new Date().toISOString()
+                        })
+                        .eq('user_id', user_id);
+
+                    if (pendingError) console.error("Error setting pending status:", pendingError);
+
+                    // Stop execution here - do NOT send welcome email yet
+                    return new Response(JSON.stringify({ received: true, status: 'pending_payment' }), { headers: { "Content-Type": "application/json" } });
+                }
+
+                console.log(`[SUBSCRIPTION_FLOW] Payment verified. Updating profile for User ${user_id} -> Status: ACTIVE, SubID: ${subscriptionId}`);
 
                 const { error: updateError } = await supabaseClient
                     .from('user_profiles')
@@ -769,6 +792,33 @@ Deno.serve(async (req) => {
                             console.error(`[INVOICE_FAILED] Failed to trigger email:`, emailErr);
                         }
                     }
+                }
+            } else if (invoice.billing_reason === 'subscription_cycle' || invoice.billing_reason === 'subscription_create') {
+                // --- C. STANDARD SUBSCRIPTION FAILURE ---
+                console.log(`[INVOICE_FAILED] Standard Subscription Payment Failed for Customer ${invoice.customer}`);
+
+                // Revoke access immediately
+                const { data: userProfile, error: findError } = await supabaseClient
+                    .from('user_profiles')
+                    .select('user_id')
+                    .eq('stripe_customer_id', invoice.customer)
+                    .single();
+
+                if (userProfile && userProfile.user_id) {
+                    console.log(`[INVOICE_FAILED] Revoking access for User ${userProfile.user_id}`);
+                    const { error: revokeError } = await supabaseClient
+                        .from('user_profiles')
+                        .update({
+                            subscription_status: 'payment_failed', // or 'inactive'
+                            subscription_updated_at: new Date().toISOString()
+                        })
+                        .eq('user_id', userProfile.user_id);
+
+                    if (revokeError) console.error(`[INVOICE_FAILED] Failed to revoke access:`, revokeError);
+
+                    // Optional: Trigger specific email for sub failure if needed
+                } else {
+                    console.warn(`[INVOICE_FAILED] Could not find user to revoke for customer ${invoice.customer}`);
                 }
             }
 
