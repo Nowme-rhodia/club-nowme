@@ -511,6 +511,30 @@ Deno.serve(async (req) => {
                 console.log(`[SUBSCRIPTION_FLOW] Detected subscription event. Metadata:`, JSON.stringify(session.metadata));
 
                 const { user_id } = session.metadata;
+
+                // --- CRITICAL FIX: Update User Status ---
+                const subscriptionId = session.subscription as string;
+                const customerId = session.customer as string;
+                const subscriptionType = session.metadata.subscription_type || 'monthly';
+
+                console.log(`[SUBSCRIPTION_FLOW] Updating profile for User ${user_id} -> Status: ACTIVE, SubID: ${subscriptionId}`);
+
+                const { error: updateError } = await supabaseClient
+                    .from('user_profiles')
+                    .update({
+                        subscription_status: 'active',
+                        subscription_type: subscriptionType,
+                        stripe_subscription_id: subscriptionId,
+                        stripe_customer_id: customerId,
+                        subscription_updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', user_id);
+
+                if (updateError) {
+                    console.error("[SUBSCRIPTION_FLOW] CRITICAL: Failed to update user profile status:", updateError);
+                } else {
+                    console.log("[SUBSCRIPTION_FLOW] User profile updated successfully to ACTIVE.");
+                }
                 const email = session.customer_details?.email || session.customer_email;
                 const name = session.customer_details?.name || "Beauty";
 
