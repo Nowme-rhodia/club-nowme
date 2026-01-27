@@ -396,6 +396,14 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       */
 
       const validVariants = variants.filter(v => v.name && v.price);
+
+      const incompleteVariants = variants.filter(v => v.name && !v.price);
+      if (incompleteVariants.length > 0) {
+        toast.error('Veuillez indiquer un prix pour toutes les options nommées (le prix est obligatoire pour éviter les erreurs).');
+        setLoading(false);
+        return;
+      }
+
       if (eventType !== 'promo' && validVariants.length === 0) {
         toast.error('Veuillez ajouter au moins un tarif valide (Nom et Prix)');
         setLoading(false);
@@ -1476,11 +1484,11 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                 <div className="relative">
                   <Link className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                   <input
-                    type="url"
+                    type="text"
                     value={calendlyUrl}
                     onChange={(e) => setCalendlyUrl(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    placeholder="https://..., email, téléphone"
+                    placeholder="https://..., email, téléphone, etc..."
                   />
                 </div>
                 <p className="mt-2 text-sm text-gray-500">
@@ -1554,6 +1562,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                               placeholder="0.00"
                               min="0"
                               step="0.01"
+                              required
                             />
                             <span className="absolute right-3 top-2 text-gray-400">€</span>
                           </div>
