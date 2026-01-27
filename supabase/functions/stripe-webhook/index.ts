@@ -698,6 +698,54 @@ Deno.serve(async (req) => {
                 }
             }
 
+            // --- C. STANDARD SUBSCRIPTION SUCCESS (Activation/Renewal) ---
+            if (invoice.subscription && ['subscription_create', 'subscription_cycle', 'subscription_update'].includes(invoice.billing_reason)) {
+                console.log(`[INVOICE_PAID] Subscription payment succeeded for Customer ${invoice.customer}. Activating/Renewing...`);
+
+                const { data: userProfile, error: findError } = await supabaseClient
+                    .from('user_profiles')
+                    .select('user_id')
+                    .eq('stripe_customer_id', invoice.customer)
+                    .single();
+
+                if (userProfile && userProfile.user_id) {
+                    const { error: activeError } = await supabaseClient
+                        .from('user_profiles')
+                        .update({
+                            subscription_status: 'active',
+                            subscription_updated_at: new Date().toISOString(),
+                            stripe_subscription_id: invoice.subscription // Ensure latest ID is synced
+                        })
+                        .eq('user_id', userProfile.user_id);
+
+                    // --- NEW: UPSERT TO SUBSCRIPTIONS TABLE ---
+                    const periodEnd = invoice.lines?.data?.[0]?.period?.end
+                        ? new Date(invoice.lines.data[0].period.end * 1000).toISOString()
+                        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Fallback 30 days
+
+                    const { error: subError } = await supabaseClient
+                        .from('subscriptions')
+                        .upsert({
+                            user_id: userProfile.user_id,
+                            status: 'active',
+                            stripe_subscription_id: invoice.subscription,
+                            current_period_end: periodEnd,
+                            cancel_at_period_end: false,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'user_id' });
+
+                    if (subError) console.error(`[INVOICE_PAID] Failed to upsert subscriptions table:`, subError);
+
+                    if (activeError) {
+                        console.error(`[INVOICE_PAID] Failed to activate user ${userProfile.user_id}:`, activeError);
+                    } else {
+                        console.log(`[INVOICE_PAID] User ${userProfile.user_id} successfully activated/renewed.`);
+                    }
+                } else {
+                    console.warn(`[INVOICE_PAID] User not found for customer ${invoice.customer}.`);
+                }
+            }
+
             // --- B. RECEIPT EMAIL (Original Logic) ---
             // Trigger dedicated Invoice Receipt Email
             // We need: email, amount, currency, date, invoicePdfUrl, invoiceId

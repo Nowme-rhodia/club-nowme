@@ -302,7 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // CRITICAL FIX: Ensure subscription_status is DRIVEN by the subscriptions table
         // If no subscription data found, status MUST be undefined/null, regardless of what userData says
         subscription: subscriptionData || null,
-        subscription_status: subscriptionData?.status || null,
+        subscription_status: subscriptionData?.status || userDataWithRpc?.subscription_status || null,
         role,
       };
 
