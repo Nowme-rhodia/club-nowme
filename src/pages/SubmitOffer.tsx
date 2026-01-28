@@ -7,6 +7,11 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Star,
+  Users,
+  TrendingUp,
+  ArrowRight,
+  Heart
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { supabase } from '../lib/supabase';
@@ -238,421 +243,540 @@ export default function SubmitOffer() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
       <SEO
-        title="Devenir partenaire"
-        description="Rejoignez Nowme Club et proposez vos offres bien-être."
+        title="Devenir partenaire - NowMe Club"
+        description="Rejoignez Nowme Club et proposez vos offres bien-être à une communauté engagée."
       />
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white shadow rounded-lg p-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-              <Building2 className="w-8 h-8 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Devenir partenaire</h1>
-            <p className="text-gray-600">
-              Créez votre compte partenaire dès maintenant. Une fois votre dossier validé, vous pourrez publier vos offres.
+
+      {/* Hero Section */}
+      <div className="bg-primary text-white py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1529156069896-85cecd3f4351?ixlib=rb-4.0.3&auto=format&fit=crop&w=2069&q=80')] bg-cover bg-center opacity-10"></div>
+        <div className="max-w-7xl mx-auto text-center relative z-10">
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-8 tracking-tight leading-tight">
+            Devenez l'une de nos adresses <br />
+            <span className="text-white bg-white/20 px-4 py-1 rounded-full italic transform -rotate-2 inline-block mt-2">Coup de Cœur</span>
+          </h1>
+          <p className="text-xl md:text-2xl mb-12 max-w-3xl mx-auto opacity-95 leading-relaxed font-light">
+            Le Club Nowme n'est pas un annuaire. C'est le <strong>guide complice</strong> de femmes 30+ qui veulent profiter de la vie.
+            <br className="hidden md:block" />
+            Nous sélectionnons les lieux qui feront vibrer leur quotidien.
+          </p>
+          <button
+            onClick={() => document.getElementById('partner-form')?.scrollIntoView({ behavior: 'smooth' })}
+            className="inline-flex items-center px-10 py-5 bg-white text-primary rounded-full text-lg font-bold hover:bg-orange-50 transition-all duration-300 shadow-xl hover:-translate-y-1 group"
+          >
+            Proposer mon établissement
+            <Heart className="ml-3 w-5 h-5 group-hover:fill-current transition-colors" />
+          </button>
+        </div>
+      </div>
+
+      {/* Philosophy Section */}
+      <div className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Notre Mission : L'Incitation au Kiff</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Nous avons créé un écosystème vertueux où se faire plaisir est encouragé et récompensé.
+              Du restaurant au théâtre, en passant par le sport et le bien-être, nous guidons nos membres vers les meilleures expériences.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Nom de l'entreprise */}
-            <div>
-              <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-1">
-                Nom de l'entreprise <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="businessName"
-                name="businessName"
-                value={formData.businessName}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.businessName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                placeholder="Ex: Spa Zen & Bien-être"
-              />
-              {errors.businessName && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.businessName}
-                </p>
-              )}
-            </div>
-
-            {/* SIRET */}
-            <div>
-              <label htmlFor="siret" className="block text-sm font-medium text-gray-700 mb-1">
-                Numéro SIRET <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="siret"
-                name="siret"
-                value={formData.siret}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.siret ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                placeholder="123 456 789 00012"
-              />
-              {errors.siret && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.siret}
-                </p>
-              )}
-            </div>
-
-            {/* Adresse légale */}
-            <div className="relative">
-              <label htmlFor="address-search" className="block text-sm font-medium text-gray-700 mb-1">
-                Adresse légale de l'entreprise <span className="text-red-500">*</span>
-              </label>
-              <LocationSearch
-                initialValue={formData.address}
-                onSelect={(location) => {
-                  setFormData((prev) => ({ ...prev, address: location.address }));
-                  if (errors.address) {
-                    setErrors((prev) => ({ ...prev, address: undefined }));
-                  }
-                }}
-                error={errors.address}
-              />
-            </div>
-
-            {/* Nom du contact */}
-            <div>
-              <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-1">
-                Nom du contact <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="contactName"
-                name="contactName"
-                value={formData.contactName}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.contactName ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                placeholder="Ex: Marie Dupont"
-              />
-              {errors.contactName && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.contactName}
-                </p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email professionnel <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.email ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                placeholder="contact@votre-entreprise.fr"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Mot de passe souhaité <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.password ? 'border-red-500' : 'border-gray-300'}`}
-                  placeholder="8 caractères minimum, 1 majuscule, 1 chiffre"
-                  autoComplete="new-password"
-                />
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
+            <div className="text-center group">
+              <div className="w-24 h-24 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform duration-300">
+                <Star className="w-10 h-10 text-rose-500" />
               </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.password}
-                </p>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmation du mot de passe <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'}`}
-                  placeholder="Répétez le mot de passe"
-                  autoComplete="new-password"
-                />
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-
-            {/* Téléphone */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Téléphone <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.phone ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                placeholder="0612345678"
-              />
-              {errors.phone && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.phone}
-                </p>
-              )}
-            </div>
-
-
-            {/* Message */}
-            <div>
-              <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                Décrivez votre activité <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                rows={5}
-                value={formData.message}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none ${errors.message ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                placeholder="Parlez-nous de votre entreprise, vos services, et pourquoi vous souhaitez rejoindre Nowme Club..."
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                {formData.message.length} / 20 caractères minimum
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Une Plateforme humaine</h3>
+              <p className="text-gray-600 leading-relaxed px-4">
+                Nos membres ne cherchent pas juste "un endroit", elles cherchent <strong>LA bonne adresse</strong> recommandée par le Club. Être partenaire, c'est vous mettre en avant sur nos réseaux, c'est organiser des  sorties. C'est une communauté qui échange uniquement sur les prochains kiffs à se faire.
               </p>
-              {errors.message && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.message}
-                </p>
-              )}
             </div>
 
-            {/* Catégories */}
-            <div>
-              <label htmlFor="mainCategoryId" className="block text-sm font-medium text-gray-700 mb-1">
-                Catégorie Principale du Partenaire
-              </label>
-              <select
-                id="mainCategoryId"
-                name="mainCategoryId"
-                value={formData.mainCategoryId}
-                onChange={(e) => setFormData({ ...formData, mainCategoryId: e.target.value, subcategoryIds: [] })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-              >
-                <option value="">Sélectionner une catégorie</option>
-                {mainCategories.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
+            <div className="text-center group">
+              <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform duration-300">
+                <TrendingUp className="w-10 h-10 text-amber-500" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Le Kiff Récompensé</h3>
+              <p className="text-gray-600 leading-relaxed px-4">
+                Nous souhaitons que nos membres se fassent plaisir, nous leur offrons du <strong>Cashback</strong> sur chaque expérience. Plus elles se font plaisir chez vous, plus elles y gagnent.
+              </p>
             </div>
 
-            {formData.mainCategoryId && subCategories.length > 0 && (
-              <div>
-                <span className="block text-sm font-medium text-gray-700 mb-2">
-                  Sous-catégories (Expertises spécifiques)
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 max-h-48 overflow-y-auto p-3 border border-gray-200 rounded-lg bg-gray-50">
-                  {subCategories.map(sub => (
-                    <label key={sub.id} className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-white rounded-md transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={formData.subcategoryIds.includes(sub.id)}
-                        onChange={() => handleSubCategoryToggle(sub.id)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
-                      />
-                      <span className="text-sm text-gray-700">{sub.name}</span>
-                    </label>
-                  ))}
-                </div>
+            <div className="text-center group">
+              <div className="w-24 h-24 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform duration-300">
+                <Users className="w-10 h-10 text-teal-500" />
               </div>
-            )}
-
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Présence en ligne (optionnel, mais fortement recommandé)</span>
-              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Une Sélection Pointue</h3>
+              <p className="text-gray-600 leading-relaxed px-4">
+                Nous ne visons pas la quantité mais la <strong>qualité</strong>. 5 partenaires sélectionnés dans votre niche et ville, pour garantir une visibilité exceptionnelle à chacun. Avec des événements communs, une vraie relation entre le membre et le partenaire.
+              </p>
             </div>
-
-            {/* Site web */}
-            <div>
-              <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
-                Site web
-              </label>
-              <input
-                type="url"
-                id="website"
-                name="website"
-                value={formData.website}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                placeholder="https://votre-site.fr"
-              />
-            </div>
-
-            {/* Réseaux sociaux */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
-                  Instagram <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
-                </label>
-                <input
-                  type="text"
-                  id="instagram"
-                  name="instagram"
-                  value={formData.instagram}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="https://instagram.com/votre_compte"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="facebook" className="block text-sm font-medium text-gray-700 mb-1">
-                  Facebook <span className="text-gray-400 font-normal">(URL commençant par https://)</span>
-                </label>
-                <input
-                  type="text"
-                  id="facebook"
-                  name="facebook"
-                  value={formData.facebook}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                  placeholder="https://facebook.com/VotrePage"
-                />
-              </div>
-            </div>
-
-            {/* Terms Acceptance */}
-            <div className="flex items-start">
-              <div className="flex items-center h-5">
-                <input
-                  id="acceptTerms"
-                  name="acceptTerms"
-                  type="checkbox"
-                  required
-                  className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
-                />
-              </div>
-              <div className="ml-3 text-sm">
-                <label htmlFor="acceptTerms" className="font-medium text-gray-700">
-                  J'accepte les <Link to="/conditions-partenaires" target="_blank" className="text-primary hover:underline">Conditions Générales de Partenariat</Link>
-                </label>
-                <p className="text-gray-500">
-                  En cochant cette case, je donne mandat express à NOWME pour facturer en mon nom et pour mon compte.
-                </p>
-              </div>
-            </div>
-
-            {/* Submit button */}
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Envoi en cours...
-                  </>
-                ) : (
-                  'Envoyer ma demande'
-                )}
-              </button>
-            </div>
-
-            <p className="text-xs text-center text-gray-500">
-              En soumettant ce formulaire, vous acceptez d'être contacté par notre équipe concernant
-              votre demande de partenariat.
-            </p>
-          </form>
+          </div>
         </div>
+      </div>
 
-        {/* Info box */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">Prochaines étapes</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>✓ Notre équipe examine votre demande sous 48h</li>
-            <li>✓ Vous recevez une notification par email</li>
-            <li>✓ Une fois approuvé, complétez votre profil et publiez vos offres</li>
-          </ul>
+      {/* Categories Ribbon */}
+      <div className="py-12 bg-gray-900 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4">
+          <p className="text-center text-gray-400 text-sm tracking-widest uppercase mb-8">Nous recherchons des pépites dans tous les univers</p>
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6 text-white font-medium opacity-80">
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Bien-être & Relaxation</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Culture & Divertissement</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Gastronomie & Art de la Table</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Sport & Activités Physiques</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Voyages & Expériences</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Loisirs & Créativité</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Développement Personnel</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Mode & Shopping</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Services à Domicile</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Spiritualité & Énergie</span>
+            <span className="px-5 py-2.5 border border-white/20 rounded-full hover:bg-white/10 transition-colors cursor-default">Produits</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Form Section */}
+      <div id="partner-form" className="py-24 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white shadow-2xl rounded-3xl overflow-hidden border-t-8 border-primary">
+            <div className="px-8 py-12">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Rejoignez l'aventure</h2>
+                <p className="text-gray-600">
+                  Parlez-nous de votre lieu et de ce qui le rend unique.
+                  <br />Nous avons hâte de vous découvrir.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Form Content - Kept exactly as verified previously */}
+                {/* Nom de l'entreprise */}
+                <div>
+                  <label htmlFor="businessName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom de l'entreprise <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="businessName"
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.businessName ? 'border-red-500' : 'border-gray-200'
+                      }`}
+                    placeholder="Ex: Spa Zen & Bien-être"
+                  />
+                  {errors.businessName && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.businessName}
+                    </p>
+                  )}
+                </div>
+
+                {/* SIRET */}
+                <div>
+                  <label htmlFor="siret" className="block text-sm font-medium text-gray-700 mb-1">
+                    Numéro SIRET <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="siret"
+                    name="siret"
+                    value={formData.siret}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.siret ? 'border-red-500' : 'border-gray-200'
+                      }`}
+                    placeholder="123 456 789 00012"
+                  />
+                  {errors.siret && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.siret}
+                    </p>
+                  )}
+                </div>
+
+                {/* Adresse légale */}
+                <div className="relative">
+                  <label htmlFor="address-search" className="block text-sm font-medium text-gray-700 mb-1">
+                    Adresse légale de l'entreprise <span className="text-red-500">*</span>
+                  </label>
+                  <LocationSearch
+                    initialValue={formData.address}
+                    onSelect={(location) => {
+                      setFormData((prev) => ({ ...prev, address: location.address }));
+                      if (errors.address) {
+                        setErrors((prev) => ({ ...prev, address: undefined }));
+                      }
+                    }}
+                    error={errors.address}
+                  />
+                </div>
+
+                {/* Nom du contact */}
+                <div>
+                  <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom du contact <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="contactName"
+                    name="contactName"
+                    value={formData.contactName}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.contactName ? 'border-red-500' : 'border-gray-200'
+                      }`}
+                    placeholder="Ex: Marie Dupont"
+                  />
+                  {errors.contactName && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.contactName}
+                    </p>
+                  )}
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email professionnel <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.email ? 'border-red-500' : 'border-gray-200'
+                      }`}
+                    placeholder="contact@votre-entreprise.fr"
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.email}
+                    </p>
+                  )}
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Mot de passe souhaité <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.password ? 'border-red-500' : 'border-gray-200'}`}
+                      placeholder="8 caractères minimum, 1 majuscule, 1 chiffre"
+                      autoComplete="new-password"
+                    />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.password}
+                    </p>
+                  )}
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirmation du mot de passe <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 pl-10 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'}`}
+                      placeholder="Répétez le mot de passe"
+                      autoComplete="new-password"
+                    />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+
+                {/* Téléphone */}
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Téléphone <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition ${errors.phone ? 'border-red-500' : 'border-gray-200'
+                      }`}
+                    placeholder="0612345678"
+                  />
+                  {errors.phone && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.phone}
+                    </p>
+                  )}
+                </div>
+
+
+                {/* Message */}
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+                    Décrivez votre activité <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="message"
+                    name="message"
+                    rows={5}
+                    value={formData.message}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition resize-none ${errors.message ? 'border-red-500' : 'border-gray-200'
+                      }`}
+                    placeholder="Parlez-nous de votre entreprise, vos services, et pourquoi vous souhaitez rejoindre Nowme Club..."
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    {formData.message.length} / 20 caractères minimum
+                  </p>
+                  {errors.message && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Catégories */}
+                <div>
+                  <label htmlFor="mainCategoryId" className="block text-sm font-medium text-gray-700 mb-1">
+                    Catégorie Principale du Partenaire
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="mainCategoryId"
+                      name="mainCategoryId"
+                      value={formData.mainCategoryId}
+                      onChange={(e) => setFormData({ ...formData, mainCategoryId: e.target.value, subcategoryIds: [] })}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition appearance-none bg-white"
+                    >
+                      <option value="">Sélectionner une catégorie</option>
+                      {mainCategories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {formData.mainCategoryId && subCategories.length > 0 && (
+                  <div className="animate-fade-in-down">
+                    <span className="block text-sm font-medium text-gray-700 mb-2">
+                      Sous-catégories (Expertises spécifiques)
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 max-h-48 overflow-y-auto p-3 border border-gray-200 rounded-lg bg-gray-50 custom-scrollbar">
+                      {subCategories.map(sub => (
+                        <label key={sub.id} className="flex items-center space-x-3 cursor-pointer p-2 hover:bg-white rounded-md transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={formData.subcategoryIds.includes(sub.id)}
+                            onChange={() => handleSubCategoryToggle(sub.id)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4"
+                          />
+                          <span className="text-sm text-gray-700">{sub.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div className="relative py-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-3 bg-white text-gray-500 font-medium">Présence en ligne</span>
+                  </div>
+                </div>
+
+                {/* Site web */}
+                <div>
+                  <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
+                    Site web
+                  </label>
+                  <input
+                    type="url"
+                    id="website"
+                    name="website"
+                    value={formData.website}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                    placeholder="https://votre-site.fr"
+                  />
+                </div>
+
+                {/* Réseaux sociaux */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="instagram" className="block text-sm font-medium text-gray-700 mb-1">
+                      Instagram <span className="text-gray-400 font-normal text-xs">(URL https://)</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="instagram"
+                      name="instagram"
+                      value={formData.instagram}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                      placeholder="https://instagram.com/votre_compte"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="facebook" className="block text-sm font-medium text-gray-700 mb-1">
+                      Facebook <span className="text-gray-400 font-normal text-xs">(URL https://)</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="facebook"
+                      name="facebook"
+                      value={formData.facebook}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                      placeholder="https://facebook.com/VotrePage"
+                    />
+                  </div>
+                </div>
+
+                {/* Terms Acceptance */}
+                <div className="flex items-start bg-blue-50/50 p-4 rounded-lg">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="acceptTerms"
+                      name="acceptTerms"
+                      type="checkbox"
+                      required
+                      className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="ml-3 text-sm">
+                    <label htmlFor="acceptTerms" className="font-medium text-gray-700">
+                      J'accepte les <Link to="/conditions-partenaires" target="_blank" className="text-primary hover:underline font-semibold">Conditions Générales de Partenariat</Link>
+                    </label>
+                    <p className="text-gray-500 mt-1">
+                      En cochant cette case, je donne mandat express à NOWME pour facturer en mon nom et pour mon compte.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Submit button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full flex items-center justify-center px-8 py-4 border border-transparent text-lg font-bold rounded-full text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-4 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Envoi en cours...
+                      </>
+                    ) : (
+                      'Envoyer ma candidature'
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-xs text-center text-gray-400">
+                  En soumettant ce formulaire, vous acceptez d'être contacté par notre équipe concernant
+                  votre demande de partenariat.
+                </p>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Questions fréquentes</h2>
+          <div className="grid gap-8">
+            <div className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Quel est le modèle économique ?</h3>
+              <p className="text-gray-600 leading-relaxed">
+                C'est un modèle au succès : l'inscription est gratuite. Nous prenons une commission de 10% à 30% uniquement lorsque nous vous apportons une cliente. Si nous ne vous apportons personne, vous ne payez rien.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Comment fonctionne le Cashback ?</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Sur chaque achat ou réservation effectué chez vous via le Club, nous reversons une partie de notre commission à la cliente. C'est notre manière de l'inciter à découvrir votre établissement et à revenir.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-8 rounded-2xl border border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 mb-3">Comment sont élus les partenaires ?</h3>
+              <p className="text-gray-600 leading-relaxed">
+                Nous recherchons des lieux et des activités avec une âme, qui partagent nos valeurs de bienveillance et de plaisir. Nous limitons volontairement le nombre de partenaires pour garantir une vraie relation de confiance.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

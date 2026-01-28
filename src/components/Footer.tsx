@@ -66,7 +66,14 @@ export function Footer() {
                   Tous les kiffs
                 </Link>
               </li>
-
+              <li>
+                <Link
+                  to="/devenir-partenaire"
+                  className="text-gray-600 hover:text-primary transition-colors duration-200"
+                >
+                  Devenir partenaire
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -155,6 +162,6 @@ export function Footer() {
           </div>
         </div>
       </div>
-    </footer>
+    </footer >
   );
 }

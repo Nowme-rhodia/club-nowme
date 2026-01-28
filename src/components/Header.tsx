@@ -74,14 +74,7 @@ export function Header() {
               </Link>
             )}
 
-            {!isPartner && !isSubscriber && (
-              <Link
-                to="/devenir-partenaire"
-                className="text-primary hover:text-primary-dark font-semibold transition-colors duration-200"
-              >
-                Devenir partenaire
-              </Link>
-            )}
+
 
             {isAdmin && (
               <Link
@@ -161,15 +154,7 @@ export function Header() {
                   Devenir ambassadrice
                 </Link>
               )}
-              {!isPartner && !isSubscriber && (
-                <Link
-                  to="/devenir-partenaire"
-                  className="text-primary hover:text-primary-dark font-medium px-2 py-3 border-b border-gray-50"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Devenir partenaire
-                </Link>
-              )}
+
               {isAdmin && (
                 <>
                   <Link
