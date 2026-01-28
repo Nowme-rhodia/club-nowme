@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { Info } from 'lucide-react';
 
 export default function PartnerFinancials() {
     const [partner, setPartner] = useState<any>(null);
@@ -24,11 +25,11 @@ export default function PartnerFinancials() {
             // 1. Get Partner
             const { data: profile } = await supabase.from('user_profiles').select('partner_id').eq('user_id', user.id).single();
 
-            if (profile?.partner_id) {
+            if ((profile as any)?.partner_id) {
                 const { data: partnerData } = await supabase
                     .from('partners')
                     .select('*')
-                    .eq('id', profile.partner_id)
+                    .eq('id', (profile as any).partner_id)
                     .single();
                 setPartner(partnerData);
 
@@ -36,7 +37,7 @@ export default function PartnerFinancials() {
                 const { data: payoutsData } = await supabase
                     .from('payouts')
                     .select('*')
-                    .eq('partner_id', profile.partner_id)
+                    .eq('partner_id', (profile as any).partner_id)
                     .order('period_start', { ascending: false });
 
                 setPayouts(payoutsData || []);
@@ -108,12 +109,23 @@ export default function PartnerFinancials() {
                         <span className="mr-2">✓</span> Compte relié (Stripe Express)
                     </div>
                 ) : (
-                    <button
-                        onClick={handleConfigurePayouts}
-                        className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition"
-                    >
-                        Configurer mes virements
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleConfigurePayouts}
+                            className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition"
+                        >
+                            Configurer mes virements
+                        </button>
+
+                        {/* Tooltip Info */}
+                        <div className="relative group flex items-center">
+                            <Info className="w-5 h-5 text-gray-400 cursor-help hover:text-purple-600 transition-colors" />
+                            <div className="absolute bottom-full mb-2 right-0 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 text-center shadow-lg">
+                                Ceci est une passerelle de paiement sécurisée pour recevoir vos gains directement sur votre compte bancaire. Ce n'est pas un compte Stripe classique : aucune gestion ni action n'est requise de votre part après parametrage.
+                                <div className="absolute top-full right-2 border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
 

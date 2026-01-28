@@ -195,7 +195,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
       setDurationType(offer.duration_type || 'lifetime');
       setValidityStartDate(offer.validity_start_date ? formatDateTimeForInput(offer.validity_start_date) : '');
-      setValidityEndDate(offer.validity_end_date ? formatDateTimeForInput(offer.validity_end_date) : '');
+      setEventDate(offer.event_start_date ? formatDateTimeForInput(offer.event_start_date) : '');
+      setEventEndDate(offer.event_end_date ? formatDateTimeForInput(offer.event_end_date) : '');
+      setExternalLink(offer.external_link || '');
 
       // Load service zones if at_home schema
       if (offer.service_zones && Array.isArray(offer.service_zones)) {
@@ -573,12 +575,23 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         toast('Offre passée en validation suite aux modifications', { icon: '⚠️' });
       }
 
-      // 5. Handle Variants (Delete all and re-create for simplicity in update)
+      // 5. Handle Variants (Smart Sync)
+      // Delete variants that are no longer in the list (but were there before)
       if (offer) {
-        await supabase.from('offer_variants').delete().eq('offer_id', offer.id);
+        const currentVariantIds = validVariants.map(v => v.id).filter(Boolean);
+
+        if (currentVariantIds.length === 0) {
+          // If no variants left, delete all
+          await supabase.from('offer_variants').delete().eq('offer_id', offer.id);
+        } else {
+          // Delete those NOT in the list
+          await supabase.from('offer_variants')
+            .delete()
+            .eq('offer_id', offer.id)
+            .not('id', 'in', `(${currentVariantIds.map(id => `"${id}"`).join(',')})`);
+        }
       }
 
-      // 3. Upsert Variants
       // 3. Upsert Variants
       if (eventType !== 'promo') {
         const variantsToUpsert = validVariants.map(v => {

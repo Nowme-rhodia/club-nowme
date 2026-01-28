@@ -1,0 +1,338 @@
+[
+  {
+    "id": "42808458-9b8a-4cbd-95a8-c5adc21b3e2c",
+    "created_at": "2026-01-09T17:56:46.824703+00:00",
+    "amount": 10,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "1eef2d7c-fc0a-474e-a822-cea3b7a8d362",
+    "offers": {
+      "title": "GIRLZ DAY OUT"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "d72119fe-759f-4ca2-bf57-04f69bf71a68",
+    "created_at": "2026-01-07T09:46:50.120429+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "90b03c2f-379a-4bf8-b9df-38e285248c8f",
+    "created_at": "2026-01-07T14:20:38.858776+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "3ed3e176-9dcc-4453-8d2e-d7d291ad3824",
+    "created_at": "2026-01-10T10:43:58.396016+00:00",
+    "amount": 15,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "1eef2d7c-fc0a-474e-a822-cea3b7a8d362",
+    "offers": {
+      "title": "Book club & Drinks"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "3249c041-8061-4813-8b5f-6f516a66416c",
+    "created_at": "2026-01-07T12:01:58.37924+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "396fd4c5-6772-4cf3-839b-88e3fc75dc24",
+    "created_at": "2026-01-07T09:47:08.430859+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "2231d18c-dd06-4967-a6ec-c9e4e2bf2936",
+    "created_at": "2026-01-09T18:01:47.401863+00:00",
+    "amount": 30,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Atelier : Stop à la procrastination"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "011c7204-d17b-415b-b7fc-f51abd4bdf6c",
+    "created_at": "2026-01-07T13:52:31.894593+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "81c0b3a8-43cd-4e02-afb6-4ac71274e9dd",
+    "created_at": "2026-01-10T12:05:53.366291+00:00",
+    "amount": 10,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "1eef2d7c-fc0a-474e-a822-cea3b7a8d362",
+    "offers": {
+      "title": "GIRLZ DAY OUT"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "814db531-de7f-4dce-9743-1fbaae91877c",
+    "created_at": "2026-01-07T09:50:16.793321+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "ca35ad66-44e1-41ff-8665-fa7391070d55",
+    "created_at": "2026-01-07T12:58:38.450467+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "ed3895cd-892d-4b8b-94f0-081088868af7",
+    "created_at": "2026-01-07T14:05:51.389463+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "b1bd45ea-a0b5-4a2d-b1c5-c0e081cfd337",
+    "created_at": "2026-01-07T14:28:27.577174+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "405ace31-58a7-40c6-8e83-43edfb488e99",
+    "created_at": "2026-01-07T15:07:57.714598+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "f1fc0f3c-f70b-4a3c-b4fe-4d55515374ce",
+    "created_at": "2026-01-10T12:07:13.516967+00:00",
+    "amount": 60,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Sauna Norvégien"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "dd1c1f40-745b-4699-99a0-9f4e5b6c4d10",
+    "created_at": "2026-01-09T18:10:04.568214+00:00",
+    "amount": 30,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Atelier : Stop à la procrastination"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "5724a4fe-b805-4543-bcd2-8da9d3168c56",
+    "created_at": "2026-01-09T18:14:50.1071+00:00",
+    "amount": 50,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Coaching sportif personnalisé"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "06e2c1d6-f6eb-4024-9a13-ed7083d990f2",
+    "created_at": "2026-01-10T12:23:20.157549+00:00",
+    "amount": 60,
+    "status": "confirmed",
+    "is_payout_eligible": true,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Sauna Norvégien"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "adaf51a9-170a-4cac-9dcb-c0a6eee7362e",
+    "created_at": "2026-01-10T12:22:22.500953+00:00",
+    "amount": 50,
+    "status": "confirmed",
+    "is_payout_eligible": true,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Coaching sportif personnalisé"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "7d4512b9-2a2c-4c32-a8ff-0ae93a89018c",
+    "created_at": "2026-01-10T09:51:45.884905+00:00",
+    "amount": 60,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Coaching sportif personnalisé"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "5defba81-7849-45c6-beb3-d806d43bbaa3",
+    "created_at": "2026-01-07T09:55:30.57942+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "06b7fe2d-84c4-4368-a5eb-8a30ca80424b",
+    "created_at": "2026-01-07T13:26:59.767824+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "c01fb785-af8b-4da9-8084-c4e2644e109b",
+    "created_at": "2026-01-10T12:24:14.045745+00:00",
+    "amount": 30,
+    "status": "confirmed",
+    "is_payout_eligible": true,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Atelier : Stop à la procrastination"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "e05b643a-0753-472b-a9ab-52b412230e0c",
+    "created_at": "2026-01-05T19:14:24.471155+00:00",
+    "amount": 50,
+    "status": "confirmed",
+    "is_payout_eligible": true,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "e753048b-1b4a-40d8-8545-d48737a26d75",
+    "created_at": "2026-01-05T19:21:17.984809+00:00",
+    "amount": 50,
+    "status": "confirmed",
+    "is_payout_eligible": true,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "e6605a72-1881-4ec2-b00a-5800fbe09f4b",
+    "created_at": "2026-01-05T19:24:25.05174+00:00",
+    "amount": 50,
+    "status": "confirmed",
+    "is_payout_eligible": true,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "21f339ed-feee-4f9c-8e39-d096b6473679",
+    "created_at": "2026-01-05T15:09:09.569509+00:00",
+    "amount": 8,
+    "status": "confirmed",
+    "is_payout_eligible": true,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "970ba3eb-61b0-44a1-9f0d-dd4f146aa326",
+    "created_at": "2026-01-10T10:11:53.150334+00:00",
+    "amount": 60,
+    "status": "cancelled",
+    "is_payout_eligible": false,
+    "partner_id": "c78f1403-22b5-43e9-ac0d-00577701731b",
+    "offers": {
+      "title": "Coaching sportif personnalisé"
+    },
+    "source": "By Customer Email"
+  },
+  {
+    "id": "c78f3c57-27db-4a7a-a8b5-6434d4ffa019",
+    "created_at": "2026-01-07T14:09:15.713468+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "093176cd-e142-452b-a259-0e0cb98d54da",
+    "created_at": "2026-01-07T14:32:42.717795+00:00",
+    "amount": 60,
+    "status": "pending",
+    "is_payout_eligible": false,
+    "partner_id": null,
+    "offers": null,
+    "source": "By Customer Email"
+  },
+  {
+    "id": "1f6670ee-0884-426f-8fcb-fdda58f4f228",
+    "created_at": "2026-01-28T07:07:31.521972+00:00",
+    "amount": 179,
+    "status": "confirmed",
+    "is_payout_eligible": false,
+    "partner_id": "1eef2d7c-fc0a-474e-a822-cea3b7a8d362",
+    "offers": {
+      "title": "Veux-tu t'épouser ? Conférences, Dinner Gala et Spa"
+    },
+    "source": "By Partner rhodia@nowme.fr"
+  }
+]

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
+import { CreditCard, Calendar, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -47,8 +47,8 @@ export default function SettingsPayments() {
         .eq('user_id', user.id)
         .single();
 
-      if (userProfile?.partner_id) {
-        partnerId = userProfile.partner_id;
+      if ((userProfile as any)?.partner_id) {
+        partnerId = (userProfile as any).partner_id;
       }
 
       if (!partnerId) return;
@@ -60,9 +60,9 @@ export default function SettingsPayments() {
         .single();
 
       if (!error && data) {
-        setIban(data.payout_iban || '');
-        setStripeId(data.stripe_account_id || '');
-        setCalendlyUrl(data.calendly_url || '');
+        setIban((data as any).payout_iban || '');
+        setStripeId((data as any).stripe_account_id || '');
+        setCalendlyUrl((data as any).calendly_url || '');
       }
     };
     loadData();
@@ -78,7 +78,7 @@ export default function SettingsPayments() {
         .eq('user_id', user.id)
         .single();
 
-      if (!userProfile?.partner_id) throw new Error("Partenaire introuvable");
+      if (!(userProfile as any)?.partner_id) throw new Error("Partenaire introuvable");
 
       const { error } = await supabase
         .from('partners')
@@ -86,8 +86,8 @@ export default function SettingsPayments() {
           payout_iban: iban,
           stripe_account_id: stripeId,
           calendly_url: calendlyUrl
-        })
-        .eq('id', userProfile.partner_id);
+        } as any)
+        .eq('id', (userProfile as any).partner_id);
 
       if (error) throw error;
       setSuccess('Paramètres de paiement mis à jour');
@@ -215,6 +215,15 @@ export default function SettingsPayments() {
                       {loadingStripe ? 'Connexion en cours...' : 'Connecter Stripe'}
                     </button>
                   )}
+
+                  {/* Tooltip Info */}
+                  <div className="relative group flex items-center">
+                    <Info className="w-5 h-5 text-gray-400 cursor-help hover:text-primary transition-colors" />
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 text-center shadow-lg">
+                      Ceci est une passerelle de paiement sécurisée pour recevoir vos gains directement sur votre compte bancaire. Ce n'est pas un compte Stripe classique : aucune gestion ni action n'est requise de votre part.
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Nécessaire pour recevoir vos fonds automatiquement après chaque réservation.
@@ -294,16 +303,16 @@ function PayoutHistory() {
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('partner_id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id as any)
         .single();
 
-      if (!profile?.partner_id) return;
+      if (!(profile as any)?.partner_id) return;
 
       // 2. Get payouts
       const { data, error } = await supabase
         .from('payouts')
         .select('*')
-        .eq('partner_id', profile.partner_id)
+        .eq('partner_id', (profile as any).partner_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

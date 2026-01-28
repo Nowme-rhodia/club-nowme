@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
         const [userResponse, offerResponse, partnerResponse, variantResponse] = await Promise.all([
             supabase.from('user_profiles').select('first_name, last_name, email').eq('user_id', bookingData.user_id).single(),
-            supabase.from('offers').select('title, is_online, booking_type, calendly_url, external_link, digital_product_file').eq('id', bookingData.offer_id).single(),
+            supabase.from('offers').select('title, is_online, booking_type, external_link, digital_product_file').eq('id', bookingData.offer_id).single(),
             supabase.from('partners').select('business_name, description, website, address, contact_email, notification_settings, siret, tva_intra').eq('id', bookingData.partner_id).single(),
             bookingData.variant_id ? supabase.from('offer_variants').select('name, price, content').eq('id', bookingData.variant_id).single() : Promise.resolve({ data: null, error: null })
         ])
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
                 console.error("Date formatting error", e);
                 dateDisplay = validDateToDisplay;
             }
-        } else if (offer.calendly_url || isAtHome) {
+        } else if (isAtHome) {
             dateDisplay = "À choisir lors de la prise de RDV";
         }
 
@@ -213,7 +213,6 @@ Deno.serve(async (req) => {
                     <p>C'est un événement 100% en ligne.</p>
                     <p>Vous retrouverez le lien de connexion dans votre espace "Mes Réservations" ou ci-dessous si disponible.</p>
                     ${offer.external_link ? `<p style="margin: 15px 0;"><a href="${offer.external_link}" style="background-color: #2563EB; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">Lien de la visio (Zoom/Meet)</a></p>` : ''}
-                    ${offer.calendly_url ? `<p><a href="${offer.calendly_url}">Lien de connexion / Prise de RDV</a></p>` : ''}
                     <p style="margin-top: 20px;"><a href="${Deno.env.get("PUBLIC_SITE_URL")}/mes-reservations" style="background-color: #0F172A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Voir ma réservation</a></p>
                  `;
         } else {

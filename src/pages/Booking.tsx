@@ -28,7 +28,7 @@ type Offer = {
   location: string | null;
   rating: number | null;
   requires_agenda: boolean | null;
-  calendly_url: string | null;
+  // calendly_url removed
   has_stock: boolean | null;
   stock: number | null;
   category_id: string | null;
@@ -59,7 +59,7 @@ export default function OfferPage() {
           location,
           rating,
           requires_agenda,
-          calendly_url,
+          // calendly_url removed
           has_stock,
           stock,
           category_id,
