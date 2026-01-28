@@ -8,6 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -19,7 +21,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     )
 
-    const { partner_id, period_start, period_end } = await req.json() // Expect format YYYY-MM-DD
+    const { partner_id, period_start, period_end, payout_id } = await req.json()
 
     if (!partner_id || !period_start || !period_end) {
       throw new Error("Missing required parameters")
@@ -34,26 +36,49 @@ serve(async (req) => {
 
     if (partnerError || !partner) throw new Error("Partner not found")
 
-    // 2. Fetch Bookings for Period (Paid only)
+    // 2. Fetch Bookings for Period
+    // If we have a payout_id, we could inspect the payout record, but getting bookings is still updated from DB.
+    // Ideally we trust the DB calculations for totals if payout_id exists.
+
+    let total_collected = 0;
+    let commission_ht = 0;
+    let commission_tva = 0;
+    let net_payout = 0;
+
+    if (payout_id) {
+      // Fetch existing payout to ensure values match DB
+      const { data: payoutData } = await supabase.from('payouts').select('*').eq('id', payout_id).single();
+      if (payoutData) {
+        total_collected = payoutData.total_amount_collected;
+        commission_ht = payoutData.commission_amount;
+        commission_tva = payoutData.commission_tva;
+        net_payout = payoutData.net_payout_amount;
+      }
+    }
+
+    // Load bookings anyway for the details list
     const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select('*')
       .eq('partner_id', partner_id)
-      .eq('status', 'paid')
+      // .eq('status', 'paid') // Relax this constraint, confirmed/completed/paid
+      .in('status', ['confirmed', 'completed', 'paid']) // Match RPC logic roughly
       .gte('created_at', period_start)
       .lte('created_at', period_end)
 
     if (bookingsError) throw new Error("Error fetching bookings: " + bookingsError.message)
 
-    // 3. Calculate Totals
-    const total_collected = bookings.reduce((sum, b) => sum + (b.amount || 0), 0)
-    const commission_rate = partner.commission_rate || 20 // Default 20% if missing?
-    const commission_ht = total_collected * (commission_rate / 100)
-    const commission_tva = commission_ht * 0.20
-    const commission_ttc = commission_ht + commission_tva
-    const net_payout = total_collected - commission_ttc
+    // Fallback calculation if not provided by payout_id
+    if (!payout_id || total_collected === 0) {
+      total_collected = bookings.reduce((sum, b) => sum + (b.amount || 0), 0)
+      // Commission logic: sum of commission_amount (HT)
+      commission_ht = bookings.reduce((sum, b) => sum + (b.commission_amount || 0), 0)
+      commission_tva = commission_ht * 0.20
+      const commission_ttc = commission_ht + commission_tva
+      net_payout = total_collected - commission_ttc
+    }
 
-    // 4. Generate PDF
+    // 3. Generate PDF
     const pdfDoc = await PDFDocument.create()
     const page = pdfDoc.addPage()
     const { width, height } = page.getSize()
@@ -65,13 +90,11 @@ serve(async (req) => {
     }
 
     // Header
-    // Company Logo / Details (NOWME)
-    drawText("NOWME", 50, height - 50, 18, boldFont)
-    drawText("10 Rue Penthièvre", 50, height - 70, 10, font) // Placeholder
-    drawText("75008 PARIS", 50, height - 85, 10, font) // Placeholder
-    drawText("SIRET : 98327863700018", 50, height - 100, 10, font) // Placeholder or Real ? I found a SIRET in grep earlier "983..." ? No, that was in SubmitOffer maybe? I'll use a placeholder "A REMPLACER" if not sure, but let's try to be helpful. 
-    // Actually I didn't see specific SIRET in grep output that looked like NOWME's.
-    // Let's use generic placeholders that are obvious, but clean layout.
+    // Header
+    drawText("NOWME SAS", 50, height - 50, 18, boldFont)
+    drawText("59 Rue de Ponthieu", 50, height - 70, 10, font)
+    drawText("75008 PARIS", 50, height - 85, 10, font)
+    drawText("SIRET : 933 108 011 00018", 50, height - 100, 10, font)
 
     // Document Title & Info
     drawText("RELEVÉ DE REDDITION DE COMPTES", 300, height - 50, 14, boldFont)
@@ -91,7 +114,6 @@ serve(async (req) => {
     const startY = height - 250
     drawText("RÉCAPITULATIF", 50, startY, 14, boldFont)
 
-    // Draw columns headers
     const colY = startY - 30
     drawText("Désignation", 50, colY, 10, boldFont)
     drawText("Montant", 400, colY, 10, boldFont)
@@ -103,7 +125,7 @@ serve(async (req) => {
     drawText(`${total_collected.toFixed(2)} €`, 400, currentY, 10, boldFont)
     currentY -= 20
 
-    drawText(`Commission sur ventes (${commission_rate}%) HT`, 50, currentY, 10)
+    drawText(`Commission sur ventes HT`, 50, currentY, 10)
     drawText(`- ${commission_ht.toFixed(2)} €`, 400, currentY, 10)
     currentY -= 20
 
@@ -132,7 +154,7 @@ serve(async (req) => {
 
     const pdfBytes = await pdfDoc.save()
 
-    // 5. Upload to Storage
+    // 4. Upload to Storage
     const fileName = `payout_${partner_id}_${period_start}_${period_end}.pdf`
     const filePath = `${partner_id}/${fileName}`
 
@@ -142,60 +164,47 @@ serve(async (req) => {
 
     if (uploadError) throw new Error("Upload failed: " + uploadError.message)
 
-    // 6. Get Public URL (or signed)
     const { data: { publicUrl } } = supabase.storage.from('payout_statements').getPublicUrl(filePath)
 
-    // 7. Insert/Update Payout Record
-    // Check if exists first to avoid duplicate periods? 
-    // Ideally we should upsert based on (partner_id, period_start, period_end) but we don't have that constraint yet.
-    // Let's just create a new record. Use client logic to delete old if needed.
+    // 5. Insert or Update Payout Record
+    if (payout_id) {
+      // Update existing
+      await supabase.from('payouts').update({ statement_url: publicUrl }).eq('id', payout_id);
+    } else {
+      // Fallback: Insert new (legacy behavior)
+      const { error: insertError } = await supabase
+        .from('payouts')
+        .insert({
+          partner_id,
+          period_start,
+          period_end,
+          total_amount_collected: total_collected,
+          commission_amount: commission_ht,
+          commission_tva: commission_tva,
+          net_payout_amount: net_payout,
+          status: 'pending',
+          statement_url: publicUrl
+        });
+      if (insertError) throw new Error("Insert failed: " + insertError.message);
+    }
 
-    // 7. Insert/Update Payout Record
-    const { data: payout, error: insertError } = await supabase
-      .from('payouts')
-      .insert({
-        partner_id,
-        period_start,
-        period_end,
-        total_amount_collected: total_collected,
-        commission_amount: commission_ht,
-        commission_tva: commission_tva,
-        net_payout_amount: net_payout,
-        status: 'pending',
-        statement_url: publicUrl
-      })
-      .select()
-      .single()
-
-    if (insertError) throw new Error("Database insert failed: " + insertError.message)
-
-
-    // 8. [NEW] Send Email Notification with PDF
+    // 6. Send Email Notification
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (RESEND_API_KEY) {
-      // Fetch partner email
-      const { data: emailPartner } = await supabase
-        .from('partners')
-        .select('contact_email')
-        .eq('id', partner_id)
-        .single();
-
+      const { data: emailPartner } = await supabase.from('partners').select('contact_email').eq('id', partner_id).single();
       const targetEmail = emailPartner?.contact_email;
 
       if (targetEmail) {
         console.log(`Sending payout email to ${targetEmail}`);
 
-        // Import Resend dynamically or assuming it's available via global import if I changed top of file.
-        // But since I am replacing a block, I should ensure SDK is imported.
-        // Actually, I need to add the import at the top first if it's missing.
-        // Let's check imports. It was NOT imported.
-        // I will use dynamic import or just raw fetch with FIXED Base64.
-        // Fixing Base64 is easier than adding imports in a replace_file_content if I can't touch top.
-        // BUT `multi_replace` is better.
-        // Let's try to fix the Base64 encoding first as it is less invasive.
-
-        // Base64 conversion for Deno/Browser
-        const b64 = btoa(String.fromCharCode(...pdfBytes));
+        // Base64 encode for attachment
+        // Deno btoa wrapper
+        let binary = "";
+        const bytes = new Uint8Array(pdfBytes);
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const b64 = btoa(binary);
 
         await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -224,7 +233,7 @@ serve(async (req) => {
             attachments: [
               {
                 filename: fileName,
-                content: b64 // Correctly Base64 encoded
+                content: b64
               }
             ]
           }),
@@ -233,7 +242,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, payout }),
+      JSON.stringify({ success: true, publicUrl }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
 

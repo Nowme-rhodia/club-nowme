@@ -164,7 +164,7 @@ export default function Subscription() {
             <motion.div {...fadeInUp}>
               <div className="inline-flex items-center px-4 py-2 bg-primary/10 rounded-full text-primary font-semibold mb-6 transform rotate-1">
                 <Users className="w-4 h-4 mr-2" />
-                Plus de 500 femmes kiffent déjà avec nous
+                Plus de s kiffent déjà avec nous
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
