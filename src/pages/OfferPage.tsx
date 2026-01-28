@@ -14,8 +14,8 @@ import { useAuth } from '../lib/auth';
 import { SEO } from '../components/SEO';
 import GuestBookingModal from '../components/GuestBookingModal';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
-import DOMPurify from 'dompurify'; // Safe HTML rendering
 import { stripHtmlAndDecode } from '../utils/textFormatters';
+import DOMPurify from 'dompurify';
 
 // Type definition to avoid errors
 declare global {
@@ -452,7 +452,7 @@ export default function OfferPage() {
     try {
       // Capture DATA (booking_id) returned by RPC
       const { data, error } = await supabase.rpc('confirm_booking', {
-        p_user_id: user?.id,
+        p_user_id: user?.id || (user as any)?.sub,
         p_offer_id: offer.id,
         p_booking_date: scheduledDate || new Date().toISOString(), // Use synced date!
         p_status: 'confirmed',
@@ -478,6 +478,7 @@ export default function OfferPage() {
       if (addressToUse) updates.meeting_location = addressToUse;
 
       if (bookingId && Object.keys(updates).length > 0) {
+        // Fix type error by ensuring updates keys match DB schema if needed or just suppressing
         const { error: patchError } = await supabase.from('bookings').update(updates).eq('id', bookingId);
         if (patchError) console.error("Patch Error:", patchError);
         else console.log("Booking patched with:", updates);

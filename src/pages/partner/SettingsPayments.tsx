@@ -165,14 +165,14 @@ export default function SettingsPayments() {
                       <p>
                         En utilisant Nowme pour vos réservations, vous nous donnez mandat pour émettre les factures en votre nom et pour votre compte (Article 289 du CGI).
                       </p>
-                      <p className="mt-2">
+                      <div className="mt-2">
                         <strong>Ce que cela signifie :</strong>
                         <ul className="list-disc pl-5 mt-1 space-y-1">
                           <li>Nowme génère automatiquement la facture client avec VOS informations légales.</li>
                           <li>Vous n'avez pas besoin de refaire une facture pour le client.</li>
                           <li>Vous recevez chaque mois un relevé de reddition de comptes récapitulant vos ventes.</li>
                         </ul>
-                      </p>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -16,6 +16,7 @@ export const SEO = ({ title, description, canonical, image }: SEOProps) => {
 
   // Clean canonical: Remove query params
   const cleanCanonical = canonical ? canonical.split('?')[0] : siteUrl;
+  const finalImage = image || defaultImage;
 
   return (
     <Helmet>
@@ -28,14 +29,18 @@ export const SEO = ({ title, description, canonical, image }: SEOProps) => {
       <meta property="og:url" content={cleanCanonical} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
-      <meta property="og:image" content={image || defaultImage} />
+      <meta property="og:image" content={finalImage} />
+
+      {/* Dimensions d'image pour aider WhatsApp/FB */}
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={cleanCanonical} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={image || defaultImage} />
+      <meta name="twitter:image" content={finalImage} />
 
       {/* Canonical URL */}
       {cleanCanonical && <link rel="canonical" href={cleanCanonical} />}
