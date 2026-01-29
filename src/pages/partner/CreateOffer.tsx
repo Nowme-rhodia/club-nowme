@@ -413,6 +413,19 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         return;
       }
 
+      // Check for invalid discounted prices (must be lower than standard price)
+      const invalidDiscountVariants = variants.filter(v =>
+        v.price &&
+        v.discounted_price &&
+        parseFloat(v.discounted_price) >= parseFloat(v.price)
+      );
+
+      if (invalidDiscountVariants.length > 0) {
+        toast.error('Le prix réduit doit être strictement inférieur au prix standard');
+        setLoading(false);
+        return;
+      }
+
       if (eventType !== 'promo' && validVariants.length === 0) {
         // Double check if there are variants with content but no price, which is invalid
         if (variants.length > 0) {
