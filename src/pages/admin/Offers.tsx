@@ -19,6 +19,8 @@ import {
 import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
 import toast from 'react-hot-toast';
+import CreateOffer from '../partner/CreateOffer';
+
 
 
 interface Offer {
@@ -65,6 +67,7 @@ export default function Offers() {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
 
   // States for Rejection Modal
   const [showRejectionModal, setShowRejectionModal] = useState(false);
@@ -534,6 +537,14 @@ export default function Offers() {
                           <ToggleLeft className="w-5 h-5" />
                         )}
                       </button>
+
+                      <button
+                        onClick={() => setEditingOffer(offer)}
+                        className="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                        title="Modifier l'offre"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -544,134 +555,136 @@ export default function Offers() {
       </div>
 
       {/* Modal de détails */}
-      {selectedOffer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Détails de l'offre
-              </h2>
+      {
+        selectedOffer && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Détails de l'offre
+                </h2>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Images */}
-                {(selectedOffer.image_url || (selectedOffer.offer_media && selectedOffer.offer_media.length > 0)) && (
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Images</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {selectedOffer.image_url && (
-                        <img
-                          src={selectedOffer.image_url}
-                          alt={selectedOffer.title}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      )}
-                      {selectedOffer.offer_media && selectedOffer.offer_media.map((media) => (
-                        <img
-                          key={media.id}
-                          src={media.url}
-                          alt={selectedOffer.title}
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Informations principales */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {selectedOffer.title}
-                    </h3>
-                    <div className="flex items-center gap-4 mb-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${selectedOffer.is_approved !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                        }`}>
-                        {selectedOffer.is_approved !== false ? 'Active' : 'Désactivée'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Partenaire</h4>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="font-medium">{selectedOffer.partner?.business_name || 'Partenaire supprimé'}</p>
-                      <p className="text-sm text-gray-600">{selectedOffer.partner?.contact_name}</p>
-                      <p className="text-sm text-gray-600">{selectedOffer.partner?.phone}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
-                    <p className="text-gray-600">{selectedOffer.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Images */}
+                  {(selectedOffer.image_url || (selectedOffer.offer_media && selectedOffer.offer_media.length > 0)) && (
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
-                      <p className="text-gray-600">
-                        {categories.find(c => c.slug === selectedOffer.category_slug)?.name}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
-                      <p className="text-gray-600 flex items-center">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {selectedOffer.location}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Variants */}
-                  {(selectedOffer.variants && selectedOffer.variants.length > 0) && (
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-2">Tarifs</h4>
-                      <div className="space-y-2">
-                        {selectedOffer.variants.map((variant) => (
-                          <div key={variant.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                            <div>
-                              <p className="font-medium">{variant.name}</p>
-                              <p className="text-sm text-gray-600">{variant.description || ''}</p>
-                            </div>
-                            <div className="text-right">
-                              {variant.discounted_price ? (
-                                <div>
-                                  <span className="text-lg font-bold text-primary">{variant.discounted_price}€</span>
-                                  <span className="text-sm text-gray-400 line-through ml-2">{variant.price}€</span>
-                                </div>
-                              ) : (
-                                <span className="text-lg font-bold text-gray-900">{variant.price}€</span>
-                              )}
-                            </div>
-                          </div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Images</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedOffer.image_url && (
+                          <img
+                            src={selectedOffer.image_url}
+                            alt={selectedOffer.title}
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
+                        )}
+                        {selectedOffer.offer_media && selectedOffer.offer_media.map((media) => (
+                          <img
+                            key={media.id}
+                            src={media.url}
+                            alt={selectedOffer.title}
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
                         ))}
                       </div>
                     </div>
                   )}
+
+                  {/* Informations principales */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {selectedOffer.title}
+                      </h3>
+                      <div className="flex items-center gap-4 mb-4">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${selectedOffer.is_approved !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                          }`}>
+                          {selectedOffer.is_approved !== false ? 'Active' : 'Désactivée'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Partenaire</h4>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <p className="font-medium">{selectedOffer.partner?.business_name || 'Partenaire supprimé'}</p>
+                        <p className="text-sm text-gray-600">{selectedOffer.partner?.contact_name}</p>
+                        <p className="text-sm text-gray-600">{selectedOffer.partner?.phone}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+                      <p className="text-gray-600">{selectedOffer.description}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-1">Catégorie</h4>
+                        <p className="text-gray-600">
+                          {categories.find(c => c.slug === selectedOffer.category_slug)?.name}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-1">Localisation</h4>
+                        <p className="text-gray-600 flex items-center">
+                          <MapPin className="w-4 h-4 mr-1" />
+                          {selectedOffer.location}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Variants */}
+                    {(selectedOffer.variants && selectedOffer.variants.length > 0) && (
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-2">Tarifs</h4>
+                        <div className="space-y-2">
+                          {selectedOffer.variants.map((variant) => (
+                            <div key={variant.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                              <div>
+                                <p className="font-medium">{variant.name}</p>
+                                <p className="text-sm text-gray-600">{variant.description || ''}</p>
+                              </div>
+                              <div className="text-right">
+                                {variant.discounted_price ? (
+                                  <div>
+                                    <span className="text-lg font-bold text-primary">{variant.discounted_price}€</span>
+                                    <span className="text-sm text-gray-400 line-through ml-2">{variant.price}€</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-lg font-bold text-gray-900">{variant.price}€</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-6 flex justify-between">
-                <button
-                  onClick={() => handleToggleActive(selectedOffer.id, selectedOffer.is_approved !== false)}
-                  className={`flex-1 flex items-center justify-center px-4 py-2 rounded-lg transition-all transform active:scale-95 ${selectedOffer.is_approved !== false
-                    ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                    : 'bg-green-50 text-green-600 hover:bg-green-100'
-                    }`}
-                >
-                  {selectedOffer.is_approved !== false ? 'Désactiver' : 'Activer'}
-                </button>
+                <div className="mt-6 flex justify-between">
+                  <button
+                    onClick={() => handleToggleActive(selectedOffer.id, selectedOffer.is_approved !== false)}
+                    className={`flex-1 flex items-center justify-center px-4 py-2 rounded-lg transition-all transform active:scale-95 ${selectedOffer.is_approved !== false
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                      : 'bg-green-50 text-green-600 hover:bg-green-100'
+                      }`}
+                  >
+                    {selectedOffer.is_approved !== false ? 'Désactiver' : 'Activer'}
+                  </button>
 
-                <button
-                  onClick={() => setSelectedOffer(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Fermer
-                </button>
+                  <button
+                    onClick={() => setSelectedOffer(null)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Fermer
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal de rejet */}
       {
@@ -721,6 +734,24 @@ export default function Offers() {
           </div>
         )
       }
-    </div>
+      {/* Modal d'édition */}
+      {
+        editingOffer && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <CreateOffer
+                offer={editingOffer}
+                onClose={() => setEditingOffer(null)}
+                onSuccess={() => {
+                  setEditingOffer(null);
+                  toast.success('Offre mise à jour avec succès');
+                  loadOffers();
+                }}
+              />
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 }

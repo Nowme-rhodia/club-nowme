@@ -141,6 +141,13 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   // Fetch Partner ID
   React.useEffect(() => {
     async function fetchPartnerId() {
+      // If we are editing an existing offer, use its partner_id
+      if (offer && offer.partner_id) {
+        setPartnerId(offer.partner_id);
+        return;
+      }
+
+      // Otherwise, try to get it from the current user's profile
       if (!user) return;
       const { data, error } = await supabase
         .from('user_profiles')
@@ -153,7 +160,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       }
     }
     fetchPartnerId();
-  }, [user]);
+  }, [user, offer]);
 
   // Populate form if editing
   React.useEffect(() => {
@@ -407,7 +414,12 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       }
 
       if (eventType !== 'promo' && validVariants.length === 0) {
-        toast.error('Veuillez ajouter au moins un tarif valide (Nom et Prix)');
+        // Double check if there are variants with content but no price, which is invalid
+        if (variants.length > 0) {
+          toast.error('Veuillez définir au moins un tarif avec un Nom et un Prix');
+        } else {
+          toast.error('Veuillez ajouter au moins un tarif valide (Nom et Prix)');
+        }
         setLoading(false);
         return;
       }
@@ -465,17 +477,24 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         setIsUploading(false);
       }
 
-      // 3. Get Partner ID (if not already known, but usually we do this once)
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('partner_id')
-        .eq('user_id', (user as any)?.id)
-        .single();
+      // 3. Get Partner ID
+      // If we already have a partnerId (from offer edit or initial fetch), use it.
+      // Otherwise fallback to fetching (only for new offers by partners)
+      let finalPartnerId = partnerId;
 
-      if (profileError || !(profileData as any)?.partner_id) {
-        toast.error('Profil partenaire introuvable');
-        setLoading(false);
-        return;
+      if (!finalPartnerId) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('partner_id')
+          .eq('user_id', (user as any)?.id)
+          .single();
+
+        if (profileError || !(profileData as any)?.partner_id) {
+          toast.error('Profil partenaire introuvable');
+          setLoading(false);
+          return;
+        }
+        finalPartnerId = (profileData as any).partner_id;
       }
 
       // 4. Get Category ID
@@ -492,7 +511,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       }
 
       const offerData = {
-        partner_id: (profileData as any)?.partner_id,
+        partner_id: finalPartnerId,
         title,
         description,
         category_id: (categoryData as any).id,
