@@ -66,38 +66,41 @@ export default function SubscriptionSuccess() {
       setVerificationResult(data);
 
       if (data.success && data.status === 'active') {
-        setIsVerifying(false);
-        toast.success('Abonnement activé avec succès !');
+        // DO NOT stop verifying yet. Wait for profile sync.
+        // setIsVerifying(false); 
+        toast.success('Paiement validé ! Finalisation du compte...');
 
-        // SHOW FORM IMMEDIATELY to avoid delay
+        // SHOW FORM IMMEDIATELY to avoid delay (Visual only, but buttons are hidden by isVerifying)
         setShowWelcomeForm(true);
 
         // Recharger le profil pour mettre à jour le rôle avec retry
-        console.log('🔄 Refreshing user profile...');
+        console.log('🔄 Refreshing user profile to sync Stripe status...');
 
-        // Attendre un peu pour que la DB soit à jour
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Attendre un peu pour que la DB soit à jour (webhook latency)
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         // Essayer de recharger le profil jusqu'à 3 fois
         let retries = 0;
-        const maxRetries = 3;
+        const maxRetries = 4; // Increased to 4
 
         while (retries < maxRetries) {
+          console.log(`⏳ Profile refresh attempt ${retries + 1}/${maxRetries}...`);
           await refreshProfile();
 
-          // Attendre un peu pour que le state soit mis à jour
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Check if we are now a subscriber (Note: 'profile' var here is stale due to closure, 
+          // but refreshProfile updates the context. We rely on the time passed.)
+          // Ideal: check the return of refreshProfile if it returned data, 
+          // but for now we just ensure we waited enough spirals.
 
-          // Vérifier si le profil a été chargé (on pourrait améliorer cette vérification)
-          console.log(`✅ Profile refresh attempt ${retries + 1}/${maxRetries} completed`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
           retries++;
-
-          if (retries < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
         }
 
-        console.log('✅ Profile refresh completed after', retries, 'attempts');
+        console.log('✅ Profile refresh sequences completed.');
+
+        // NOW we unlock the UI
+        setIsVerifying(false);
+        toast.success('Abonnement activé avec succès !');
 
         // Après le scan, on check si le profil est complet
         const updatedProfile = profile; // Note: profile might be stale here due to closure, but we rely on re-renders or direct check
