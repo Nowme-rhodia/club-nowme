@@ -21,8 +21,11 @@ export function PreLaunchBlocker({ overlay = false }: { overlay?: boolean }) {
 
             <div className="max-w-xl mx-auto space-y-4 mb-10">
                 <p className="text-xl text-gray-600">
-                    L'espace Club et les Sorties ouvrent officiellement
-                    <span className="font-bold text-primary mx-1">en Février</span> !
+                    L'espace Club et les Sorties ouvriront dès que nous serons
+                    <span className="font-bold text-primary mx-1">100 membres</span> !
+                </p>
+                <p className="text-lg text-primary font-medium">
+                    N'hésite pas à amener tes copines pour débloquer l'accès plus vite ! 👯‍♀️
                 </p>
                 <p className="text-gray-500">
                     On prépare les derniers détails pour que l'expérience soit parfaite.<br />
