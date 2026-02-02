@@ -64,7 +64,9 @@ const formats = [
 const formatDateTimeForInput = (dateStr: string) => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
-  return date.toISOString().slice(0, 16);
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  const localDate = new Date(date.getTime() - offsetMs);
+  return localDate.toISOString().slice(0, 16);
 };
 
 export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferProps) {
