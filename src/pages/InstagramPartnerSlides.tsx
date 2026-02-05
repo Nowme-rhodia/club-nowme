@@ -1,0 +1,518 @@
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Sparkles, Heart, Star, Circle, Square, Triangle } from 'lucide-react';
+
+const InstagramPartnerSlides = () => {
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [showSafeZone, setShowSafeZone] = useState(true);
+
+    // Partner data from Supabase
+    const partners = [
+        {
+            id: 'cover',
+            type: 'cover',
+            title: "NOS EXPERTS",
+            subtitle: "DU CLUB",
+            copy: "Rencontre les femmes qui vont transformer ton quotidien",
+            bg: 'from-[#FF6B9D] via-[#C06C84] to-[#6C5B7B]'
+        },
+        {
+            id: 1,
+            type: 'partner',
+            name: "Brice Caumont",
+            title: "RÉFLEXOLOGIE & REIKI",
+            pitch: "Réajuste la puissance de tes émotions avec douceur",
+            location: "Paris (75)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/9fbc63b6-9882-4990-93fa-90bd73086747/cover-1770053333086.JPG",
+            color: '#FF6B9D'
+        },
+        {
+            id: 2,
+            type: 'partner',
+            name: "Feel Pilates Studio",
+            title: "PILATES & YOGA",
+            pitch: "Reconnecte-toi à ton corps en douceur",
+            location: "Palaiseau (91)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/72a6a127-3477-45f3-bd98-a2633d9fa151/cover-1769550345887.jpg",
+            color: '#FFA07A'
+        },
+        {
+            id: 3,
+            type: 'partner',
+            name: "Julia Coiffard",
+            title: "MÉDITATION & MASSAGES",
+            pitch: "Des parenthèses de douceur pour te retrouver",
+            location: "Viroflay (78)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/dd0489c9-43f9-41d4-a32c-1970e9ddec81/cover-1769702328498.png",
+            color: '#98D8C8'
+        },
+        {
+            id: 4,
+            type: 'partner',
+            name: "Laetitia Loiseau-Martineau",
+            title: "COACH EN BONHEUR",
+            pitch: "Comprends ce que tu vis pour avancer sereinement",
+            location: "Gagny (93)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/81eaf98a-7fef-4ce1-aab7-76a2d503ed2e/cover-1769095520095.png",
+            color: '#F7B731'
+        },
+        {
+            id: 5,
+            type: 'partner',
+            name: "Mission Fit",
+            title: "COACHING SPORTIF",
+            pitch: "Atteins tes objectifs avec des coachs diplômés",
+            location: "La Queue-en-Brie (94)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/449f453b-cda7-4844-bec3-bbc594cf4a10/cover-1769898193945.jpeg",
+            color: '#5F27CD'
+        },
+        {
+            id: 6,
+            type: 'partner',
+            name: "Nora Bousbah",
+            title: "NEUROBIO COMPORTEMENTALISTE",
+            pitch: "Transforme tes blocages en leviers d'évolution",
+            location: "Samoreau (77)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/fb478013-7df8-4200-bb88-f75b54971756/cover-1769005077836.jpg",
+            color: '#00D2D3'
+        },
+        {
+            id: 7,
+            type: 'partner',
+            name: "Vintage Home Paris",
+            title: "BOUGIES FLEURIES",
+            pitch: "Crée une ambiance cocooning chez toi",
+            location: "Paris (75)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/f32781cb-dbf5-4b1e-bf7b-764490394799/cover-1769967894945.png",
+            color: '#FF9FF3'
+        },
+        {
+            id: 8,
+            type: 'partner',
+            name: "Lumae",
+            title: "BIEN-ÊTRE HOLISTIQUE",
+            pitch: "Ralentis et reconnecte-toi à ton rythme",
+            location: "Paris (75)",
+            image: "https://dqfyuhwrjozoxadkccdj.supabase.co/storage/v1/object/public/partner-assets/c78f1403-22b5-43e9-ac0d-00577701731b/cover-1767972217929.jpg",
+            color: '#54A0FF'
+        },
+        {
+            id: 9,
+            type: 'partner',
+            name: "Axel Vannier",
+            title: "PHOTOGRAPHIE THÉRAPEUTIQUE",
+            pitch: "Révèle ta beauté et booste ton estime de toi",
+            location: "Versailles (78)",
+            image: "/partner-photos/axel-vannier.png",
+            color: '#48DBFB'
+        },
+        {
+            id: 10,
+            type: 'partner',
+            name: "Cabinet Borges",
+            title: "PSYCHOTHÉRAPIE",
+            pitch: "Traverse les ruptures et retrouve ta sérénité",
+            location: "Verrières-le-Buisson (91)",
+            image: "/partner-photos/cabinet-borges.png",
+            color: '#FF6348'
+        },
+        {
+            id: 11,
+            type: 'partner',
+            name: "Cosmiquelife",
+            title: "CARTOMANCIE & MÉDIUMNITÉ",
+            pitch: "Révèle les trésors cachés en toi",
+            location: "Paris (75)",
+            image: "/partner-photos/cosmiquelife.png",
+            color: '#1DD1A1'
+        },
+        {
+            id: 12,
+            type: 'partner',
+            name: "Eden des Sens",
+            title: "SPA & MASSAGES",
+            pitch: "Piscine, spa et soins sur-mesure près de Paris",
+            location: "Paris (75)",
+            image: "/partner-photos/eden-des-sens.png",
+            color: '#10AC84'
+        },
+        {
+            id: 13,
+            type: 'partner',
+            name: "Karima Hassani Yanouri",
+            title: "SOPHROLOGIE, NATUROPATHIE & RÉFLEXOLOGIE",
+            pitch: "15 ans d'expertise pour ton équilibre",
+            location: "Paris (75)",
+            image: "/partner-photos/karima-hassani.png",
+            color: '#EE5A6F'
+        },
+        {
+            id: 14,
+            type: 'partner_text',
+            name: "Kdess Events",
+            title: "CONCERT POP SOUL AFRO",
+            pitch: "Viens kiffer son concert le 01/03/26 à Paris",
+            location: "Le Pré-Saint-Gervais (93)",
+            color: '#C44569'
+        },
+        {
+            id: 15,
+            type: 'partner',
+            name: "La Gatine",
+            title: "SPA PRIVATIF",
+            pitch: "Nuits ou journées spa à moins d'1h de Paris",
+            location: "La Boissière-École (78)",
+            image: "/partner-photos/la-gatine.png",
+            color: '#0ABDE3'
+        },
+        {
+            id: 16,
+            type: 'partner_text',
+            name: "Le Monde en un Regard",
+            title: "VOYAGES SUR-MESURE",
+            pitch: "Séjours bien-être et cures ayurvédiques",
+            location: "Montgeron (91)",
+            color: '#FD79A8'
+        },
+        {
+            id: 17,
+            type: 'partner',
+            name: "Le Temps des Savoir-Faire",
+            title: "ATELIERS ARTISANAUX",
+            pitch: "De la branche à la cuillère, crée de tes mains",
+            location: "Mareil-Marly (78)",
+            image: "/partner-photos/le-temps-des-savoir-faire.png",
+            color: '#6C5CE7'
+        },
+        {
+            id: 18,
+            type: 'partner',
+            name: "Level Up Event",
+            title: "ANIMATIONS ÉVÉNEMENTIELLES",
+            pitch: "Escape game, olympiades et soirées quiz",
+            location: "Lagny-sur-Marne (77)",
+            image: "/partner-photos/level-up-event.png",
+            color: '#A29BFE'
+        },
+        {
+            id: 19,
+            type: 'partner',
+            name: "Ma Vie Bien-Être",
+            title: "ÉNERGÉTIQUE & RÉFLEXOLOGIE",
+            pitch: "Redeviens actrice de ta santé",
+            location: "Saint-Pathus (77)",
+            image: "/partner-photos/ma-vie-bien-etre.png",
+            color: '#FDCB6E'
+        },
+        {
+            id: 20,
+            type: 'partner',
+            name: "Rozé Sylvie",
+            title: "CERCLES DE FEMMES",
+            pitch: "Sors de l'épuisement, retrouve ton élan de vie",
+            location: "Saint-Denis-lès-Rebais (77)",
+            image: "/partner-photos/roze-sylvie.png",
+            color: '#E17055'
+        },
+        {
+            id: 21,
+            type: 'partner',
+            name: "Sabrina Talot",
+            title: "NATUROPATHIE",
+            pitch: "Accompagnement naturel pour ton bien-être féminin",
+            location: "Sannois (95)",
+            image: "/partner-photos/sabrina-talot.png",
+            color: '#00B894'
+        },
+        {
+            id: 22,
+            type: 'partner',
+            name: "Rafaelle Djian",
+            title: "DÉVELOPPEMENT PERSONNEL",
+            pitch: "Comprends tes blocages et pose tes objectifs",
+            location: "Paris (75)",
+            image: "/partner-photos/rafaelle-djian.png",
+            color: '#FFEAA7'
+        },
+        {
+            id: 23,
+            type: 'partner',
+            name: "Simple Coffee Paris",
+            title: "COFFEE SHOP & BRUNCH",
+            pitch: "Endroit design et chaleureux pour tes pauses",
+            location: "Paris (75)",
+            image: "/partner-photos/simple-coffee.png",
+            color: '#DFE6E9'
+        },
+        {
+            id: 24,
+            type: 'partner_text',
+            name: "Solunaria",
+            title: "MAGNÉTISME & SHIATSU",
+            pitch: "Soins énergétiques pour soulager tes maux",
+            location: "Combs-la-Ville (77)",
+            color: '#74B9FF'
+        },
+        {
+            id: 25,
+            type: 'partner_text',
+            name: "Zenou Spa",
+            title: "MASSAGES & HAMMAM",
+            pitch: "Détente et relaxation avec des pros qualifiés",
+            location: "Paris (75)",
+            color: '#A29BFE'
+        },
+        {
+            id: 26,
+            type: 'partner',
+            name: "DJ Privé",
+            title: "DJ PROFESSIONNEL",
+            pitch: "Ambiance garantie pour tes soirées privées",
+            location: "Ennery (95)",
+            image: "/partner-photos/dj-prive.png",
+            color: '#FF7675'
+        },
+        {
+            id: 'cta',
+            type: 'cta',
+            title: "REJOINS-NOUS",
+            copy: "Découvre tous nos experts et profite d'avantages exclusifs",
+            link: "nowme.fr",
+            bg: 'from-[#FF6B9D] via-[#C06C84] to-[#6C5B7B]'
+        }
+    ];
+
+    const next = () => setCurrentSlide((currentSlide + 1) % partners.length);
+    const prev = () => setCurrentSlide((currentSlide - 1 + partners.length) % partners.length);
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center p-8">
+            <div className="relative">
+                {/* Instagram Post Container (4:5 ratio) */}
+                <div
+                    className="relative bg-white overflow-hidden shadow-2xl"
+                    style={{
+                        width: '400px',
+                        height: '500px',
+                        position: 'relative'
+                    }}
+                >
+                    {/* Safe Zone Overlay (1:1 square in center) */}
+                    {showSafeZone && (
+                        <div
+                            className="absolute inset-0 pointer-events-none z-50"
+                            style={{
+                                border: '2px dashed rgba(255, 0, 0, 0.5)',
+                                top: '50px',
+                                bottom: '50px',
+                                left: '0',
+                                right: '0'
+                            }}
+                        />
+                    )}
+
+                    {/* Cover Slide */}
+                    {partners[currentSlide].type === 'cover' && (
+                        <div className={`w-full h-full bg-gradient-to-br ${partners[currentSlide].bg} flex flex-col items-center justify-center text-white p-8 relative overflow-hidden`}>
+                            {/* Geometric shapes background - safe zone compliant */}
+                            <div className="absolute inset-0 opacity-20">
+                                <div className="absolute w-16 h-16 rounded-full bg-yellow-300 animate-pulse" style={{ top: '70px', left: '40px' }}></div>
+                                <div className="absolute bottom-20 right-10 w-32 h-32 bg-pink-300 rotate-45"></div>
+                                <div className="absolute top-1/3 right-20 w-16 h-16 bg-cyan-300 rounded-full"></div>
+                                <div className="absolute bottom-1/3 left-16 w-24 h-24 bg-purple-300 rotate-12"></div>
+                            </div>
+
+                            <div className="text-center z-10">
+                                <div className="mb-6 flex justify-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-yellow-400 animate-bounce"></div>
+                                    <div className="w-12 h-12 bg-pink-400 rotate-45"></div>
+                                    <div className="w-12 h-12 rounded-full bg-cyan-400"></div>
+                                </div>
+                                <h1 className="text-5xl font-black mb-2 tracking-tight">{partners[currentSlide].title}</h1>
+                                <h2 className="text-6xl font-black mb-6 tracking-tight">{partners[currentSlide].subtitle}</h2>
+                                <p className="text-lg font-medium max-w-xs mx-auto leading-relaxed">{partners[currentSlide].copy}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Partner Slide with Image - NEW FUN DESIGN */}
+                    {partners[currentSlide].type === 'partner' && (
+                        <div className="w-full h-full relative bg-white">
+                            {/* Image with rounded corner overlay */}
+                            <div className="absolute left-0 right-0 px-4" style={{ top: '50px', height: '200px' }}>
+                                <div
+                                    className="w-full h-full rounded-3xl overflow-hidden relative"
+                                    style={{
+                                        backgroundImage: `url(${partners[currentSlide].image})`,
+                                        backgroundSize: 'contain',
+                                        backgroundPosition: 'center',
+                                        backgroundRepeat: 'no-repeat'
+                                    }}
+                                >
+                                    {/* Geometric accent - moved inside safe zone */}
+                                    <div
+                                        className="absolute w-12 h-12 rounded-full opacity-90"
+                                        style={{
+                                            backgroundColor: partners[currentSlide].color,
+                                            top: '60px',
+                                            right: '16px'
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+
+                            {/* Content area with fun shapes */}
+                            <div className="absolute bottom-0 left-0 right-0 p-6" style={{ top: '270px' }}>
+                                <div className="relative">
+                                    {/* Decorative circles */}
+                                    <div className="absolute -top-8 left-0 flex gap-2">
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                        <div className="w-3 h-3 rounded-full bg-gray-300"></div>
+                                        <div className="w-3 h-3 rounded-full bg-gray-200"></div>
+                                    </div>
+
+                                    {/* Title with colored background */}
+                                    <div
+                                        className="inline-block px-3 py-1 rounded-full mb-2"
+                                        style={{ backgroundColor: partners[currentSlide].color }}
+                                    >
+                                        <span className="text-xs font-bold uppercase tracking-wider text-white">
+                                            {partners[currentSlide].title}
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-2xl font-black mb-2 text-gray-900">{partners[currentSlide].name}</h3>
+
+                                    {partners[currentSlide].location && (
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                            <span className="text-sm font-semibold text-gray-600">{partners[currentSlide].location}</span>
+                                        </div>
+                                    )}
+
+                                    <p className="text-sm font-medium text-gray-700 leading-snug">{partners[currentSlide].pitch}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Partner Text Slide - NEW FUN DESIGN */}
+                    {partners[currentSlide].type === 'partner_text' && (
+                        <div className="w-full h-full relative bg-white overflow-hidden">
+                            {/* Geometric background - adjusted for safe zone */}
+                            <div className="absolute inset-0">
+                                <div
+                                    className="absolute w-32 h-32 rounded-full opacity-20"
+                                    style={{
+                                        backgroundColor: partners[currentSlide].color,
+                                        top: '60px',
+                                        right: '0'
+                                    }}
+                                ></div>
+                                <div className="absolute bottom-0 left-0 w-32 h-32 rotate-45 opacity-15" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                <div
+                                    className="absolute w-20 h-20 rounded-full opacity-10"
+                                    style={{
+                                        backgroundColor: partners[currentSlide].color,
+                                        top: '50%',
+                                        left: '25%'
+                                    }}
+                                ></div>
+                            </div>
+
+                            <div className="relative h-full flex flex-col justify-center p-8">
+                                {/* Decorative element */}
+                                <div className="mb-6 flex gap-2">
+                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                    <div className="w-4 h-4 rotate-45" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                    <div className="w-4 h-4 rounded-full opacity-50" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                </div>
+
+                                {/* Title badge */}
+                                <div
+                                    className="inline-block px-4 py-2 rounded-full mb-4 self-start"
+                                    style={{ backgroundColor: partners[currentSlide].color }}
+                                >
+                                    <span className="text-xs font-bold uppercase tracking-wider text-white">
+                                        {partners[currentSlide].title}
+                                    </span>
+                                </div>
+
+                                <h3 className="text-4xl font-black mb-4 text-gray-900 leading-tight">{partners[currentSlide].name}</h3>
+
+                                {partners[currentSlide].location && (
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                        <span className="text-base font-bold text-gray-600">{partners[currentSlide].location}</span>
+                                    </div>
+                                )}
+
+                                <p className="text-lg font-medium text-gray-700 leading-relaxed max-w-sm">{partners[currentSlide].pitch}</p>
+
+                                {/* Bottom decorative element */}
+                                <div className="mt-8 flex gap-3">
+                                    <div className="w-16 h-1 rounded-full" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                    <div className="w-8 h-1 rounded-full opacity-50" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                    <div className="w-4 h-1 rounded-full opacity-30" style={{ backgroundColor: partners[currentSlide].color }}></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CTA Slide */}
+                    {partners[currentSlide].type === 'cta' && (
+                        <div className={`w-full h-full bg-gradient-to-br ${partners[currentSlide].bg} flex flex-col items-center justify-center text-white p-8 relative overflow-hidden`}>
+                            {/* Geometric shapes - safe zone compliant */}
+                            <div className="absolute inset-0 opacity-20">
+                                <div className="absolute w-20 h-20 rounded-full bg-yellow-300 animate-pulse" style={{ top: '70px', right: '40px' }}></div>
+                                <div className="absolute bottom-20 left-10 w-32 h-32 bg-pink-300 rotate-45"></div>
+                                <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-cyan-300"></div>
+                            </div>
+
+                            <div className="text-center z-10">
+                                <div className="mb-6 flex justify-center gap-3">
+                                    <div className="w-16 h-16 rounded-full bg-yellow-400"></div>
+                                    <div className="w-16 h-16 bg-pink-400 rotate-45"></div>
+                                </div>
+                                <h1 className="text-6xl font-black mb-6 tracking-tight">{partners[currentSlide].title}</h1>
+                                <p className="text-xl font-medium max-w-sm mx-auto leading-relaxed mb-8">{partners[currentSlide].copy}</p>
+                                <div className="bg-white text-purple-900 px-8 py-4 rounded-full font-black text-xl inline-block">
+                                    {partners[currentSlide].link}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Navigation Controls */}
+                <div className="flex items-center justify-center gap-4 mt-6">
+                    <button
+                        onClick={prev}
+                        className="bg-white hover:bg-gray-100 text-purple-900 p-3 rounded-full shadow-lg transition"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                    <span className="text-white font-bold">
+                        {currentSlide + 1} / {partners.length}
+                    </span>
+                    <button
+                        onClick={next}
+                        className="bg-white hover:bg-gray-100 text-purple-900 p-3 rounded-full shadow-lg transition"
+                        data-testid="next-slide"
+                    >
+                        <ChevronRight size={24} />
+                    </button>
+                    <button
+                        onClick={() => setShowSafeZone(!showSafeZone)}
+                        className="bg-white hover:bg-gray-100 text-purple-900 p-3 rounded-full shadow-lg transition ml-4"
+                        title={showSafeZone ? "Hide safe zone" : "Show safe zone"}
+                        data-testid="toggle-safe-zone"
+                    >
+                        {showSafeZone ? <EyeOff size={24} /> : <Eye size={24} />}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default InstagramPartnerSlides;

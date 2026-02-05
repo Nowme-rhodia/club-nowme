@@ -1,0 +1,6 @@
+
+--- Table: offers ---
+Columns: id, partner_id, title, description, coordinates, status, created_at, updated_at, is_approved, category_id, commission_rate, event_start_date, event_end_date, street_address, zip_code, department, city, image_url, booking_type, external_link, promo_code, cancellation_conditions, duration, cancellation_policy, digital_product_file, is_online, service_zones, promo_conditions, duration_type, validity_start_date, validity_end_date, is_official, installment_options, requires_agenda, rejection_reason, slug, access_password, last_draft_reminder_at, cancellation_deadline_hours
+
+--- Table: offer_variants ---
+Columns: id, offer_id, name, price, discounted_price, created_at, updated_at, description, stock, credit_amount, content

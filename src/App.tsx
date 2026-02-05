@@ -78,6 +78,7 @@ const PartnerBookingDetail = React.lazy(() => import('./pages/partner/BookingDet
 const PartnerReviews = React.lazy(() => import('./pages/partner/Reviews'));
 const PartnerGuide = React.lazy(() => import('./pages/partner/PartnerGuide'));
 const PartnerContractSign = React.lazy(() => import('./pages/partner/ContractSign'));
+const InstagramPartnerSlides = React.lazy(() => import('./pages/InstagramPartnerSlides'));
 const PartnerContractView = React.lazy(() => import('./pages/partner/ContractView'));
 const PartnerPublicProfile = React.lazy(() => import('./pages/PartnerPublicProfile'));
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
@@ -91,6 +92,8 @@ const Events = React.lazy(() => import('./pages/club/Events'));
 const Booking = React.lazy(() => import('./pages/Booking'));
 const BookingSuccess = React.lazy(() => import('./pages/BookingSuccess'));
 const CancellationFeedback = React.lazy(() => import('./pages/CancellationFeedback'));
+const InstagramSlides = React.lazy(() => import('./pages/InstagramSlides'));
+const InstagramEventSlides = React.lazy(() => import('./pages/InstagramEventSlides'));
 
 
 
@@ -144,6 +147,7 @@ function App() {
                     </PrivateRoute>
                   } />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
+                  <Route path="/instagram-partners" element={<InstagramPartnerSlides />} />
                   <Route path="/le-club" element={
                     <PrivateRoute allowedRoles={['subscriber', 'admin']}>
                       <GoogleMapsLoader>
@@ -308,6 +312,10 @@ function App() {
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />
+
+                  {/* Dev routes */}
+                  <Route path="/instagram-preview" element={<InstagramSlides />} />
+                  <Route path="/instagram-events" element={<InstagramEventSlides />} />
                 </Routes>
               </Suspense>
             </main>

@@ -492,6 +492,104 @@ export default function Partners() {
                   </dl>
                 </div>
 
+                {/* Description */}
+                {selectedPartner.description && (
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                    <h3 className="text-lg font-medium text-purple-900 mb-2">Description</h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedPartner.description}</p>
+                  </div>
+                )}
+
+                {/* Liens & Réseaux Sociaux */}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                  <h3 className="text-lg font-medium text-green-900 mb-4">Liens & Réseaux Sociaux</h3>
+                  <dl className="grid grid-cols-1 gap-3">
+                    {selectedPartner.website && (
+                      <div>
+                        <dt className="text-sm font-medium text-green-900">Site Web</dt>
+                        <dd className="mt-1">
+                          <a
+                            href={selectedPartner.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                          >
+                            {selectedPartner.website}
+                          </a>
+                        </dd>
+                      </div>
+                    )}
+                    {selectedPartner.instagram && (
+                      <div>
+                        <dt className="text-sm font-medium text-green-900">Instagram</dt>
+                        <dd className="mt-1">
+                          <a
+                            href={selectedPartner.instagram}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                          >
+                            {selectedPartner.instagram}
+                          </a>
+                        </dd>
+                      </div>
+                    )}
+                    {selectedPartner.facebook && (
+                      <div>
+                        <dt className="text-sm font-medium text-green-900">Facebook</dt>
+                        <dd className="mt-1">
+                          <a
+                            href={selectedPartner.facebook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                          >
+                            {selectedPartner.facebook}
+                          </a>
+                        </dd>
+                      </div>
+                    )}
+                    {!selectedPartner.website && !selectedPartner.instagram && !selectedPartner.facebook && (
+                      <p className="text-sm text-gray-500 italic">Aucun lien renseigné</p>
+                    )}
+                  </dl>
+                </div>
+
+                {/* Images */}
+                <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                  <h3 className="text-lg font-medium text-orange-900 mb-4">Images</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <dt className="text-sm font-medium text-orange-900 mb-2">Logo</dt>
+                      {selectedPartner.logo_url ? (
+                        <img
+                          src={selectedPartner.logo_url}
+                          alt="Logo"
+                          className="w-full h-32 object-contain bg-white rounded border border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                          <p className="text-sm text-gray-400">Pas de logo</p>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-orange-900 mb-2">Image de couverture</dt>
+                      {selectedPartner.cover_image_url ? (
+                        <img
+                          src={selectedPartner.cover_image_url}
+                          alt="Couverture"
+                          className="w-full h-32 object-cover bg-white rounded border border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-gray-100 rounded border border-gray-200 flex items-center justify-center">
+                          <p className="text-sm text-gray-400">Pas d'image de couverture</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Configuration Commission */}
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                   <h3 className="text-lg font-medium text-blue-900 mb-4">Commission & Contrat</h3>

@@ -1,0 +1,57 @@
+[
+  {
+    "title": "Book club & Drinks",
+    "date": "2026-02-07T13:00:00+00:00",
+    "is_online": false,
+    "city": "Paris",
+    "street_address": "119 Rue Manin",
+    "description": "<p>Et si on prenait enfin le temps de ralentir ?</p><p>Le <strong>Book Club &amp; Drinks</strong>, c...",
+    "public_price": 40,
+    "member_price": 15,
+    "variant_name": "Entrée avec Buffet"
+  },
+  {
+    "title": "On zappe Cupidon ? Soirée entre copines le 13 ! 💃",
+    "date": "2026-02-13T20:15:00+00:00",
+    "is_online": true,
+    "city": "En ligne",
+    "street_address": "En ligne",
+    "description": "<p>Les filles, le 14 c'est pour les restos bondés et les roses hors de prix... mais le 13, c'est pou...",
+    "public_price": 10,
+    "member_price": 5,
+    "variant_name": "Entrée"
+  },
+  {
+    "title": "Veux-tu t'épouser ? Conférences, Dinner Gala et Spa",
+    "date": "2026-03-08T13:30:00+00:00",
+    "is_online": false,
+    "city": "Serris",
+    "street_address": "4 Avenue Johannes Gutenberg",
+    "description": "<h3><span style=\"background-color: rgba(255, 255, 255, 0.95); color: rgb(17, 24, 39);\">La&nbsp;quest...",
+    "public_price": 69,
+    "member_price": 49,
+    "variant_name": "Pass Après-midi"
+  },
+  {
+    "title": "GIRLZ DAY OUT",
+    "date": "2026-04-04T12:30:00+00:00",
+    "is_online": false,
+    "city": "Paris",
+    "street_address": "32 Avenue Corentin Cariou",
+    "description": "<p>Oui,&nbsp;une&nbsp;<strong>boîte&nbsp;de&nbsp;nuit&nbsp;l’après-midi,&nbsp;entre&nbsp;femmes&nbsp...",
+    "public_price": 15,
+    "member_price": 5,
+    "variant_name": "Entrée"
+  },
+  {
+    "title": "Séjour en Thailande NOVEMBRE 2026",
+    "date": "2026-05-01T10:00:00+00:00",
+    "is_online": true,
+    "city": "En ligne",
+    "street_address": "En ligne",
+    "description": "<h1>🌴 Thaïlande : Ta Parenthèse Magique (Novembre 2026)</h1><p>Rejoins une tribu sélective de 12 fe...",
+    "public_price": 1690,
+    "member_price": 1590,
+    "variant_name": "Ton bonheur"
+  }
+]
