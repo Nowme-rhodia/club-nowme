@@ -8,10 +8,6 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
-    // Authorization Check (for manual trigger support or cron)
-    // Note: For cron triggers, Supabase calls this internally but authentication via Service Key is implicit in the client setup.
-    // We can add a simple header check if we want to secure the endpoint from public calls.
-
     try {
         console.log("🚀 Starting Weekly Recap generation...");
 
@@ -20,15 +16,55 @@ serve(async (req) => {
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
         const oneWeekAgoStr = oneWeekAgo.toISOString();
 
-        // Fetch New Approved Offers
-        const { data: newOffers, error: offersError } = await supabase
-            .from("offers")
-            .select("title, description, image_url, id")
-            .eq("status", "approved")
-            .gt("created_at", oneWeekAgoStr)
-            .limit(3);
+        // Step 0: Identify Official Partners to safely split offers
+        const { data: officialPartners, error: officialPartnersError } = await supabase
+            .from("partners")
+            .select("id")
+            .eq("is_official", true);
 
-        // Fetch New Partners
+        if (officialPartnersError) {
+            console.error("Error fetching official partners:", officialPartnersError);
+            return new Response("Error fetching official partners", { status: 500 });
+        }
+
+        const officialPartnerIds = officialPartners?.map(p => p.id) || [];
+
+        // A. Fetch Official Offers
+        let officialOffers: any[] = [];
+        if (officialPartnerIds.length > 0) {
+            const { data, error } = await supabase
+                .from("offers")
+                .select("title, description, image_url, id")
+                .eq("status", "approved")
+                .gt("created_at", oneWeekAgoStr)
+                .in("partner_id", officialPartnerIds)
+                .limit(3);
+
+            if (error) throw error;
+            officialOffers = data || [];
+        }
+
+        // B. Fetch Regular New Offers (excluding official ones)
+        let query = supabase
+            .from("offers")
+            .select("title, description, image_url, id, partners!inner(business_name)") // Select partner name too just in case
+            .eq("status", "approved")
+            .gt("created_at", oneWeekAgoStr);
+
+        if (officialPartnerIds.length > 0) {
+            // content.not('partner_id', 'in', `(${officialPartnerIds.join(',')})`) // Supabase syntax requires simpler array?
+            // Actually .not('partner_id', 'in', officialPartnerIds) might strict check.
+            // Safer way: .filter('partner_id', 'not.in', `(${officialPartnerIds.join(',')})`)
+            // Ideally: .not('partner_id', 'in', officialPartnerIds) works if correctly typed.
+            // Let's use the explicit filter string format to be safe with arrays in raw Postgrest if needed, 
+            // but JS client supports array for 'in'. For 'not.in', we use .not('partner_id', 'in', officialPartnerIds) matches documentation?
+            // "filter(column, operator, value): Match a column against a value (not, in)" -> .not(column, operator, value)
+            query = query.not("partner_id", "in", `(${officialPartnerIds.join(',')})`);
+        }
+
+        const { data: newOffers, error: offersError } = await query.limit(3);
+
+        // C. Fetch New Partners
         const { data: newPartners, error: partnersError } = await supabase
             .from("partners")
             .select("business_name, description, id")
@@ -41,17 +77,23 @@ serve(async (req) => {
             return new Response("Error fetching content", { status: 500 });
         }
 
-        if ((!newOffers || newOffers.length === 0) && (!newPartners || newPartners.length === 0)) {
+        const hasOfficial = officialOffers && officialOffers.length > 0;
+        const hasRegular = newOffers && newOffers.length > 0;
+        const hasPartners = newPartners && newPartners.length > 0;
+
+        if (!hasOfficial && !hasRegular && !hasPartners) {
             console.log("No new content this week. Skipping recap.");
             return new Response("No new content found", { status: 200 });
         }
 
-        // 2. Fetch subscribed users
+        // 2. Fetch subscribed users (Payants + Invités ONLY)
+        // We exclude partners by checking partner_id is NULL
         const { data: subscribers, error: usersError } = await supabase
             .from("user_profiles")
             .select("email, first_name")
             .eq("sub_auto_recap", true)
-            .not("email", "is", null); // Ensure email exists
+            .is("partner_id", null) // Exclude partners
+            .not("email", "is", null);
 
         if (usersError || !subscribers) {
             console.error("Error fetching subscribers:", usersError);
@@ -72,7 +114,6 @@ serve(async (req) => {
             "Ta semaine mérite un peu de piment. Regarde ce qu'on te propose !"
         ];
 
-        // Pick a random message for the batch (or per user if we wanted, but batch is fine)
         const randomIntro = introMessages[Math.floor(Math.random() * introMessages.length)];
 
         const generateHtml = (firstName: string) => `
@@ -97,7 +138,7 @@ serve(async (req) => {
                   <p>${randomIntro}</p>
               </div>
 
-              ${newOffers && newOffers.length > 0 ? `
+              ${hasRegular ? `
                   <div class="section-title">✨ Nouveaux Kiffs</div>
                   ${newOffers.map(offer => `
                       <div class="card">
@@ -107,7 +148,17 @@ serve(async (req) => {
                   `).join('')}
               ` : ''}
 
-              ${newPartners && newPartners.length > 0 ? `
+              ${hasOfficial ? `
+                  <div class="section-title">🏆 Kiffs Officiels</div>
+                  ${officialOffers.map(offer => `
+                      <div class="card">
+                          <h3>${offer.title}</h3>
+                          <p>${offer.description ? offer.description.substring(0, 100) + '...' : ''}</p>
+                      </div>
+                  `).join('')}
+              ` : ''}
+
+              ${hasPartners ? `
                   <div class="section-title">🤝 Nouveaux Partenaires</div>
                   ${newPartners.map(partner => `
                       <div class="card">
@@ -130,9 +181,7 @@ serve(async (req) => {
       </html>
     `;
 
-        // Process in chunks or individually
         let sentCount = 0;
-
         const emailPromises = subscribers.map(async (user) => {
             try {
                 await resend.emails.send({
