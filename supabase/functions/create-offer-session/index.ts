@@ -1,4 +1,4 @@
-import { serve } from "std/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "npm:stripe@^17.5.0";
 import { createClient } from "@supabase/supabase-js";
 
