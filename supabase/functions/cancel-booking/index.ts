@@ -1,8 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "@supabase/supabase-js";
 import { Stripe } from "https://esm.sh/stripe@12.0.0?target=deno";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "resend";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -81,6 +81,7 @@ serve(async (req: Request) => {
         offers (
           title,
           cancellation_policy,
+          cancellation_deadline_hours,
           booking_type,
           event_start_date,
           partner_id,
@@ -140,14 +141,18 @@ serve(async (req: Request) => {
         `);
 
         switch (policy) {
-            case 'flexible': // 24h
-                if (hoursUntilEvent >= 24) refundEligible = true;
+            case 'flexible': // Now 15 days
+                if (daysUntilEvent >= 15) refundEligible = true;
                 break;
             case 'moderate': // 7 days
                 if (daysUntilEvent >= 7) refundEligible = true;
                 break;
-            case 'strict': // 15 days
-                if (daysUntilEvent >= 15) refundEligible = true;
+            case 'strict': // Now 24h
+                if (hoursUntilEvent >= 24) refundEligible = true;
+                break;
+            case 'custom':
+                const deadlineHours = offer.cancellation_deadline_hours || 0;
+                if (hoursUntilEvent >= deadlineHours) refundEligible = true;
                 break;
             case 'non_refundable':
                 refundEligible = false;
@@ -323,7 +328,8 @@ serve(async (req: Request) => {
                     'flexible': 'Flexible (Annulable sans frais jusqu\'à 15 jours avant le Kiff)',
                     'moderate': 'Modérée (Annulable sans frais jusqu\'à 7 jours avant le Kiff)',
                     'strict': 'Stricte (Annulable sans frais jusqu\'à 24h avant le Kiff)',
-                    'non_refundable': 'Non remboursable (Pas de remboursement possible)'
+                    'non_refundable': 'Non remboursable (Pas de remboursement possible)',
+                    'custom': `Personnalisée (Annulable sans frais jusqu'à ${(offer.cancellation_deadline_hours || 0) < 24 ? (offer.cancellation_deadline_hours || 0) + 'h' : Math.floor((offer.cancellation_deadline_hours || 0) / 24) + ' jours'} avant le Kiff)`
                 } as Record<string, string>)[policy] || policy;
 
                 const refundMessage = refundEligible

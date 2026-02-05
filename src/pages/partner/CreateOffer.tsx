@@ -119,7 +119,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   const [accessPassword, setAccessPassword] = useState(''); // Password for restricted content
   const [digitalProductFile, setDigitalProductFile] = useState<string | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
-  const [cancellationPolicy, setCancellationPolicy] = useState<'flexible' | 'moderate' | 'strict' | 'non_refundable'>('flexible');
+  const [cancellationPolicy, setCancellationPolicy] = useState<'flexible' | 'moderate' | 'strict' | 'non_refundable' | 'custom'>('flexible');
+  const [customDeadline, setCustomDeadline] = useState<string>('');
+  const [customDeadlineUnit, setCustomDeadlineUnit] = useState<'hours' | 'days' | 'weeks'>('days');
 
   // Duration
   const [durationType, setDurationType] = useState<'lifetime' | 'fixed'>('lifetime');
@@ -199,6 +201,26 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setAccessPassword(offer.access_password || '');
       setDigitalProductFile(offer.digital_product_file || null);
       setCancellationPolicy(offer.cancellation_policy || 'flexible');
+      setDigitalProductFile(offer.digital_product_file || null);
+      setCancellationPolicy(offer.cancellation_policy || 'flexible');
+
+      // Initialize Custom Deadline Unit
+      if (offer.cancellation_deadline_hours) {
+        const h = offer.cancellation_deadline_hours;
+        if (h % 168 === 0) {
+          setCustomDeadline((h / 168).toString());
+          setCustomDeadlineUnit('weeks');
+        } else if (h % 24 === 0) {
+          setCustomDeadline((h / 24).toString());
+          setCustomDeadlineUnit('days');
+        } else {
+          setCustomDeadline(h.toString());
+          setCustomDeadlineUnit('hours');
+        }
+      } else {
+        setCustomDeadline('');
+        setCustomDeadlineUnit('days');
+      }
 
       setInstallmentOptions(offer.installment_options || []);
 
@@ -445,6 +467,12 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         return;
       }
 
+      if (cancellationPolicy === 'custom' && !customDeadline) {
+        toast.error('Veuillez définir un délai pour la politique personnalisée');
+        setLoading(false);
+        return;
+      }
+
       // 2. Upload Image or Get URL
       let uploadedImageUrl = offer?.image_url;
 
@@ -552,6 +580,10 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         service_zones: locationMode === 'at_home' ? serviceZones : [],
         image_url: uploadedImageUrl,
         cancellation_policy: cancellationPolicy,
+        cancellation_policy: cancellationPolicy,
+        cancellation_deadline_hours: cancellationPolicy === 'custom' ? (
+          parseInt(customDeadline) * (customDeadlineUnit === 'days' ? 24 : customDeadlineUnit === 'weeks' ? 168 : 1)
+        ) : null,
         access_password: eventType === 'simple_access' ? accessPassword : null,
         installment_options: installmentOptions,
         // Status remains mostly unchanged or resets to draft if needed, but let's keep it simple
@@ -1492,6 +1524,16 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                     value: 'strict',
                     label: 'Stricte (24h)',
                     desc: 'Remboursement intégral jusqu\'à 24h avant l\'événement.'
+                  },
+                  {
+                    value: 'non_refundable',
+                    label: 'Non remboursable',
+                    desc: 'Aucun remboursement possible.'
+                  },
+                  {
+                    value: 'custom',
+                    label: 'Personnalisée',
+                    desc: 'Définissez votre propre délai d\'annulation.'
                   }
                 ].map((policy) => (
                   <div
@@ -1514,6 +1556,46 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                     <p className="text-sm text-gray-500">{policy.desc}</p>
                   </div>
                 ))}
+              </div>
+            )}
+            {/* Custom Policy Input */}
+            {cancellationPolicy === 'custom' && (
+              <div className="mt-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Délai d'annulation
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1 max-w-[200px]">
+                    <input
+                      type="number"
+                      min="1"
+                      value={customDeadline}
+                      onChange={(e) => setCustomDeadline(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                      placeholder="Ex: 2"
+                    />
+                  </div>
+                  <select
+                    value={customDeadlineUnit}
+                    onChange={(e) => setCustomDeadlineUnit(e.target.value as any)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white"
+                  >
+                    <option value="hours">Heures</option>
+                    <option value="days">Jours</option>
+                    <option value="weeks">Semaines</option>
+                  </select>
+
+                </div>
+                {customDeadline && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Soit {(
+                      parseInt(customDeadline) * (customDeadlineUnit === 'days' ? 24 : customDeadlineUnit === 'weeks' ? 168 : 1)
+                    ) < 24
+                      ? `${parseInt(customDeadline) * (customDeadlineUnit === 'days' ? 24 : customDeadlineUnit === 'weeks' ? 168 : 1)} heures`
+                      : `${(parseInt(customDeadline) * (customDeadlineUnit === 'days' ? 24 : customDeadlineUnit === 'weeks' ? 168 : 1)) / 24} jours`
+                    } avant l'événement.
+                  </p>
+                )}
               </div>
             )}
           </div>

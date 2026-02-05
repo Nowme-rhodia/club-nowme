@@ -38,7 +38,8 @@ interface Booking {
         access_password?: string;
 
         event_end_date?: string;
-        cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
+        cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable' | 'custom';
+        cancellation_deadline_hours?: number;
         partner?: {
             contact_email?: string;
             business_name?: string;
@@ -111,6 +112,7 @@ export default function Bookings() {
                         digital_product_file,
                         event_end_date,
                         cancellation_policy,
+                        cancellation_deadline_hours,
                         external_link,
                         is_online,
                         partner: partners (
@@ -741,10 +743,15 @@ export default function Bookings() {
                                     {(() => {
                                         const policy = selectedBookingForCancel.offer.cancellation_policy || 'flexible';
                                         switch (policy) {
-                                            case 'flexible': return "Flexible : Remboursement intégral jusqu'à 24h avant l'événement.";
+                                            case 'flexible': return "Flexible : Remboursement intégral jusqu'à 15 jours avant l'événement.";
                                             case 'moderate': return "Modérée : Remboursement intégral jusqu'à 7 jours avant l'événement.";
-                                            case 'strict': return "Stricte : Remboursement intégral jusqu'à 15 jours avant l'événement.";
+                                            case 'strict': return "Stricte : Remboursement intégral jusqu'à 24h avant l'événement.";
                                             case 'non_refundable': return "Non remboursable : Aucun remboursement possible.";
+                                            case 'custom': {
+                                                const hours = (selectedBookingForCancel.offer as any).cancellation_deadline_hours || 0;
+                                                const display = hours < 24 ? `${hours}h` : `${Math.floor(hours / 24)} jours`;
+                                                return `Personnalisée : Remboursement intégral jusqu'à ${display} avant l'événement.`;
+                                            }
                                             default: return "Conditions standard.";
                                         }
                                     })()}
