@@ -79,6 +79,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   const [coverImageUrlInput, setCoverImageUrlInput] = useState('');
   const [coverImageMode, setCoverImageMode] = useState<'upload' | 'url'>('upload');
+  const [videoUrl, setVideoUrl] = useState('');
 
   const [isUploading, setIsUploading] = useState(false);
   const [additionalImages, setAdditionalImages] = useState<File[]>([]);
@@ -195,7 +196,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
           : null
       });
 
-      setEventType(offer.booking_type === 'calendly' ? 'event' : (offer.booking_type || 'event'));
+      setEventType(offer.booking_type || 'event');
       setPromoCode(offer.promo_code || '');
       setPromoConditions(offer.promo_conditions || '');
       setAccessPassword(offer.access_password || '');
@@ -229,6 +230,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       setEventDate(offer.event_start_date ? formatDateTimeForInput(offer.event_start_date) : '');
       setEventEndDate(offer.event_end_date ? formatDateTimeForInput(offer.event_end_date) : '');
       setExternalLink(offer.external_link || '');
+      setCalendlyUrl((offer.booking_type === 'calendly' ? offer.external_link : '') || '');
+      setVideoUrl(offer.video_url || '');
 
       // Load service zones if at_home schema
       if (offer.service_zones && Array.isArray(offer.service_zones)) {
@@ -292,7 +295,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       const loadCoOrganizers = async () => {
         const { data } = await supabase
           .from('offer_co_organizers')
-          .select('partner:partners(id, business_name, image_url)')
+          .select('partner:partners(id, business_name, logo_url)')
           .eq('offer_id', offer.id);
 
         if (data) {
@@ -561,7 +564,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         booking_type: eventType,
         event_start_date: eventType === 'event' && eventDate ? new Date(eventDate).toISOString() : null,
         event_end_date: eventType === 'event' && eventEndDate ? new Date(eventEndDate).toISOString() : null,
-        external_link: (eventType === 'promo' || eventType === 'simple_access' || (eventType === 'event' && locationMode === 'online')) ? externalLink : null,
+        event_end_date: eventType === 'event' && eventEndDate ? new Date(eventEndDate).toISOString() : null,
+        external_link: eventType === 'calendly' ? calendlyUrl : ((eventType === 'promo' || eventType === 'simple_access' || (eventType === 'event' && locationMode === 'online')) ? externalLink : null),
+        promo_code: eventType === 'promo' ? promoCode : null,
         promo_code: eventType === 'promo' ? promoCode : null,
         promo_conditions: eventType === 'promo' ? promoConditions : null,
         digital_product_file: eventType === 'purchase' ? digitalProductFile : null,
@@ -579,7 +584,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         is_online: locationMode === 'online',
         service_zones: locationMode === 'at_home' ? serviceZones : [],
         image_url: uploadedImageUrl,
-        cancellation_policy: cancellationPolicy,
+        video_url: videoUrl || null,
         cancellation_policy: cancellationPolicy,
         cancellation_deadline_hours: cancellationPolicy === 'custom' ? (
           parseInt(customDeadline) * (customDeadlineUnit === 'days' ? 24 : customDeadlineUnit === 'weeks' ? 168 : 1)
@@ -849,6 +854,9 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                     <X className="w-3 h-3" />
                   </button>
                 </div>
+
+
+
               ))}
               {additionalImageUrls.map((url, idx) => (
                 <div key={`url-${idx}`} className="relative group aspect-square bg-gray-100 rounded-lg overflow-hidden">
@@ -888,6 +896,28 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
                 </div>
               )}
             </div>
+          </div>
+
+          {/* --- Video URL --- */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Lien Vidéo
+            </label>
+            <div className="flex bg-gray-50 border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+              <div className="pl-3 py-2 text-gray-400 bg-gray-100 border-r border-gray-300">
+                <Link className="h-5 w-5" />
+              </div>
+              <input
+                type="url"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="flex-1 px-4 py-2 bg-transparent outline-none text-gray-900 placeholder-gray-400"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Lien YouTube ou Vimeo. La vidéo sera affichée en dessous de la description.
+            </p>
           </div>
 
           {/* --- Catégorie (First per requirements) --- */}

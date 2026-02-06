@@ -15,6 +15,7 @@ import { SEO } from '../components/SEO';
 import GuestBookingModal from '../components/GuestBookingModal';
 import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { stripHtmlAndDecode } from '../utils/textFormatters';
+import { getVideoEmbedUrl } from '../utils/video';
 import DOMPurify from 'dompurify';
 
 // Type definition to avoid errors
@@ -127,7 +128,10 @@ export default function OfferPage() {
         event_start_date,
         event_end_date,
         installment_options,
+        event_end_date,
+        installment_options,
         image_url,
+        video_url,
         is_official,
         category: offer_categories!offers_category_id_fkey(name, slug, parent_slug),
         offer_variants(id, name, description, price, discounted_price, stock),
@@ -729,6 +733,27 @@ export default function OfferPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
               </div>
 
+              {/* Video Embed for Mobile (or if sticky layout allows, actually let's put it below main content or in the grid?) 
+                 The current layout is 2 columns: Image (Left/Top) | Content (Right/Bottom)
+                 Ideally video should be in the left column (Image gallery).
+                 But the layout above logic is: images[currentImageIndex].
+                 
+                 Let's add the video to the `images` state?
+                 No, video handling is different (iframe vs img).
+                 
+                 Let's add the video player BELOW the image in the left column if on desktop, or just part of the flow.
+                 The left column `div` (line 690) is sticky. We can put the video inside it or below it?
+                 It has `overflow-hidden` and `h-96`. Inserting video there might be tricky if we want a gallery feeling.
+                 
+                 Let's place it in the Content Side (Right) for now, below Description? 
+                 User request: "below the main image in the offer details"
+                 
+                 If "Offer Details" means the right side content column? Or the visual gallery?
+                 Usually video is good near the description or in the gallery.
+                 
+                 Let's put it in the Description section (Right Column) for visibility.
+              */}
+
               <div className="p-6 lg:p-8 flex flex-col h-full">
                 <div className="flex-grow">
                   <h1 className="text-3xl font-bold text-gray-900 mb-4">{offer.title}</h1>
@@ -826,6 +851,26 @@ export default function OfferPage() {
                       className="text-gray-600 leading-relaxed prose prose-sm max-w-none prose-p:mb-2 prose-ul:list-disc prose-ul:pl-4 prose-ol:list-decimal prose-ol:pl-4 break-words overflow-visible"
                       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(offer.description) }}
                     />
+
+                    {/* VIDEO EMBED SECTION */}
+                    {offer.video_url && getVideoEmbedUrl(offer.video_url) && (
+                      <div className="mt-6 mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                          <Video className="w-5 h-5" />
+                          Vidéo
+                        </h3>
+                        <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg bg-black">
+                          <iframe
+                            width="100%"
+                            height="100%"
+                            src={getVideoEmbedUrl(offer.video_url) || ''}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full h-full border-0"
+                          ></iframe>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {offer.is_online && offer.booking_type === 'event' && (

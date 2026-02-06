@@ -23,6 +23,7 @@ import { categories } from '../../data/categories';
 import { LocationSearch } from '../../components/LocationSearch';
 import toast from 'react-hot-toast';
 import CreateOffer from './CreateOffer';
+import DOMPurify from 'dompurify';
 
 interface Offer {
   id: string;
@@ -56,6 +57,7 @@ interface Offer {
   };
   offer_media?: { url: string }[];
   media?: { url: string }[]; // Handle potential alias
+  video_url?: string | null;
   variants?: {
     name: string;
     price: number;
@@ -1049,7 +1051,10 @@ export default function Offers() {
 
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
-                    <p className="text-gray-600">{selectedOffer.description}</p>
+                    <div
+                      className="text-gray-600 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedOffer.description) }}
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
