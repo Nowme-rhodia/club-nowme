@@ -37,6 +37,7 @@ interface Offer {
     contact_name: string;
     contact_email: string;
     phone: string;
+    commission_rate: number;
   };
   variants?: Array<{
     id: string;
@@ -137,7 +138,8 @@ export default function PendingOffers() {
         body: {
           to: offer.partner.contact_email,
           contactName: offer.partner.contact_name,
-          offerTitle: offer.title
+          offerTitle: offer.title,
+          commissionRate: offer.partner.commission_rate
         }
       });
 

@@ -7,7 +7,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return handleCors(req);
 
   try {
-    const { to, contactName, offerTitle } = await req.json();
+    const { to, contactName, offerTitle, commissionRate = 20 } = await req.json();
+
+    const nowmeShare = commissionRate;
+    const partnerShare = 100 - commissionRate;
 
     if (!to || !contactName || !offerTitle) {
       return new Response(JSON.stringify({
@@ -40,7 +43,7 @@ serve(async (req) => {
   <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; margin: 30px 0;">
     <h3 style="color: #BF2778; margin-top: 0;">🚀 Prochaines étapes :</h3>
     <ul style="margin: 0; padding-left: 20px; font-size: 16px;">
-      <li>Votre offre est maintenant visible par nos 500+ membres</li>
+      <li>Votre offre est maintenant visible par nos membres</li>
       <li>Vous recevrez des notifications pour chaque réservation</li>
       <li>Gérez vos réservations depuis votre espace partenaire</li>
       <li>Suivez vos revenus en temps réel</li>
@@ -55,8 +58,14 @@ serve(async (req) => {
 
   <div style="background-color: #e6f7e6; padding: 15px; border-radius: 10px; margin: 30px 0;">
     <p style="margin: 0; color: #2d5a2d; font-size: 14px; text-align: center;">
-      💰 <strong>Commission Nowme :</strong> 20% sur chaque réservation<br>
-      📊 Vous recevrez 80% du montant de chaque vente
+      💰 <strong>Commission Nowme :</strong> ${nowmeShare}% sur chaque réservation<br>
+      📊 Vous recevrez ${partnerShare}% du montant de chaque vente
+    </p>
+  </div>
+
+  <div style="text-align: center; margin: 30px 0; padding: 20px; border: 1px dashed #BF2778; border-radius: 10px;">
+    <p style="margin: 0; color: #666; font-size: 16px;">
+      N'hésitez pas à le partager sur les réseaux sociaux en taguant <strong>@nowme_une.femme.en.off</strong>, je repartagerai avec plaisir !
     </p>
   </div>
 

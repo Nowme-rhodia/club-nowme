@@ -29,13 +29,13 @@ test('generate instagram event slides screenshots', async ({ page }) => {
     // Give it a moment to render
     await page.waitForTimeout(500);
 
-    // Take screenshots of all 6 slides (Cover + 4 Events + CTA)
-    for (let i = 1; i <= 6; i++) {
+    // Take screenshots of all 7 slides (Recap + 5 Events + CTA)
+    for (let i = 1; i <= 7; i++) {
         // Capture the specific element
         await container.screenshot({ path: path.join(outputDir, `event-slide-${i}.png`) });
 
         // Click next
-        if (i < 6) {
+        if (i < 7) {
             await page.getByTestId('next-button').click();
             // Wait for update
             await page.waitForTimeout(500);

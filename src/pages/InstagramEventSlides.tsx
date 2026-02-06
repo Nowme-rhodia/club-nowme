@@ -31,6 +31,7 @@ const InstagramEventSlides = () => {
             list: [
                 { date: "13 FÉV", name: "Apéro en ligne", location: "En ligne" },
                 { date: "08 MARS", name: "Veux-tu t'épouser ?", location: "Ki Space Hotel & Spa" },
+                { date: "11 MARS", name: "Karaoke, Blindtest & Massage", location: "Jo&Joe Nation" },
                 { date: "04 AVRIL", name: "Girlz Day Out", location: "La Villette" },
                 { date: "NOV 26", name: "Thaïlande", location: "Voyage" }
             ],
@@ -65,6 +66,21 @@ const InstagramEventSlides = () => {
                 { name: "PASS APRÈS-MIDI", public: "69€", member: "49€" },
                 { name: "PASS COMPLET", public: "179€", member: "149€" }
             ]
+        },
+        {
+            id: 'new_event_march_11',
+            type: 'event',
+            title: "KARAOKE, BLINDTEST & MASSAGE",
+            subtitle: "SOIRÉE DÉTENTE",
+            copy: "Une soirée fun et détente ! Blindtest endiablé, session karaoké et massages pour décompresser.",
+            date: "11 MARS",
+            location: "JO&JOE PARIS NATION",
+            price_public: "30€",
+            price_member: "15€",
+            icon: <Music size={48} />,
+            tag: "SOIRÉE FUN",
+            warning: "⚠️ 15 PLACES SEULEMENT !",
+            bg: 'from-[#6A0091] to-[#8E00C7]'
         },
         {
             id: 3,
@@ -179,7 +195,7 @@ const InstagramEventSlides = () => {
                                         <div key={idx} className="flex items-center justify-between bg-white/10 p-2 px-3 rounded-lg backdrop-blur-sm border border-white/5">
                                             <div className="flex flex-col">
                                                 <span className="text-[9px] font-black text-[#FFD700] uppercase tracking-wider">{evt.date}</span>
-                                                <span className="font-bold text-sm leading-tight truncate max-w-[180px]">{evt.name}</span>
+                                                <span className="font-bold text-[10px] leading-tight truncate max-w-[220px]">{evt.name}</span>
                                             </div>
                                             <span className="text-[9px] font-medium opacity-60 uppercase text-right leading-tight max-w-[60px]">{evt.location}</span>
                                         </div>

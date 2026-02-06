@@ -557,6 +557,25 @@ Deno.serve(async (req) => {
                     console.error("[SUBSCRIPTION_FLOW] CRITICAL: Failed to update user profile status:", updateError);
                 } else {
                     console.log("[SUBSCRIPTION_FLOW] User profile updated successfully to ACTIVE.");
+
+                    // --- FIX: Upsert to subscriptions table to prevent race condition with invoice webhook ---
+                    const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Fallback 30 days
+                    const { error: subUpsertError } = await supabaseClient
+                        .from('subscriptions')
+                        .upsert({
+                            user_id: user_id,
+                            status: 'active',
+                            stripe_subscription_id: subscriptionId,
+                            current_period_end: periodEnd,
+                            cancel_at_period_end: false,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'user_id' });
+
+                    if (subUpsertError) {
+                        console.error("[SUBSCRIPTION_FLOW] Failed to upsert subscription record:", subUpsertError);
+                    } else {
+                        console.log("[SUBSCRIPTION_FLOW] Subscription record synced successfully.");
+                    }
                 }
                 const email = session.customer_details?.email || session.customer_email;
                 const name = session.customer_details?.name || "Beauty";
