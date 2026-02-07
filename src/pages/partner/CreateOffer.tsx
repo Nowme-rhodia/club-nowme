@@ -135,6 +135,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
   ]);
 
   const [installmentOptions, setInstallmentOptions] = useState<string[]>([]);
+  const [additionalBenefits, setAdditionalBenefits] = useState('');
 
   // Auto-set policy for certain types
   React.useEffect(() => {
@@ -224,6 +225,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
       }
 
       setInstallmentOptions(offer.installment_options || []);
+      setAdditionalBenefits(offer.additional_benefits || '');
 
       setDurationType(offer.duration_type || 'lifetime');
       setValidityStartDate(offer.validity_start_date ? formatDateTimeForInput(offer.validity_start_date) : '');
@@ -591,6 +593,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
         ) : null,
         access_password: eventType === 'simple_access' ? accessPassword : null,
         installment_options: installmentOptions,
+        additional_benefits: additionalBenefits || null,
         // Status remains mostly unchanged or resets to draft if needed, but let's keep it simple
         status: (offer && offer.status === 'rejected') ? 'draft' : (offer ? offer.status : 'draft')
       };
@@ -1729,7 +1732,7 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
                         {eventType !== 'wallet_pack' && (
                           <div>
-                            <label className="block text-xs font-medium text-gray-500 mb-1">Prix barré (Optionnel)</label>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Prix promo (membres du club) - Optionnel</label>
                             <div className="relative">
                               <input
                                 type="number"
@@ -1915,6 +1918,29 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
               </div>
             </div>
           )}
+
+          {/* --- Additional Benefits --- */}
+          {eventType !== 'promo' && (
+            <div className="bg-green-50 p-6 rounded-xl border border-green-100 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="text-2xl">🎁</div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-green-900 mb-2">Avantages supplémentaires</h3>
+                  <p className="text-sm text-green-700 mb-4">
+                    Indiquez les avantages non-monétaires inclus avec cette offre (ex: "+ une course de voitures télécommandées offerte")
+                  </p>
+                  <input
+                    type="text"
+                    value={additionalBenefits}
+                    onChange={(e) => setAdditionalBenefits(e.target.value)}
+                    className="w-full px-4 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500"
+                    placeholder="Ex: + un café offert, + un cadeau surprise..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
 
           {/* --- Payment Options (Installments) --- */}
           {(eventType === 'event' || eventType === 'wallet_pack') && (

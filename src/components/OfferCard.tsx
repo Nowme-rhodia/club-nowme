@@ -20,6 +20,7 @@ interface OfferCardProps {
   bookingType?: string;
   date?: string;
   slug?: string;
+  additionalBenefits?: string;
 }
 
 export function OfferCard({
@@ -38,7 +39,8 @@ export function OfferCard({
   promoConditions,
   bookingType,
   date,
-  isOfficial
+  isOfficial,
+  additionalBenefits
 }: OfferCardProps & { isOfficial?: boolean }) {
   const { user, isSubscriber, isPartner, isAdmin } = useAuth();
 
@@ -189,6 +191,13 @@ export function OfferCard({
                 </div>
               ) : (
                 <span className="text-xl font-bold text-gray-900">{price}€</span>
+              )}
+
+              {/* Additional Benefits */}
+              {additionalBenefits && (
+                <div className="text-xs text-green-700 mt-1 font-medium">
+                  {additionalBenefits}
+                </div>
               )}
             </div>
           </div>

@@ -14,7 +14,9 @@ import {
   FileText,
   TrendingUp,
   ShoppingBag,
-  Star
+  Star,
+  Plus,
+  X
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { approvePartner, rejectPartner } from '../../lib/partner';
@@ -68,6 +70,17 @@ export default function Partners() {
   const [partnerStats, setPartnerStats] = useState<any>(null); // New state for stats
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState<{ id: string; name: string } | null>(null);
+
+  // Create Partner Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    business_name: '',
+    contact_name: '',
+    contact_email: '',
+    phone: '',
+    description: ''
+  });
+  const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
     loadPartners();
@@ -243,6 +256,45 @@ export default function Partners() {
     }
   };
 
+  const handleCreatePartner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-create-partner`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
+        body: JSON.stringify(createFormData)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Erreur lors de la création du partenaire");
+      }
+
+      alert('✅ Partenaire créé avec succès ! Un email avec les identifiants a été envoyé.');
+      setShowCreateModal(false);
+      setCreateFormData({
+        business_name: '',
+        contact_name: '',
+        contact_email: '',
+        phone: '',
+        description: ''
+      });
+      loadPartners();
+    } catch (err: any) {
+      console.error('Create partner error:', err);
+      alert('❌ Erreur : ' + err.message);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <DeletionReasonModal
@@ -254,11 +306,20 @@ export default function Partners() {
       />
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Vérification des partenaires</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Gérez les demandes de partenariat : approuvez ou refusez les candidatures
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Vérification des partenaires</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Gérez les demandes de partenariat : approuvez ou refusez les candidatures
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium"
+        >
+          <Plus className="w-5 h-5" />
+          Créer un partenaire
+        </button>
       </div>
 
       {/* Filtres */}
@@ -718,6 +779,120 @@ export default function Partners() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Partner Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Créer un nouveau partenaire</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePartner} className="p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note :</strong> Un compte sera automatiquement créé pour ce partenaire avec un mot de passe temporaire.
+                  Un email avec les identifiants de connexion sera envoyé à l'adresse indiquée.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom de l'entreprise *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={createFormData.business_name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, business_name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    placeholder="Ex: Studio Yoga Paris"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom du contact *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={createFormData.contact_name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, contact_name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    placeholder="Ex: Marie Dupont"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={createFormData.contact_email}
+                    onChange={(e) => setCreateFormData({ ...createFormData, contact_email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    placeholder="contact@studio-yoga.fr"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Téléphone
+                  </label>
+                  <input
+                    type="tel"
+                    value={createFormData.phone}
+                    onChange={(e) => setCreateFormData({ ...createFormData, phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    placeholder="06 12 34 56 78"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description (optionnelle)
+                  </label>
+                  <textarea
+                    value={createFormData.description}
+                    onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    placeholder="Brève description de l'activité du partenaire..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                  disabled={createLoading}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={createLoading}
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {createLoading ? 'Création en cours...' : 'Créer le partenaire'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

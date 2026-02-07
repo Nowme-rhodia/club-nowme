@@ -137,6 +137,7 @@ export default function OfferPage() {
         offer_variants(id, name, description, price, discounted_price, stock),
         offer_media(url, type),
         digital_product_file,
+        additional_benefits,
 
         service_zones,
         promo_conditions,
@@ -1031,6 +1032,19 @@ export default function OfferPage() {
                               </button>
                             );
                           })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Benefits Display */}
+                    {offer.additional_benefits && offer.booking_type !== 'promo' && (
+                      <div className="mb-6 bg-green-50 border border-green-100 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="text-2xl">🎁</div>
+                          <div>
+                            <h4 className="font-semibold text-green-900 mb-1">Avantages inclus</h4>
+                            <p className="text-sm text-green-700">{offer.additional_benefits}</p>
+                          </div>
                         </div>
                       </div>
                     )}
