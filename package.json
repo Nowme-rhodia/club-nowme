@@ -43,6 +43,7 @@
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.330.0",
     "node-fetch": "^3.3.2",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.16.3",
     "rc-slider": "^11.1.9",
     "react": "^18.2.0",

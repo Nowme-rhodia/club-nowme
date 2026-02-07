@@ -189,10 +189,11 @@ export default function SettingsGeneral() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchPartnerData();
     }
-  }, [user, profile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, profile?.partner_id]);
 
   const fetchPartnerData = async () => {
     try {

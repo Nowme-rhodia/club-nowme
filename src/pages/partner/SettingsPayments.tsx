@@ -66,7 +66,8 @@ export default function SettingsPayments() {
       }
     };
     loadData();
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handleSave = async () => {
     try {
@@ -294,8 +295,9 @@ function PayoutHistory() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) loadPayouts();
-  }, [user]);
+    if (user?.id) loadPayouts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const loadPayouts = async () => {
     try {

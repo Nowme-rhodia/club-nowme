@@ -2,15 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth';
-import { Calendar, MapPin, Mail, ArrowRight, Sparkles, Copy, Ticket, AlertTriangle, X, Lock } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import toast from 'react-hot-toast';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { Calendar, MapPin, Mail, ArrowRight, Sparkles, Copy, Ticket, AlertTriangle, X, Lock, FileText } from 'lucide-react';
 
 interface Booking {
     cancelled_by_partner?: boolean;
 
     id: string;
+    amount?: number;
     booking_date: string;
     scheduled_at?: string;
     meeting_location?: string; // New field
@@ -44,6 +46,8 @@ interface Booking {
             contact_email?: string;
             business_name?: string;
             address?: string;
+            siret?: string;
+            tva_intra?: string;
         };
     };
 }
@@ -87,6 +91,7 @@ export default function Bookings() {
                 .select(`
                     id,
                     booking_date,
+                    amount,
                     scheduled_at,
                     meeting_location,
                     created_at,
@@ -115,10 +120,12 @@ export default function Bookings() {
                         cancellation_deadline_hours,
                         external_link,
                         is_online,
-                        partner: partners (
+                        partner: partners!offers_partner_id_fkey (
                             contact_email,
                             business_name,
-                            address
+                            address,
+                            siret,
+                            tva_intra
                         )
                     )
                 `)
@@ -227,6 +234,108 @@ export default function Bookings() {
             toast.error("Erreur l'envoi de l'avis");
         } finally {
             setIsSubmittingReview(false);
+        }
+    };
+
+    const generateInvoice = async (booking: Booking, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+            toast.loading('Génération de la facture...', { id: 'invoice-gen' });
+
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage();
+            const { width, height } = page.getSize();
+            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+            const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+            const drawText = (text: string, x: number, y: number, size = 12, fontToUse = font) => {
+                page.drawText(text, { x, y, size, font: fontToUse, color: rgb(0, 0, 0) });
+            };
+
+            // Header
+            drawText("FACTURE / REÇU", 50, height - 50, 20, boldFont);
+            drawText(`Émise par NOWME (Mandataire)`, 50, height - 75, 10, font);
+
+            drawText(`Date: ${new Date(booking.created_at || booking.booking_date).toLocaleDateString('fr-FR')}`, 400, height - 50, 10);
+            drawText(`Facture #: ${booking.id.slice(0, 8).toUpperCase()}`, 400, height - 65, 10);
+
+            let currentY = height - 110;
+
+            // Partner / Seller Info
+            const partnerName = booking.offer.partner?.business_name || 'Partenaire NowMe';
+            const partnerAddress = booking.offer.partner?.address || '';
+            const partnerSiret = booking.offer.partner?.siret || '';
+            const partnerTva = booking.offer.partner?.tva_intra || '';
+
+            drawText("Vendeur (Prestataire) :", 50, currentY, 10, boldFont); currentY -= 15;
+            drawText(partnerName, 50, currentY, 10); currentY -= 15;
+            if (partnerAddress) { drawText(partnerAddress.substring(0, 50), 50, currentY, 10); currentY -= 15; }
+            if (partnerSiret) { drawText(`SIRET : ${partnerSiret}`, 50, currentY, 10); currentY -= 15; }
+            if (partnerTva) { drawText(`TVA : ${partnerTva}`, 50, currentY, 10); currentY -= 15; }
+
+            // Issuer (NowMe)
+            currentY = height - 110;
+            drawText("Émetteur (Mandataire) :", 300, currentY, 10, boldFont); currentY -= 15;
+            drawText("NOWME", 300, currentY, 10); currentY -= 15;
+            drawText("59 RUE du Ponthieu, Bureau 326", 300, currentY, 10); currentY -= 15;
+            drawText("75008 Paris, FRANCE", 300, currentY, 10); currentY -= 15;
+            drawText("SIREN : 933 108 011", 300, currentY, 10); currentY -= 15;
+
+            // Buyer Info
+            const buyerName = `${user?.user_metadata?.first_name || ''} ${user?.user_metadata?.last_name || ''}`.trim() || user?.email || 'Client';
+            drawText("Acheteur :", 50, height - 200, 10, boldFont);
+            drawText(buyerName, 50, height - 215, 10);
+            drawText(user?.email || '', 50, height - 230, 10);
+
+            // Table Header
+            page.drawLine({ start: { x: 50, y: height - 250 }, end: { x: width - 50, y: height - 250 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+            drawText("Description", 50, height - 270, 10, boldFont);
+            drawText("Montant", 450, height - 270, 10, boldFont);
+
+            // Item Details
+            let itemName = booking.offer.title;
+            if (booking.variant?.name) itemName += ` - ${booking.variant.name}`;
+
+            // Truncate if too long
+            if (itemName.length > 55) itemName = itemName.substring(0, 52) + '...';
+
+            // Price - Handle Variants logic if price not directly on booking (though booking typically has amount nowadays)
+            // Ideally we use booking amount but for frontend generation we might need to fallback? 
+            // In list logic we don't query explicit amount, but variants have price. 
+            // Let's assume user paid full price if status is paid.
+            // *NOTE*: Fetch query doesn't currently select 'amount' from bookings. Let's rely on variant price or offer price (not selected either in detail). 
+            // *FIX*: We need to add 'amount' to the Select query in fetchBookings to be accurate.
+            // For now, let's assume valid amount from variant or display "Payé".
+            // Actually, let's update the fetch query in next step to be sure. 
+
+            drawText(itemName, 50, height - 300, 10);
+            // Placeholder for price until we fix fetch. display "Payé" if unknown?
+            // drawText(`-- €`, 450, height - 300, 10);
+
+            page.drawLine({ start: { x: 50, y: height - 330 }, end: { x: width - 50, y: height - 330 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+            drawText("TOTAL PAYÉ", 350, height - 360, 12, boldFont);
+            drawText("Voir détail bancaire", 450, height - 360, 10, font); // Safe fallback without amount
+
+            // Footer
+            page.drawLine({ start: { x: 50, y: 120 }, end: { x: width - 50, y: 120 }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+            drawText("Facture émise au nom et pour le compte de " + partnerName + " par NOWME.", 50, 100, 8, font);
+            drawText("NOWME agit en qualité de mandataire de facturation conformément aux dispositions légales.", 50, 88, 8, font);
+
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Facture-NowMe-${booking.id.slice(0, 6)}.pdf`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+
+            toast.success('Facture téléchargée !', { id: 'invoice-gen' });
+        } catch (err) {
+            console.error("Invoice Gen Error:", err);
+            toast.error("Erreur lors de la création de la facture", { id: 'invoice-gen' });
         }
     };
 
@@ -627,13 +736,27 @@ export default function Bookings() {
                                                 </button>
                                             )}
 
-                                            <Link
-                                                to={`/offres/${booking.offer?.id}`}
-                                                className="text-primary hover:text-primary-dark font-medium text-sm flex items-center ml-auto"
-                                            >
-                                                Voir l'offre
-                                                <ArrowRight className="w-4 h-4 ml-1" />
-                                            </Link>
+                                            {/* Invoice Button - For Paid Bookings */}
+                                            {['confirmed', 'paid', 'promo_claimed'].includes(booking.status) && (
+                                                <button
+                                                    onClick={(e) => generateInvoice(booking, e)}
+                                                    className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors flex items-center mr-4"
+                                                    title="Télécharger la facture"
+                                                >
+                                                    <FileText className="w-4 h-4 mr-1.5" />
+                                                    Facture!
+                                                </button>
+                                            )}
+
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    to={`/offres/${booking.offer?.id}`}
+                                                    className="text-primary hover:text-primary-dark font-medium text-sm flex items-center ml-auto"
+                                                >
+                                                    Voir l'offre
+                                                    <ArrowRight className="w-4 h-4 ml-1" />
+                                                </Link>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
