@@ -1,0 +1,32 @@
+--- PRICES ANALYSIS ---
+
+Offer: Veux-tu t'épouser ? Conférences, Dinner Gala et Spa (veux-tu-t-epouser-conferences-dinner-gala-et-spa-nowme-serris)
+  Variant: Pass Après-midi
+    Public Price: 69€
+    Member Price: 49€
+  Variant: Pass Complet
+    Public Price: 179€
+    Member Price: 149€
+
+Offer: On zappe Cupidon ? Soirée entre copines le 13 ! 💃 (on-zappe-cupidon-soiree-entre-copines-le-13-nowme-en-ligne)
+  Variant: Entrée
+    Public Price: 10€
+    Member Price: 5€
+
+Offer: Séjour en Thailande NOVEMBRE 2026 (sejour-thailande-novembre-2026)
+  Variant: Ton bonheur
+    Public Price: 1690€
+    Member Price: 1590€
+
+Offer: GIRLZ DAY OUT (girlz-day-out-nowme-paris-1)
+  Variant: Entrée
+    Public Price: 15€
+    Member Price: 5€
+  Variant: Entrée + Massage de 10 minutes
+    Public Price: 25€
+    Member Price: 15€
+
+Offer: KARAOKE BLIND TEST &MASSAGE (karaoke-blind-test-massage-nowme-paris)
+  Variant: Entrez TOUT INCLLUS
+    Public Price: 30€
+    Member Price: 15€

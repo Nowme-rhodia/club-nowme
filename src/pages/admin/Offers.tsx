@@ -14,7 +14,8 @@ import {
   Calendar,
   Building2,
   XCircle,
-  CheckCircle2
+  CheckCircle2,
+  Plus
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { categories } from '../../data/categories';
@@ -70,6 +71,7 @@ export default function Offers() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // States for Rejection Modal
   const [showRejectionModal, setShowRejectionModal] = useState(false);
@@ -294,11 +296,20 @@ export default function Offers() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Toutes les offres</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Gérez les offres approuvées et leur statut d'activation
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Toutes les offres</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Gérez les offres approuvées et leur statut d'activation
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors font-medium"
+        >
+          <Plus className="w-5 h-5" />
+          Créer une offre
+        </button>
       </div>
 
       {/* Statistiques */}
@@ -800,23 +811,30 @@ export default function Offers() {
         )
       }
       {/* Modal d'édition */}
-      {
-        editingOffer && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <CreateOffer
-                offer={editingOffer}
-                onClose={() => setEditingOffer(null)}
-                onSuccess={() => {
-                  setEditingOffer(null);
-                  toast.success('Offre mise à jour avec succès');
-                  loadOffers();
-                }}
-              />
-            </div>
-          </div>
-        )
-      }
+      {editingOffer && (
+        <CreateOffer
+          offer={editingOffer}
+          onClose={() => setEditingOffer(null)}
+          onSuccess={() => {
+            setEditingOffer(null);
+            toast.success('Offre mise à jour avec succès');
+            loadOffers();
+          }}
+        />
+      )}
+
+      {/* Modal de création */}
+      {showCreateModal && (
+        <CreateOffer
+          offer={undefined}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            toast.success('Offre créée avec succès');
+            loadOffers();
+          }}
+        />
+      )}
     </div >
   );
 }

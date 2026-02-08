@@ -81,3 +81,29 @@ En tant qu'expert marketing ciblant les femmes de 30+, voici une analyse différ
 3.  **Automation :**
     *   Cron job quotidien ou Edge est déclenché pour vérifier les dates.
     *   Envoi via le système d'email transactionnel existant.
+
+---
+
+## 3. Stratégie d'Affiliation (Monétisation Additionnelle)
+
+Pour booster la valeur perçue de l'abonnement et générer des revenus passifs, voici une sélection de programmes d'affiliation alignés avec la cible "Femme 30+ / Lifestyle / Bien-être".
+
+### A. Voyage & Expériences
+*   **GetYourGuide / Viator / Klook** : Pour les activités, visites et expériences locales. Idéal pour proposer des "sorties entre filles" dans différentes villes.
+*   **Booking.com (Section Attractions)** : Simple et efficace pour les billets coupe-file.
+*   **SNCF Connect** : Pour les escapades week-end (Bons plans train).
+
+### B. Beauté & Bien-être
+*   **Blissim (ex-Birchbox) / Glossybox** : Box beauté mensuelle. Très fort taux de conversion sur cible féminine.
+*   **Sephora / L'Occitane / Oh My Cream** : Produits de beauté premium. "Oh My Cream" a une image très "clean beauty" qui colle bien avec une cible 30+ soucieuse.
+*   **ClassPass** : Accès à des salles de sport et studios (Yoga, Pilates). Parfait pour l'aspect "Healthy" du club.
+
+### C. Lifestyle & Mode
+*   **Showroomprivé / Veepee** : Les ventes privées restent un gros levier ("Bons plans shopping").
+*   **HelloFresh / Quitoque** : Box repas. Répond à la problématique "Charge mentale" des dîners.
+*   **Boursorama (The Corner)** : Si tu veux proposer du "Cashback" ou des bons plans bancaires (très rémunérateur en parrainage).
+
+**Mise en place :**
+1.  S'inscrire sur les plateformes d'affiliation (Awin, Affilae, Kwanko).
+2.  Créer un "Partenaire" dans l'admin pour chaque marque (ex: Partenaire "Blissim").
+3.  Créer une offre avec le lien d'affiliation en "Lien Externe".
