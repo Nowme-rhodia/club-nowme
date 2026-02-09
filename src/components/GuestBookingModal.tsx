@@ -120,8 +120,12 @@ export default function GuestBookingModal({ isOpen, onClose, onSuccess, offerTit
                 <div className="bg-primary/5 p-6 border-b border-primary/10 flex justify-between items-start">
                     <div>
                         <h3 className="text-xl font-bold text-gray-900">Finaliser ma réservation</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Créez votre compte en quelques secondes pour valider votre place pour <span className="font-bold text-primary">{offerTitle}</span>.
+                        <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            GRATUIT - SANS ABONNEMENT
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">
+                            Créez votre compte <span className="font-bold">invité</span> pour recevoir vos billets. <br />
+                            <span className="italic text-gray-500 text-xs">Ce compte sert uniquement à gérer vos réservations.</span>
                         </p>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
@@ -231,7 +235,7 @@ export default function GuestBookingModal({ isOpen, onClose, onSuccess, offerTit
                         ) : (
                             <>
                                 <UserPlus className="w-5 h-5" />
-                                Confirmer et Payer
+                                Continuer vers la réservation
                             </>
                         )}
                     </button>
