@@ -500,13 +500,8 @@ export default function OfferPage() {
 
   const handleBooking = async () => {
     // Guest Handling for Official Events
-    if (isGuest) {
-      if (offer.is_official) {
-        // Redirect to Login with redirect back
-        navigate(`/connexion?redirectTo=${encodeURIComponent(location.pathname)}`);
-        return;
-      }
-    }
+    // REMOVED: Redirection to login. We now show the GuestModal below.
+
 
     // Guest Handling: Enforce login for official events BEFORE any other logic
     if (isGuest && isOfficial) {
