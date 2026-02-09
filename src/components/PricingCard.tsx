@@ -55,9 +55,12 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
         </div>
 
         {tier.id === 'monthly' && (
-          <div className="mt-2 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-700 font-semibold">
-              🎯 Puis 39,99€/mois - Accès complet maintenu
+          <div className="mt-2 text-center">
+            <div className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold mb-2">
+              Cadeau de bienvenue
+            </div>
+            <p className="text-xs text-gray-500">
+              Puis 39,99€/mois • <span className="font-bold text-gray-700">Sans engagement</span>
             </p>
           </div>
         )}
@@ -120,7 +123,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
         )}
 
         <p className="text-center text-xs text-gray-500">
-          {tier.id === 'yearly' ? "Engagement d'un an" : "Annulable à tout moment"} • Résiliation en 1 clic
+          {tier.id === 'yearly' ? "Engagement d'un an" : "Liberté totale • Annulable en 1 clic"}
         </p>
       </div>
     </div>

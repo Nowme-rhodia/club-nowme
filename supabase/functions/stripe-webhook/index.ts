@@ -213,8 +213,8 @@ Deno.serve(async (req) => {
                 const stripeEmail = session.customer_details?.email || session.customer_email;
 
                 if (internalEmail && stripeEmail && internalEmail.toLowerCase() !== stripeEmail.toLowerCase()) {
-                    console.error(`[SECURITY_BLOCK] Identity Mismatch! Internal: ${internalEmail} vs Stripe: ${stripeEmail}. ID: ${user_id}.`);
-                    return new Response("Identity mismatch: Email does not match user account.", { status: 400 });
+                    console.warn(`[SECURITY_WARNING] Identity Mismatch! Internal: ${internalEmail} vs Stripe: ${stripeEmail}. ID: ${user_id}. Proceeding because user_id is trusted.`);
+                    // We DO NOT return error anymore, we trust user_id from metadata
                 } else {
                     console.log("[EMAIL_MATCH_CONFIRMED] Stripe email matches internal profile.");
                 }

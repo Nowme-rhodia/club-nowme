@@ -1,0 +1,17 @@
+­ƒÜÇ Starting Email Mismatch Verification Test...
+1´©ÅÔâú Creating test user: match-test-1770631612197@nowme.fr
+   Ô£à User created: 3268429d-09fc-4208-ab8a-1a04092a1da2
+   Ô£à Profile manually inserted.
+   Ô£à Using Offer ID: 68cf2578-b7e7-41d7-8ec2-a674afc49727
+2´©ÅÔâú Sending Webhook with Email Mismatch...
+   Internal Email: match-test-1770631612197@nowme.fr
+   Stripe Email:   different-1770631612197@gmail.com
+   Response Status: 200
+   Response Body: {"received":true}
+   Ô£à Webhook returned 200 OK and no error.
+3´©ÅÔâú Verifying Booking Creation in DB...
+   Ô£à User Profile exists.
+   Ô£à Booking confirmed! ID: da8878a3-563c-49f5-b8a6-e8053a5960ca
+   ­ƒÄë SUCCESS: Emails didn't match, but booking was created.
+­ƒº╣ Cleaning up test user...
+   User deleted.

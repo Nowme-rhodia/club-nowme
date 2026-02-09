@@ -109,7 +109,7 @@ serve(async (req: Request): Promise<Response> => {
       success_url,
       cancel_url,
       metadata: {
-        source: "one_time",
+        source: "club-nowme",
         offer_id: offer.id,
         booking_id: booking.id,
         partner_id: offer.partner_id,

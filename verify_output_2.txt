@@ -1,0 +1,18 @@
+­ƒÜÇ Starting Email Mismatch Verification Test...
+1´©ÅÔâú Creating test user: match-test-1770631578475@nowme.fr
+   Ô£à User created: a3bd8c2d-8a36-404f-9b32-fc407f3e31c9
+   ÔÜá´©Å Profile insert failed (maybe auto-created?): Could not find the 'role' column of 'user_profiles' in the schema cache
+   Ô£à Using Offer ID: 68cf2578-b7e7-41d7-8ec2-a674afc49727
+2´©ÅÔâú Sending Webhook with Email Mismatch...
+   Internal Email: match-test-1770631578475@nowme.fr
+   Stripe Email:   different-1770631578475@gmail.com
+   Response Status: 500
+   Response Body: Booking Confirmation Failed: insert or update on table "bookings" violates foreign key constraint "bookings_user_id_fkey_profiles"
+   ÔØî Webhook Failed (Error in response)
+   Error details: Booking Confirmation Failed: insert or update on table "bookings" violates foreign key constraint "bookings_user_id_fkey_profiles"
+3´©ÅÔâú Verifying Booking Creation in DB...
+   ÔÜá´©Å WARNING: User Profile missing! Trigger might have failed.
+   ÔØî Booking NOT found in DB.
+   (This means the webhook finished but did not insert the booking)
+­ƒº╣ Cleaning up test user...
+   User deleted.

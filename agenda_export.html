@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Agenda Kiff - Club Nowme</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+            background-color: #ffffff;
+            color: #333;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 0 auto;
+            background: white;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: #AF52DE;
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .event-card {
+            display: flex;
+            background: #fcfcfc;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            page-break-inside: avoid;
+        }
+
+        .date-box {
+            background-color: #f8f0fc;
+            padding: 20px;
+            min-width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .date-day {
+            font-size: 28px;
+            font-weight: 900;
+            color: #AF52DE;
+            line-height: 1;
+        }
+
+        .date-month {
+            font-size: 12px;
+            font-weight: 700;
+            color: #AF52DE;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .content-box {
+            padding: 20px;
+            flex: 1;
+        }
+
+        .event-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #1a1a1a;
+            text-transform: uppercase;
+            margin: 0 0 8px 0;
+        }
+
+        .event-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+            margin: 0 0 10px 0;
+        }
+
+        .event-link {
+            font-size: 12px;
+            font-weight: 700;
+            color: #AF52DE;
+            text-decoration: none;
+        }
+
+        .special-card {
+            background-color: #1a1a1a;
+            color: white;
+            border: none;
+        }
+
+        .special-card .event-title {
+            color: #FFD700;
+        }
+
+        .special-card .event-desc {
+            color: #eee;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page">
+        <div class="header">
+            <h1>Ton Agenda Kiff</h1>
+            <div class="subtitle">Club Nowme • Février - Avril</div>
+        </div>
+
+        <div class="event-list">
+
+            <!-- Event 1 -->
+            <div class="event-card">
+                <div class="date-box">
+                    <div class="date-day">13</div>
+                    <div class="date-month">FÉV</div>
+                </div>
+                <div class="content-box">
+                    <h3 class="event-title">🍷 Apéro "Gallentines" (En ligne)</h3>
+                    <p class="event-desc">
+                        Saint-Valentin ou pas, on s'en fiche. Ce soir, c'est entre nous. Connecte-toi depuis ton canapé
+                        et viens rire avec ta squad.
+                    </p>
+                    <a href="https://club.nowme.fr/offres/on-zappe-cupidon-soiree-entre-copines-le-13-nowme-en-ligne"
+                        class="event-link">Voir l'événement →</a>
+                </div>
+            </div>
+
+            <!-- Event 2 -->
+            <div class="event-card">
+                <div class="date-box" style="background-color: #fff9db;">
+                    <div class="date-day" style="color: #d4ac0d;">08</div>
+                    <div class="date-month" style="color: #d4ac0d;">MARS</div>
+                </div>
+                <div class="content-box">
+                    <h3 class="event-title">💍 Veux-tu t'épouser ?</h3>
+                    <p class="event-desc">
+                        Une journée exceptionnelle au Ki Space Hotel & Spa : conférences, dîner de gala et une promesse
+                        d'amour à toi-même.
+                    </p>
+                    <a href="https://club.nowme.fr/offres/veux-tu-t-epouser-conferences-dinner-gala-et-spa-nowme-serris"
+                        class="event-link">Voir l'événement →</a>
+                </div>
+            </div>
+
+            <!-- Event 3 -->
+            <div class="event-card">
+                <div class="date-box">
+                    <div class="date-day">11</div>
+                    <div class="date-month">MARS</div>
+                </div>
+                <div class="content-box">
+                    <h3 class="event-title">🎤 Karaoké & Massage</h3>
+                    <p class="event-desc">
+                        Direction le Jo&Joe Nation. Massage pour commencer, Céline Dion pour finir. L'équilibre parfait.
+                    </p>
+                    <a href="https://club.nowme.fr/offres/karaoke-blind-test-massage-nowme-paris"
+                        class="event-link">Voir l'événement →</a>
+                </div>
+            </div>
+
+            <!-- Event 4 -->
+            <div class="event-card">
+                <div class="date-box">
+                    <div class="date-day">04</div>
+                    <div class="date-month">AVRIL</div>
+                </div>
+                <div class="content-box">
+                    <h3 class="event-title">🪩 Girlz Day Out @ Movida</h3>
+                    <p class="event-desc">
+                        Clubbing version adulte responsable (14h-19h). Tu danses, tu profites, et tu es rentrée pour le
+                        dîner.
+                    </p>
+                    <a href="https://club.nowme.fr/offres/girlz-day-out-nowme-paris-1" class="event-link">Voir
+                        l'événement →</a>
+                </div>
+            </div>
+
+            <!-- Event 5 -->
+            <div class="event-card special-card">
+                <div class="content-box" style="text-align: center;">
+                    <h3 class="event-title">✈️ NOV 2026 : THAÏLANDE</h3>
+                    <p class="event-desc">
+                        9 jours entre femmes. Temples, plages, spiritualité. Le voyage d'une vie.<br>
+                        <strong>⚠️ Il ne reste que 8 places !</strong>
+                    </p>
+                    <a href="https://club.nowme.fr/offres/sejour-thailande-novembre-2026" class="event-link"
+                        style="color: #FFD700;">Voir le programme →</a>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+            <p>Retrouvez tous nos événements sur <strong>club.nowme.fr</strong></p>
+        </div>
+    </div>
+
+</body>
+
+</html>

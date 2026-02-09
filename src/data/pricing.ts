@@ -28,29 +28,29 @@ export interface ServiceOffering {
 export const PRICING_TIERS: PricingTier[] = [
   {
     id: 'monthly',
-    name: 'Plan Découverte',
+    name: 'Offre Mensuelle',
     price: 12.99,
     originalPrice: 39.99,
-    period: '1er mois, puis 39,99€/mois',
-    description: 'Premier mois à 12,99€ (Automatiquement appliqué)',
+    period: '1er mois (Cadeau), puis 39,99€/mois',
+    description: 'Offre de bienvenue sans engagement',
     stripePriceId: 'price_1Sow5YD3JHLNgQan3TgkmEFP',
     promoCode: undefined, // Plus de code promo manuel requis
     features: [
       'Accès complet à tous les services dès le 1er mois',
       '2-3 événements premium et `sorties organisées par mois',
-      'Concours Box surprise trimestrielle (valeur 30€ à 100€)',
+      'Concours Box surprise trimestrielle (valeur 100€)',
       'Apéros mensuels en ligne',
       'Masterclass exclusives avec expertes',
       'Réductions jusqu\'à -70% chez nos partenaires',
       'Accès aux séjours entre filles',
       'Communauté premium modérée',
       'Newsletter hebdomadaire "Kiff de la semaine"',
-      'Résiliation en 1 clic'
+      'Sans engagement : Arrête quand tu veux'
     ]
   },
   {
     id: 'yearly',
-    name: 'Annuel',
+    name: 'Offre Annuelle',
     price: 399,
     period: 'par an',
     description: 'Presque 2 mois OFFERTS + bonus exclusifs',
