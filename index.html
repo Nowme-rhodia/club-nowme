@@ -2,13 +2,23 @@
 <html lang="fr">
 
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17947479509"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'AW-17947479509');
+  </script>
+
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/logo-nowme.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Ajout de la balise CSP pour Stripe + Google Maps -->
+  <!-- Ajout de la balise CSP pour Stripe + Google Maps + Google Ads -->
   <meta http-equiv="Content-Security-Policy"
-    content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://js.stripe.com https://assets.calendly.com;" />
+    content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://js.stripe.com https://assets.calendly.com https://www.googletagmanager.com;" />
 
   <title>Nowme - Ton kiff au féminin</title>
 
