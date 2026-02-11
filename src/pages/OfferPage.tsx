@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Calendar, Clock, Euro, Gift, ShoppingBag, X, Check, ArrowRight, Star, Heart, Share2, Info, Youtube, Video, Building, ArrowLeft, Globe, CheckCircle, ChevronLeft, ChevronRight, Lock, Copy, ExternalLink } from 'lucide-react';
+import { MapPin, Calendar, Clock, Euro, Gift, ShoppingBag, X, Check, ArrowRight, Star, Heart, Share2, Info, Youtube, Video, Building, ArrowLeft, Globe, CheckCircle, ChevronLeft, ChevronRight, Lock, Copy, ExternalLink, CreditCard, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 
@@ -238,20 +238,25 @@ export default function OfferPage() {
 
   const isPrivileged = isSubscriber || isAdmin || isPartner;
 
+  // REFACTORED PRICE INFO LOGIC
+  // We now explicitly calculate both prices
   const priceInfo = selectedVariant
     ? {
-      // Non-subscribers pay full price (price), subscribers pay discounted_price if available
+      // The price the user WILL PAY based on their status
       price: isPrivileged
         ? (selectedVariant.discounted_price || selectedVariant.price)
         : selectedVariant.price,
-      // Original price for strikethrough (only for subscribers)
-      original_price: (isPrivileged && selectedVariant.discounted_price) ? selectedVariant.price : null,
-      variant_id: selectedVariant.id,
-      // Store member price significantly for frustration UI
+
+      // Explicit public price (always valid)
+      public_price: selectedVariant.price,
+
+      // Explicit member price (if discounted, otherwise same)
       member_price: selectedVariant.discounted_price || selectedVariant.price,
+
+      variant_id: selectedVariant.id,
       has_discount: !!selectedVariant.discounted_price && selectedVariant.discounted_price < selectedVariant.price
     }
-    : { price: 0, original_price: null, variant_id: null, member_price: 0, has_discount: false };
+    : { price: 0, public_price: 0, member_price: 0, variant_id: null, has_discount: false };
 
   // Total to Pay (Price * Quantity + Travel Fee)
   // Note: Travel Fee is usually per trip, not per person if same location. 
@@ -484,6 +489,7 @@ export default function OfferPage() {
 
       if (bookingId && Object.keys(updates).length > 0) {
         // Fix type error by ensuring updates keys match DB schema if needed or just suppressing
+        // @ts-ignore
         const { error: patchError } = await supabase.from('bookings').update(updates).eq('id', bookingId);
         if (patchError) console.error("Patch Error:", patchError);
         else console.log("Booking patched with:", updates);
@@ -569,7 +575,7 @@ export default function OfferPage() {
 
   const getButtonLabel = () => {
     // Guest Handling
-    if (isGuest && isOfficial) return "Se connecter pour réserver";
+    if (isGuest && isOfficial) return "Réserver (Inscription gratuite requise)";
     if (isGuest) return "Rejoindre le club"; // Should be unreachable if blurred, but safe fallback
 
     if (isAlreadyBooked) return "Vous êtes déjà inscrit";
@@ -681,6 +687,14 @@ export default function OfferPage() {
             {category && (
               <span className="px-4 py-2 rounded-full text-white bg-white/20 backdrop-blur-sm font-medium">
                 {category.name}
+              </span>
+            )}
+
+            {/* Added: Official Badge */}
+            {isOfficial && (
+              <span className="px-4 py-2 rounded-full text-white bg-green-500/80 backdrop-blur-sm font-medium flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Ouvert aux non-membres
               </span>
             )}
           </div>
@@ -1009,14 +1023,17 @@ export default function OfferPage() {
 
                                   <div className="text-right">
                                     {hasPromo ? (
-                                      <>
-                                        <div className="font-bold text-primary text-lg">
-                                          {variant.discounted_price}€
-                                        </div>
-                                        <div className="text-sm text-gray-400 line-through decoration-gray-400">
+                                      <div className="flex flex-col items-end">
+                                        <div className="font-bold text-gray-900 text-lg">
                                           {variant.price}€
                                         </div>
-                                      </>
+                                        <div className="text-sm text-gray-400 line-through decoration-gray-400">
+                                          {variant.discounted_price}€
+                                        </div>
+                                        <div className="text-[10px] text-primary font-medium uppercase bg-primary/10 px-1.5 py-0.5 rounded mt-0.5">
+                                          Prix Club
+                                        </div>
+                                      </div>
                                     ) : (
                                       <div className="font-bold text-gray-900 text-lg">
                                         {variant.price}€
@@ -1047,334 +1064,452 @@ export default function OfferPage() {
 
 
 
-                    <div id="zone-selector-section" className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl flex-col sm:flex-row gap-4 sm:gap-0">
+                    {/* Pricing Summary Block - Explicit Breakdown */}
+                    <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-100">
+                      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-gray-400" />
+                        Détails du paiement
+                      </h3>
 
-                      {/* --- Zone Selector & Address (At Home Only) --- */}
-                      {offer.service_zones && offer.service_zones.length > 0 && (
-                        <div className="w-full mb-6 border-b border-gray-100 pb-6">
-
-                          {/* Zones Table */}
-                          <div className="mb-4 bg-blue-50/50 rounded-lg p-3 text-sm">
-                            <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              1. Sélectionnez votre zone
-                            </h4>
-                            <div className="grid grid-cols-3 gap-2">
-                              {offer.service_zones.map((z: any) => (
-                                <button
-                                  key={z.code}
-                                  onClick={() => {
-                                    if (selectedZoneCode === z.code) {
-                                      setSelectedZoneCode(''); // Deselect
-                                    } else {
-                                      setSelectedZoneCode(z.code);
-                                      toast.success(`Zone ${z.code} sélectionnée (+${z.fee}€)`);
-                                    }
-                                  }}
-                                  className={`px-2 py-1.5 rounded text-xs border font-medium transition-all ${selectedZoneCode === z.code
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                                    : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
-                                    }`}
-                                >
-                                  {z.code} {z.fee > 0 ? `(+${z.fee}€)` : '(Gratuit)'}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className={`transition-all duration-300 ${!selectedZoneCode ? 'opacity-50 pointer-events-none blur-[1px]' : 'opacity-100'}`}>
-                            <label className="block text-sm font-bold text-gray-900 mb-2">
-                              2. Saisissez votre adresse complète
-                            </label>
-                            <input
-                              ref={meetingAddressRef}
-                              type="text"
-                              placeholder="Ex: 12 Rue de la Paix, 75000 Paris"
-                              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-gray-400 font-medium"
-                              value={meetingAddress}
-                              onChange={(e) => setMeetingAddress(e.target.value)}
-                              autoComplete="new-password"
-                              name={`address_field_no_autofill_${Math.random().toString(36).substr(2, 9)}`}
-                              data-lpignore="true"
-                              data-1p-ignore="true"
-                            />
-                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3 text-green-500" />
-                              Cette adresse sera transmise au prestataire.
-                            </p>
-                          </div>
-
-                          {/* DEBUG ADDRESS STATE REMOVED FOR CLEANER UI, BUT DATA FLOW SECURED */}
+                      <div className="space-y-4">
+                        {/* Price Rows */}
+                        <div className="flex justify-between items-center py-2 border-b border-gray-200 border-dashed">
+                          <span className="text-gray-600">Prix Standard / Non-Membre</span>
+                          <span className="font-medium text-gray-900">{priceInfo.public_price}€</span>
                         </div>
 
-                      )}
-
-                      {/* --- Quantity Selector (For Official Events or All?) --- */}
-                      {/* Allow quantity for everyone if it's an event or purchase, except calendly maybe? */}
-                      {/* Usually Calendar is 1 person. But maybe 4 friends? */}
-                      {/* Let's allow for 'event' type mostly. */}
-                      {(offer.booking_type === 'event' || offer.booking_type === 'purchase') && !isSubscriber && (
-                        <div className="mb-6 border-b border-gray-100 pb-6 w-full">
-                          <div className="bg-gray-50 p-3 rounded-lg flex items-center justify-between">
-                            <span className="font-bold text-gray-700">Nombre de places</span>
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
-                                disabled={quantity <= 1}
-                              >
-                                -
-                              </button>
-                              <span className="font-bold text-lg w-6 text-center">{quantity}</span>
-                              <button
-                                onClick={() => setQuantity(Math.min(10, quantity + 1))}
-                                className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
-                                disabled={quantity >= 10}
-                              >
-                                +
-                              </button>
+                        {priceInfo.has_discount && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-200 border-dashed bg-primary/5 -mx-6 px-6 relative">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1 h-4 bg-primary rounded-full"></div>
+                              <span className="text-primary font-bold">Prix des kiffeuses du club Nowme</span>
                             </div>
-                          </div>
-                        </div>
-                      )}
-
-
-                      <div className="w-full sm:w-auto text-right">
-
-                        {/* --- Installment Selector --- */}
-                        {offer.booking_type !== 'promo' && offer.price !== 0 && (
-                          <div className="mb-4 flex flex-col items-end">
-                            {/* Logic: Show options if defined AND price > 100 AND startDate > 7 days */}
-                            {(() => {
-                              const isEligibleDate = !offer.event_start_date || (new Date(offer.event_start_date).getTime() - Date.now() > 7 * 24 * 60 * 60 * 1000);
-                              const validOptions = (offer.installment_options || []).filter((opt: string) => ['2x', '3x', '4x'].includes(opt));
-
-                              // Only show if we have options and date is OK
-                              // User requested "sans montant minimum", so we rely on Partner's choice.
-                              if (validOptions.length > 0 && isEligibleDate) {
-                                return (
-                                  <div className="flex bg-gray-100 p-1 rounded-lg">
-                                    <button
-                                      onClick={() => setInstallmentPlan('1x')}
-                                      className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${installmentPlan === '1x' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-                                    >
-                                      1x
-                                    </button>
-                                    {validOptions.map((opt: string) => (
-                                      <button
-                                        key={opt}
-                                        onClick={() => setInstallmentPlan(opt)}
-                                        className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${installmentPlan === opt ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-900'}`}
-                                      >
-                                        {opt}
-                                      </button>
-                                    ))}
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
+                            <span className="font-bold text-primary">{priceInfo.member_price}€</span>
                           </div>
                         )}
 
-                        <p className="text-sm text-gray-500 mb-1">
-                          {installmentPlan !== '1x' ? `Montant à régler aujourd'hui (${installmentPlan})` : 'Total à payer'}
-                        </p>
-                        <div className="flex flex-col items-end">
-                          <div className="flex items-baseline justify-end gap-2">
-                            <span className="text-3xl font-bold text-gray-900">
-                              {(totalToPay / (parseInt(installmentPlan) || 1)).toFixed(2)}€
-                            </span>
-                            {priceInfo.original_price && (
-                              <span className="text-lg text-gray-400 line-through">
-                                {priceInfo.original_price}€
+                        {/* Explicitly show what user is actually paying based on login state */}
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="text-lg font-bold text-gray-900">Total à payer</span>
+                          <div className="text-right">
+                            <span className="text-2xl font-black text-primary block">{totalToPay}€</span>
+                            {!isPrivileged && priceInfo.has_discount && (
+                              <span className="text-xs text-red-500 font-medium block mt-1">
+                                Économisez {(priceInfo.public_price - priceInfo.member_price).toFixed(2)}€ en devenant membre !
+                              </span>
+                            )}
+                            {isPrivileged && priceInfo.has_discount && (
+                              <span className="text-xs text-green-600 font-medium block mt-1 flex items-center justify-end gap-1">
+                                <CheckCircle className="w-3 h-3" /> Tarif membre appliqué
                               </span>
                             )}
                           </div>
+                        </div>
 
-                          {/* FRUSTRATION UI: Show for non-subscribers if a discount exists */}
-                          {!isPrivileged && priceInfo.has_discount && (
-                            <div className="mt-1 mb-2 flex flex-col items-end">
-                              <div className="flex flex-col items-end animate-pulse">
-                                <span className="text-sm text-pink-600 font-bold">
-                                  Prix membre : {priceInfo.member_price}€
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Tu économiserais {(priceInfo.price - priceInfo.member_price).toFixed(2)}€ en étant membre !
-                                </span>
-                              </div>
-                              <Link
-                                to="/subscription"
-                                className="mt-2 text-xs bg-pink-600 text-white px-3 py-1.5 rounded-full font-bold hover:bg-pink-700 transition shadow-sm flex items-center gap-1"
+                        {/* Payment Methods Logos */}
+                        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100 justify-center opacity-70 grayscale hover:grayscale-0 transition-all flex-wrap">
+                          <img src="https://img.icons8.com/color/48/visa.png" alt="Visa" className="h-6 object-contain" />
+                          <img src="https://img.icons8.com/color/48/mastercard.png" alt="Mastercard" className="h-6 object-contain" />
+                          <img src="https://img.icons8.com/color/48/apple-pay.png" alt="Apple Pay" className="h-6 object-contain" />
+                          <img src="https://img.icons8.com/color/48/google-pay.png" alt="Google Pay" className="h-6 object-contain" />
+                          <img src="https://img.icons8.com/color/48/paypal.png" alt="PayPal" className="h-6 object-contain" />
+                          <span className="text-xs font-medium text-gray-500 ml-2 whitespace-nowrap">Paiement sécurisé</span>
+                        </div>
+                      </div>
+
+                      {/* Installment Options - Only visible if multiple options exist */}
+                      {offer.installment_options && offer.installment_options.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Options de paiement</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {/* Always show Comptant (1x) */}
+                            <button
+                              onClick={() => setInstallmentPlan('1x')}
+                              className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${installmentPlan === '1x'
+                                ? 'bg-primary text-white border-primary shadow-sm'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-primary/50'
+                                }`}
+                            >
+                              Comptant
+                            </button>
+
+                            {/* Show only configured options */}
+                            {offer.installment_options?.map((plan: string) => (
+                              <button
+                                key={plan}
+                                onClick={() => setInstallmentPlan(plan)}
+                                className={`px-3 py-2 text-sm font-medium rounded-lg border transition-all ${installmentPlan === plan
+                                  ? 'bg-primary text-white border-primary shadow-sm'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:border-primary/50'
+                                  }`}
                               >
-                                Devenir membre
-                                <ExternalLink className="w-3 h-3" />
-                              </Link>
-                            </div>
-                          )}
+                                {plan}
+                              </button>
+                            ))}
+                          </div>
                           {installmentPlan !== '1x' && (
-                            <p className="text-xs text-gray-500 mt-1 mb-2 max-w-[200px] text-right">
-                              Puis {(parseInt(installmentPlan) || 1) - 1} mensualités de {(totalToPay / (parseInt(installmentPlan) || 1)).toFixed(2)}€
-                              <br />
-                              <span className="text-primary italic">Prélèvement automatique chaque mois</span>
+                            <p className="text-xs text-gray-500 mt-2 italic">
+                              * Paiement échelonné en {installmentPlan} fois sans frais via Stripe.
                             </p>
                           )}
                         </div>
+                      )}
+                    </div>
+                  </div>
 
-                        {travelFee > 0 && (
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            Dont frais déplacements : +{travelFee}€
+                  <div id="zone-selector-section" className="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl flex-col sm:flex-row gap-4 sm:gap-0">
+
+                    {/* --- Zone Selector & Address (At Home Only) --- */}
+                    {offer.service_zones && offer.service_zones.length > 0 && (
+                      <div className="w-full mb-6 border-b border-gray-100 pb-6">
+
+                        {/* Zones Table */}
+                        <div className="mb-4 bg-blue-50/50 rounded-lg p-3 text-sm">
+                          <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                            <MapPin className="w-4 h-4" />
+                            1. Sélectionnez votre zone
+                          </h4>
+                          <div className="grid grid-cols-3 gap-2">
+                            {offer.service_zones.map((z: any) => (
+                              <button
+                                key={z.code}
+                                onClick={() => {
+                                  if (selectedZoneCode === z.code) {
+                                    setSelectedZoneCode(''); // Deselect
+                                  } else {
+                                    setSelectedZoneCode(z.code);
+                                    toast.success(`Zone ${z.code} sélectionnée (+${z.fee}€)`);
+                                  }
+                                }}
+                                className={`px-2 py-1.5 rounded text-xs border font-medium transition-all ${selectedZoneCode === z.code
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                                  }`}
+                              >
+                                {z.code} {z.fee > 0 ? `(+${z.fee}€)` : '(Gratuit)'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className={`transition-all duration-300 ${!selectedZoneCode ? 'opacity-50 pointer-events-none blur-[1px]' : 'opacity-100'}`}>
+                          <label className="block text-sm font-bold text-gray-900 mb-2">
+                            2. Saisissez votre adresse complète
+                          </label>
+                          <input
+                            ref={meetingAddressRef}
+                            type="text"
+                            placeholder="Ex: 12 Rue de la Paix, 75000 Paris"
+                            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-gray-400 font-medium"
+                            value={meetingAddress}
+                            onChange={(e) => setMeetingAddress(e.target.value)}
+                            autoComplete="new-password"
+                            name={`address_field_no_autofill_${Math.random().toString(36).substr(2, 9)}`}
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                          />
+                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                            Cette adresse sera transmise au prestataire.
+                          </p>
+                        </div>
+
+                        {/* DEBUG ADDRESS STATE REMOVED FOR CLEANER UI, BUT DATA FLOW SECURED */}
+                      </div>
+
+                    )}
+
+                    {/* --- Quantity Selector (For Official Events or All?) --- */}
+                    {/* Allow quantity for everyone if it's an event or purchase, except calendly maybe? */}
+                    {/* Usually Calendar is 1 person. But maybe 4 friends? */}
+                    {/* Let's allow for 'event' type mostly. */}
+                    {(offer.booking_type === 'event' || offer.booking_type === 'purchase') && !isSubscriber && (
+                      <div className="mb-6 border-b border-gray-100 pb-6 w-full">
+                        <div className="bg-gray-50 p-3 rounded-lg flex items-center justify-between">
+                          <span className="font-bold text-gray-700">Nombre de places</span>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                              className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                              disabled={quantity <= 1}
+                            >
+                              -
+                            </button>
+                            <span className="font-bold text-lg w-6 text-center">{quantity}</span>
+                            <button
+                              onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                              className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                              disabled={quantity >= 10}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+
+                    <div className="w-full sm:w-auto text-right">
+
+                      {/* --- Installment Selector --- */}
+                      {offer.booking_type !== 'promo' && offer.price !== 0 && (
+                        <div className="mb-4 flex flex-col items-end">
+                          {/* Logic: Show options if defined AND price > 100 AND startDate > 7 days */}
+                          {(() => {
+                            const isEligibleDate = !offer.event_start_date || (new Date(offer.event_start_date).getTime() - Date.now() > 7 * 24 * 60 * 60 * 1000);
+                            const validOptions = (offer.installment_options || []).filter((opt: string) => ['2x', '3x', '4x'].includes(opt));
+
+                            // Only show if we have options and date is OK
+                            // User requested "sans montant minimum", so we rely on Partner's choice.
+                            if (validOptions.length > 0 && isEligibleDate) {
+                              return (
+                                <div className="flex bg-gray-100 p-1 rounded-lg">
+                                  <button
+                                    onClick={() => setInstallmentPlan('1x')}
+                                    className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${installmentPlan === '1x' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+                                  >
+                                    1x
+                                  </button>
+                                  {validOptions.map((opt: string) => (
+                                    <button
+                                      key={opt}
+                                      onClick={() => setInstallmentPlan(opt)}
+                                      className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${installmentPlan === opt ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-900'}`}
+                                    >
+                                      {opt}
+                                    </button>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      )}
+
+                      <p className="text-sm text-gray-500 mb-1">
+                        {installmentPlan !== '1x' ? `Montant à régler aujourd'hui (${installmentPlan})` : 'Total à payer'}
+                      </p>
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-baseline justify-end gap-2">
+                          <span className="text-3xl font-bold text-gray-900">
+                            {(totalToPay / (parseInt(installmentPlan) || 1)).toFixed(2)}€
+                          </span>
+                          {priceInfo.price < priceInfo.public_price && (
+                            <span className="text-lg text-gray-400 line-through">
+                              {priceInfo.public_price}€
+                            </span>
+                          )}
+                        </div>
+
+                        {/* FRUSTRATION UI: Show for non-subscribers if a discount exists */}
+                        {!isPrivileged && priceInfo.has_discount && (
+                          <div className="mt-1 mb-2 flex flex-col items-end">
+                            <div className="flex flex-col items-end animate-pulse">
+                              <span className="text-sm text-pink-600 font-bold">
+                                Prix membre : {priceInfo.member_price}€
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                Tu économiserais {(priceInfo.price - priceInfo.member_price).toFixed(2)}€ en étant membre !
+                              </span>
+                            </div>
+                            <Link
+                              to="/subscription"
+                              className="mt-2 text-xs bg-pink-600 text-white px-3 py-1.5 rounded-full font-bold hover:bg-pink-700 transition shadow-sm flex items-center gap-1"
+                            >
+                              Devenir membre pour 12,99€
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        )}
+                        {installmentPlan !== '1x' && (
+                          <p className="text-xs text-gray-500 mt-1 mb-2 max-w-[200px] text-right">
+                            Puis {(parseInt(installmentPlan) || 1) - 1} mensualités de {(totalToPay / (parseInt(installmentPlan) || 1)).toFixed(2)}€
+                            <br />
+                            <span className="text-primary italic">Prélèvement automatique chaque mois</span>
                           </p>
                         )}
                       </div>
-                      <button
-                        onClick={handleShare}
-                        className="p-3 bg-white text-gray-700 rounded-full shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md active:scale-95"
-                      >
-                        <Share2 className="w-5 h-5" />
-                      </button>
-                    </div>
 
-                    {/* Fake CTA for blurred view, although covered by overlay */}
-
-
-                    <button
-                      onClick={handleBooking}
-                      disabled={bookingLoading || isOutOfStock || !hasAccess || isAlreadyBooked}
-                      className={`w-full px-6 py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${isOutOfStock ? 'bg-gray-400' : 'bg-primary hover:bg-primary-dark'
-                        }`}
-                    >
-                      {bookingLoading ? (
-                        <>
-                          <Clock className="w-5 h-5 animate-spin" />
-                          Traitement...
-                        </>
-                      ) : (
-                        offer.booking_type === 'calendly' && priceInfo.price > 0
-                          ? 'Payer et Réserver'
-                          : getButtonLabel()
+                      {travelFee > 0 && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Dont frais déplacements : +{travelFee}€
+                        </p>
                       )}
+                    </div>
+                    <button
+                      onClick={handleShare}
+                      className="p-3 bg-white text-gray-700 rounded-full shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md active:scale-95"
+                    >
+                      <Share2 className="w-5 h-5" />
                     </button>
                   </div>
 
-                  {/* Promo Modal and Event Modal remain same, but unreachable if !hasAccess */}
-                  {showPromoModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl animate-scale-in relative">
-                        <button
-                          onClick={() => setShowPromoModal(false)}
-                          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-                        >
-                          <span className="sr-only">Fermer</span>
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <CheckCircle className="w-8 h-8 text-green-600" />
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">Félicitations !</h3>
-                          <p className="text-gray-500 mb-6">Voici votre code promo à utiliser :</p>
-
-                          <div className="bg-gray-100 p-4 rounded-xl flex items-center justify-between mb-6 border-2 border-dashed border-gray-300">
-                            <code className="text-xl font-mono font-bold text-primary tracking-wider">{offer.promo_code}</code>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(offer.promo_code);
-                                toast.success("Code copié !");
-                              }}
-                              className="p-2 text-gray-500 hover:text-primary transition-colors"
-                            >
-                              <Copy className="w-5 h-5" />
-                            </button>
-                          </div>
-
-                          <div className="space-y-3">
-                            <a
-                              href={offer.external_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
-                            >
-                              Accéder au site partenaire
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                            <button
-                              onClick={() => setShowPromoModal(false)}
-                              className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
-                            >
-                              Fermer
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Event Confirm Modal */}
-                  {showEventConfirmModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                      <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl animate-scale-in">
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Calendar className="w-8 h-8 text-primary" />
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmation d'inscription</h3>
-                          <p className="text-gray-500 mb-6">
-                            Vous êtes sur le point de vous inscrire à l'événement :
-                          </p>
-
-                          <div className="bg-gray-50 p-4 rounded-xl mb-6 text-left">
-                            <h4 className="font-bold text-gray-900 mb-1">{offer.title}</h4>
-                            <div className="flex items-center gap-2 text-gray-600 text-sm">
-                              <Clock className="w-4 h-4" />
-                              <span>{getEventDate()}</span>
-                            </div>
-                            <div className="flex items-center text-gray-600 mb-4">
-                              <MapPin className="w-5 h-5 mr-2" />
-                              <span className="mr-4">{offer.city}</span>
-                              <Building className="w-5 h-5 mr-2" />
-                              <Link to={`/partenaire/${offer.partner_id}`} className="hover:text-primary hover:underline transition-colors font-medium">
-                                {offer.partner?.business_name}
-                              </Link>
-                            </div>
-                            <div className="flex items-center text-gray-600 mb-4">
-                              <MapPin className="w-5 h-5 mr-2" />
-                              <span className="mr-4">{offer.city}</span>
-                              <Building className="w-5 h-5 mr-2" />
-                              <Link to={`/partenaire/${offer.partner_id}`} className="hover:text-primary hover:underline transition-colors font-medium">
-                                {offer.partner?.business_name}
-                              </Link>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              onClick={() => setShowEventConfirmModal(false)}
-                              className="py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              onClick={bookEvent}
-                              disabled={bookingLoading || (offer.booking_type === 'calendly' && !calendlyDate)}
-                              className="py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark disabled:opacity-70 disabled:cursor-not-allowed"
-                            >
-                              {(offer.booking_type === 'calendly' && !calendlyDate) ? 'Validation...' : (bookingLoading ? 'Validation...' : 'Confirmer')}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Fake CTA for blurred view, although covered by overlay */}
 
 
-
+                  <button
+                    onClick={handleBooking}
+                    disabled={bookingLoading || isOutOfStock || !hasAccess || isAlreadyBooked}
+                    className={`w-full px-6 py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${isOutOfStock ? 'bg-gray-400' : 'bg-primary hover:bg-primary-dark'
+                      }`}
+                  >
+                    {bookingLoading ? (
+                      <>
+                        <Clock className="w-5 h-5 animate-spin" />
+                        Traitement...
+                      </>
+                    ) : (
+                      offer.booking_type === 'calendly' && priceInfo.price > 0
+                        ? 'Payer et Réserver'
+                        : getButtonLabel()
+                    )}
+                  </button>
                 </div>
+
+                {/* Promo Modal and Event Modal remain same, but unreachable if !hasAccess */}
+                {showPromoModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl animate-scale-in relative">
+                      <button
+                        onClick={() => setShowPromoModal(false)}
+                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <span className="sr-only">Fermer</span>
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Félicitations !</h3>
+                        <p className="text-gray-500 mb-6">Voici votre code promo à utiliser :</p>
+
+                        <div className="bg-gray-100 p-4 rounded-xl flex items-center justify-between mb-6 border-2 border-dashed border-gray-300">
+                          <code className="text-xl font-mono font-bold text-primary tracking-wider">{offer.promo_code}</code>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(offer.promo_code);
+                              toast.success("Code copié !");
+                            }}
+                            className="p-2 text-gray-500 hover:text-primary transition-colors"
+                          >
+                            <Copy className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          <a
+                            href={offer.external_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                          >
+                            Accéder au site partenaire
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                          <button
+                            onClick={() => setShowPromoModal(false)}
+                            className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                          >
+                            Fermer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Event Confirm Modal */}
+                {showEventConfirmModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl animate-scale-in">
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Calendar className="w-8 h-8 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Confirmation d'inscription</h3>
+                        <p className="text-gray-500 mb-6">
+                          Vous êtes sur le point de vous inscrire à l'événement :
+                        </p>
+
+                        <div className="bg-gray-50 p-4 rounded-xl mb-6 text-left">
+                          <h4 className="font-bold text-gray-900 mb-1">{offer.title}</h4>
+                          <div className="flex items-center gap-2 text-gray-600 text-sm">
+                            <Clock className="w-4 h-4" />
+                            <span>{getEventDate()}</span>
+                          </div>
+                          <div className="flex items-center text-gray-600 mb-4">
+                            <MapPin className="w-5 h-5 mr-2" />
+                            <span className="mr-4">{offer.city}</span>
+                            <Building className="w-5 h-5 mr-2" />
+                            <Link to={`/partenaire/${offer.partner_id}`} className="hover:text-primary hover:underline transition-colors font-medium">
+                              {offer.partner?.business_name}
+                            </Link>
+                          </div>
+                          <div className="flex items-center text-gray-600 mb-4">
+                            <MapPin className="w-5 h-5 mr-2" />
+                            <span className="mr-4">{offer.city}</span>
+                            <Building className="w-5 h-5 mr-2" />
+                            <Link to={`/partenaire/${offer.partner_id}`} className="hover:text-primary hover:underline transition-colors font-medium">
+                              {offer.partner?.business_name}
+                            </Link>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            onClick={() => setShowEventConfirmModal(false)}
+                            className="py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={bookEvent}
+                            disabled={bookingLoading || (offer.booking_type === 'calendly' && !calendlyDate)}
+                            className="py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark disabled:opacity-70 disabled:cursor-not-allowed"
+                          >
+                            {(offer.booking_type === 'calendly' && !calendlyDate) ? 'Validation...' : (bookingLoading ? 'Validation...' : 'Confirmer')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
+
               </div>
-            </div >
+            </div>
           </div >
         </div >
       </div >
+
+
+      {/* Sticky Mobile Bar / Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 lg:hidden z-40 flex items-center justify-between gap-4">
+        <div className="flex flex-col">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-bold text-primary">{priceInfo.price}€</span>
+            {priceInfo.price < priceInfo.public_price && (
+              <span className="text-sm text-gray-400 line-through">{priceInfo.public_price}€</span>
+            )}
+          </div>
+          {priceInfo.has_discount && !isPrivileged && (
+            <div className="flex flex-col">
+              <span className="text-xs text-primary font-medium">Prix membre dispo</span>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleBooking}
+          disabled={bookingLoading || isOutOfStock}
+          className={`px-6 py-3 rounded-xl font-bold text-white shadow-lg ${isOutOfStock ? 'bg-gray-400' : 'bg-primary'
+            }`}
+        >
+          {isOutOfStock ? 'Complet' : getButtonLabel()}
+        </button>
+      </div>
 
       <GuestBookingModal
         isOpen={showGuestModal}
@@ -1391,6 +1526,6 @@ export default function OfferPage() {
           toast.success("Compte créé ! Vous êtes connecté.", { icon: '👋' });
         }}
       />
-    </div>
+    </div >
   );
 }
