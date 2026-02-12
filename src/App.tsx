@@ -127,11 +127,7 @@ function App() {
                       <TousLesKiffs />
                     </GoogleMapsLoader>
                   } />
-                  <Route path="/offres/:slug" element={
-                    <GoogleMapsLoader>
-                      <OfferPage />
-                    </GoogleMapsLoader>
-                  } />
+                  <Route path="/offres/:slug" element={<OfferPage />} />
                   <Route path="/abonnement" element={<Subscription />} />
                   <Route path="/paiement" element={<Checkout />} />
                   <Route path="/abonnement-confirme" element={<SubscriptionSuccess />} />
