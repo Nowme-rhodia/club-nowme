@@ -17,6 +17,10 @@ interface MandateContractProps {
 export default function MandateContractTemplate({ partner }: MandateContractProps) {
     const currentDate = format(new Date(), 'dd MMMM yyyy', { locale: fr });
 
+    if (!partner) {
+        return <div className="p-4 text-red-500">Erreur : Données du partenaire manquantes pour le contrat.</div>;
+    }
+
     return (
         <div className="max-w-[21cm] mx-auto bg-white p-12 text-sm leading-relaxed text-justify relative min-h-[29.7cm]">
             <div className="mb-12 text-center">
@@ -38,10 +42,10 @@ export default function MandateContractTemplate({ partner }: MandateContractProp
 
                 <div className="w-1/2 pl-4 border-l border-gray-300">
                     <h3 className="font-bold mb-2 uppercase text-xs tracking-wider">ET :</h3>
-                    <p className="font-bold">{partner.business_name || '[Raisons Sociale]'}</p>
-                    <p>Représentée par {partner.contact_name || '[Nom du représentant]'}</p>
-                    <p>SIRET : {partner.siret || '[SIRET]'}</p>
-                    <p>Adresse : {partner.address || '[Adresse]'}</p>
+                    <p className="font-bold">{partner?.business_name || '[Raisons Sociale]'}</p>
+                    <p>Représentée par {partner?.contact_name || '[Nom du représentant]'}</p>
+                    <p>SIRET : {partner?.siret || '[SIRET]'}</p>
+                    <p>Adresse : {partner?.address || '[Adresse]'}</p>
                     <p className="mt-2 font-bold">(Ci-après le "Mandant")</p>
                 </div>
             </div>
@@ -74,15 +78,15 @@ export default function MandateContractTemplate({ partner }: MandateContractProp
                     </p>
 
                     <div className="my-4 border border-blue-200 bg-blue-50 p-4 rounded text-blue-900">
-                        {partner.commission_model === 'acquisition' ? (
+                        {partner?.commission_model === 'acquisition' ? (
                             <>
                                 <p><strong>Modèle : Acquisition & Fidélisation</strong></p>
                                 <ul className="list-disc pl-5 mt-2">
                                     <li>
-                                        <strong>PREMIER ACHAT :</strong> Pour toute première commande d'un Utilisateur chez le Mandant, une commission de <strong>{partner.commission_rate}%</strong> HT est appliquée sur le montant total TTC de la transaction.
+                                        <strong>PREMIER ACHAT :</strong> Pour toute première commande d'un Utilisateur chez le Mandant, une commission de <strong>{partner?.commission_rate ?? 0}%</strong> HT est appliquée sur le montant total TTC de la transaction.
                                     </li>
                                     <li>
-                                        <strong>ACHATS SUIVANTS :</strong> Pour toutes les commandes suivantes de ce même Utilisateur chez le Mandant, une commission de gestion réduite de <strong>{partner.commission_rate_repeat}%</strong> HT est appliquée.
+                                        <strong>ACHATS SUIVANTS :</strong> Pour toutes les commandes suivantes de ce même Utilisateur chez le Mandant, une commission de gestion réduite de <strong>{partner?.commission_rate_repeat ?? 0}%</strong> HT est appliquée.
                                     </li>
                                 </ul>
                             </>
@@ -90,7 +94,7 @@ export default function MandateContractTemplate({ partner }: MandateContractProp
                             <>
                                 <p><strong>Modèle : Commission Fixe</strong></p>
                                 <p className="mt-2">
-                                    Une commission unique de <strong>{partner.commission_rate}%</strong> HT est appliquée sur le montant total TTC de chaque transaction réalisée via la plateforme.
+                                    Une commission unique de <strong>{partner?.commission_rate ?? 0}%</strong> HT est appliquée sur le montant total TTC de chaque transaction réalisée via la plateforme.
                                 </p>
                             </>
                         )}

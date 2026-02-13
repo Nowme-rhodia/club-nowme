@@ -56,7 +56,22 @@ Deno.serve(async (req) => {
             .eq('id', offer_id)
             .single();
 
+
         if (offerError || !offer) throw new Error("Offer not found");
+
+        // --- RESTRICTED BUSINESS LOGIC (Stripe Compliance) ---
+        // Block payments for offers related to restricted jurisdictions.
+        const RESTRICTED_KEYWORDS = ['iran', 'cuba', 'syrie', 'syria', 'corée du nord', 'north korea', 'crimée', 'crimea', 'donetsk', 'luhansk', 'russie', 'russia'];
+
+        const textToScan = (offer.title + " " + (offer.description || "")).toLowerCase();
+        const foundRestricted = RESTRICTED_KEYWORDS.find(keyword => textToScan.includes(keyword));
+
+        if (foundRestricted) {
+            console.error(`[COMPLIANCE] Blocked transaction for restricted jurisdiction: ${foundRestricted}`);
+            throw new Error(`Paiement refusé : Les transactions liées à cette destination (${foundRestricted.toUpperCase()}) sont restreintes par les régulations financières internationales.`);
+        }
+        // -----------------------------------------------------
+
 
         // ... Variant Logic ...
         let unitAmount = Math.round(price * 100);

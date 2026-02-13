@@ -37,12 +37,26 @@ export default function NotificationCenter() {
                 return;
             }
             // Fallback
-            const { data } = await supabase
-                .from('user_profiles')
+            const { data } = await (supabase
+                .from('user_profiles') as any)
                 .select('partner_id')
                 .eq('user_id', user.id)
-                .single();
-            if (data?.partner_id) setPartnerId(data.partner_id);
+                .maybeSingle();
+
+            if (data?.partner_id) {
+                setPartnerId(data.partner_id);
+            } else {
+                // Try direct lookup in partners table
+                const { data: partnerDirect } = await (supabase
+                    .from('partners') as any)
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                if (partnerDirect?.id) {
+                    setPartnerId(partnerDirect.id);
+                }
+            }
         };
         getPartnerId();
     }, [user, profile]);
@@ -92,24 +106,25 @@ export default function NotificationCenter() {
     const fetchNotifications = async () => {
         if (!partnerId) return;
         setLoading(true);
-        const { data, error } = await supabase
-            .from('partner_notifications')
+        const { data, error } = await (supabase
+            .from('partner_notifications') as any)
             .select('*')
             .eq('partner_id', partnerId)
             .order('created_at', { ascending: false })
             .limit(20);
 
         if (!error && data) {
-            setNotifications(data);
-            setUnreadCount(data.filter(n => !n.read_status).length);
+            const notificationsData = data as Notification[];
+            setNotifications(notificationsData);
+            setUnreadCount(notificationsData.filter((n) => !n.read_status).length);
         }
         setLoading(false);
     };
 
     const markAsRead = async (id: string) => {
         if (!partnerId) return;
-        const { error } = await supabase
-            .from('partner_notifications')
+        const { error } = await (supabase
+            .from('partner_notifications') as any)
             .update({ read_status: true })
             .eq('id', id);
 
@@ -121,8 +136,8 @@ export default function NotificationCenter() {
 
     const markAllRead = async () => {
         if (!partnerId) return;
-        await supabase
-            .from('partner_notifications')
+        await (supabase
+            .from('partner_notifications') as any)
             .update({ read_status: true })
             .eq('partner_id', partnerId)
             .eq('read_status', false);

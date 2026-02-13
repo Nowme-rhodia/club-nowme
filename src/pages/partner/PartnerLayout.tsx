@@ -22,14 +22,31 @@ export default function PartnerLayout() {
       const partnerId = profile?.partner_id;
 
       if (!partnerId) {
-        // Fallback: récupérer depuis user_profiles
+        // Fallback: chercher dans user_profiles
+        let partnerIdFound = null;
+
         const { data: profileData } = await (supabase
           .from("user_profiles") as any)
           .select("partner_id")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
-        if (!profileData || !profileData.partner_id) {
+        if (profileData && profileData.partner_id) {
+          partnerIdFound = profileData.partner_id;
+        } else {
+          // Double Fallback: chercher directement dans la table partners via user_id
+          const { data: partnerDirect } = await (supabase
+            .from("partners") as any)
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (partnerDirect) {
+            partnerIdFound = partnerDirect.id;
+          }
+        }
+
+        if (!partnerIdFound) {
           setBusinessName("Mon entreprise");
           return;
         }
@@ -37,8 +54,8 @@ export default function PartnerLayout() {
         // Récupérer les infos du partenaire
         const { data, error } = await (supabase
           .from("partners") as any)
-          .select("business_name, contract_signed_at") // Added field
-          .eq("id", profileData.partner_id)
+          .select("business_name, contract_signed_at")
+          .eq("id", partnerIdFound)
           .maybeSingle();
 
         if (!error && data) {
