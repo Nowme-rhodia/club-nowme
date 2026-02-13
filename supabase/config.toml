@@ -104,3 +104,33 @@ entrypoint = "./functions/admin-delete-user/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/admin-delete-user/*.html" ]
+
+[functions.fix-stripe-payouts]
+enabled = true
+verify_jwt = true
+import_map = "./functions/fix-stripe-payouts/deno.json"
+entrypoint = "./functions/fix-stripe-payouts/index.ts"
+
+[functions.send-onboarding-reminders]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-onboarding-reminders/deno.json"
+entrypoint = "./functions/send-onboarding-reminders/index.ts"
+
+[functions.send-booking-reminder]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-booking-reminder/deno.json"
+entrypoint = "./functions/send-booking-reminder/index.ts"
+
+[functions.send-reengagement-email]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-reengagement-email/deno.json"
+entrypoint = "./functions/send-reengagement-email/index.ts"
+
+[functions.send-low-stock-alert]
+enabled = true
+verify_jwt = true
+import_map = "./functions/send-low-stock-alert/deno.json"
+entrypoint = "./functions/send-low-stock-alert/index.ts"

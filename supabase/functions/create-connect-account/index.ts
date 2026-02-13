@@ -86,7 +86,14 @@ serve(async (req) => {
                 business_type: 'company',
                 company: {
                     name: partner.business_name,
-                }
+                },
+                settings: {
+                    payouts: {
+                        schedule: {
+                            interval: 'daily',
+                        },
+                    },
+                },
             });
 
             accountId = account.id;

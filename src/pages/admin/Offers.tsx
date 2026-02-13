@@ -135,7 +135,8 @@ export default function Offers() {
           body: {
             to: offer.partner.contact_email,
             contactName: offer.partner.contact_name,
-            offerTitle: offer.title
+            offerTitle: offer.title,
+            commissionRate: offer.partner.commission_rate
           }
         });
       }

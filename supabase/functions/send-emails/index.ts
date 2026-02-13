@@ -1,5 +1,4 @@
 // ✅ Cron d’envoi des emails (batch depuis table "emails")
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createSupabaseClient, corsHeaders, handleCors, logger } from "../_shared/utils/index.ts";
 
 const MAX_RETRIES = 3;
@@ -7,7 +6,7 @@ const BATCH_SIZE = 10;
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   const corsResponse = handleCors(req);
   if (corsResponse) return corsResponse;
 
