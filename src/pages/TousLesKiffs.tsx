@@ -105,10 +105,25 @@ export default function TousLesKiffs() {
         const { data, error } = await supabase
           .from('offers')
           .select(`
-            *,
+            id,
+            slug,
+            title,
+            description,
+            image_url,
             promo_conditions,
             booking_type,
-            category:offer_categories!offers_category_id_fkey(*),
+            status,
+            created_at,
+            coordinates,
+            street_address,
+            zip_code,
+            city,
+            is_online,
+            service_zones,
+            event_start_date,
+            event_end_date,
+            offer_media(url),
+            category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
             offer_variants(price, discounted_price),
             partner:partners!offers_partner_id_fkey(business_name, address, contact_email)
           `)

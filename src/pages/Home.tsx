@@ -22,9 +22,20 @@ function LatestOffers() {
         const { data, error } = await supabase
           .from('offers')
           .select(`
-            *,
+            id,
+            title,
+            description,
+            image_url,
             promo_conditions,
             booking_type,
+            status,
+            created_at,
+            coordinates,
+            street_address,
+            zip_code,
+            city,
+            slug,
+            offer_media(url),
             offer_variants(price, discounted_price),
             partner:partners!offers_partner_id_fkey(business_name, address)
           `)
