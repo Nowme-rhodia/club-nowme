@@ -16,9 +16,8 @@
   <link rel="icon" type="image/svg+xml" href="/logo-nowme.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Ajout de la balise CSP pour Stripe + Google Maps + Google Ads -->
   <meta http-equiv="Content-Security-Policy"
-    content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://js.stripe.com https://assets.calendly.com https://www.googletagmanager.com;" />
+    content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://maps.gstatic.com https://js.stripe.com https://assets.calendly.com https://www.googletagmanager.com; connect-src 'self' https://dqfyuhwrjozoxadkccdj.supabase.co https://*.supabase.co https://maps.googleapis.com https://maps.gstatic.com https://www.google-analytics.com https://www.googletagmanager.com https://www.google.com;" />
 
   <title>Nowme - Ton kiff au féminin</title>
 
@@ -28,7 +27,7 @@
 
   <!-- Performance Hints -->
   <link rel="preconnect" href="https://images.unsplash.com" />
-  <link rel="preconnect" href="https://jbbttqanfphcswrkslue.supabase.co" />
+  <link rel="preconnect" href="https://dqfyuhwrjozoxadkccdj.supabase.co" />
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://club.nowme.fr" />

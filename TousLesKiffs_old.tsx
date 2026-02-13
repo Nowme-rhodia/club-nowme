@@ -78,7 +78,6 @@ export default function TousLesKiffs() {
   const [isOnlineFilter, setIsOnlineFilter] = useState(false);
   const [isWalletFilter, setIsWalletFilter] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
 
@@ -187,7 +186,6 @@ export default function TousLesKiffs() {
         }
       } catch (err) {
         console.error('Error:', err);
-        setError('Impossible de charger les kiffs. Vérifiez votre connexion internet ou réessayez plus tard.');
       } finally {
         setIsLoading(false);
       }
@@ -629,25 +627,7 @@ export default function TousLesKiffs() {
       </div>
       {/* Grille des offres */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">Oups ! Une erreur est survenue</h3>
-            <p className="text-gray-500 max-w-md mx-auto mb-6">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              Réessayer
-            </button>
-          </div>
-        )}
-
-        {isLoading && !error && (
+        {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
             {[...Array(8)].map((_, i) => (
               <div
