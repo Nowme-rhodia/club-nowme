@@ -334,7 +334,7 @@ export default function UpdatePassword() {
                 <Check className="h-6 w-6 text-green-600" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Mot de passe mis à jour 🎉</h3>
-              <p className="text-sm text-gray-500 mb-6">Redirection en cours...</p>
+              <p className="text-sm text-gray-500 mb-6">Vous pouvez maintenant vous connecter.</p>
               <Link
                 to="/auth/signin"
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full text-white bg-primary hover:bg-primary-dark"
