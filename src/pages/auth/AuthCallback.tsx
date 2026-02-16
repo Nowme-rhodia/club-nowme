@@ -13,11 +13,11 @@ const AuthCallback = () => {
     console.log('AuthCallback - URL complète:', window.location.href);
     console.log('AuthCallback - Location search:', location.search);
     console.log('AuthCallback - Location hash:', location.hash);
-    
+
     // Récupérer les paramètres de l'URL
     const searchParams = new URLSearchParams(location.search);
     const hashParams = location.hash ? new URLSearchParams(location.hash.substring(1)) : null;
-    
+
     // Vérifier les différents formats possibles
     const type = searchParams.get('type') || hashParams?.get('type');
     const tokenHash = searchParams.get('token_hash') || hashParams?.get('token_hash');
@@ -25,7 +25,7 @@ const AuthCallback = () => {
     const refreshToken = searchParams.get('refresh_token') || hashParams?.get('refresh_token');
     const error = searchParams.get('error') || hashParams?.get('error');
     const errorDescription = searchParams.get('error_description') || hashParams?.get('error_description');
-    
+
     // Afficher les paramètres extraits pour le débogage
     console.log('AuthCallback - Paramètres extraits:', {
       type,
@@ -47,12 +47,13 @@ const AuthCallback = () => {
       case 'recovery':
         // Si nous avons un token_hash, rediriger directement vers la page de mise à jour du mot de passe
         if (tokenHash) {
-          navigate(`/auth/update-password?token_hash=${tokenHash}&type=recovery`);
-        } 
+          const emailParam = searchParams.get('email') || hashParams?.get('email');
+          navigate(`/auth/update-password?token_hash=${tokenHash}&type=recovery${emailParam ? `&email=${encodeURIComponent(emailParam)}` : ''}`);
+        }
         // Si nous avons un access_token, utiliser l'ancien format
         else if (accessToken) {
           navigate(`/auth/update-password?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}`);
-        } 
+        }
         else {
           setError('Token de récupération manquant. Veuillez demander un nouveau lien de réinitialisation.');
         }

@@ -97,7 +97,8 @@ export default function UpdatePassword() {
             if (mounted) {
               // Don't error out hard yet, maybe the user wants to retry?
               // But effectively the token is bad.
-              setError('Ce lien semble invalide ou a expiré.');
+              // Expose specific error for debugging
+              setError(verifyError.message || 'Ce lien semble invalide ou a expiré.');
               setChecking(false);
             }
           } else {
