@@ -23,11 +23,11 @@ export default function UpdatePassword() {
   const [isSessionUpdate, setIsSessionUpdate] = useState(false); // New flag to track if updating via existing session
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
+  // Use a ref to track if we should verify, to avoid stale closures in timeout
+  const checkingRef = React.useRef(true);
+
   useEffect(() => {
     let mounted = true;
-
-    // Use a ref to track if we should verify, to avoid stale closures in timeout
-    const checkingRef = React.useRef(true);
 
     // Timeout de sécurité : Si au bout de 8s rien ne s'est passé, on arrête de charger
     const safetyTimeout = setTimeout(() => {
