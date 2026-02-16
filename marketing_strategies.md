@@ -84,26 +84,61 @@ En tant qu'expert marketing ciblant les femmes de 30+, voici une analyse différ
 
 ---
 
-## 3. Stratégie d'Affiliation (Monétisation Additionnelle)
+## 3. Stratégie d'Affiliation (Partenaires Approuvés & À intégrer)
 
-Pour booster la valeur perçue de l'abonnement et générer des revenus passifs, voici une sélection de programmes d'affiliation alignés avec la cible "Femme 30+ / Lifestyle / Bien-être".
+Voici la liste officielle des 11 partenaires **validés** à intégrer dès maintenant sur la plateforme.
 
-### A. Voyage & Expériences
-*   **GetYourGuide / Viator / Klook** : Pour les activités, visites et expériences locales. Idéal pour proposer des "sorties entre filles" dans différentes villes.
-*   **Booking.com (Section Attractions)** : Simple et efficace pour les billets coupe-file.
-*   **SNCF Connect** : Pour les escapades week-end (Bons plans train).
+### A. Beauté & Bien-être
+*   **Hairlust FR** (Cheveux) : Soins capillaires naturels et innovants.
+    *   *Offre à créer :* "Découverte Hairlust : Soins cheveux naturels"
+*   **Maison des Fragrances** (Parfums) : Grand catalogue de parfums et déodorants.
+    *   *Offre à créer :* "Vos parfums préférés à prix doux"
+*   **Bonjour Drink** (Bien-être/Food) : Boissons adaptogènes naturelles.
+    *   *Offre à créer :* "Energie & Focus au naturel avec Bonjour Drink"
+*   **French Mush** (Santé/Bien-être) : Champignons adaptogènes (Lions Mane, etc.).
+    *   *Offre à créer :* "Boostez votre immunité avec French Mush"
 
-### B. Beauté & Bien-être
-*   **Blissim (ex-Birchbox) / Glossybox** : Box beauté mensuelle. Très fort taux de conversion sur cible féminine.
-*   **Sephora / L'Occitane / Oh My Cream** : Produits de beauté premium. "Oh My Cream" a une image très "clean beauty" qui colle bien avec une cible 30+ soucieuse.
-*   **ClassPass** : Accès à des salles de sport et studios (Yoga, Pilates). Parfait pour l'aspect "Healthy" du club.
+### B. Maison & Déco
+*   **La Couette Française** (Maison) : Literie premium Made in France.
+    *   *Offre à créer :* "Nuits de rêve Made in France"
+*   **Deesup** (Déco/Design) : Mobilier design de seconde main.
+    *   *Offre à créer :* "Design iconique de seconde main"
+*   **Darty** (Électroménager/Tech) : L'incontournable pour la maison.
+    *   *Offre à créer :* "Tout l'équipement maison avec Darty"
 
-### C. Lifestyle & Mode
-*   **Showroomprivé / Veepee** : Les ventes privées restent un gros levier ("Bons plans shopping").
-*   **HelloFresh / Quitoque** : Box repas. Répond à la problématique "Charge mentale" des dîners.
-*   **Boursorama (The Corner)** : Si tu veux proposer du "Cashback" ou des bons plans bancaires (très rémunérateur en parrainage).
+### C. Lifestyle & Loisirs
+*   **Fnac** (Culture/Tech) : Livres, Billetterie, High-Tech.
+    *   *Offre à créer :* "Culture & Loisirs : Vos envies à portée de clic"
+*   **MonBento** (Lifestyle/Food) : Lunchbox design et pratiques.
+    *   *Offre à créer :* "Vos déjeuners nomades avec style"
+*   **Sport Découverte** (Loisirs/Cadeaux) : Stages, baptêmes, activités insolites.
+    *   *Offre à créer :* "Offrez des sensations : Pilotage, Saut, Bien-être..."
+*   **ASMC** (Outdoor/Aventure) : Camping, survie, nature.
+    *   *Offre à créer :* "L'appel de l'aventure : Équipement Outdoor"
 
-**Mise en place :**
-1.  S'inscrire sur les plateformes d'affiliation (Awin, Affilae, Kwanko).
-2.  Créer un "Partenaire" dans l'admin pour chaque marque (ex: Partenaire "Blissim").
-3.  Créer une offre avec le lien d'affiliation en "Lien Externe".
+---
+
+### 🛠️ Procédure d'Intégration (Pas à Pas)
+
+Pour chaque partenaire ci-dessus :
+
+1.  **Créer le compte Partenaire (Admin)**
+    *   Aller dans **Admin > Utilisateurs > Créer un partenaire**.
+    *   **Nom :** [Nom du Partenaire] (ex: MonBento).
+    *   **Email :** `rhodia+[nompartenaire]@nowme.fr` (ex: `rhodia+monbento@nowme.fr`).
+    *   **Catégorie :** Choisir la plus pertinente (Maison, Beauté, etc.).
+
+2.  **Récupérer le Lien d'Affiliation (Awin)**
+    *   Aller sur Awin > Outils > **Générateur de liens**.
+    *   Choisir le partenaire.
+    *   Coller l'URL de destination (ex: la page d'accueil de leur site ou une page promo).
+    *   Copier le **lien long** généré (commençant souvent par `https://www.awin1.com...`).
+
+3.  **Créer l'Offre (Admin)**
+    *   Aller dans **Admin > Offres > Créer une offre**.
+    *   Sélectionner le partenaire créé à l'étape 1.
+    *   **Titre :** Voir suggestions ci-dessus.
+    *   **Type de réservation :** "Lien Externe".
+    *   **Lien :** Coller le lien Awin généré.
+    *   **Image :** Utiliser une belle image produit ou le logo (dispo sur Awin).
+    *   **Description :** Décrire en une phrase l'avantage (ex: "Profitez de la livraison offerte" ou "Découvrez la sélection").
