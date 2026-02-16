@@ -246,7 +246,7 @@ function App() {
                   <Route path="/auth/signin" element={<Navigate to="/connexion" replace />} />
                   <Route path="/auth/signup" element={<Navigate to="/inscription" replace />} />
                   <Route path="/auth/forgot-password" element={<Navigate to="/mot-de-passe-oublie" replace />} />
-                  <Route path="/auth/update-password" element={<Navigate to="/nouveau-mot-de-passe" replace />} />
+                  <Route path="/auth/update-password" element={<UpdatePassword />} />
                   <Route path="/update-password" element={<Navigate to="/nouveau-mot-de-passe" replace />} />
 
                   {/* Account Redirects */}

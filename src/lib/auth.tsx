@@ -613,7 +613,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectTo = `${window.location.origin}/auth/update-password`;
+      const redirectTo = `${window.location.origin}/nouveau-mot-de-passe`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) throw error;
       toast.success('Lien envoyé par email');
