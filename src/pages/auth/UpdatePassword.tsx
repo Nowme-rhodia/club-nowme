@@ -26,9 +26,12 @@ export default function UpdatePassword() {
   useEffect(() => {
     let mounted = true;
 
+    // Use a ref to track if we should verify, to avoid stale closures in timeout
+    const checkingRef = React.useRef(true);
+
     // Timeout de sécurité : Si au bout de 8s rien ne s'est passé, on arrête de charger
     const safetyTimeout = setTimeout(() => {
-      if (mounted && checking) {
+      if (mounted && checkingRef.current) {
         console.warn('⚠️ Safety timeout reached in UpdatePassword.');
         setChecking(false);
         // Si on n'a toujours rien trouvé, on affiche une erreur générique
