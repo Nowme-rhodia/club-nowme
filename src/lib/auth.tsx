@@ -477,7 +477,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (event === 'PASSWORD_RECOVERY') {
             console.log('🔐 PASSWORD_RECOVERY détecté');
             toast.success('Lien validé, tu peux définir ton nouveau mot de passe ✨');
-            navigate('/auth/update-password');
+            // Only redirect if we are not already on the update password page to prevent reloading/stripping params
+            if (!window.location.pathname.includes('update-password') && !window.location.pathname.includes('nouveau-mot-de-passe')) {
+              navigate('/nouveau-mot-de-passe');
+            }
           }
 
           // Special handling for TOKEN_REFRESHED to avoid clearing profile on transient errors
