@@ -204,12 +204,14 @@ export default function TousLesKiffs() {
           setOffersWithLocations(formattedOffers);
         }
       } catch (err: any) {
-        // Ignore abort errors - they're intentional
-        if (err.name === 'AbortError' || err.message?.includes('aborted')) {
-          console.log('Fetch cancelled (component unmounted)');
-          return;
+        // Supabase wraps AbortError in PostgrestError format: {message, details, hint, code}
+        // We need to check the message content, not err.name
+        const errorMessage = err?.message || err?.details || String(err);
+        if (errorMessage.includes('AbortError') || errorMessage.includes('aborted')) {
+          console.log('✓ Fetch cancelled intentionally (component unmounted or navigation)');
+          return; // Silent exit - this is expected behavior
         }
-        console.error('Error:', err);
+        console.error('Error fetching offers:', err);
         setError('Impossible de charger les kiffs. Vérifiez votre connexion internet ou réessayez plus tard.');
       } finally {
         setIsLoading(false);
