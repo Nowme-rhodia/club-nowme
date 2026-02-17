@@ -320,10 +320,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
         }
-      } catch (e) {
-        console.error('Auth init error:', e);
-        setUser(null);
-        setProfile(null);
+      } catch (e: any) {
+        // Supabase's internal AbortError is a known issue with localStorage lock conflicts
+        // It happens when: multiple tabs, rapid navigation, or React StrictMode unmount/remount
+        if (e?.name === 'AbortError' || e?.message?.includes('aborted')) {
+          console.warn('⚠️ Auth init interrupted (AbortError). This is usually safe to ignore.');
+          // Don't crash the app - just set a safe default state
+          setUser(null);
+          setProfile(null);
+        } else {
+          console.error('Auth init error:', e);
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
