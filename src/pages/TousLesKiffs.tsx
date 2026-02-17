@@ -100,6 +100,8 @@ export default function TousLesKiffs() {
   }, [offersWithLocations]);
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchOffers = async () => {
       try {
         const { data, error } = await supabase
@@ -128,7 +130,8 @@ export default function TousLesKiffs() {
             partner:partners!offers_partner_id_fkey(business_name, address, contact_email)
           `)
           .eq('status', 'approved')
-          .order('created_at', { ascending: false }); // Tri par défaut : les plus récents d'abord
+          .order('created_at', { ascending: false })
+          .abortSignal(abortController.signal); // Add abort signal
 
         if (error) {
           console.error('Error fetching offers:', error);
@@ -200,7 +203,12 @@ export default function TousLesKiffs() {
           });
           setOffersWithLocations(formattedOffers);
         }
-      } catch (err) {
+      } catch (err: any) {
+        // Ignore abort errors - they're intentional
+        if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+          console.log('Fetch cancelled (component unmounted)');
+          return;
+        }
         console.error('Error:', err);
         setError('Impossible de charger les kiffs. Vérifiez votre connexion internet ou réessayez plus tard.');
       } finally {
@@ -209,7 +217,12 @@ export default function TousLesKiffs() {
     };
 
     fetchOffers();
-  }, []);
+
+    // Cleanup function to cancel fetch if component unmounts
+    return () => {
+      abortController.abort();
+    };
+  }, [isAdmin, isSubscriber]); // Add dependencies to re-fetch when auth state changes
 
   const filteredOffers = useMemo(() => {
     let filtered = offersWithLocations;
