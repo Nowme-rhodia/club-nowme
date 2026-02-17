@@ -133,9 +133,10 @@ export default function TousLesKiffs() {
           .order('created_at', { ascending: false })
           .abortSignal(abortController.signal); // Add abort signal
 
+
         if (error) {
-          console.error('Error fetching offers:', error);
-          return;
+          // Don't log here - let the catch block handle it with proper AbortError detection
+          throw error;
         }
 
         if (data) {
