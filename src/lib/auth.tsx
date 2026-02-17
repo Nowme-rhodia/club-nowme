@@ -313,7 +313,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
-        if (!currentUser) {
+        if (currentUser) {
+          // Critical: We must call this here to keep the component "busy"
+          // Otherwise React StrictMode + fast completion = AbortError
+          await loadUserProfile(currentUser.id);
+        } else {
           setProfile(null);
         }
       } catch (e) {

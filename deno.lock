@@ -1,0 +1,68 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.96.0",
+    "https://esm.sh/iceberg-js@^0.8.1?target=denonext": "https://esm.sh/iceberg-js@0.8.1?target=denonext"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/auth-js@2.96.0/denonext/auth-js.mjs": "72acb033e2c49b99d8d45fc8a0f68ce596be2030f95d2d664dfb880ecdac161d",
+    "https://esm.sh/@supabase/functions-js@2.96.0/denonext/functions-js.mjs": "5323f4fbc0127e5855d6456046b6437d0a04fc211b9614e374107dacddb07a87",
+    "https://esm.sh/@supabase/postgrest-js@2.96.0/denonext/postgrest-js.mjs": "625e470d14ff59b721b2a6bd37e958c848dec541321164a9e2be7cd9b54962ce",
+    "https://esm.sh/@supabase/realtime-js@2.96.0/denonext/realtime-js.mjs": "d0c5ff2e45fc6e2e6059b5d9deb3552509cd1bc6478362554d87254156b3e10c",
+    "https://esm.sh/@supabase/storage-js@2.96.0/denonext/storage-js.mjs": "3cfd15a8d4c806a5e2eb511630a2bbdd66ca736b552788bd0feb1644d18fdfe7",
+    "https://esm.sh/@supabase/supabase-js@2.96.0": "c5a179bd572d3cbe716930ad1edeba4f0bcde58e531d8c1b894c6c1aaa8eab0f",
+    "https://esm.sh/@supabase/supabase-js@2.96.0/denonext/supabase-js.mjs": "b67d2eeb546259350cd3928047ec8e9a184e451af04f778c9e0953eaca5cb12e",
+    "https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs": "d839d81a2e3966500ca2cdd0c1cb458e9608bacfc91f7bb67a69b2e878dcdb4f",
+    "https://esm.sh/iceberg-js@0.8.1?target=denonext": "58c849d7fe2bf4eca4a84eb501e83c161a7d8c34ca1bec15a962b3bec3062633",
+    "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs": "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@playwright/test@^1.57.0",
+        "npm:@react-google-maps/api@^2.20.5",
+        "npm:@stripe/stripe-js@^2.4.0",
+        "npm:@supabase/supabase-js@^2.90.1",
+        "npm:@tailwindcss/forms@~0.5.11",
+        "npm:@tailwindcss/typography@~0.5.19",
+        "npm:@types/dompurify@^3.0.5",
+        "npm:@types/node@^20.19.26",
+        "npm:@types/rc-slider@^9.3.0",
+        "npm:@types/react-dom@^18.2.19",
+        "npm:@types/react@^18.2.55",
+        "npm:@typescript-eslint/eslint-plugin@^7.0.1",
+        "npm:@typescript-eslint/parser@^7.0.1",
+        "npm:@vitejs/plugin-react@^4.2.1",
+        "npm:autoprefixer@^10.4.17",
+        "npm:commander@14",
+        "npm:date-fns@^3.6.0",
+        "npm:dompurify@^3.3.1",
+        "npm:dotenv@^16.6.1",
+        "npm:eslint-plugin-react-hooks@^4.6.0",
+        "npm:eslint-plugin-react-refresh@~0.4.5",
+        "npm:eslint@^8.56.0",
+        "npm:framer-motion@^11.18.2",
+        "npm:lucide-react@0.330",
+        "npm:node-fetch@^3.3.2",
+        "npm:pdf-lib@^1.17.1",
+        "npm:pg@^8.16.3",
+        "npm:postcss@^8.4.35",
+        "npm:rc-slider@^11.1.9",
+        "npm:react-dom@^18.2.0",
+        "npm:react-helmet-async@^2.0.5",
+        "npm:react-hook-form@^7.61.1",
+        "npm:react-hot-toast@^2.5.1",
+        "npm:react-markdown@^10.1.0",
+        "npm:react-quill-new@^3.7.0",
+        "npm:react-router-dom@^6.22.0",
+        "npm:react@^18.2.0",
+        "npm:slugify@^1.6.6",
+        "npm:stripe@^20.2.0",
+        "npm:tailwindcss@^3.4.1",
+        "npm:typescript@^5.3.3",
+        "npm:use-places-autocomplete@^4.0.1",
+        "npm:vite@^5.0.12"
+      ]
+    }
+  }
+}

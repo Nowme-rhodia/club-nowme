@@ -1,13 +1,13 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { serve } from "std/http/server.ts";
+import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-serve(async (req) => {
+serve(async (req: Request) => {
     try {
         console.log("🚀 Starting Re-engagement Campaign...");
 
@@ -19,7 +19,7 @@ serve(async (req) => {
         // Fetch all users first (pagination might be needed for large scale, but fine for now)
         const { data: users, error: userError } = await supabase
             .from("user_profiles")
-            .select("user_id, email, first_name")
+            .select("user_id, email, first_name, partner_id")
             .not("email", "is", null);
 
         if (userError) throw userError;
@@ -32,8 +32,11 @@ serve(async (req) => {
 
         if (bookingError) throw bookingError;
 
-        const activeUserIds = new Set(recentBookings?.map(b => b.user_id));
-        const inactiveUsers = users?.filter(u => !activeUserIds.has(u.user_id)) || [];
+        const activeUserIds = new Set(recentBookings?.map((b: any) => b.user_id));
+
+        // Exclude partners - they have their own dedicated onboarding reminder system
+        const inactiveUsersRaw = users?.filter((u: any) => !activeUserIds.has(u.user_id)) || [];
+        const inactiveUsers = inactiveUsersRaw.filter((u: any) => !u.partner_id); // Exclude anyone who IS a partner
 
         console.log(`Found ${inactiveUsers.length} inactive users.`);
 
@@ -45,8 +48,8 @@ serve(async (req) => {
             .eq("subject", "Tu nous manques ! 💔")
             .gte("created_at", ninetyDaysAgo.toISOString());
 
-        const contactedEmails = new Set(sentEmails?.map(e => e.to_address));
-        const finalTargets = inactiveUsers.filter(u => !contactedEmails.has(u.email));
+        const contactedEmails = new Set(sentEmails?.map((e: any) => e.to_address));
+        const finalTargets = inactiveUsers.filter((u: any) => !contactedEmails.has(u.email));
 
         console.log(`Sending to ${finalTargets.length} users after filtering.`);
 
@@ -67,7 +70,7 @@ serve(async (req) => {
                     <p>De nombreuses nouveautés sont arrivées depuis ta dernière visite : nouveaux spas, ateliers, restaurants...</p>
 
                     <div style="margin: 30px 0;">
-                        <a href="https://club.nowme.fr/categories" style="background-color: #BE185D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; font-weight: bold;">
+                        <a href="https://club.nowme.fr/tous-les-kiffs" style="background-color: #BE185D; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; font-weight: bold;">
                             Découvrir les nouveautés
                         </a>
                     </div>
@@ -104,8 +107,8 @@ serve(async (req) => {
             status: 200,
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error:", error);
-        return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+        return new Response(JSON.stringify({ error: error?.message || 'Unknown error' }), { status: 500 });
     }
 });
