@@ -17,6 +17,7 @@ import { AddressAutocomplete } from '../components/AddressAutocomplete';
 import { stripHtmlAndDecode } from '../utils/textFormatters';
 import { getVideoEmbedUrl } from '../utils/video';
 import DOMPurify from 'dompurify';
+import { getOptimizedImage } from '../utils/imageOptimizer';
 
 // Type definition to avoid errors
 declare global {
@@ -317,12 +318,25 @@ export default function OfferPage() {
   const gradient = getCategoryGradient(category?.slug || 'default');
   const backgroundImage = getCategoryBackground(category?.slug || 'default');
 
+  // Stabilize random coordinates to prevent hydration mismatches and map jitter
+  // We use a simple hash of the title/slug to generate "random-looking" but deterministic offsets
+  const pseudoRandom = (seed: string) => {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const x = Math.sin(hash++) * 10000;
+    return x - Math.floor(x);
+  };
+
   const coordinates = offer.parsed_coordinates ? {
     lat: offer.parsed_coordinates.lat,
     lng: offer.parsed_coordinates.lng
   } : {
-    lat: 48.8566 + (Math.random() - 0.5) * 0.1,
-    lng: 2.3522 + (Math.random() - 0.5) * 0.1,
+    // Default to Paris with stable offset
+    lat: 48.8566 + (pseudoRandom(offer.slug || offer.title || 'lat') - 0.5) * 0.1,
+    lng: 2.3522 + (pseudoRandom(offer.title || offer.slug || 'lng') - 0.5) * 0.1,
   };
 
   const handleShare = async () => {
@@ -705,9 +719,9 @@ export default function OfferPage() {
                 {images.length > 0 ? (
                   <>
                     <img
-                      src={images[currentImageIndex]}
+                      src={getOptimizedImage(images[currentImageIndex], 800, 800)}
                       alt={offer.title}
-                      fetchPriority="high"
+                      fetchpriority="high"
                       decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />

@@ -45,7 +45,7 @@ export default function SignUp() {
     };
   };
 
-  const [formData, setFormData] = useState(generateRandomData());
+  const [formData, setFormData] = useState(() => generateRandomData());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);

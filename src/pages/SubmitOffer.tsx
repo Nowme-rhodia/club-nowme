@@ -32,6 +32,7 @@ interface FormData {
   confirmPassword?: string;
   mainCategoryId: string;
   subcategoryIds: string[];
+  acceptTerms: boolean;
 }
 
 export default function SubmitOffer() {
@@ -53,6 +54,7 @@ export default function SubmitOffer() {
     confirmPassword: '',
     mainCategoryId: '',
     subcategoryIds: [],
+    acceptTerms: false,
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,13 +126,24 @@ export default function SubmitOffer() {
       newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
     }
 
+    if (!formData.acceptTerms) {
+      newErrors.acceptTerms = 'Vous devez accepter les conditions générales';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    // Handle checkbox separately
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+
     // Clear error when user starts typing
     if (errors[name as keyof FormData]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
@@ -684,23 +697,30 @@ export default function SubmitOffer() {
                 </div>
 
                 {/* Terms Acceptance */}
-                <div className="flex items-start bg-blue-50/50 p-4 rounded-lg">
-                  <div className="flex items-center h-5">
+                <div className={`flex items-start bg-blue-50/50 p-4 rounded-lg transition-colors ${errors.acceptTerms ? 'ring-2 ring-red-500 bg-red-50' : ''}`}>
+                  <div className="flex items-center h-6">
                     <input
                       id="acceptTerms"
                       name="acceptTerms"
                       type="checkbox"
-                      required
-                      className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                      checked={formData.acceptTerms}
+                      onChange={handleChange}
+                      className="focus:ring-primary h-5 w-5 text-primary border-gray-300 rounded cursor-pointer"
                     />
                   </div>
                   <div className="ml-3 text-sm">
-                    <label htmlFor="acceptTerms" className="font-medium text-gray-700">
-                      J'accepte les <Link to="/conditions-partenaires" target="_blank" className="text-primary hover:underline font-semibold">Conditions Générales de Partenariat</Link>
+                    <label htmlFor="acceptTerms" className="font-medium text-gray-700 cursor-pointer block py-1">
+                      J'accepte les <Link to="/conditions-partenaires" target="_blank" className="text-primary hover:underline font-semibold relative z-10">Conditions Générales de Partenariat</Link>
                     </label>
                     <p className="text-gray-500 mt-1">
                       En cochant cette case, je donne mandat express à NOWME pour facturer en mon nom et pour mon compte.
                     </p>
+                    {errors.acceptTerms && (
+                      <p className="mt-2 text-sm text-red-600 flex items-center font-medium">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        {errors.acceptTerms}
+                      </p>
+                    )}
                   </div>
                 </div>
 

@@ -256,7 +256,6 @@ export default function SettingsGeneral() {
             new_booking: true,
             booking_reminder: true,
             booking_cancellation: true,
-            booking_cancellation: true,
             marketing: false
           },
           contract_signed_at: partner.contract_signed_at

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { getOptimizedImage } from '../utils/imageOptimizer';
 
 interface SEOProps {
   title: string;
@@ -16,7 +17,8 @@ export const SEO = ({ title, description, canonical, image }: SEOProps) => {
 
   // Clean canonical: Remove query params
   const cleanCanonical = canonical ? canonical.split('?')[0] : siteUrl;
-  const finalImage = image || defaultImage;
+
+  const finalImage = getOptimizedImage(image || defaultImage, 1200, 630);
 
   return (
     <Helmet>

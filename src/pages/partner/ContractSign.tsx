@@ -28,7 +28,7 @@ export default function PartnerContractSign() {
         if (!partnerId && user?.id) {
             try {
                 const { data: profileData } = await supabase
-                    .from('user_profiles')
+                    .from('user_profiles' as any)
                     .select('partner_id')
                     .eq('user_id', user.id)
                     .single();
@@ -50,7 +50,7 @@ export default function PartnerContractSign() {
         }
 
         const { data, error } = await supabase
-            .from('partners')
+            .from('partners' as any)
             .select('*')
             .eq('id', partnerId)
             .single();
@@ -75,7 +75,7 @@ export default function PartnerContractSign() {
 
         try {
             const { error } = await supabase
-                .from('partners')
+                .from('partners' as any)
                 .update({
                     contract_signed_at: new Date().toISOString()
                 })
@@ -145,13 +145,13 @@ export default function PartnerContractSign() {
                                 <input
                                     id="terms"
                                     type="checkbox"
-                                    className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                                    className="focus:ring-blue-500 h-5 w-5 text-blue-600 border-gray-300 rounded cursor-pointer"
                                     checked={permission}
                                     onChange={(e) => setPermission(e.target.checked)}
                                 />
                             </div>
                             <div className="ml-3 text-sm">
-                                <label htmlFor="terms" className="font-medium text-gray-700">
+                                <label htmlFor="terms" className="font-medium text-gray-700 cursor-pointer block py-1">
                                     J'ai lu et j'accepte les termes du Contrat de Mandat.
                                 </label>
                                 <p className="text-gray-500">En cochant cette case, je reconnais que ma validation vaut signature électronique.</p>

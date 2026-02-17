@@ -6,11 +6,13 @@ import { SEO } from '../../components/SEO';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 import { translateError } from '../../lib/errorTranslations';
+import { useAuth } from '../../lib/auth';
 
 export default function SignIn() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { user, loading: authLoading } = useAuth(); // Hooks must be at top level
   const [email, setEmail] = useState(searchParams.get('email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +24,14 @@ export default function SignIn() {
   useEffect(() => {
     return () => { isMounted.current = false; };
   }, []);
+
+  // Redirection automatique si déjà connecté
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log('⚡ Déjà connecté, redirection automatique...');
+      navigate('/account');
+    }
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     if (location.state?.message) {
