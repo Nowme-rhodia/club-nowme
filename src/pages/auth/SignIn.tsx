@@ -125,7 +125,17 @@ export default function SignIn() {
         console.log('Utilisateur standard, redirection vers /account');
         navigate('/account');
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Ignore AbortError - it happens during rapid navigation after login
+      const isAbort = err?.name === 'AbortError' ||
+        err?.message?.includes('aborted') ||
+        (typeof err === 'string' && err.includes('AbortError'));
+
+      if (isAbort) {
+        console.log('🔇 Suppressing SignIn abort error');
+        return;
+      }
+
       console.error('Erreur complète:', err);
       setError(translateError(err));
     } finally {

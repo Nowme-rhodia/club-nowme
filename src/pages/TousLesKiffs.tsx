@@ -209,7 +209,9 @@ export default function TousLesKiffs() {
         // We need to check the message content, not err.name
         const errorMessage = err?.message || err?.details || String(err);
         if (errorMessage.includes('AbortError') || errorMessage.includes('aborted')) {
-          console.log('✓ Fetch cancelled intentionally (component unmounted or navigation)');
+          if (import.meta.env.DEV) {
+            console.log('✓ Fetch cancelled intentionally (component unmounted or navigation)');
+          }
           return; // Silent exit - this is expected behavior
         }
         console.error('Error fetching offers:', err);

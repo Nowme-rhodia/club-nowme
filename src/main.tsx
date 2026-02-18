@@ -4,11 +4,13 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 
-console.log('🌍 Environment Variables Check:', {
-  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-  VITE_STRIPE_PUBLISHABLE_KEY: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
-  ALL_VITE: Object.keys(import.meta.env).filter(k => k.startsWith('VITE_'))
-});
+if (import.meta.env.DEV) {
+  console.log('🌍 Environment Variables Check:', {
+    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+    VITE_STRIPE_PUBLISHABLE_KEY: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY,
+    ALL_VITE: Object.keys(import.meta.env).filter(k => k.startsWith('VITE_'))
+  });
+}
 
 // Global handler for uncaught Supabase internal AbortErrors
 // These come from _acquireLock and _initSupabaseAuthClient internal promises
@@ -18,7 +20,9 @@ window.addEventListener('unhandledrejection', (event) => {
 
   // Suppress AbortError from Supabase's internal localStorage lock mechanism
   if (error?.name === 'AbortError' || errorMessage.includes('AbortError') || errorMessage.includes('aborted')) {
-    console.log('🔇 Suppressed uncaught AbortError from Supabase internal initialization');
+    if (import.meta.env.DEV) {
+      console.log('🔇 Suppressed uncaught AbortError from Supabase internal initialization');
+    }
     event.preventDefault(); // Prevent "Uncaught (in promise)" console error
     return;
   }

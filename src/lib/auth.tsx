@@ -112,6 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return 'guest';
   };
 
+  const isAbortError = (error: any) => {
+    return error?.name === 'AbortError' ||
+      error?.message?.includes('aborted') ||
+      error?.code === 'ABORTED' ||
+      (typeof error === 'string' && error.includes('AbortError'));
+  };
+
   const loadUserProfile = async (userId: string, forceRefresh: boolean = false) => {
     try {
       setError(null); // Clear errors on start
@@ -188,6 +195,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ]) as any;
 
       if (userError) {
+        if (isAbortError(userError)) {
+          // Silent return for aborts
+          return;
+        }
+
         const msg = (userError as any).message || '';
         if (msg.includes('recursion')) {
           console.error('🛑 Recursion error detected.');
@@ -242,6 +254,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       logger.auth.profileLoad(merged);
     } catch (e: any) {
+      if (isAbortError(e)) {
+        return; // Silent bypass
+      }
       console.error('❌ loadUserProfile error:', e);
 
       // Edge Function Fallback
@@ -323,7 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e: any) {
         // Supabase's internal AbortError is a known issue with localStorage lock conflicts
         // It happens when: multiple tabs, rapid navigation, or React StrictMode unmount/remount
-        if (e?.name === 'AbortError' || e?.message?.includes('aborted')) {
+        if (isAbortError(e)) {
           console.warn('⚠️ Auth init interrupted (AbortError). This is usually safe to ignore.');
           // Don't crash the app - just set a safe default state
           setUser(null);
@@ -407,6 +422,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await loadUserProfile(currentUser.id, true);
 
     } catch (error: any) {
+      if (isAbortError(error)) {
+        console.log('🔇 Suppressing signIn abort error');
+        return;
+      }
       console.error('SignIn error:', error);
       throw error;
     } finally {
