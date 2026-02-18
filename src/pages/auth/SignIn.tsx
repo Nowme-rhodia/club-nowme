@@ -28,7 +28,9 @@ export default function SignIn() {
   // Redirection automatique si déjà connecté
   useEffect(() => {
     if (!authLoading && user) {
-      console.log('⚡ Déjà connecté, redirection automatique...');
+      if (import.meta.env.DEV) {
+        console.log('⚡ Déjà connecté, redirection automatique...');
+      }
       navigate('/account');
     }
   }, [user, authLoading, navigate]);
@@ -67,7 +69,9 @@ export default function SignIn() {
       }
 
       const user = session.user;
-      console.log('Utilisateur connecté avec succès:', user.id);
+      if (import.meta.env.DEV) {
+        console.log('Utilisateur connecté avec succès:', user.id);
+      }
 
       // Étape 3: Vérifier le profil utilisateur (pour admin, partenaire, ou abonné)
       // Optimisation: maybeSingle + sélection ciblée des colonnes
@@ -94,7 +98,9 @@ export default function SignIn() {
 
       // Priorité 2: Redirection demandée via state (router redirect)
       if (location.state?.from) {
-        console.log('Redirection demandée via State vers:', location.state.from);
+        if (import.meta.env.DEV) {
+          console.log('Redirection demandée via State vers:', location.state.from);
+        }
         navigate(location.state.from);
         return;
       }
@@ -119,10 +125,14 @@ export default function SignIn() {
       }
 
       if (userData?.is_admin) {
-        console.log('Utilisateur admin, redirection vers /admin');
+        if (import.meta.env.DEV) {
+          console.log('Utilisateur admin, redirection vers /admin');
+        }
         navigate('/admin');
       } else {
-        console.log('Utilisateur standard, redirection vers /account');
+        if (import.meta.env.DEV) {
+          console.log('Utilisateur standard, redirection vers /account');
+        }
         navigate('/account');
       }
     } catch (err: any) {
@@ -132,7 +142,6 @@ export default function SignIn() {
         (typeof err === 'string' && err.includes('AbortError'));
 
       if (isAbort) {
-        console.log('🔇 Suppressing SignIn abort error');
         return;
       }
 

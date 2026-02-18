@@ -125,7 +125,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const timestamp = Date.now();
 
       if (loadingProfileRef.current === userId && !forceRefresh) {
-        console.log('⏸️ loadUserProfile - Already loading profile for userId:', userId);
         return;
       }
 
@@ -133,7 +132,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!forceRefresh && profileCacheRef.current && profileCacheRef.current.userId === userId) {
         const cacheAge = timestamp - profileCacheRef.current.timestamp;
         if (cacheAge < CACHE_DURATION) {
-          console.log('✅ loadUserProfile - Using memory cached profile');
           setProfile(profileCacheRef.current.profile);
           return;
         }
@@ -167,7 +165,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoadingProfile(userId);
       loadingProfileRef.current = userId;
 
-      console.log('🔍 loadUserProfile - Fetching data for:', userId);
       const timeoutDuration = 15000;
 
       const [
@@ -339,7 +336,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Supabase's internal AbortError is a known issue with localStorage lock conflicts
         // It happens when: multiple tabs, rapid navigation, or React StrictMode unmount/remount
         if (isAbortError(e)) {
-          console.warn('⚠️ Auth init interrupted (AbortError). This is usually safe to ignore.');
           // Don't crash the app - just set a safe default state
           setUser(null);
           setProfile(null);
@@ -423,7 +419,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     } catch (error: any) {
       if (isAbortError(error)) {
-        console.log('🔇 Suppressing signIn abort error');
         return;
       }
       console.error('SignIn error:', error);

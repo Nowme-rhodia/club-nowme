@@ -158,15 +158,22 @@ export default function TousLesKiffs() {
 
             // Parser coordinates "(lat,lng)"
             let lat = 0, lng = 0;
-            if (typeof offer.coordinates === 'string') {
-              const matches = offer.coordinates.match(/\((.*),(.*)\)/);
-              if (matches) {
-                lat = parseFloat(matches[1]);
-                lng = parseFloat(matches[2]);
+            try {
+              if (typeof offer.coordinates === 'string') {
+                const matches = offer.coordinates.match(/\((.*),(.*)\)/);
+                if (matches) {
+                  lat = parseFloat(matches[1]);
+                  lng = parseFloat(matches[2]);
+                }
+              } else if (Array.isArray(offer.coordinates)) {
+                lat = Number(offer.coordinates[0]);
+                lng = Number(offer.coordinates[1]);
+              } else if (offer.coordinates && typeof offer.coordinates === 'object') {
+                lat = Number((offer.coordinates as any).lat || (offer.coordinates as any).x || 0);
+                lng = Number((offer.coordinates as any).lng || (offer.coordinates as any).y || 0);
               }
-            } else if (Array.isArray(offer.coordinates)) {
-              lat = offer.coordinates[0];
-              lng = offer.coordinates[1];
+            } catch (err) {
+              console.warn('⚠️ Error parsing coordinates for offer', offer.id, err);
             }
 
             const isOfficial = offer.partner?.contact_email === 'rhodia@nowme.fr' || offer.partner?.business_name === 'Nowme';
@@ -189,7 +196,7 @@ export default function TousLesKiffs() {
               },
               category: offer.category?.name || 'Autre',
               categorySlug: offer.category?.parent_slug || offer.category?.slug || 'autre',
-              subcategorySlug: offer.category?.parent_slug ? offer.category.slug : undefined,
+              subcategorySlug: offer.category?.parent_slug ? offer.category?.slug : undefined,
               reviews: [],
               is_online: offer.is_online,
               service_zones: offer.service_zones,
