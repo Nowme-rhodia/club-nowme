@@ -30,6 +30,7 @@ begin
     where
         up.email is not null
         and s.id is null
+        and up.partner_id is null
         and (
             up.created_at::date = (current_date - interval '1 day')::date or
             up.created_at::date = (current_date - interval '3 days')::date or
@@ -63,6 +64,7 @@ begin
         and b.status = 'paid'
         and b.created_at::date = (current_date - interval '1 day')::date
         and s.id is null -- Not a subscriber
+        and (up.partner_id is null or up.id is null) -- Not a partner
         and p.contact_email = 'rhodia@nowme.fr'; -- Only Rhodia's events
 
     -- 3. Exploratrices J-2 événement: Event is in 2 days (reminder)
@@ -86,6 +88,7 @@ begin
         and b.status = 'paid'
         and b.scheduled_at::date = (current_date + interval '2 days')::date
         and s.id is null
+        and (up.partner_id is null or up.id is null) -- Not a partner
         and p.contact_email = 'rhodia@nowme.fr';
 
     -- 4. Exploratrices J+1 post-événement: Event was yesterday (follow-up)
@@ -115,6 +118,7 @@ begin
         and b.status = 'paid'
         and b.scheduled_at::date = (current_date - interval '1 day')::date
         and s.id is null
+        and (up.partner_id is null or up.id is null) -- Not a partner
         and p.contact_email = 'rhodia@nowme.fr';
 end;
 $$;
