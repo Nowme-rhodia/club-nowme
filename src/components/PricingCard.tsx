@@ -16,7 +16,7 @@ export function PricingCard({ tier, isCurrentPlan }: PricingCardProps) {
   const savings = tier.id === 'yearly' ? YEARLY_SAVINGS.savings : 0;
 
   // Si l'utilisateur est connecté, aller directement au checkout, sinon inscription
-  const ctaLink = user ? `/checkout?plan=${tier.id}` : `/auth/signup?plan=${tier.id}`;
+  const ctaLink = user ? `/paiement?plan=${tier.id}` : `/inscription?plan=${tier.id}`;
 
   return (
     <div

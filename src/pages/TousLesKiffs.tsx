@@ -479,13 +479,29 @@ export default function TousLesKiffs() {
               </div>
               <LocationSearch onSelect={handleLocationSelect} />
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="inline-flex items-center px-4 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-            >
-              <SlidersHorizontal className="w-5 h-5 mr-2" />
-              Filtres
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsOfficialFilter(!isOfficialFilter)}
+                className={`inline-flex items-center px-4 py-2 rounded-full border transition-all ${isOfficialFilter
+                  ? 'bg-purple-600 text-white border-purple-600 shadow-md transform scale-105'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-purple-600 hover:text-purple-600'
+                  }`}
+              >
+                <Sparkles className={`w-5 h-5 mr-2 ${isOfficialFilter ? 'animate-pulse' : ''}`} />
+                <span className="font-bold">Événements Nowme</span>
+              </button>
+
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`inline-flex items-center px-4 py-2 rounded-full transition-all ${showFilters
+                  ? 'bg-gray-900 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+              >
+                <SlidersHorizontal className="w-5 h-5 mr-2" />
+                Filtres
+              </button>
+            </div>
           </div>
 
           {/* Filtres étendus */}

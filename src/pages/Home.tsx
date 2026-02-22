@@ -200,7 +200,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                to="/subscription"
+                to="/abonnement"
                 className="inline-flex items-center px-8 py-4 rounded-full bg-pink-500 text-white font-semibold hover:bg-pink-600 transform hover:scale-105 transition-all animate-bounce-slow shadow-lg shadow-pink-500/30"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
@@ -383,7 +383,7 @@ export default function Home() {
                   En rejoignant le Club, tu ne fais pas que payer un service. <br className="hidden md:block" />
                   <strong className="text-white">Tu finances directement, des lieux prestigieux, un service de malade, la possibilité de rencontrer d'autres kiffeuses avec qui profiter sans parler des animatrices passionnées qui t'accompagne,</strong> qui seront là pour s'occuper de toi comme une reine, à chaque événement.
                 </p>
-                <Link to="/subscription" className="inline-flex items-center px-8 py-4 bg-white text-gray-900 rounded-full font-bold hover:bg-gray-100 transition-colors">
+                <Link to="/abonnement" className="inline-flex items-center px-8 py-4 bg-white text-gray-900 rounded-full font-bold hover:bg-gray-100 transition-colors">
                   Je participe à l'aventure <ChevronRight className="ml-2 w-5 h-5" />
                 </Link>
               </div>
@@ -411,7 +411,7 @@ export default function Home() {
             Rejoins le mouvement.
           </p>
           <Link
-            to="/subscription"
+            to="/abonnement"
             className="inline-flex items-center px-10 py-5 bg-white text-pink-600 font-bold text-xl rounded-full hover:bg-gray-100 transform hover:scale-105 transition-all shadow-2xl"
           >
             Je m'abonne (12,99€) <ChevronRight className="w-6 h-6 ml-2" />

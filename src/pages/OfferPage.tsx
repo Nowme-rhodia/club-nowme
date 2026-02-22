@@ -697,6 +697,15 @@ export default function OfferPage() {
 
       <div className="relative min-h-screen pt-32 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          {/* Header Branding for Official Offers */}
+          {isOfficial && (
+            <div className="text-center mb-8 animate-fade-in">
+              <p className="text-xl md:text-2xl font-black text-white bg-pink-500/90 backdrop-blur-sm px-6 py-3 rounded-2xl shadow-xl inline-block border-2 border-white/20 transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+                Le club des kiffeuses de 30-40-50+++ ans ✨
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 mb-6 justify-center">
             {category && (
               <span className="px-4 py-2 rounded-full text-white bg-white/20 backdrop-blur-sm font-medium">
@@ -721,7 +730,7 @@ export default function OfferPage() {
                     <img
                       src={getOptimizedImage(images[currentImageIndex], 800, 800)}
                       alt={offer.title}
-                      fetchpriority="high"
+                      fetchPriority="high"
                       decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -953,7 +962,7 @@ export default function OfferPage() {
                               Tu y es presque ! Choisis ton plan pour débloquer ce kiff et tous les autres.
                             </p>
                             <Link
-                              to={`/subscription?redirectTo=${encodeURIComponent(location.pathname)}`}
+                              to={`/inscription?redirectTo=${encodeURIComponent(location.pathname)}`}
                               className="block w-full py-3 bg-pink-500 text-white rounded-full font-bold hover:bg-pink-600 transition-colors shadow-lg hover:shadow-pink-500/25"
                             >
                               Finaliser mon adhésion
@@ -1328,7 +1337,7 @@ export default function OfferPage() {
                               </span>
                             </div>
                             <Link
-                              to="/subscription"
+                              to="/inscription?plan=monthly"
                               className="mt-2 text-xs bg-pink-600 text-white px-3 py-1.5 rounded-full font-bold hover:bg-pink-700 transition shadow-sm flex items-center gap-1"
                             >
                               Devenir membre pour 12,99€

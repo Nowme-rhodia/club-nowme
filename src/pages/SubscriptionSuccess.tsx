@@ -66,8 +66,18 @@ export default function SubscriptionSuccess() {
       setVerificationResult(data);
 
       if (data.success && data.status === 'active') {
+        // 🔥 Google Ads Conversion Tracking (Verified Success)
+        if (typeof window !== 'undefined' && (window as any).gtag) {
+          console.log('🎯 Firing Google Ads Conversion event...');
+          (window as any).gtag('event', 'conversion', {
+            'send_to': 'AW-17947479509/Achat', // Note: Ensure the label 'Achat' is correct in Google Ads
+            'value': data.amount || 12.99, // Use amount from response or default
+            'currency': 'EUR',
+            'transaction_id': sessionId
+          });
+        }
+
         // DO NOT stop verifying yet. Wait for profile sync.
-        // setIsVerifying(false); 
         toast.success('Paiement validé ! Finalisation du compte...');
 
         // SHOW FORM IMMEDIATELY to avoid delay (Visual only, but buttons are hidden by isVerifying)

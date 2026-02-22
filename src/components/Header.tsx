@@ -58,7 +58,7 @@ export function Header() {
           <div className="hidden md:flex items-center space-x-6">
             {!isSubscriber && !isPartner && (
               <Link
-                to="/subscription"
+                to="/abonnement"
                 className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg active:scale-95"
               >
                 Tester à 12,99€

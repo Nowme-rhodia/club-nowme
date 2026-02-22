@@ -44,7 +44,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
-                  to="/subscription"
+                  to="/abonnement"
                   className="text-gray-600 hover:text-primary transition-colors duration-200"
                 >
                   Abonnement

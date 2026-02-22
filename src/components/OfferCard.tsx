@@ -120,6 +120,11 @@ export function OfferCard({
             </div>
           )}
           <h3 className="font-bold text-lg text-gray-900 line-clamp-2 leading-tight">{title}</h3>
+          {isOfficial && (
+            <p className="text-[10px] font-black text-pink-600 uppercase tracking-tighter mt-1">
+              Le club des kiffeuses de 30-40-50+++ ans
+            </p>
+          )}
         </div>
 
         <p className="text-gray-600 text-sm line-clamp-2 mb-3 flex-1">{stripHtmlAndDecode(description)}</p>

@@ -79,9 +79,9 @@ export default function Subscription() {
       return '/account';
     }
     if (isAuthenticated) {
-      return `/checkout?plan=${plan}`;
+      return `/paiement?plan=${plan}`;
     }
-    return `/auth/signup?plan=${plan}`;
+    return `/inscription?plan=${plan}`;
   };
 
   const getActionText = (defaultText: string) => {
@@ -750,7 +750,7 @@ export default function Subscription() {
             <p className="font-bold text-blue-800 mb-2 text-center">💡 Pourquoi 39,99€/mois ?</p>
             <ul className="space-y-2 text-gray-700">
               <li className="flex items-start"><Check className="w-4 h-4 text-blue-500 mr-2 mt-1" /> <strong>C'est le prix d'un seul resto</strong>, mais ça t'ouvre des dizaines d'opportunités.</li>
-              <li className="flex items-start"><Check className="w-4 h-4 text-blue-500 mr-2 mt-1" /> <strong>C'est vite rentabilisé</strong> : 2 codes promos bien-être et c'est remboursé.</li>
+              <li className="flex items-start"><Check className="w-4 h-4 text-blue-500 mr-2 mt-1" /> <strong>Rentabilisé dès la 1ère sortie</strong> : 2 codes promos bien-être et ton abonnement est remboursé.</li>
               <li className="flex items-start"><Check className="w-4 h-4 text-blue-500 mr-2 mt-1" /> <strong>C'est la garantie qualité</strong> d'un club privé modéré et sécurisé.</li>
             </ul>
           </div>
@@ -763,9 +763,9 @@ export default function Subscription() {
               className="bg-white rounded-3xl p-8 border-2 border-primary/20 relative flex flex-col hover:shadow-xl transition-shadow duration-300"
               whileHover={{ y: -5 }}
             >
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide">
-                  Sans engagement • Liberté
+              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full">
+                <span className="px-4 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap">
+                  Sans engagement • Rentabilisé en 1 sortie 🚀
                 </span>
               </div>
 
@@ -849,9 +849,9 @@ export default function Subscription() {
                   <span className="text-gray-600">Bonus Séjours</span>
                   <span className="font-semibold text-green-600">+100€ OFF</span>
                 </div>
-                <div className="border-t border-gray-200 pt-2 flex justify-between items-center mt-2">
-                  <span className="font-bold text-primary">Valeur Totale</span>
-                  <span className="font-bold text-primary text-xl">2500€+ / an</span>
+                <div className="border-t border-gray-100 pt-2 flex justify-between items-center mt-2">
+                  <span className="font-bold text-primary">Total Économisé</span>
+                  <span className="font-bold text-primary text-lg">2500€+ / an</span>
                 </div>
               </div>
 
@@ -866,21 +866,99 @@ export default function Subscription() {
                 to={getActionLink('yearly')}
                 className="block w-full text-center px-6 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg hover:shadow-lg transition-all hover:scale-105"
               >
-                {isSubscriber ? 'Passer en Annuel' : isAuthenticated ? 'Profiter des 1620€ de valeur' : 'Je rejoins le VIP'}
+                {isSubscriber ? 'Passer en Annuel' : isAuthenticated ? 'Profiter des 2500€ de valeur' : 'Je rejoins le VIP'}
               </Link>
               <div className="text-center mt-3 text-xs text-gray-500">
                 Paiement 100% sécurisé via Stripe
               </div>
             </motion.div>
+          </div>
+        </div>
+      </motion.section>
 
+      {/* Google Reviews Section */}
+      <motion.section className="py-20 bg-[#FDF8F4]" {...fadeInUp}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="flex justify-center mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star key={star} className="w-6 h-6 text-yellow-500 fill-current" />
+              ))}
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Ce qu'en disent les membres</h2>
+            <p className="text-lg text-gray-600">Note moyenne de 4.9/5 sur Google </p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Sarah L.",
+                text: "Une communauté incroyable ! J'ai rencontré mes meilleures amies grâce aux apéros Nowme. C'est bien plus qu'un club de sorties.",
+                date: "Il y a 2 mois"
+              },
+              {
+                name: "Camille D.",
+                text: "Les réductions partenaires sont juste dingues. L'abonnement est remboursé dès ma première séance de spa.",
+                date: "Il y a 1 mois"
+              },
+              {
+                name: "Mélanie V.",
+                text: "Enfin un endroit où on peut être soi-même. Les événements sont variés et l'ambiance toujours bienveillante.",
+                date: "Il y a 3 semaines"
+              }
+            ].map((review, i) => (
+              <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center mb-4 text-yellow-500">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} className="w-4 h-4 fill-current" />
+                  ))}
+                </div>
+                <p className="text-gray-700 italic mb-4">"{review.text}"</p>
+                <div className="flex justify-between items-center text-sm text-gray-500">
+                  <span className="font-bold text-gray-900">{review.name}</span>
+                  <span>{review.date}</span>
+                </div>
+              </div>
+            ))}
+          </div>
 
+          <div className="mt-12 text-center">
+            <a
+              href="https://www.google.com/maps/place/?q=place_id:ChIJDQGRUXJv5kcRMFVxvvBD7Rc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-primary font-bold hover:underline"
+            >
+              Voir tous les avis sur Google <ArrowRight className="w-4 h-4 ml-2" />
+            </a>
+          </div>
         </div>
-      </motion.section >
+      </motion.section>
 
+      {/* Trust & Guarantee Section (Minimalist) */}
+      <section className="py-12 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center text-sm text-gray-500">
+            <div className="flex flex-col items-center">
+              <Shield className="w-8 h-8 text-green-500 mb-2" />
+              <p className="font-bold text-gray-900">Paiement 100% Sécurisé</p>
+              <p>Via Stripe (Visa, Mastercard, Apple Pay)</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <Zap className="w-8 h-8 text-blue-500 mb-2" />
+              <p className="font-bold text-gray-900">Zéro Engagement</p>
+              <p>Annulable en 1 clic depuis ton compte</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <Users className="w-8 h-8 text-pink-500 mb-2" />
+              <p className="font-bold text-gray-900">Communauté Bienveillante</p>
+              <p>Profils vérifiés et animation quotidienne</p>
+            </div>
+          </div>
+        </div>
+      </section>
       {/* FAQ Section */}
-      < motion.section className="py-20 bg-gray-50" {...fadeInUp}>
+      <motion.section className="py-20 bg-gray-50" {...fadeInUp}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <motion.h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6">
@@ -921,7 +999,7 @@ export default function Subscription() {
             ))}
           </div>
         </div>
-      </motion.section >
+      </motion.section>
 
 
 
@@ -1006,6 +1084,6 @@ export default function Subscription() {
         </div>
       </motion.section>
 
-    </div>
+    </div >
   );
 }

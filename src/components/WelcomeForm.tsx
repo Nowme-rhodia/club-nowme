@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { Loader2, PartyPopper } from 'lucide-react';
 import toast from 'react-hot-toast';
+import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
+import { Mail, MapPin } from 'lucide-react';
 
 interface WelcomeFormProps {
     onComplete: () => void;
@@ -14,9 +16,13 @@ export function WelcomeForm({ onComplete }: WelcomeFormProps) {
 
     const [formData, setFormData] = useState({
         phone: profile?.phone || '',
-        birth_date: '',
-        acquisition_source: '',
-        signup_goal: '',
+        whatsapp_number: profile?.whatsapp_number || '',
+        delivery_address: profile?.delivery_address || '',
+        latitude: profile?.latitude || null as number | null,
+        longitude: profile?.longitude || null as number | null,
+        birth_date: profile?.birth_date || '',
+        acquisition_source: profile?.acquisition_source || '',
+        signup_goal: profile?.signup_goal || '',
     });
 
     // Sync state with profile (in case it loads after mount)
@@ -25,6 +31,10 @@ export function WelcomeForm({ onComplete }: WelcomeFormProps) {
             setFormData(prev => ({
                 ...prev,
                 phone: prev.phone || profile.phone || '',
+                whatsapp_number: prev.whatsapp_number || profile.whatsapp_number || '',
+                delivery_address: prev.delivery_address || profile.delivery_address || '',
+                latitude: prev.latitude || profile.latitude || null,
+                longitude: prev.longitude || profile.longitude || null,
                 birth_date: prev.birth_date || profile.birth_date || '',
                 acquisition_source: prev.acquisition_source || profile.acquisition_source || '',
                 signup_goal: prev.signup_goal || profile.signup_goal || '',
@@ -49,6 +59,10 @@ export function WelcomeForm({ onComplete }: WelcomeFormProps) {
                 .from('user_profiles')
                 .update({
                     phone: formData.phone,
+                    whatsapp_number: formData.whatsapp_number,
+                    delivery_address: formData.delivery_address,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude,
                     birth_date: formData.birth_date,
                     acquisition_source: formData.acquisition_source,
                     signup_goal: formData.signup_goal,
@@ -126,18 +140,48 @@ export function WelcomeForm({ onComplete }: WelcomeFormProps) {
                             </div>
                         </div>
 
-                        {/* Phone */}
+                        {/* Phone & WhatsApp */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Ton numéro de téléphone <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    required
+                                    placeholder="06 12 34 56 78"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                                    value={formData.phone}
+                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Numéro WhatsApp
+                                </label>
+                                <input
+                                    type="tel"
+                                    placeholder="Si différent du portable"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
+                                    value={formData.whatsapp_number}
+                                    onChange={e => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Delivery Address */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Ton numéro de téléphone <span className="text-red-500">*</span>
+                                Adresse de livraison (pour les cadeaux !) <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="tel"
-                                required
-                                placeholder="06 12 34 56 78"
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none"
-                                value={formData.phone}
-                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            <AddressAutocomplete
+                                value={formData.delivery_address}
+                                onChange={(addr, lat, lng) => setFormData({
+                                    ...formData,
+                                    delivery_address: addr,
+                                    latitude: lat,
+                                    longitude: lng
+                                })}
                             />
                         </div>
 
@@ -218,6 +262,70 @@ export function WelcomeForm({ onComplete }: WelcomeFormProps) {
                     </button>
                 </form>
             </div>
+        </div>
+    );
+}
+interface AddressAutocompleteProps {
+    value: string;
+    onChange: (address: string, lat: number | null, lng: number | null) => void;
+}
+
+function AddressAutocomplete({ value: initialValue, onChange }: AddressAutocompleteProps) {
+    const {
+        ready,
+        value,
+        setValue,
+        suggestions: { status, data },
+        clearSuggestions,
+    } = usePlacesAutocomplete({
+        requestOptions: {
+            types: ['address'],
+            componentRestrictions: { country: 'fr' }
+        },
+        debounce: 300,
+        defaultValue: initialValue
+    });
+
+    return (
+        <div className="relative">
+            <div className="relative">
+                <input
+                    id="deliveryAddress"
+                    disabled={!ready}
+                    value={value}
+                    onChange={(e) => {
+                        setValue(e.target.value);
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none pl-10"
+                    placeholder="3 rue de la Paix, 75000 Paris..."
+                />
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            </div>
+
+            {status === "OK" && (
+                <ul className="absolute z-50 w-full bg-white border border-gray-100 rounded-xl mt-1 shadow-xl max-h-60 overflow-auto">
+                    {data.map(({ place_id, description }) => (
+                        <li
+                            key={place_id}
+                            onClick={async () => {
+                                setValue(description, false);
+                                clearSuggestions();
+                                try {
+                                    const results = await getGeocode({ address: description });
+                                    const { lat, lng } = await getLatLng(results[0]);
+                                    onChange(description, lat, lng);
+                                } catch (err) {
+                                    console.error("Geocoding error", err);
+                                    onChange(description, null, null);
+                                }
+                            }}
+                            className="p-3 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 border-b border-gray-50 last:border-0"
+                        >
+                            {description}
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 }

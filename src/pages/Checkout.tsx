@@ -27,8 +27,8 @@ export default function Checkout() {
 
     // Rediriger vers l'inscription si l'utilisateur n'est pas connecté
     if (!user) {
-      logger.navigation.redirect('/checkout', `/auth/signup?plan=${plan}`, 'User not authenticated');
-      navigate(`/auth/signup?plan=${plan}`);
+      logger.navigation.redirect('/paiement', `/inscription?plan=${plan}`, 'User not authenticated');
+      navigate(`/inscription?plan=${plan}`);
       return;
     }
 
