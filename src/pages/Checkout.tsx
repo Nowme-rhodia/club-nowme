@@ -124,18 +124,32 @@ export default function Checkout() {
             {loading ? (
               <div className="flex items-center justify-center">
                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Redirection vers le paiement...
+                Redirection sécurisée...
               </div>
             ) : (
-              <>
-                <CreditCard className="w-5 h-5 inline mr-2" />
-                Finaliser mon abonnement ({currentTier.price}€)
-              </>
+              <div className="flex flex-col items-center">
+                <div className="flex items-center">
+                  <CreditCard className="w-6 h-6 mr-3" />
+                  <span>Je m'abonne - {selectedPlan === 'monthly' ? '12,99€' : currentTier.price + '€'}</span>
+                </div>
+                {selectedPlan === 'monthly' && (
+                  <span className="text-xs font-normal opacity-90 mt-1">
+                    (12,99€ le 1er mois, puis 39,99€/mois)
+                  </span>
+                )}
+              </div>
             )}
           </button>
 
-          <p className="text-xs text-gray-500 mt-4">
-            Vous serez redirigé vers Stripe pour finaliser le paiement de manière sécurisée
+          <div className="flex items-center justify-center gap-4 mt-6 grayscale opacity-70">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-4" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-6" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg" alt="Apple Pay" className="h-5" />
+          </div>
+
+          <p className="text-xs text-gray-500 mt-6">
+            Paiement 100% sécurisé via Stripe. Aucune donnée bancaire n'est stockée chez nous.
           </p>
         </div>
 

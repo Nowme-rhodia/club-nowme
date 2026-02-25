@@ -19,15 +19,9 @@ export default function SignUp() {
   const generateRandomData = () => {
     const isDev = import.meta.env.DEV || window.location.hostname === 'localhost';
     if (!isDev) return {
+      firstName: '',
       email: '',
       password: '',
-      firstName: '',
-      lastName: '',
-      phone: '',
-      whatsapp: '',
-      deliveryAddress: '',
-      latitude: null as number | null,
-      longitude: null as number | null
     };
 
     const timestamp = Date.now();
@@ -36,7 +30,6 @@ export default function SignUp() {
       email: `test${timestamp}${random}@example.com`,
       password: 'DKsijdjhSA*27dusjaTesdsdakio297',
       firstName: `Test${random}`,
-      lastName: `User${timestamp}`
     };
   };
 
@@ -94,7 +87,6 @@ export default function SignUp() {
           emailRedirectTo: `${window.location.origin}/checkout?plan=${plan}`,
           data: {
             first_name: formData.firstName,
-            last_name: formData.lastName,
           }
         }
       });
@@ -145,8 +137,7 @@ export default function SignUp() {
       const { error: updateError } = await (supabase
         .from('user_profiles') as any)
         .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName
+          first_name: formData.firstName
         })
         .eq('user_id', authData.user.id);
 
@@ -167,16 +158,21 @@ export default function SignUp() {
 
       if (signInError) {
         console.warn('⚠️ Erreur connexion auto:', signInError);
-        // Continue quand même, l'utilisateur pourra se connecter manuellement
       } else {
         console.log('✅ Utilisateur connecté:', signInData.session ? 'Session active' : 'Pas de session');
+      }
+
+      // 🔥 Google Ads Tracking: Inscription (Not Sale)
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'conversion', {
+          'send_to': 'AW-17947479509/Inscription', // Event for signup
+        });
       }
 
       toast.success('Compte créé avec succès ! Redirection vers le paiement...');
 
       // Rediriger vers checkout sans l'email dans l'URL (on utilise l'utilisateur connecté)
       navigate(`/checkout?plan=${plan}`);
-
     } catch (err: any) {
       console.error('❌ Erreur inscription:', err);
       setError(translateError(err));
@@ -234,10 +230,10 @@ export default function SignUp() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                  Prénom
+                  Ton Prénom
                 </label>
                 <div className="mt-1 relative">
                   <input
@@ -246,24 +242,6 @@ export default function SignUp() {
                     type="text"
                     required
                     value={formData.firstName}
-                    onChange={handleChange}
-                    className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
-                  />
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                  Nom
-                </label>
-                <div className="mt-1 relative">
-                  <input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    required
-                    value={formData.lastName}
                     onChange={handleChange}
                     className="block w-full appearance-none rounded-lg border border-gray-300 px-3 py-3 pl-10 placeholder-gray-400 shadow-sm focus:border-primary focus:outline-none focus:ring-primary sm:text-sm"
                   />
