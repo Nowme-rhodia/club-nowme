@@ -1,0 +1,50 @@
+--- 1. Checking Subscribers ---
+Total user profiles: 107
+2026-02-25T08:10:15.652166+00:00 | knora2000@yahoo.fr | Nora | Recap: true | Partner: null
+2026-02-22T11:52:01.761819+00:00 | sandrine.ducamp@hotmail.fr | Sandrine  | Recap: true | Partner: null
+2026-02-21T16:56:27.511846+00:00 | sosonia14c@gmail.com | Mariis  | Recap: true | Partner: null
+2026-02-19T10:16:34.955198+00:00 | naturoparis14@gmail.com | Claire | Recap: true | Partner: 38e4f461-7ee5-436d-86ae-14824a19c7dd
+2026-02-19T10:16:13.372168+00:00 | lesfleurscestlui@gmail.com | Pascal | Recap: true | Partner: 56723f48-ec6e-4aeb-b300-066d822a1e4f
+2026-02-18T07:59:49.036279+00:00 | mika97124@hotmail.fr | Mikaella | Recap: true | Partner: null
+2026-02-17T15:17:01.807627+00:00 | rhodia+abonne@example.com | Test954 | Recap: true | Partner: null
+2026-02-16T05:35:59.929345+00:00 | jeanne.njiki@live.fr | Jeanne  | Recap: true | Partner: null
+2026-02-14T19:55:25.219716+00:00 | dolcekatalina@gmail.com | Evelyne  | Recap: true | Partner: null
+2026-02-14T17:54:13.016918+00:00 | e.erdial@gmail.com | Jeannick  | Recap: true | Partner: null
+2026-02-14T16:43:58.905862+00:00 | sabsudre@gmail.com | Sabrina  | Recap: true | Partner: null
+2026-02-13T18:27:15.48365+00:00 | rhodia+asmc@nowme.fr | Partenaire | Recap: true | Partner: f819a7ca-1bf6-4d77-97db-efe4abadd6e8
+2026-02-13T18:27:14.968143+00:00 | rhodia+sportdecouverte@nowme.fr | Partenaire | Recap: true | Partner: 12c2f746-6381-40fb-a87e-7a77df737e77
+2026-02-13T18:27:14.478965+00:00 | rhodia+monbento@nowme.fr | Partenaire | Recap: true | Partner: 86cab120-74e3-4f09-b706-bf4e6e4a2e4f
+2026-02-13T18:27:14.044817+00:00 | rhodia+fnac@nowme.fr | Partenaire | Recap: true | Partner: 2d43740e-4d1d-457f-a27b-ee0a4ffe035d
+2026-02-13T18:27:13.403302+00:00 | rhodia+darty@nowme.fr | Partenaire | Recap: true | Partner: 5cd02513-ac58-4013-bdfb-cc47435e6c8c
+2026-02-13T18:27:12.937683+00:00 | rhodia+deesup@nowme.fr | Partenaire | Recap: true | Partner: cb9c4a19-7500-4c00-804c-dd05ac34c3ce
+2026-02-13T18:27:12.533495+00:00 | rhodia+lacouettefrancaise@nowme.fr | Partenaire | Recap: true | Partner: 2fc76e6c-2625-4128-af46-34331d9633a0
+2026-02-13T18:27:12.101408+00:00 | rhodia+frenchmush@nowme.fr | Partenaire | Recap: true | Partner: 3d854e0e-c74a-462d-8682-a5902225f007
+2026-02-13T18:27:11.645619+00:00 | rhodia+bonjourdrink@nowme.fr | Partenaire | Recap: true | Partner: 8ca2313e-75cb-495f-9c5b-41d64282bb2d
+2026-02-13T18:27:11.221822+00:00 | rhodia+maisondesfragrances@nowme.fr | Partenaire | Recap: true | Partner: 7c39f8b6-e55b-4926-b580-a2d72437cc8e
+2026-02-13T18:27:10.787987+00:00 | rhodia+hairlust@nowme.fr | Partenaire | Recap: true | Partner: 851c00fa-6fa7-43b9-a9e1-daa6ec559aa1
+2026-02-13T16:38:05.916238+00:00 | maletru@hotmail.com | Marie | Recap: true | Partner: 61b75e11-c71a-479a-8949-56a83f825dc3
+2026-02-12T18:11:47.581738+00:00 | isabelthuret@gmail.com | Isabelle  | Recap: true | Partner: null
+2026-02-12T15:50:55.853313+00:00 | aimetoidabord24@gmail.com | Anaëlle | Recap: true | Partner: 4e25ee35-4a72-4296-8162-138f4dd93665
+2026-02-12T15:50:30.862282+00:00 | caroline@stylosophie.net | Caroline | Recap: true | Partner: a304343f-d7d2-4833-8047-db854d29db61
+2026-02-12T15:50:10.512379+00:00 | contact@zoomup.biz | Stephan | Recap: true | Partner: 24ea3625-ff72-4f0f-a924-f4259f77a65d
+2026-02-12T15:49:46.054341+00:00 | feme.diycafe@gmail.com | Janis | Recap: true | Partner: 7771d139-a694-4277-9bfd-0b98db39e75a
+2026-02-12T15:48:40.083532+00:00 | lateliernaturellementvotre@gmail.com | Sandra | Recap: true | Partner: 1fe04cfe-87be-4473-8a24-6c0a902b0f3d
+2026-02-12T15:47:51.681731+00:00 | contact@secret-jeegs.fr | Gwenaelle | Recap: true | Partner: 602ffd16-eaa9-4ee9-8836-53dd43ae68ed
+
+--- 2. Checking Recent Recap Cron Job Runs ---
+2026-01-04T12:50:16.582357+00:00 | test dimanche 14h | Status: sent
+2025-12-30T15:45:01.964447+00:00 | prgom 7 | Status: sent
+2025-12-30T15:19:20.769695+00:00 | program 6 | Status: sent
+2025-12-30T15:06:22.232003+00:00 | instant 5 | Status: sent
+2025-12-30T15:01:27.909844+00:00 | test programme 5 | Status: sent
+2025-12-30T14:48:01.56406+00:00 | test program 4 | Status: sent
+2025-12-30T12:03:19.801371+00:00 | test progrma 3 | Status: sent
+2025-12-30T11:52:14.521231+00:00 | test program 2 | Status: sent
+2025-12-30T11:45:40.128129+00:00 | test instant 2 | Status: sent
+2025-12-30T11:43:04.260624+00:00 | test program | Status: sent
+
+--- 3. Checking for recipients of the recap ---
+Potential recap recipients based on current flags: 57
+
+--- 4. Checking recent content (to see if recap was skipped) ---
+Content found for last Tuesday's recap period: 0 offers, 2 partners

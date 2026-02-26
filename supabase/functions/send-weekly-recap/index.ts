@@ -182,21 +182,38 @@ serve(async (req) => {
     `;
 
         let sentCount = 0;
-        const emailPromises = subscribers.map(async (user) => {
-            try {
-                await resend.emails.send({
-                    from: "Nowme Club <contact@nowme.fr>",
-                    to: [user.email],
-                    subject: emailSubject,
-                    html: generateHtml(user.first_name || 'Nowme'),
-                });
-                sentCount++;
-            } catch (e) {
-                console.error(`Failed to send to ${user.email}:`, e);
-            }
-        });
+        const chunkSize = 20;
 
-        await Promise.all(emailPromises);
+        for (let i = 0; i < subscribers.length; i += chunkSize) {
+            const chunk = subscribers.slice(i, i + chunkSize);
+            await Promise.all(chunk.map(async (user) => {
+                try {
+                    await resend.emails.send({
+                        from: "Nowme Club <contact@nowme.fr>",
+                        to: [user.email],
+                        subject: emailSubject,
+                        html: generateHtml(user.first_name || 'Nowme'),
+                    });
+                    sentCount++;
+                } catch (e) {
+                    console.error(`Failed to send to ${user.email}:`, e);
+                }
+            }));
+        }
+
+        // 4. Log the recap in admin_newsletters for tracking
+        try {
+            await supabase.from("admin_newsletters").insert({
+                subject: `[AUTO-RECAP] ${emailSubject}`,
+                body: `Automated Weekly Recap sent to ${sentCount} subscribers.`,
+                status: 'sent',
+                sent_at: new Date().toISOString(),
+                scheduled_at: new Date().toISOString()
+            });
+        } catch (logError) {
+            console.error("Failed to log recap in admin_newsletters:", logError);
+            // Don't fail the whole function if logging fails
+        }
 
         return new Response(JSON.stringify({ success: true, count: sentCount }), {
             headers: { "Content-Type": "application/json" },

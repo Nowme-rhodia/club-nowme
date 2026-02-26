@@ -1,0 +1,25 @@
+--- 1. Recent Users and their Subscription Status ---
+2026-02-25T08:10:15.652166+00:00 | knora2000@yahoo.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-22T11:52:01.761819+00:00 | sandrine.ducamp@hotmail.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-21T16:56:27.511846+00:00 | sosonia14c@gmail.com | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-19T10:16:34.955198+00:00 | naturoparis14@gmail.com | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-19T10:16:13.372168+00:00 | lesfleurscestlui@gmail.com | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-18T07:59:49.036279+00:00 | mika97124@hotmail.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-17T15:17:01.807627+00:00 | rhodia+abonne@example.com | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-16T05:35:59.929345+00:00 | jeanne.njiki@live.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-14T19:55:25.219716+00:00 | dolcekatalina@gmail.com | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-14T17:54:13.016918+00:00 | e.erdial@gmail.com | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-14T16:43:58.905862+00:00 | sabsudre@gmail.com | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:15.48365+00:00 | rhodia+asmc@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:14.968143+00:00 | rhodia+sportdecouverte@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:14.478965+00:00 | rhodia+monbento@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:14.044817+00:00 | rhodia+fnac@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:13.403302+00:00 | rhodia+darty@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:12.937683+00:00 | rhodia+deesup@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:12.533495+00:00 | rhodia+lacouettefrancaise@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:12.101408+00:00 | rhodia+frenchmush@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+2026-02-13T18:27:11.645619+00:00 | rhodia+bonjourdrink@nowme.fr | Profile Sub: true | DB Sub Table Status: NONE
+
+--- 2. Checking Tuesday Recap Cron Logs via SQL ---
+
+--- 3. Checking for any "Newsletter" entries of type recap ---
