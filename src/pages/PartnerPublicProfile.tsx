@@ -38,6 +38,7 @@ export default function PartnerPublicProfile() {
     const [partner, setPartner] = useState<Partner | null>(null);
     const [offers, setOffers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [imageError, setImageError] = useState(false);
 
     useEffect(() => {
         const fetchPartnerProfile = async () => {
@@ -156,12 +157,13 @@ export default function PartnerPublicProfile() {
             <div className="relative h-64 md:h-80 w-full bg-gray-900 mt-0">
                 {/* Background (Blurred / Gradient) - Wrapped to clip overflow */}
                 <div className="absolute inset-0 overflow-hidden">
-                    {partner.cover_image_url ? (
+                    {partner.cover_image_url && !imageError ? (
                         <div className="absolute inset-0">
                             <img
                                 src={partner.cover_image_url}
                                 alt=""
                                 decoding="async"
+                                onError={() => setImageError(true)}
                                 className="w-full h-full object-cover opacity-50 blur-xl scale-110"
                             />
                             <div className="absolute inset-0 bg-black/40" />
@@ -188,10 +190,11 @@ export default function PartnerPublicProfile() {
                         {/* Profile Image (Square) */}
                         <div className="relative flex-shrink-0">
                             <div className="w-32 h-32 md:w-48 md:h-48 rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-white">
-                                {partner.cover_image_url ? (
+                                {partner.cover_image_url && !imageError ? (
                                     <img
                                         src={partner.cover_image_url}
                                         alt={partner.business_name}
+                                        onError={() => setImageError(true)}
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (

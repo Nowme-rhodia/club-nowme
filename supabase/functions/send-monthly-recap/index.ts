@@ -46,7 +46,8 @@ serve(async (req) => {
         const { data: profiles, error: profilesError } = await supabase
             .from('user_profiles')
             .select('user_id, email, first_name')
-            // .eq('subscription_status', 'active') // Uncomment if confirmed column
+            .is('partner_id', null)
+            .or('is_admin.is.null,is_admin.eq.false')
             .not('email', 'is', null);
 
         if (profilesError) throw profilesError;

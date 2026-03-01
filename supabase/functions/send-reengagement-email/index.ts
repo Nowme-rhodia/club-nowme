@@ -35,8 +35,9 @@ serve(async (req: Request) => {
         const activeUserIds = new Set(recentBookings?.map((b: any) => b.user_id));
 
         // Exclude partners - they have their own dedicated onboarding reminder system
+        // Also exclude admins.
         const inactiveUsersRaw = users?.filter((u: any) => !activeUserIds.has(u.user_id)) || [];
-        const inactiveUsers = inactiveUsersRaw.filter((u: any) => !u.partner_id); // Exclude anyone who IS a partner
+        const inactiveUsers = inactiveUsersRaw.filter((u: any) => !u.partner_id && !u.is_admin); // Exclude partners & admins
 
         console.log(`Found ${inactiveUsers.length} inactive users.`);
 

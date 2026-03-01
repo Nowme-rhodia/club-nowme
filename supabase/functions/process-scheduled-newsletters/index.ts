@@ -78,7 +78,7 @@ serve(async (req) => {
                 .select("email")
                 .eq("sub_newsletter", true)
                 .is("partner_id", null)
-                .eq("is_admin", false)
+                .or('is_admin.is.null,is_admin.eq.false')
                 .not("email", "is", null);
 
             if (usersError || !subscribers || subscribers.length === 0) {

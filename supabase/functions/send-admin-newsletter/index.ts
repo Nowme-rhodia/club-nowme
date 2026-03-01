@@ -32,6 +32,8 @@ serve(async (req) => {
             .from("user_profiles")
             .select("email, first_name")
             .eq("sub_newsletter", true)
+            .is('partner_id', null)
+            .or('is_admin.is.null,is_admin.eq.false')
             .not("email", "is", null);
 
         if (usersError || !subscribers) {

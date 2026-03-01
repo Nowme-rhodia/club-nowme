@@ -22,6 +22,11 @@ interface Partner {
 export default function PartnersDirectory() {
     const [partners, setPartners] = useState<Partner[]>([]);
     const [loading, setLoading] = useState(true);
+    const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+
+    const handleImageError = (id: string) => {
+        setImageErrors(prev => ({ ...prev, [id]: true }));
+    };
 
     useEffect(() => {
         const fetchPartners = async () => {
@@ -131,10 +136,11 @@ export default function PartnersDirectory() {
                                 >
                                     {/* Cover Image Area */}
                                     <div className="h-40 bg-gray-100 relative overflow-hidden">
-                                        {partner.cover_image_url ? (
+                                        {partner.cover_image_url && !imageErrors[partner.id] ? (
                                             <img
                                                 src={partner.cover_image_url}
                                                 alt=""
+                                                onError={() => handleImageError(partner.id)}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             />
                                         ) : (

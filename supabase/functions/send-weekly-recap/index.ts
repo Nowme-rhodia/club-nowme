@@ -93,6 +93,7 @@ serve(async (req) => {
             .select("email, first_name")
             .eq("sub_auto_recap", true)
             .is("partner_id", null) // Exclude partners
+            .or('is_admin.is.null,is_admin.eq.false') // Exclude admins
             .not("email", "is", null);
 
         if (usersError || !subscribers) {
