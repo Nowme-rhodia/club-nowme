@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "@supabase/supabase-js";
-import { Stripe } from "https://esm.sh/stripe@12.0.0?target=deno";
+import { Stripe } from "stripe";
 import { Resend } from "resend";
 
 const corsHeaders = {

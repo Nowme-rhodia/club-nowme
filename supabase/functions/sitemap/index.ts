@@ -1,5 +1,5 @@
 
-import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { createClient } from "@supabase/supabase-js"
 
 console.log("Sitemap Edge Function Invoked")
 

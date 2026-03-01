@@ -1,6 +1,6 @@
 // File: supabase/functions/_shared/utils/supabase.ts
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createClient } from "@supabase/supabase-js";
 
 export function createSupabaseClient(authHeader?: string) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

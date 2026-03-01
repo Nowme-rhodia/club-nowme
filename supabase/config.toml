@@ -53,7 +53,6 @@ verify_jwt = false
 [functions.send-abandoned-signup-reminder]
 enabled = true
 verify_jwt = true
-import_map = "./functions/send-abandoned-signup-reminder/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/send-abandoned-signup-reminder/index.ts"
@@ -64,7 +63,6 @@ entrypoint = "./functions/send-abandoned-signup-reminder/index.ts"
 [functions.generate-payout-statement]
 enabled = true
 verify_jwt = true
-import_map = "./functions/generate-payout-statement/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/generate-payout-statement/index.ts"
@@ -75,7 +73,6 @@ entrypoint = "./functions/generate-payout-statement/index.ts"
 [functions.send-partner-expiration-reminder]
 enabled = true
 verify_jwt = true
-import_map = "./functions/send-partner-expiration-reminder/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/send-partner-expiration-reminder/index.ts"
@@ -86,7 +83,6 @@ entrypoint = "./functions/send-partner-expiration-reminder/index.ts"
 [functions.approve-ambassador]
 enabled = true
 verify_jwt = true
-import_map = "./functions/approve-ambassador/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/approve-ambassador/index.ts"
@@ -97,7 +93,6 @@ entrypoint = "./functions/approve-ambassador/index.ts"
 [functions.admin-delete-user]
 enabled = true
 verify_jwt = true
-import_map = "./functions/admin-delete-user/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/admin-delete-user/index.ts"
@@ -108,29 +103,24 @@ entrypoint = "./functions/admin-delete-user/index.ts"
 [functions.fix-stripe-payouts]
 enabled = true
 verify_jwt = true
-import_map = "./functions/fix-stripe-payouts/deno.json"
 entrypoint = "./functions/fix-stripe-payouts/index.ts"
 
 [functions.send-onboarding-reminders]
 enabled = true
 verify_jwt = true
-import_map = "./functions/send-onboarding-reminders/deno.json"
 entrypoint = "./functions/send-onboarding-reminders/index.ts"
 
 [functions.send-booking-reminder]
 enabled = true
 verify_jwt = true
-import_map = "./functions/send-booking-reminder/deno.json"
 entrypoint = "./functions/send-booking-reminder/index.ts"
 
 [functions.send-reengagement-email]
 enabled = true
 verify_jwt = true
-import_map = "./functions/send-reengagement-email/deno.json"
 entrypoint = "./functions/send-reengagement-email/index.ts"
 
 [functions.send-low-stock-alert]
 enabled = true
 verify_jwt = true
-import_map = "./functions/send-low-stock-alert/deno.json"
 entrypoint = "./functions/send-low-stock-alert/index.ts"

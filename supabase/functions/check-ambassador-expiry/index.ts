@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const adminEmail = Deno.env.get("GMAIL_EMAIL") || "rhodia@nowme.fr";

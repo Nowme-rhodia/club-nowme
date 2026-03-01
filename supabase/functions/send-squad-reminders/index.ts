@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { Resend } from "npm:resend@2.0.0";
+import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -72,30 +72,37 @@ serve(async (req) => {
                     const { email, first_name } = member;
                     if (!email) continue;
 
-                    await resend.emails.send({
-                        from: 'Club Nowme <equipe@nowme.fr>',
-                        to: email,
-                        subject: `J-7 : Ta sortie ${squad.title} approche ! 👯‍♀️`,
-                        html: `
-                  <div style="font-family: sans-serif; color: #333;">
-                    <p>Coucou ${first_name || 'La Kiffeuse'} !</p>
-                    <p>Plus que quelques jours avant ta sortie <strong>${squad.title}</strong> ! C'est le moment de chauffer le groupe WhatsApp ! 🔥</p>
-                    
-                    <div style="background: #fdf2f8; padding: 20px; border-radius: 12px; margin: 20px 0;">
-                        <h3 style="margin-top: 0; color: #db2777;">Rappel du RDV :</h3>
-                        <p style="margin: 5px 0;">📅 ${eventDate}</p>
-                        <p style="margin: 5px 0;">📍 ${squad.location}</p>
-                    </div>
+                    try {
+                        // Rate limit prevention
+                        await new Promise(resolve => setTimeout(resolve, 500));
 
-                    <p><strong>Le petit rappel bienveillance :</strong><br/>
-                    Au Club, on vient comme on est, avec son sourire et sa bonne humeur. L'objectif ? Passer un moment 100% déconnexion et sororité. On compte sur toi pour accueillir les nouvelles comme des reines ! 👑</p>
+                        await resend.emails.send({
+                            from: 'Club Nowme <equipe@nowme.fr>',
+                            to: email,
+                            subject: `J-7 : Ta sortie ${squad.title} approche ! 👯‍♀️`,
+                            html: `
+                      <div style="font-family: sans-serif; color: #333;">
+                        <p>Coucou ${first_name || 'La Kiffeuse'} !</p>
+                        <p>Plus que quelques jours avant ta sortie <strong>${squad.title}</strong> ! C'est le moment de chauffer le groupe WhatsApp ! 🔥</p>
+                        
+                        <div style="background: #fdf2f8; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #db2777;">Rappel du RDV :</h3>
+                            <p style="margin: 5px 0;">📅 ${eventDate}</p>
+                            <p style="margin: 5px 0;">📍 ${squad.location}</p>
+                        </div>
 
-                    <p>On a trop hâte de voir vos photos (n'oublie pas de nous taguer !).</p>
+                        <p><strong>Le petit rappel bienveillance :</strong><br/>
+                        Au Club, on vient comme on est, avec son sourire et sa bonne humeur. L'objectif ? Passer un moment 100% déconnexion et sororité. On compte sur toi pour accueillir les nouvelles comme des reines ! 👑</p>
 
-                    <p>À très vite,<br/><strong>La Team Nowme</strong></p>
-                  </div>
-                `
-                    });
+                        <p>On a trop hâte de voir vos photos (n'oublie pas de nous taguer !).</p>
+
+                        <p>À très vite,<br/><strong>La Team Nowme</strong></p>
+                      </div>
+                    `
+                        });
+                    } catch (err) {
+                        console.error(`Failed to send J-7 reminder to ${email}:`, err);
+                    }
                 }
 
                 // Mark as sent
@@ -150,30 +157,37 @@ serve(async (req) => {
 
                     // NOTE: Using slightly different 'J-3' copy (same structure, slight variation if desired, but sticking to reviewed template logic)
                     // User authorized "Rappel Sortie (J-7 et J-3)" with one template. I'll use the same well-crafted template.
-                    await resend.emails.send({
-                        from: 'Club Nowme <equipe@nowme.fr>',
-                        to: email,
-                        subject: `J-3 : Ta sortie ${squad.title}, c'est bientôt ! 👯‍♀️`,
-                        html: `
-                  <div style="font-family: sans-serif; color: #333;">
-                    <p>Coucou ${first_name || 'La Kiffeuse'} !</p>
-                    <p>C'est presque le jour J pour <strong>${squad.title}</strong> ! On espère que tu es prête. 🔥</p>
-                    
-                    <div style="background: #fdf2f8; padding: 20px; border-radius: 12px; margin: 20px 0;">
-                        <h3 style="margin-top: 0; color: #db2777;">Rappel du RDV :</h3>
-                        <p style="margin: 5px 0;">📅 ${eventDate}</p>
-                        <p style="margin: 5px 0;">📍 ${squad.location}</p>
-                    </div>
+                    try {
+                        // Rate limit prevention
+                        await new Promise(resolve => setTimeout(resolve, 500));
 
-                    <p><strong>Le petit rappel bienveillance :</strong><br/>
-                    Au Club, on vient comme on est, avec son sourire et sa bonne humeur. L'objectif ? Passer un moment 100% déconnexion et sororité. On compte sur toi pour accueillir les nouvelles comme des reines ! 👑</p>
+                        await resend.emails.send({
+                            from: 'Club Nowme <equipe@nowme.fr>',
+                            to: email,
+                            subject: `J-3 : Ta sortie ${squad.title}, c'est bientôt ! 👯‍♀️`,
+                            html: `
+                      <div style="font-family: sans-serif; color: #333;">
+                        <p>Coucou ${first_name || 'La Kiffeuse'} !</p>
+                        <p>C'est presque le jour J pour <strong>${squad.title}</strong> ! On espère que tu es prête. 🔥</p>
+                        
+                        <div style="background: #fdf2f8; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #db2777;">Rappel du RDV :</h3>
+                            <p style="margin: 5px 0;">📅 ${eventDate}</p>
+                            <p style="margin: 5px 0;">📍 ${squad.location}</p>
+                        </div>
 
-                    <p>On a trop hâte de voir vos photos (n'oublie pas de nous taguer !).</p>
+                        <p><strong>Le petit rappel bienveillance :</strong><br/>
+                        Au Club, on vient comme on est, avec son sourire et sa bonne humeur. L'objectif ? Passer un moment 100% déconnexion et sororité. On compte sur toi pour accueillir les nouvelles comme des reines ! 👑</p>
 
-                    <p>À très vite,<br/><strong>La Team Nowme</strong></p>
-                  </div>
-                `
-                    });
+                        <p>On a trop hâte de voir vos photos (n'oublie pas de nous taguer !).</p>
+
+                        <p>À très vite,<br/><strong>La Team Nowme</strong></p>
+                      </div>
+                    `
+                        });
+                    } catch (err) {
+                        console.error(`Failed to send J-3 reminder to ${email}:`, err);
+                    }
                 }
 
                 // Mark as sent

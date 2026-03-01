@@ -1,7 +1,7 @@
 // data-migration.ts - Edge Function pour les migrations de données
 // Cette fonction remplace supabase-data-migration.js pour une utilisation dans StackBlitz
 
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from "@supabase/supabase-js";
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 
 // Configuration

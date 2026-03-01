@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -21,7 +21,7 @@ serve(async (req) => {
                 offers!inner (
                     title,
                     status,
-                    partners!inner (
+                    partners!offers_partner_id_fkey!inner (
                         business_name,
                         contact_email,
                         contact_name
@@ -42,11 +42,15 @@ serve(async (req) => {
         // 2. Process Alerts
         for (const variant of variants) {
             // @ts-ignore
-            const partner = variant.offers.partners;
-            // @ts-ignore
-            const offerTitle = variant.offers.title;
+            const offer = variant.offers;
+            if (!offer) continue;
 
-            if (!partner.contact_email) continue;
+            // @ts-ignore
+            const partner = offer.partners;
+            // @ts-ignore
+            const offerTitle = offer.title;
+
+            if (!partner || !partner.contact_email) continue;
 
             // Check if we already alerted for this variant recently (e.g., last 3 days)
             // Using 'emails' table again as audit log

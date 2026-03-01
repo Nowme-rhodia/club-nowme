@@ -1,0 +1,105 @@
+WARNING: Functions using fallback import map: admin-create-partner, admin-delete-squad, admin-maintenance, admin-recreate-user, approve-partner, cancel-booking, check-ambassador-expiry, check-event-completion, check-upcoming-installments, cleanup-test-user, create-checkout-session, create-connect-account, create-offer-session, debug-newsletter, get-payment-link, get-stripe-session, get-user-profile, handle-partner-cancellation, handle-wallet-debit, link-auth-to-profile, manage-ambassador, manage-club-boxes, manage-club-events, manage-masterclasses, manage-rewards, manage-wellness-consultations, migrations, notify-ambassador-application, nuke-jgendron, nuke-user, process-email-queue, process-scheduled-newsletters, run-migration, run-payouts, send-admin-newsletter, send-confirmation-email, send-daily-newsletter, send-emails, send-feedback-email, send-invoice-receipt, send-marketing-campaigns, send-monthly-recap, send-offer-approval, send-offer-notification, send-offer-rejection, send-offer-submission-confirmation, send-partner-approval, send-partner-approval-email, send-partner-confirmation, send-partner-notification, send-partner-rejection, send-partner-submission, send-payment-failed-email, send-squad-reminders, send-subscription-welcome, send-weekly-recap, sitemap, stripe-checkout-completed, stripe-connect-webhook, stripe-user-welcome, stripe-webhook, sync-stripe-subscriptions, verify-subscription, stripe-webhook, sync-stripe-subscriptions, stripe-checkout-completed, link-auth-to-profile
+Please use recommended per function dependency declaration  https://supabase.com/docs/guides/functions/import-maps
+WARNING: Docker is not running
+Deploying Function: approve-partner
+Uploading asset (approve-partner): supabase/functions/import_map.json
+Uploading asset (approve-partner): supabase/functions/approve-partner/index.ts
+Deploying Function: run-migration
+Uploading asset (run-migration): supabase/functions/import_map.json
+Uploading asset (run-migration): supabase/functions/run-migration/index.ts
+Deploying Function: send-feedback-email
+Uploading asset (send-feedback-email): supabase/functions/import_map.json
+Uploading asset (send-feedback-email): supabase/functions/send-feedback-email/index.ts
+Deploying Function: send-invoice-receipt
+Uploading asset (send-invoice-receipt): supabase/functions/import_map.json
+Uploading asset (send-invoice-receipt): supabase/functions/send-invoice-receipt/index.ts
+Deploying Function: send-partner-expiration-reminder
+Uploading asset (send-partner-expiration-reminder): supabase/functions/send-partner-expiration-reminder/deno.json
+Uploading asset (send-partner-expiration-reminder): supabase/functions/send-partner-expiration-reminder/index.ts
+Deploying Function: create-portal-session
+Uploading asset (create-portal-session): supabase/functions/create-portal-session/deno.json
+Uploading asset (create-portal-session): supabase/functions/create-portal-session/index.ts
+Deploying Function: get-payment-link
+Uploading asset (get-payment-link): supabase/functions/import_map.json
+Uploading asset (get-payment-link): supabase/functions/get-payment-link/index.ts
+Deploying Function: process-scheduled-newsletters
+Uploading asset (process-scheduled-newsletters): supabase/functions/import_map.json
+Uploading asset (process-scheduled-newsletters): supabase/functions/process-scheduled-newsletters/index.ts
+Deploying Function: send-squad-reminders
+Uploading asset (send-squad-reminders): supabase/functions/import_map.json
+Uploading asset (send-squad-reminders): supabase/functions/send-squad-reminders/index.ts
+Deploying Function: send-abandoned-signup-reminder
+Uploading asset (send-abandoned-signup-reminder): supabase/functions/send-abandoned-signup-reminder/deno.json
+Uploading asset (send-abandoned-signup-reminder): supabase/functions/send-abandoned-signup-reminder/index.ts
+Deploying Function: admin-list-users
+Uploading asset (admin-list-users): supabase/functions/admin-list-users/deno.json
+Uploading asset (admin-list-users): supabase/functions/admin-list-users/index.ts
+Deploying Function: handle-wallet-debit
+Uploading asset (handle-wallet-debit): supabase/functions/import_map.json
+Uploading asset (handle-wallet-debit): supabase/functions/handle-wallet-debit/index.ts
+Uploading asset (handle-wallet-debit): supabase/functions/_shared/utils/logging.ts
+Uploading asset (handle-wallet-debit): supabase/functions/_shared/utils/cors.ts
+Deploying Function: notify-ambassador-application
+Uploading asset (notify-ambassador-application): supabase/functions/import_map.json
+Uploading asset (notify-ambassador-application): supabase/functions/notify-ambassador-application/index.ts
+Deploying Function: nuke-jgendron
+Uploading asset (nuke-jgendron): supabase/functions/import_map.json
+Uploading asset (nuke-jgendron): supabase/functions/nuke-jgendron/index.ts
+Deploying Function: send-partner-approval
+Uploading asset (send-partner-approval): supabase/functions/import_map.json
+Uploading asset (send-partner-approval): supabase/functions/send-partner-approval/index.ts
+Uploading asset (send-partner-approval): supabase/functions/_shared/utils/index.ts
+Uploading asset (send-partner-approval): supabase/functions/_shared/utils/cors.ts
+Uploading asset (send-partner-approval): supabase/functions/_shared/utils/logging.ts
+Uploading asset (send-partner-approval): supabase/functions/_shared/utils/supabase.ts
+Uploading asset (send-partner-approval): supabase/functions/_shared/utils/email.ts
+Deploying Function: cancel-subscription
+Uploading asset (cancel-subscription): supabase/functions/cancel-subscription/deno.json
+Uploading asset (cancel-subscription): supabase/functions/cancel-subscription/index.ts
+Deploying Function: create-admin-users
+Uploading asset (create-admin-users): supabase/functions/create-admin-users/deno.json
+Uploading asset (create-admin-users): supabase/functions/create-admin-users/index.ts
+Deploying Function: create-connect-account
+Uploading asset (create-connect-account): supabase/functions/import_map.json
+Uploading asset (create-connect-account): supabase/functions/create-connect-account/index.ts
+Deploying Function: handle-partner-cancellation
+Uploading asset (handle-partner-cancellation): supabase/functions/import_map.json
+Uploading asset (handle-partner-cancellation): supabase/functions/handle-partner-cancellation/index.ts
+Deploying Function: manage-ambassador
+Uploading asset (manage-ambassador): supabase/functions/import_map.json
+Uploading asset (manage-ambassador): supabase/functions/manage-ambassador/index.ts
+Deploying Function: send-weekly-recap
+Uploading asset (send-weekly-recap): supabase/functions/import_map.json
+Uploading asset (send-weekly-recap): supabase/functions/send-weekly-recap/index.ts
+Deploying Function: customize-auth-emails
+Uploading asset (customize-auth-emails): supabase/functions/customize-auth-emails/deno.json
+Uploading asset (customize-auth-emails): supabase/functions/customize-auth-emails/index.ts
+Deploying Function: manage-wellness-consultations
+Uploading asset (manage-wellness-consultations): supabase/functions/import_map.json
+Uploading asset (manage-wellness-consultations): supabase/functions/manage-wellness-consultations/index.ts
+Deploying Function: process-email-queue
+Uploading asset (process-email-queue): supabase/functions/import_map.json
+Uploading asset (process-email-queue): supabase/functions/process-email-queue/index.ts
+Uploading asset (process-email-queue): supabase/functions/_shared/utils/index.ts
+Uploading asset (process-email-queue): supabase/functions/_shared/utils/cors.ts
+Uploading asset (process-email-queue): supabase/functions/_shared/utils/logging.ts
+Uploading asset (process-email-queue): supabase/functions/_shared/utils/supabase.ts
+Uploading asset (process-email-queue): supabase/functions/_shared/utils/email.ts
+Deploying Function: send-onboarding-reminders
+Uploading asset (send-onboarding-reminders): supabase/functions/send-onboarding-reminders/deno.json
+Uploading asset (send-onboarding-reminders): supabase/functions/send-onboarding-reminders/index.ts
+Deploying Function: sitemap
+Uploading asset (sitemap): supabase/functions/import_map.json
+Uploading asset (sitemap): supabase/functions/sitemap/index.ts
+Deploying Function: check-upcoming-installments
+Uploading asset (check-upcoming-installments): supabase/functions/import_map.json
+Uploading asset (check-upcoming-installments): supabase/functions/check-upcoming-installments/index.ts
+Deploying Function: get-user-profile
+Uploading asset (get-user-profile): supabase/functions/import_map.json
+Uploading asset (get-user-profile): supabase/functions/get-user-profile/index.ts
+Deploying Function: send-reengagement-email
+Uploading asset (send-reengagement-email): supabase/functions/send-reengagement-email/deno.json
+Uploading asset (send-reengagement-email): supabase/functions/send-reengagement-email/index.ts
+Deploying Function: fix-stripe-payouts
+unexpected deploy status 400: {"message":"Failed to bundle the function (reason: Relative import path \"@supabase/supabase-js\" not prefixed with / or ./ or ../ and not in import map from \"file:///tmp/user_fn_dqfyuhwrjozoxadkccdj_0dedcd5c-c1b4-446e-a214-63bfe5708607_10/source/supabase/functions/send-reengagement-email/index.ts\"\n    at file:///tmp/user_fn_dqfyuhwrjozoxadkccdj_0dedcd5c-c1b4-446e-a214-63bfe5708607_10/source/supabase/functions/send-reengagement-email/index.ts:3:30)."}
+Try rerunning the command with --debug to troubleshoot the error.

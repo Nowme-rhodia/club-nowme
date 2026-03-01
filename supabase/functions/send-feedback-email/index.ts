@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { Resend } from "https://esm.sh/resend@2.0.0"
+import { createClient } from "@supabase/supabase-js"
+import { Resend } from "resend"
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
 const supabaseUrl = Deno.env.get("SUPABASE_URL")
@@ -62,6 +62,8 @@ serve(async (req) => {
             const offer = booking.offers
             // @ts-ignore
             const partner = booking.partners
+
+            if (!offer || !partner) continue;
 
             let shouldSend = false
             let triggerTime: Date | null = null

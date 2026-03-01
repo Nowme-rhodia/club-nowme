@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 import { corsHeaders, handleCors } from "../_shared/utils/cors.ts";
 import { logger } from "../_shared/utils/logging.ts";
 

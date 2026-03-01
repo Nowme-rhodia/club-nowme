@@ -1,7 +1,7 @@
 // customize-auth-email.ts
 // deno-lint-ignore-file no-explicit-any
 
-import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
+import { createClient } from "@supabase/supabase-js";
 
 // Types pour les événements d'authentification
 interface WebhookPayload {

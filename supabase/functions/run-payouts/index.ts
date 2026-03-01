@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js";
-import Stripe from 'https://esm.sh/stripe@14.25.0?target=denonext';
+import { createClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
   apiVersion: '2025-02-24.acacia',
