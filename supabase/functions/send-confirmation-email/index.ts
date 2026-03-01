@@ -1,7 +1,7 @@
 
-import { createClient } from "jsr:@supabase/supabase-js@2"
-import { PDFDocument, StandardFonts, rgb } from "npm:pdf-lib@1.17.1"
-import { Resend } from "npm:resend@2.0.0"
+import { createClient } from "@supabase/supabase-js"
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
+import { Resend } from "resend"
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
 const supabaseUrl = Deno.env.get("SUPABASE_URL")
@@ -51,9 +51,9 @@ Deno.serve(async (req) => {
         if (userResponse.error) console.error("User fetch error:", userResponse.error)
 
         let user = userResponse.data || { first_name: '', last_name: '', email: '' }
-        const offer = offerResponse.data || { title: 'Offre inconnue' }
-        const partner = partnerResponse.data || { business_name: 'Partenaire', address: '', siret: '', tva_intra: '', contact_email: '' }
-        const variant = variantResponse.data
+        const offer = (offerResponse.data as any) || { title: 'Offre inconnue', is_online: false, booking_type: 'service', external_link: '', digital_product_file: '' }
+        const partner = (partnerResponse.data as any) || { business_name: 'Partenaire', address: '', siret: '', tva_intra: '', contact_email: '', notification_settings: { new_booking: true } }
+        const variant = variantResponse.data as any
 
         // Fetch Installment Plan if exists
         const { data: paymentPlan } = await supabase
@@ -143,7 +143,16 @@ Deno.serve(async (req) => {
         drawText("Problème technique : Contactez NOWME à support@nowme.fr", 50, 26, 8, font)
 
         const pdfBytes = await pdfDoc.save()
-        const pdfBase64 = btoa(String.fromCharCode(...pdfBytes))
+
+        // Use a more memory-efficient way to convert Uint8Array to base64
+        // to avoid "Maximum call stack size exceeded" with btoa(String.fromCharCode(...pdfBytes))
+        let pdfBase64 = ""
+        const chunkLength = 8192
+        for (let i = 0; i < pdfBytes.length; i += chunkLength) {
+            const chunk = pdfBytes.slice(i, i + chunkLength)
+            pdfBase64 += String.fromCharCode.apply(null, chunk as unknown as number[])
+        }
+        pdfBase64 = btoa(pdfBase64)
 
         // Email Logic
         const isOnline = offer.is_online || false;
@@ -151,11 +160,11 @@ Deno.serve(async (req) => {
         let dateDisplay = "Date à définir";
         let locationDisplay = partnerAddress;
 
-        const { data: offerDetails } = await supabase
+        const { data: offerDetails } = await (supabase
             .from('offers')
-            .select('service_zones, event_start_date')
+            .select('service_zones, event_start_date, requires_agenda')
             .eq('id', bookingData.offer_id)
-            .single();
+            .single() as any);
 
         const serviceZones = offerDetails?.service_zones || [];
         const isAtHome = serviceZones.length > 0;
@@ -320,7 +329,7 @@ Deno.serve(async (req) => {
                                 <h3 style="margin-top: 0; color: #334155; font-size: 16px;">Détails de la réservation</h3>
                                 <p style="margin: 5px 0;"><strong>📅 Date :</strong> ${dateDisplay}</p>
                                 ${isAtHome ? `<p style="margin: 5px 0;"><strong>📍 Lieu :</strong> <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationDisplay)}">${locationDisplay}</a></p>` : ''}
-                                ${variantName ? `<p style="margin: 5px 0;"><strong>🔹 Option :</strong> ${variant.name}</p>` : ''}
+                                ${variantName && variant ? `<p style="margin: 5px 0;"><strong>🔹 Option :</strong> ${variant.name}</p>` : ''}
                                 <p style="margin: 5px 0;"><strong>💰 Montant réglé (par le client) :</strong> ${price.toFixed(2)} € ${isInstallment ? '(1ère échéance sur ' + planType + ')' : ''}</p>
                                 ${isInstallment ? `<p style="margin: 5px 0; color: #0369a1;"><strong>ℹ️ Reste à payer (en auto) :</strong> ${remainingAmount.toFixed(2)} €</p>` : ''}
                             </div>
@@ -338,6 +347,7 @@ Deno.serve(async (req) => {
                         to: [partner.contact_email],
                         subject: `Nouvelle réservation : ${buyerName} - ${offerTitle}`,
                         html: partnerHtmlContent,
+                        attachments: [{ filename: `Facture-${bookingData.id.slice(0, 8)}.pdf`, content: pdfBase64 }],
                     })
                     if (partnerEmailData.error) {
                         console.error("Resend API Error (Partner Email):", partnerEmailData.error)

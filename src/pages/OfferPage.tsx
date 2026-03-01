@@ -18,6 +18,7 @@ import { stripHtmlAndDecode } from '../utils/textFormatters';
 import { getVideoEmbedUrl } from '../utils/video';
 import DOMPurify from 'dompurify';
 import { getOptimizedImage } from '../utils/imageOptimizer';
+import { parseSafeDate } from '../utils/dateUtils';
 
 // Type definition to avoid errors
 declare global {
@@ -271,7 +272,7 @@ export default function OfferPage() {
   const isOutOfStock = selectedVariant && selectedVariant.stock !== null && selectedVariant.stock <= 0;
 
   // Format date if present
-  const formattedDate = offer?.event_start_date ? new Date(offer.event_start_date).toLocaleDateString('fr-FR', {
+  const formattedDate = offer?.event_start_date ? parseSafeDate(offer.event_start_date)?.toLocaleDateString('fr-FR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -358,14 +359,15 @@ export default function OfferPage() {
 
   const getEventDate = () => {
     if (!offer.event_start_date) return '';
-    return new Date(offer.event_start_date).toLocaleString('fr-FR', {
+    const parsed = parseSafeDate(offer.event_start_date);
+    return parsed ? parsed.toLocaleString('fr-FR', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    });
+    }) : '';
   };
 
 
@@ -629,8 +631,8 @@ export default function OfferPage() {
           "description": seoDescription,
           "image": [offer?.image_url, ...(images || [])],
           ...(offer?.booking_type === 'event' || offer?.booking_type === 'calendly' ? {
-            "startDate": offer?.event_start_date ? new Date(offer.event_start_date).toISOString() : undefined,
-            "endDate": offer?.event_end_date ? new Date(offer.event_end_date).toISOString() : undefined,
+            "startDate": offer?.event_start_date ? parseSafeDate(offer.event_start_date)?.toISOString() : undefined,
+            "endDate": offer?.event_end_date ? parseSafeDate(offer.event_end_date)?.toISOString() : undefined,
             "eventStatus": "https://schema.org/EventScheduled",
             "eventAttendanceMode": offer?.is_online ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
             "location": offer?.is_online ? {
@@ -811,10 +813,10 @@ export default function OfferPage() {
                       <div className="flex items-center gap-1.5 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
                         <Calendar className="h-5 w-5 text-gray-400 mr-2" />
                         <span className="text-primary font-medium text-sm">
-                          {new Date(offer.event_start_date).toLocaleString('fr-FR', {
+                          {parseSafeDate(offer.event_start_date)?.toLocaleString('fr-FR', {
                             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                           })}
-                          {offer.event_end_date && ` - ${new Date(offer.event_end_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+                          {offer.event_end_date && ` - ${parseSafeDate(offer.event_end_date)?.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
                         </span>
                       </div>
                     )}
@@ -823,7 +825,7 @@ export default function OfferPage() {
                       <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
                         <Clock className="w-4 h-4 text-amber-600" />
                         <span className="text-amber-700 font-medium text-sm">
-                          Valable du {new Date(offer.validity_start_date).toLocaleDateString('fr-FR')} au {new Date(offer.validity_end_date).toLocaleDateString('fr-FR')}
+                          Valable du {parseSafeDate(offer.validity_start_date)?.toLocaleDateString('fr-FR')} au {parseSafeDate(offer.validity_end_date)?.toLocaleDateString('fr-FR')}
                         </span>
                       </div>
                     )}
@@ -1279,7 +1281,7 @@ export default function OfferPage() {
                         <div className="mb-4 flex flex-col items-end">
                           {/* Logic: Show options if defined AND price > 100 AND startDate > 7 days */}
                           {(() => {
-                            const isEligibleDate = !offer.event_start_date || (new Date(offer.event_start_date).getTime() - Date.now() > 7 * 24 * 60 * 60 * 1000);
+                            const isEligibleDate = !offer.event_start_date || ((parseSafeDate(offer.event_start_date)?.getTime() || 0) - Date.now() > 7 * 24 * 60 * 60 * 1000);
                             const validOptions = (offer.installment_options || []).filter((opt: string) => ['2x', '3x', '4x'].includes(opt));
 
                             // Only show if we have options and date is OK

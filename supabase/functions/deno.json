@@ -1,7 +1,13 @@
 {
   "importMap": "./import_map.json",
+  "nodeModulesDir": "auto",
   "compilerOptions": {
-    "lib": ["ESNext", "DOM", "DOM.Iterable", "deno.ns"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable",
+      "deno.ns"
+    ],
     "strict": true
   }
 }
