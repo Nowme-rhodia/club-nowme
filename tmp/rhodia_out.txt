@@ -1,0 +1,21 @@
+rhodia+ accounts:
+  rhodia+abonne@example.com -> ad1da612-31d4-4bb8-9935-92b76b30dfeb
+  rhodia+bonjourdrink@nowme.fr -> 68719d4f-d693-4aab-92df-e8da58b6a542
+  rhodia+darty@nowme.fr -> 2bc2ea43-0c64-4020-81dc-381b7e87182a
+  rhodia+asmc@nowme.fr -> 02258539-94e2-4c00-b41c-ff58965301b4
+  rhodia+hairlust@nowme.fr -> ff442bee-ef73-4b72-befa-2b79485484a6
+  rhodia+frenchmush@nowme.fr -> 15f72652-5ba7-4423-b5d4-ba172b701e84
+  rhodia+lacouettefrancaise@nowme.fr -> 992808f2-4856-4f4d-87a6-f572bfca9fa2
+  rhodia+fnac@nowme.fr -> b97b5a7a-977d-451b-bab8-016560c2b136
+  rhodia+monbento@nowme.fr -> 930f0199-bd96-4a1d-800c-69a578659866
+  rhodia+maisondesfragrances@nowme.fr -> 35579a67-af2c-428d-8558-d3295c5f2483
+  rhodia+deesup@nowme.fr -> 9ea72118-ec1a-4bc7-8fa9-a8fe7e3cff03
+  rhodia+sportdecouverte@nowme.fr -> df0529aa-950a-4bee-a6c3-60e6cf271c8e
+
+Partner profiles:
+categories error: {
+  code: '42703',
+  details: null,
+  hint: null,
+  message: 'column offer_categories.parent_id does not exist'
+}

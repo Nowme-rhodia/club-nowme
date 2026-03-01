@@ -11,6 +11,7 @@ export function Header() {
   const navigationItems = [
     { name: 'Accueil', path: '/' },
     { name: 'Tous les kiffs', path: '/tous-les-kiffs' }, // Shop
+    { name: 'Nos Partenaires', path: '/nos-partenaires' },
     { name: "L'Agenda", path: '/agenda', requiresSubscription: true }, // Events
     { name: 'Le QG', path: '/le-club', requiresSubscription: true }, // Social
     ...(isPartner && !isAdmin ? [] : [{ name: "Mode d'emploi", path: (isSubscriber || isAdmin || user?.email === 'rhodia@nowme.fr') ? '/guide-abonnee' : '/guide-public' }])

@@ -42,6 +42,7 @@ const MentionsLegales = React.lazy(() => import('./pages/legal/MentionsLegales')
 const PrivacyPolicy = React.lazy(() => import('./pages/legal/PrivacyPolicy'));
 const CGV = React.lazy(() => import('./pages/legal/CGV'));
 const ConditionsPartenaires = React.lazy(() => import('./pages/legal/ConditionsPartenaires'));
+const PartnersDirectory = React.lazy(() => import('./pages/PartnersDirectory'));
 
 // Auth pages
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
@@ -146,6 +147,7 @@ function App() {
                       <BecomeAmbassador />
                     </PrivateRoute>
                   } />
+                  <Route path="/nos-partenaires" element={<PartnersDirectory />} />
                   <Route path="/qui-sommes-nous" element={<QuiSommesNous />} />
                   <Route path="/instagram-partners" element={<InstagramPartnerSlides />} />
                   <Route path="/le-club" element={

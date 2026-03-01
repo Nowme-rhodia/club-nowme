@@ -1,0 +1,29 @@
+Available categories: personal-shopper, beaute-et-hygiene-cosmetique, services-a-domicile, centre-de-yoga-pilates, institut-de-beaute-esthetique, naturopathe-sophrologue, reflexologie, salon-de-massage-drainage-lymphatique, thalassotherapie-hammam, bars, boite-de-nuit, dj-animateur-de-soiree, createur-trice-de-vetements-accessoires, game-room, one-wo-man-show, organisateur-de-concerts, organisateur-de-soirees-a-theme, theatre-salle-de-spectacle, coach-de-vie-personnel, facilitateur-de-cercle-de-parole, hypnotherapeute, meditation, psychologue, therapeute, activites-sur-glace-ex-patinoire, boulangerie, epicerie, restaurants, ecole-de-musique-organisation, ecole-de-photographie, studio-de-photographie, mode-et-shopping, assistant-personnel, chef-prive, coiffure-a-domicile, esthetique-a-domicile, massage-a-domicile, astrologue-tarologue-et-autres-pratiques, magnetiseur, activites-terrestres, activites-nautiques-aquagym-natation, voyages-et-experiences, activites-insolites, agence-de-voyage, guide-touristique, organisateur-de-retraites-bien-etre, createur-de-vetements-accessoires, bien-etre-et-relaxation, entreprise-d-evenementiel-culturel, sejours-culturels, sejours-a-la-nature, atelier-d-ecriture, activites-sur-glace, activites-nautiques, organisateur-d-atelier-de-seconde-main, culture-et-divertissement, developpement-personnel-et-coaching, praticien-de-medecine-alternative, loisirs-et-creativite, atelier-de-creation-poterie-couture-peinture, hotels-maisons-d-hote, entreprise-devenementiel-culturel, atelier-decriture, produits, accessoires-de-yoga-sport, box-bien-etre, spiritualite-et-energie, sport-et-activites-physiques, salle-de-danse, salle-de-sport, sophrologie, spa-et-centre-de-bien-etre, organisateur-datelier-de-seconde-main, hotels-maisons-dhote, coach-parentalite, sophrologue, gastronomie-et-art-de-la-table, brunchs-food-tours, cours-de-cuisine, diners-prives, oenologie-degustations, club-de-lecture-book-club, coach-sportif, coach-sportif-sport, autre-services-a-domicile, autre-spiritualite-et-energie, autre-sport, autre-voyages, autre, autre, autre, autre, autre, autre, autre-bien-etre, autre, autre, autre, autre, autre-culture-et-divertissement, autre-developpement-personnel, autre-loisirs-et-creativite, autre-mode-et-shopping, autre-produits
+
+Existing partner profiles: 0
+
+ÔØî Error creating Bonjour Drink: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating Darty: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating ASMC: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating Hairlust: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating French Mush: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating La Couette Fran├ºaise: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating Fnac: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating monbento: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating Maison des Fragrances: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+ÔØî Error creating Dee Sup: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+
+
+ÔØî Error creating Sport D├®couverte: insert or update on table "partners" violates foreign key constraint "partners_user_id_fkey"
+=== Summary ===
+Created: 0
+Skipped: 0
