@@ -1,4 +1,3 @@
-import { serve } from "std/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4?target=denonext";
 
@@ -7,7 +6,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
     try {
         console.log("🚀 Starting Re-engagement Campaign...");
 

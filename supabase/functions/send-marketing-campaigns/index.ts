@@ -1,4 +1,3 @@
-import { serve } from "std/http/server.ts"
 import { createSupabaseClient, corsHeaders } from "../_shared/utils/index.ts"
 
 interface MarketingTarget {
@@ -94,7 +93,7 @@ const TEMPLATES: Record<string, { subject: string, body: (data: MarketingTarget)
   }
 };
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

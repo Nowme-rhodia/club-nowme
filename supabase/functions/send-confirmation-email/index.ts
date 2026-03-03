@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         const installmentNote = isInstallment ? ` (Paiement en ${planType})` : '';
 
         // Email Fallback
-        if (!user.email) {
+        if (!user.email && bookingData.user_id) {
             const { data: authUser } = await supabase.auth.admin.getUserById(bookingData.user_id)
             if (authUser?.user?.email) user.email = authUser.user.email
         }

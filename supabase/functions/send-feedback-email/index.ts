@@ -123,7 +123,7 @@ serve(async (req) => {
                 .single()
 
             let email = userProfile?.email
-            if (!email) {
+            if (!email && booking.user_id) {
                 // Fallback to Auth Admin if missing in profile
                 const { data: authUser } = await supabase.auth.admin.getUserById(booking.user_id)
                 email = authUser?.user?.email
