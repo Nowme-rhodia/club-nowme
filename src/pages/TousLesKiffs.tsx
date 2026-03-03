@@ -52,6 +52,7 @@ interface OfferDetails {
   event_end_date?: string;
   date?: string;
   isOfficial?: boolean;
+  isSoldOut?: boolean;
 }
 
 export default function TousLesKiffs() {
@@ -126,7 +127,7 @@ export default function TousLesKiffs() {
             event_end_date,
             offer_media(url),
             category:offer_categories!offers_category_id_fkey(name, slug, parent_slug),
-            offer_variants(price, discounted_price),
+            offer_variants(id, price, discounted_price, stock),
             partner:partners!offers_partner_id_fkey(business_name, address, contact_email)
           `)
           .eq('status', 'approved')
@@ -177,6 +178,7 @@ export default function TousLesKiffs() {
             }
 
             const isOfficial = offer.partner?.contact_email === 'rhodia@nowme.fr' || offer.partner?.business_name === 'Nowme';
+            const isSoldOut = offer.offer_variants?.length > 0 && offer.offer_variants.every((v: any) => v.stock !== null && v.stock <= 0);
 
             return {
               id: offer.id,
@@ -206,7 +208,8 @@ export default function TousLesKiffs() {
               promoConditions: offer.promo_conditions,
               bookingType: offer.booking_type,
               date: offer.event_start_date,
-              isOfficial: isOfficial
+              isOfficial: isOfficial,
+              isSoldOut
             };
           });
           setOffersWithLocations(formattedOffers);

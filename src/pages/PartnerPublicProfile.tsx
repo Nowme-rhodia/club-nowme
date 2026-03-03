@@ -67,7 +67,7 @@ export default function PartnerPublicProfile() {
                     .from('offers')
                     .select(`
             *,
-            offer_variants(price, discounted_price),
+            offer_variants(id, price, discounted_price, stock),
             offer_media(url, type),
             category:offer_categories(name, slug)
           `)
@@ -80,6 +80,7 @@ export default function PartnerPublicProfile() {
                 // Format offers for OfferCard
                 const formattedOffers = (offersData || []).map((offer: any) => {
                     const firstVariant = offer.offer_variants?.[0];
+                    const isSoldOut = offer.offer_variants?.length > 0 && offer.offer_variants.every((v: any) => v.stock !== null && v.stock <= 0);
                     // Logic from TousLesKiffs/OfferPage
                     const displayPrice = firstVariant ? Number(firstVariant.price) : 0;
                     const displayPromo = firstVariant && firstVariant.discounted_price ? Number(firstVariant.discounted_price) : undefined;
@@ -102,7 +103,8 @@ export default function PartnerPublicProfile() {
                         category: offer.category?.name,
                         categorySlug: offer.category?.slug,
                         is_event: offer.booking_type === 'event',
-                        date: offer.event_start_date
+                        date: offer.event_start_date,
+                        isSoldOut
                     };
                 });
 

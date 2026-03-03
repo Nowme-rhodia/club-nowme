@@ -21,6 +21,7 @@ interface OfferCardProps {
   date?: string;
   slug?: string;
   additionalBenefits?: string;
+  isSoldOut?: boolean;
 }
 
 export function OfferCard({
@@ -40,7 +41,8 @@ export function OfferCard({
   bookingType,
   date,
   isOfficial,
-  additionalBenefits
+  additionalBenefits,
+  isSoldOut
 }: OfferCardProps & { isOfficial?: boolean }) {
   const { user, isSubscriber, isPartner, isAdmin } = useAuth();
 
@@ -73,8 +75,17 @@ export function OfferCard({
           alt={title}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${isSoldOut ? 'grayscale-[0.5] opacity-80' : ''}`}
         />
+
+        {/* Sold Out Overlay */}
+        {isSoldOut && (
+          <div className="absolute inset-0 bg-black/20 flex flex-col items-center justify-center z-10">
+            <div className="bg-red-600 text-white px-6 py-2 rounded-lg font-black text-xl md:text-2xl shadow-2xl transform -rotate-12 border-4 border-white tracking-widest">
+              COMPLET
+            </div>
+          </div>
+        )}
 
         {/* Date Badge (Top Left) */}
         {formattedDate && (
@@ -208,10 +219,12 @@ export function OfferCard({
           </div>
 
           <div className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 group-hover:shadow-md whitespace-nowrap shrink-0 ${!hasAccess
-            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            : 'bg-primary text-white group-hover:bg-primary-dark'
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : isSoldOut
+                ? 'bg-red-100 text-red-700 border border-red-200'
+                : 'bg-primary text-white group-hover:bg-primary-dark'
             }`}>
-            {hasAccess ? 'Réserver' : "Voir l'offre"}
+            {!hasAccess ? "Voir l'offre" : isSoldOut ? 'Complet' : 'Réserver'}
           </div>
         </div>
       </div>

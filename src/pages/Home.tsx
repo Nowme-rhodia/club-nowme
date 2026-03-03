@@ -36,7 +36,7 @@ function LatestOffers() {
             city,
             slug,
             offer_media(url),
-            offer_variants(price, discounted_price),
+            offer_variants(price, discounted_price, stock),
             partner:partners!offers_partner_id_fkey(business_name, address)
           `)
           .eq('status', 'approved')
@@ -49,6 +49,8 @@ function LatestOffers() {
           const formatted = data.map((offer: any) => {
             // Basic formatting similar to TousLesKiffs but simplified
             const firstVariant = offer.offer_variants?.[0];
+            const isSoldOut = offer.offer_variants?.length > 0 && offer.offer_variants.every((v: any) => v.stock !== null && v.stock <= 0);
+
             // Coordinates parsing
             let lat = 0, lng = 0;
             if (typeof offer.coordinates === 'string') {
@@ -75,7 +77,8 @@ function LatestOffers() {
               partnerName: offer.partner?.business_name,
               promoConditions: offer.promo_conditions,
               bookingType: offer.booking_type,
-              slug: offer.slug
+              slug: offer.slug,
+              isSoldOut
             };
           });
           setOffers(formatted);

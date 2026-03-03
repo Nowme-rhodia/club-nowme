@@ -25,6 +25,7 @@ interface OfferDetails {
     bookingType?: string;
     date?: string;
     slug?: string;
+    isSoldOut?: boolean;
 }
 
 export default function Agenda() {
@@ -56,7 +57,7 @@ export default function Agenda() {
                     .from('offers')
                     .select(`
             *,
-            offer_variants(price, discounted_price),
+            offer_variants(id, price, discounted_price, stock),
             partner:partners!offers_partner_id_fkey(business_name, address),
             offer_media(url),
             category:offer_categories(name)
@@ -77,6 +78,7 @@ export default function Agenda() {
                         const firstVariant = offer.offer_variants?.[0];
                         const displayPrice = firstVariant ? Number(firstVariant.price) : 0;
                         const displayPromo = firstVariant && firstVariant.discounted_price ? Number(firstVariant.discounted_price) : undefined;
+                        const isSoldOut = offer.offer_variants?.length > 0 && offer.offer_variants.every((v: any) => v.stock !== null && v.stock <= 0);
 
                         // Extract Department from Zip Code or Address
                         let dept = 'Unknown';
@@ -119,7 +121,8 @@ export default function Agenda() {
                             promoConditions: offer.promo_conditions,
                             bookingType: offer.booking_type,
                             date: offer.event_start_date,
-                            slug: offer.slug
+                            slug: offer.slug,
+                            isSoldOut
                         };
                     });
 
