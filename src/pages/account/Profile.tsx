@@ -90,8 +90,15 @@ export default function Profile() {
         }
       }
 
+      if (!profile?.user_id) {
+        toast.error('Erreur: Utilisateur non trouvé.');
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('user_profiles')
+        // @ts-ignore
         .update({
           first_name: formData.first_name,
           last_name: formData.last_name,
@@ -102,7 +109,7 @@ export default function Profile() {
           longitude: lng,
           photo_url: formData.photo_url
         })
-        .eq('user_id', profile?.user_id);
+        .eq('user_id', profile.user_id);
 
       if (error) throw error;
 

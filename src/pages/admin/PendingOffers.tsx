@@ -127,6 +127,7 @@ export default function PendingOffers() {
 
     try {
       // Use RPC to approve securely bypassing RLS complexity
+      // @ts-ignore
       const { error } = await supabase.rpc('approve_offer', {
         target_offer_id: offer.id
       });

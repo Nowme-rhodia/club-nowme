@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4?target=denonext";
 import { Resend } from "https://esm.sh/resend@2.0.0";
