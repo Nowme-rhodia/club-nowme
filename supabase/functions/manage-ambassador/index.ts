@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
-import { Resend } from "resend";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4?target=denonext";
+import Stripe from "https://esm.sh/stripe@17.5.0?target=denonext";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
     apiVersion: "2023-10-16",

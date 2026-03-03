@@ -2,7 +2,7 @@
 // Endpoint: /functions/v1/get-stripe-session
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import Stripe from "stripe";
+import Stripe from "https://esm.sh/stripe@17.5.0?target=denonext";
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2024-11-20.acacia',

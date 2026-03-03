@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js"
-import Stripe from "stripe";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4?target=denonext"
+import Stripe from "https://esm.sh/stripe@17.5.0?target=denonext";
 
 console.log("Create Checkout Session Function Invoked (v10 - Full Restoration)")
 

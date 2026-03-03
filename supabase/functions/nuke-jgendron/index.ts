@@ -1,5 +1,5 @@
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4?target=denonext";
 
 Deno.serve(async (req) => {
     console.log("💥 Nuke Jgendron initiated...");

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4?target=denonext"
 
 console.log("Check Upcoming Installments Function Invoked")
 
