@@ -1049,15 +1049,31 @@ export default function OfferPage() {
                                   <div className="text-right">
                                     {hasPromo ? (
                                       <div className="flex flex-col items-end">
-                                        <div className="font-bold text-gray-900 text-lg">
-                                          {variant.price}€
-                                        </div>
-                                        <div className="text-sm text-gray-400 line-through decoration-gray-400">
-                                          {variant.discounted_price}€
-                                        </div>
-                                        <div className="text-[10px] text-primary font-medium uppercase bg-primary/10 px-1.5 py-0.5 rounded mt-0.5">
-                                          Prix Club
-                                        </div>
+                                        {isPrivileged ? (
+                                          <>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm text-gray-400 line-through">{variant.price}€</span>
+                                              <span className="font-bold text-primary text-lg">{variant.discounted_price}€</span>
+                                            </div>
+                                            <div className="text-[10px] text-primary font-medium uppercase bg-primary/10 px-1.5 py-0.5 rounded mt-0.5 flex items-center gap-1">
+                                              <CheckCircle className="w-3 h-3" /> Tarif membre
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <div className="font-bold text-gray-900 text-lg">
+                                              {variant.price}€
+                                            </div>
+                                            <div className="flex items-center gap-1.5 mt-1 border border-primary/20 bg-primary/5 rounded-full px-2 py-0.5">
+                                              <span className="text-[10px] text-primary font-bold uppercase">
+                                                Prix Club
+                                              </span>
+                                              <span className="text-sm font-black text-primary">
+                                                {variant.discounted_price}€
+                                              </span>
+                                            </div>
+                                          </>
+                                        )}
                                       </div>
                                     ) : (
                                       <div className="font-bold text-gray-900 text-lg">
