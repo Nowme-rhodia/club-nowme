@@ -8,13 +8,15 @@ import {
     Mail,
     Phone,
     ExternalLink,
-    Sparkles
+    Sparkles,
+    Lock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { OfferCard } from '../components/OfferCard';
 import { SEO } from '../components/SEO';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { motion } from 'framer-motion';
+import { useAuth } from '../lib/auth';
 
 interface Partner {
     id: string;
@@ -39,6 +41,9 @@ export default function PartnerPublicProfile() {
     const [offers, setOffers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
+
+    const { isSubscriber, isAdmin, isPartner, user } = useAuth();
+    const isPrivileged = isSubscriber || isAdmin || isPartner || (user?.email === 'rhodia@nowme.fr');
 
     useEffect(() => {
         const fetchPartnerProfile = async () => {
@@ -216,7 +221,22 @@ export default function PartnerPublicProfile() {
                                 {partner.address && (
                                     <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700">
                                         <MapPin className="w-4 h-4" />
-                                        {partner.address.split(',').pop()?.trim() || partner.address}
+                                        {(() => {
+                                            const parts = partner.address.split(',').map(p => p.trim());
+                                            let cityDisplay = parts.length > 0 ? parts[parts.length - 1] : partner.address;
+                                            if (cityDisplay.toLowerCase() === 'france' && parts.length > 1) {
+                                                cityDisplay = parts[parts.length - 2];
+                                            }
+
+                                            return isPrivileged ? (
+                                                <span>{cityDisplay}</span>
+                                            ) : (
+                                                <div className="flex items-center gap-1">
+                                                    <span className="blur-[4px] select-none opacity-60">Adresse</span>
+                                                    <span>({cityDisplay})</span>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 )}
                                 {partner.main_category && (
@@ -321,46 +341,83 @@ export default function PartnerPublicProfile() {
                                         <MapPin className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
                                         <div>
                                             <span className="block font-medium text-gray-900">Adresse</span>
-                                            <span className="text-gray-600">{partner.address}</span>
+                                            {(() => {
+                                                const parts = partner.address.split(',').map(p => p.trim());
+                                                let cityDisplay = parts.length > 0 ? parts[parts.length - 1] : partner.address;
+                                                if (cityDisplay.toLowerCase() === 'france' && parts.length > 1) {
+                                                    cityDisplay = parts[parts.length - 2];
+                                                }
+                                                return isPrivileged ? (
+                                                    <span className="text-gray-600">{partner.address}</span>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-gray-600 blur-[4px] select-none opacity-60">Adresse réservée aux membres</span>
+                                                        <span className="text-gray-500">
+                                                            ({cityDisplay})
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 )}
 
-                                {partner.phone && (
-                                    <div className="flex items-start gap-3 text-sm">
-                                        <Phone className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <span className="block font-medium text-gray-900">Téléphone</span>
-                                            <a href={`tel:${partner.phone}`} className="text-primary hover:underline">
-                                                {partner.phone}
-                                            </a>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Wrapped contact info with paywall logic */}
+                                {isPrivileged ? (
+                                    <>
+                                        {partner.phone && (
+                                            <div className="flex items-start gap-3 text-sm">
+                                                <Phone className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <span className="block font-medium text-gray-900">Téléphone</span>
+                                                    <a href={`tel:${partner.phone}`} className="text-primary hover:underline">
+                                                        {partner.phone}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
 
-                                {partner.contact_email && (
-                                    <div className="flex items-start gap-3 text-sm">
-                                        <Mail className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <span className="block font-medium text-gray-900">Contact</span>
-                                            <a href={`mailto:${partner.contact_email}`} className="text-gray-600 hover:text-primary truncate block max-w-[200px]">
-                                                {partner.contact_email}
-                                            </a>
-                                        </div>
+                                        {partner.contact_email && (
+                                            <div className="flex items-start gap-3 text-sm">
+                                                <Mail className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <span className="block font-medium text-gray-900">Contact</span>
+                                                    <a href={`mailto:${partner.contact_email}`} className="text-gray-600 hover:text-primary truncate block max-w-[200px]">
+                                                        {partner.contact_email}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 text-center flex flex-col items-center justify-center gap-2">
+                                        <Lock className="w-6 h-6 text-gray-400 mb-1" />
+                                        <p className="text-sm text-gray-600">
+                                            Coordonnées réservées aux membres
+                                        </p>
+                                        <Link
+                                            to="/auth/signup"
+                                            className="text-primary font-medium hover:underline text-sm"
+                                        >
+                                            Rejoindre le club pour y accéder
+                                        </Link>
                                     </div>
                                 )}
                             </div>
-                            {/* Mobile Actions */}
-                            <div className="flex md:hidden gap-3 mt-6">
-                                <a href={`tel:${partner.phone}`} className="flex-1 bg-white text-gray-900 py-2.5 rounded-xl font-medium border border-gray-200 shadow-sm flex items-center justify-center gap-2">
-                                    <Phone className="w-4 h-4" />
-                                    Appeler
-                                </a>
-                                <a href={`mailto:${partner.contact_email}`} className="flex-1 bg-primary text-white py-2.5 rounded-xl font-medium shadow-lg shadow-primary/25 flex items-center justify-center gap-2">
-                                    <Mail className="w-4 h-4" />
-                                    Email
-                                </a>
-                            </div>
+
+                            {/* Mobile Actions - Also protected */}
+                            {isPrivileged && (
+                                <div className="flex md:hidden gap-3 mt-6">
+                                    <a href={`tel:${partner.phone}`} className="flex-1 bg-white text-gray-900 py-2.5 rounded-xl font-medium border border-gray-200 shadow-sm flex items-center justify-center gap-2">
+                                        <Phone className="w-4 h-4" />
+                                        Appeler
+                                    </a>
+                                    <a href={`mailto:${partner.contact_email}`} className="flex-1 bg-primary text-white py-2.5 rounded-xl font-medium shadow-lg shadow-primary/25 flex items-center justify-center gap-2">
+                                        <Mail className="w-4 h-4" />
+                                        Email
+                                    </a>
+                                </div>
+                            )}
 
                             {/* Categories & Expertises */}
                             {(partner.main_category || (partner.subcategories && partner.subcategories.length > 0)) && (

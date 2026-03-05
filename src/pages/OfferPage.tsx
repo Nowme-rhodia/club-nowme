@@ -793,6 +793,23 @@ export default function OfferPage() {
                 <div className="flex-grow">
                   <h1 className="text-3xl font-bold text-gray-900 mb-4">{offer.title}</h1>
 
+                  {/* Context for non-members / new visitors */}
+                  {!isPrivileged && (
+                    <div className="mb-6 p-4 bg-pink-50 border border-pink-100 rounded-xl relative overflow-hidden transition-all duration-300 hover:shadow-md">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+                      <h3 className="font-bold text-primary mb-2 flex items-center gap-2">
+                        <Star className="w-5 h-5" fill="currentColor" />
+                        C'est quoi le Club Nowme ? ✨
+                      </h3>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        Le <strong>Club Nowme</strong> est la plateforme de sorties & offres privées dédiée <strong>100% aux femmes de 30-40-50 ans et plus.</strong>
+                        <br className="mb-1" />
+                        Rejoignez-nous pour débloquer le <strong>Prix Club</strong> sur toutes nos expériences, rencontrer d'autres kiffeuses en <strong>Île-de-France</strong> (pour l'instant !😉) et être <strong>récompensée en kiffant</strong>.<br />
+                        <span className="italic">Tu peux aussi t'inscrire à cet event sur tu n'es pas membre !</span>
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-6 mb-6 flex-wrap">
                     <div className="flex items-center gap-1.5">
                       {offer.is_online ? <Globe className="w-5 h-5 text-primary" /> : <MapPin className="w-5 h-5 text-gray-400" />}
