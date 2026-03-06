@@ -574,6 +574,11 @@ export default function OfferPage() {
     const type = offer.booking_type || 'calendly';
     const price = priceInfo.price || 0;
 
+    if (isOffline) {
+      toast.error("Cet événement n'est plus disponible.");
+      return;
+    }
+
     if (isOutOfStock) {
       toast.error("Ce tarif est épuisé.");
       return;
@@ -642,6 +647,9 @@ export default function OfferPage() {
   };
 
   const getButtonLabel = () => {
+    if (isOutOfStock) return 'Victime de son succès';
+    if (isOffline) return "Cet événement n'est plus disponible";
+
     // Guest Handling
     if (isGuest && isOfficial) return "Réserver (Inscription gratuite requise)";
     if (isGuest) return "Rejoindre le club"; // Should be unreachable if blurred, but safe fallback
@@ -652,9 +660,6 @@ export default function OfferPage() {
     const count = parseInt(installmentPlan) || 1;
     const payableAmount = (price / count);
     const priceSuffix = price > 0 ? ` (${payableAmount.toFixed(0)}€)` : '';
-
-    if (isOutOfStock) return 'Victime de son succès';
-    if (isOffline) return "Cet événement n'est plus disponible";
 
     // Credit Logic
     if (partnerCredit > 0 && usePartnerCredit && totalToPay <= 0) {
