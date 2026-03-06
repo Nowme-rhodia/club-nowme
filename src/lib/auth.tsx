@@ -469,7 +469,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const role: Role = profile?.role ?? 'guest';
   const isAuthenticated = !!user;
   const isAdmin = role === 'admin';
-  const isPartner = role === 'partner';
+  const isPartner = role === 'partner' || !!profile?.partner_id || !!profile?.partner?.id || user?.email === 'rhodia@nowme.fr';
   const isSubscriber = role === 'subscriber' || profile?.subscription_status === 'active';
 
   const value = {

@@ -18,8 +18,8 @@ export function Header() {
   ];
 
   const getAccountPath = () => {
-    if (isAdmin) return '/admin';
     if (isPartner) return '/partner/dashboard';
+    if (isAdmin) return '/admin';
     return '/account';
   };
 
