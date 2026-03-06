@@ -4,6 +4,8 @@ import { supabase } from "../../lib/supabase";
 import { Clock, CheckCircle2, XCircle, Calendar, User, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import CancellationModal from "../../components/partner/CancellationModal";
+import IssueCreditModal from "../../components/partner/IssueCreditModal";
+import { Gift } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -24,7 +26,9 @@ export default function BookingDetail() {
   const [loading, setLoading] = useState(false);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showCreditModal, setShowCreditModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isIssuingCredit, setIsIssuingCredit] = useState(false);
 
   useEffect(() => {
     if (id) fetchBooking(id);
@@ -84,6 +88,30 @@ export default function BookingDetail() {
       toast.error(err.message || "Erreur lors de l'annulation");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleIssueCredit = async (amount: number, reason: string) => {
+    if (!booking) return;
+    setIsIssuingCredit(true);
+
+    try {
+      // @ts-ignore
+      const { data, error } = await supabase.rpc('partner_issue_credit', {
+        p_user_id: booking.user_id,
+        p_amount: amount,
+        p_reason: reason
+      });
+
+      if (error) throw error;
+
+      toast.success(`Avoir de ${amount}€ attribué avec succès !`);
+      setShowCreditModal(false);
+    } catch (err: any) {
+      console.error("Credit issuance error:", err);
+      toast.error(err.message || "Erreur lors de l'attribution de l'avoir");
+    } finally {
+      setIsIssuingCredit(false);
     }
   };
 
@@ -197,14 +225,24 @@ export default function BookingDetail() {
           </div>
 
           {/* Action Footer */}
-          {["pending", "confirmed", "paid"].includes(booking.status) && (
-            <div className="bg-gray-50 px-8 py-6 border-t border-gray-100 flex justify-end">
+          {["pending", "confirmed", "paid", "cancelled"].includes(booking.status) && (
+            <div className="bg-gray-50 px-8 py-6 border-t border-gray-100 flex justify-end gap-4">
               <button
-                onClick={handleCancelClick}
-                className="px-6 py-2.5 bg-white border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm"
+                onClick={() => setShowCreditModal(true)}
+                className="px-6 py-2.5 bg-white border border-pink-200 text-primary font-medium rounded-lg hover:bg-pink-50 hover:border-pink-300 transition-colors shadow-sm flex items-center gap-2"
               >
-                Annuler la réservation
+                <Gift className="w-4 h-4" />
+                Attribuer un avoir
               </button>
+
+              {booking.status !== "cancelled" && (
+                <button
+                  onClick={handleCancelClick}
+                  className="px-6 py-2.5 bg-white border border-red-200 text-red-600 font-medium rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm"
+                >
+                  Annuler la réservation
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -215,6 +253,14 @@ export default function BookingDetail() {
         onClose={() => setShowCancelModal(false)}
         onConfirm={handleConfirmCancellation}
         isSubmitting={isSubmitting}
+      />
+
+      <IssueCreditModal
+        isOpen={showCreditModal}
+        onClose={() => setShowCreditModal(false)}
+        onConfirm={handleIssueCredit}
+        isSubmitting={isIssuingCredit}
+        clientName={booking.user ? `${booking.user.first_name} ${booking.user.last_name}` : "Client"}
       />
     </div>
   );

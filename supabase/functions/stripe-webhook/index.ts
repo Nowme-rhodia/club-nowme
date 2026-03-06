@@ -506,6 +506,25 @@ Deno.serve(async (req) => {
                 } catch (emailErr) {
                     console.error('Failed to invoke email function:', emailErr);
                 }
+
+                // --- 7. [NEW] DEDUCT PARTNER CREDIT (If used) ---
+                if (session.metadata.partner_credit_used && parseFloat(session.metadata.partner_credit_used) > 0) {
+                    const creditToDeduct = parseFloat(session.metadata.partner_credit_used);
+                    console.log(`[CREDIT] Deducting used partner credit: ${creditToDeduct}€ for User ${user_id}`);
+
+                    const { error: deductError } = await supabaseClient.rpc('deduct_partner_credit', {
+                        p_user_id: user_id,
+                        p_partner_id: offerDetails?.partner_id,
+                        p_amount: creditToDeduct,
+                        p_reason: `Achat Offre: ${offer_id}`
+                    });
+
+                    if (deductError) {
+                        console.error("[CREDIT] Error deducting partner credit:", deductError);
+                    } else {
+                        console.log("[CREDIT] Partner credit deducted successfully.");
+                    }
+                }
             } else if (session.metadata && session.metadata.source === 'subscription') {
                 // --- HANDLING SUBSCRIPTION WELCOME EMAIL ---
                 console.log(`[SUBSCRIPTION_FLOW] Detected subscription event. Metadata:`, JSON.stringify(session.metadata));

@@ -11,7 +11,8 @@ import {
     Image,
     MapPin,
     Clock,
-    DollarSign
+    DollarSign,
+    Gift
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -172,8 +173,7 @@ export default function PartnerGuide() {
                             <div>
                                 <h4 className="font-bold text-red-900 text-sm">Politique d'annulation</h4>
                                 <p className="text-sm text-red-800 mt-1">
-                                    Si VOUS devez annuler : prévenez l'abonnée le plus tôt possible et proposez un autre créneau.
-                                    Si l'ABONNÉE annule : voir les conditions d'annulation définies dans votre offre.
+                                    Si VOUS devez annuler : prévenez l'abonnée le plus tôt possible. Vous pouvez proposer un autre créneau ou <strong>lui attribuer un avoir</strong> (voir section 6) pour qu'elle puisse réserver une autre de vos prestations ultérieurement.
                                 </p>
                             </div>
                         </div>
@@ -257,6 +257,48 @@ export default function PartnerGuide() {
                                     Les virements vers votre compte bancaire sont effectués automatiquement par Stripe selon votre fréquence choisie (quotidienne, hebdo...).
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* 6. LES AVOIRS PARTENAIRES */}
+                <section>
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 bg-pink-100 rounded-xl text-primary">
+                            <Gift className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                            6. Les Avoirs Partenaires 🎁
+                        </h2>
+                    </div>
+                    <div className="pl-0 md:pl-4 space-y-6 text-gray-600 leading-relaxed">
+                        <p>
+                            Le système d'avoir vous permet de fidéliser une cliente ou de la dédommager (par exemple suite à un imprévu ou une annulation de votre part) sans passer par un remboursement bancaire complexe.
+                        </p>
+
+                        <div className="bg-pink-50 p-6 rounded-2xl border border-pink-100">
+                            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                <CheckCircle2 className="w-5 h-5 text-primary" />
+                                Comment ça marche ?
+                            </h3>
+                            <ul className="space-y-3">
+                                <li>
+                                    <strong>Attribution :</strong> Allez dans <strong>"Mes Réservations"</strong>, sélectionnez la réservation de la cliente, et cliquez sur le bouton <strong>"Attribuer un avoir"</strong>.
+                                </li>
+                                <li>
+                                    <strong>Utilisation :</strong> L'avoir est lié à VOTRE profil partenaire. La cliente pourra l'utiliser automatiquement lors de son prochain achat sur l'une de VOS offres.
+                                </li>
+                                <li>
+                                    <strong>Visibilité :</strong> La cliente voit son solde d'avoir directement sur la page de vos offres au moment de payer.
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                            <h4 className="font-bold text-gray-900 mb-2">Quand utiliser l'avoir ?</h4>
+                            <p className="text-sm italic">
+                                "Je dois annuler un atelier car je suis malade, j'attribue un avoir du montant de la place à mes clientes pour qu'elles puissent s'inscrire à la prochaine session ou choisir un autre de mes services sur le Club."
+                            </p>
                         </div>
                     </div>
                 </section>

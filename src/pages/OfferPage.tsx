@@ -44,6 +44,7 @@ export default function OfferPage() {
   // Access Control Logic
   const isOfficial = offer?.is_official === true || offer?.partner?.contact_email === 'rhodia@nowme.fr' || offer?.partner?.business_name === 'Nowme';
   const isGuest = !user;
+  const isOffline = offer?.status === 'draft';
 
   // Access: Subscribers, Admin, Partner OR Official Event (Open to all registered)
   // For 'isOfficial', we allow guests to SEE content, but booking requires login.
@@ -101,6 +102,10 @@ export default function OfferPage() {
   const [showDateConfirmModal, setShowDateConfirmModal] = useState(false);
   const [manualDateInput, setManualDateInput] = useState<string>('');
 
+  // Partner Credit State
+  const [partnerCredit, setPartnerCredit] = useState<number>(0);
+  const [usePartnerCredit, setUsePartnerCredit] = useState(true);
+
 
 
 
@@ -140,7 +145,7 @@ export default function OfferPage() {
         offer_media(url, type),
         digital_product_file,
         additional_benefits,
-
+        status,
         service_zones,
         promo_conditions,
         duration_type,
@@ -197,6 +202,32 @@ export default function OfferPage() {
 
     fetchOffer();
   }, [slug]);
+
+  // Fetch Partner Credit
+  useEffect(() => {
+    const fetchPartnerCredit = async () => {
+      if (!user || !offer?.partner?.id) {
+        setPartnerCredit(0);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('partner_credits')
+          .select('amount')
+          .eq('user_id', user.id)
+          .eq('partner_id', offer.partner.id)
+          .maybeSingle() as any;
+
+        if (error) throw error;
+        setPartnerCredit(data?.amount || 0);
+      } catch (err) {
+        console.error("Error fetching partner credit:", err);
+      }
+    };
+
+    fetchPartnerCredit();
+  }, [user, offer]);
 
   // State for Service Zones
   // State for Service Zones
@@ -267,7 +298,9 @@ export default function OfferPage() {
   // Users usually buy tickets for friends -> Travel fee might not apply to "Event" type usually.
   // For "At Home", quantity might mean number of people? 
   // Let's assume Price * Qty. Travel Fee added ONCE.
-  const totalToPay = ((priceInfo.price || 0) * quantity) + travelFee;
+  const totalToPayBeforeCredit = ((priceInfo.price || 0) * quantity) + travelFee;
+  const appliedCredit = usePartnerCredit ? Math.min(totalToPayBeforeCredit, partnerCredit) : 0;
+  const totalToPay = totalToPayBeforeCredit - appliedCredit;
 
   const isOutOfStock = selectedVariant && selectedVariant.stock !== null && selectedVariant.stock <= 0;
 
@@ -414,7 +447,8 @@ export default function OfferPage() {
         meeting_location: meetingAddressRef.current?.value || meetingAddress || (offer.street_address ? `${offer.street_address}, ${offer.zip_code} ${offer.city}` : offer.city), // Robust Address Logic
         installment_plan: installmentPlan, // Pass selected plan ('1x', '2x', '3x', '4x')
         fulfillment_status: 'fulfilled', // or 'pending' if manual approval needed
-        quantity: quantity // Pass quantity
+        quantity: quantity, // Pass quantity
+        use_partner_credit: usePartnerCredit // Let server know we WANT to use it
       };
 
       // Use fetch instead of invoke to get better error details
@@ -575,15 +609,33 @@ export default function OfferPage() {
     // We treat 'calendly' type now as just "Contact Partner".
     // We pass undefined date if it's not a fixed date event.
 
-    if (price > 0) {
+    if (totalToPay > 0) {
       handleStripeCheckout(type as 'calendly' | 'event', type === 'event' ? offer.event_start_date : undefined);
     } else {
-      // Free Offer / Event
+      // Free Offer / Event OR Fully Paid by Credit
       if (type === 'event') {
         setShowEventConfirmModal(true);
       } else {
         // Free non-event (likely Contact Partner type)
         // Confirm directly or show modal? Direct is fine for free contact/access.
+
+        // --- CREDIT CONSUMPTION FOR FREE BOOKING ---
+        if (appliedCredit > 0) {
+          try {
+            // @ts-ignore
+            const { error: creditError } = await supabase.rpc('deduct_partner_credit', {
+              p_user_id: user?.id,
+              p_partner_id: offer.partner.id,
+              p_amount: appliedCredit,
+              p_reason: `Achat Offre (Avoir): ${offer.title}`
+            });
+            if (creditError) throw creditError;
+          } catch (err: any) {
+            toast.error("Erreur lors de l'utilisation de l'avoir: " + err.message);
+            return;
+          }
+        }
+
         bookEvent();
       }
     }
@@ -602,6 +654,12 @@ export default function OfferPage() {
     const priceSuffix = price > 0 ? ` (${payableAmount.toFixed(0)}€)` : '';
 
     if (isOutOfStock) return 'Victime de son succès';
+    if (isOffline) return "Cet événement n'est plus disponible";
+
+    // Credit Logic
+    if (partnerCredit > 0 && usePartnerCredit && totalToPay <= 0) {
+      return `Réserver avec votre avoir (${appliedCredit.toFixed(2)}€)`;
+    }
 
     if (type === 'event') return `S'inscrire${priceSuffix}`;
     if (type === 'promo') return 'Profiter de l\'offre';
@@ -1033,8 +1091,8 @@ export default function OfferPage() {
                             return (
                               <button
                                 key={variant.id}
-                                onClick={() => !isVariantOutOfStock && setSelectedVariant(variant)}
-                                disabled={isVariantOutOfStock || !hasAccess}
+                                onClick={() => !isVariantOutOfStock && !isOffline && setSelectedVariant(variant)}
+                                disabled={isVariantOutOfStock || !hasAccess || isOffline}
                                 className={`w-full text-left p-4 rounded-xl border-2 transition-all relative group ${isSelected
                                   ? 'border-primary bg-primary/5 shadow-md'
                                   : isVariantOutOfStock
@@ -1307,6 +1365,40 @@ export default function OfferPage() {
                     )}
 
 
+                    {/* --- Partner Credit (Avoir) --- */}
+                    {partnerCredit > 0 && (
+                      <div className="w-full mb-6 bg-pink-50/50 p-4 rounded-xl border border-pink-100 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-pink-100 rounded-lg text-primary">
+                              <Gift className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900 small-caps">Avoir disponible</p>
+                              <p className="text-sm text-gray-600">
+                                Vous avez <strong>{partnerCredit.toFixed(2)}€</strong> d'avoir chez ce partenaire.
+                              </p>
+                            </div>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={usePartnerCredit}
+                              onChange={(e) => setUsePartnerCredit(e.target.checked)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                          </label>
+                        </div>
+                        {usePartnerCredit && appliedCredit > 0 && (
+                          <div className="mt-3 text-sm text-green-600 font-medium flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            Réduction de {appliedCredit.toFixed(2)}€ appliquée !
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="w-full sm:w-auto text-right">
 
                       {/* --- Installment Selector --- */}
@@ -1408,8 +1500,8 @@ export default function OfferPage() {
 
                   <button
                     onClick={handleBooking}
-                    disabled={bookingLoading || isOutOfStock || !hasAccess || isAlreadyBooked}
-                    className={`w-full px-6 py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${isOutOfStock ? 'bg-gray-400' : 'bg-primary hover:bg-primary-dark'
+                    disabled={bookingLoading || isOutOfStock || !hasAccess || isAlreadyBooked || isOffline}
+                    className={`w-full px-6 py-4 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${(isOutOfStock || isOffline) ? 'bg-gray-400' : 'bg-primary hover:bg-primary-dark'
                       }`}
                   >
                     {bookingLoading ? (
@@ -1523,7 +1615,25 @@ export default function OfferPage() {
                             Annuler
                           </button>
                           <button
-                            onClick={bookEvent}
+                            onClick={async () => {
+                              // If fully paid by credit, deduct first
+                              if (appliedCredit > 0 && totalToPay <= 0) {
+                                try {
+                                  // @ts-ignore
+                                  const { error: creditError } = await supabase.rpc('deduct_partner_credit', {
+                                    p_user_id: user?.id,
+                                    p_partner_id: offer.partner.id,
+                                    p_amount: appliedCredit,
+                                    p_reason: `Achat Offre (Avoir): ${offer.title}`
+                                  });
+                                  if (creditError) throw creditError;
+                                } catch (err: any) {
+                                  toast.error("Erreur lors de l'utilisation de l'avoir: " + err.message);
+                                  return;
+                                }
+                              }
+                              bookEvent();
+                            }}
                             disabled={bookingLoading || (offer.booking_type === 'calendly' && !calendlyDate)}
                             className="py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark disabled:opacity-70 disabled:cursor-not-allowed"
                           >

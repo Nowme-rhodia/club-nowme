@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
         // 1. Fetch Offer
         const { data: offer, error: offerError } = await supabaseClient
             .from('offers')
-            .select('title, image_url, description, service_zones, is_official, event_start_date')
+            .select('title, image_url, description, service_zones, is_official, event_start_date, partner_id')
             .eq('id', offer_id)
             .single();
 
@@ -141,6 +141,32 @@ Deno.serve(async (req) => {
                 unitAmount = unitAmount - discountThreshold;
             }
             console.log(`[DEBUG] New Unit Amount: ${unitAmount}`);
+        }
+
+        // --- Partner Credit (Avoir) Logic ---
+        let partnerCreditUsed = 0;
+        if (user_id && offer.partner_id) {
+            console.log(`[CREDIT] Checking partner credit for User ${user_id} and Partner ${offer.partner_id}`);
+            const { data: creditData } = await supabaseClient
+                .from('partner_credits')
+                .select('amount')
+                .eq('user_id', user_id)
+                .eq('partner_id', offer.partner_id)
+                .maybeSingle();
+
+            if (creditData && creditData.amount > 0) {
+                const availableCreditCents = Math.round(creditData.amount * 100);
+                // We apply as much credit as possible, but leave at least 0.50€ for Stripe if amount > 0
+                // Actually, if amount is covered, frontend should have handled it.
+                // If we are here, we assume we want to pay something.
+
+                const maxDeduction = Math.min(unitAmount - 50, availableCreditCents); // Keep 0.50€ minimum
+                if (maxDeduction > 0) {
+                    partnerCreditUsed = maxDeduction;
+                    unitAmount -= partnerCreditUsed;
+                    console.log(`[CREDIT] Applied Partner Credit: ${partnerCreditUsed / 100}€. New Unit Amount: ${unitAmount / 100}€`);
+                }
+            }
         }
 
         // --- Installment Logic (2x, 3x, 4x) ---
@@ -250,7 +276,8 @@ Deno.serve(async (req) => {
                 is_ambassador_discount: userData?.is_ambassador && offer.is_official ? 'true' : 'false',
                 plan_type: planType, // '2x', '3x', '4x' or '1x'
                 installment_amount: planType !== '1x' ? String(unitAmount) : '0',
-                scheduled_at: scheduled_at || ''
+                scheduled_at: scheduled_at || '',
+                partner_credit_used: String(partnerCreditUsed / 100)
             },
         };
 
