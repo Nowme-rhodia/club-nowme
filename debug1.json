@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "parameter_unknown",
+    "doc_url": "https://stripe.com/docs/error-codes/parameter-unknown",
+    "message": "Received unknown parameter: coupon_id",
+    "param": "coupon_id",
+    "request_log_url": "https://dashboard.stripe.com/acct_1SovfQD3JHLNgQan/workbench/logs?object=req_nU5ykFi6YrzkmL",
+    "type": "invalid_request_error"
+  }
+}

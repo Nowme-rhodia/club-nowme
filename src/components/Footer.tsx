@@ -74,6 +74,14 @@ export function Footer() {
                   Devenir partenaire
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/partenaire-creatrice"
+                  className="text-gray-600 hover:text-primary transition-colors duration-200"
+                >
+                  Programme Créatrices
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -154,6 +162,12 @@ export function Footer() {
                 className="hover:text-primary transition-colors duration-200"
               >
                 CGV
+              </Link>
+              <Link
+                to="/conditions-partenaires-creatrices"
+                className="hover:text-primary transition-colors duration-200"
+              >
+                Conditions Créatrices
               </Link>
             </div>
             <p className="text-gray-600 flex items-center justify-center text-sm">

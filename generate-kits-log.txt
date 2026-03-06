@@ -1,0 +1,111 @@
+
+­ƒÜÇ G├®n├®ration des 20 kits avec codes al├®atoires
+
+­ƒùæ´©Å  D├®sactivation des anciens codes (NOWME* et NW*)...
+  Ô£à D├®sactiv├® : NOWME01
+  Ô£à D├®sactiv├® : NOWME02
+  Ô£à D├®sactiv├® : NOWME03
+  Ô£à D├®sactiv├® : NOWME04
+  Ô£à D├®sactiv├® : NOWME05
+  Ô£à D├®sactiv├® : NOWME06
+  Ô£à D├®sactiv├® : NOWME07
+  Ô£à D├®sactiv├® : NOWME08
+  Ô£à D├®sactiv├® : NOWME09
+  Ô£à D├®sactiv├® : NOWME10
+  Ô£à D├®sactiv├® : NOWME11
+  Ô£à D├®sactiv├® : NOWME12
+  Ô£à D├®sactiv├® : NOWME13
+  Ô£à D├®sactiv├® : NOWME14
+  Ô£à D├®sactiv├® : NOWME15
+  Ô£à D├®sactiv├® : NOWME16
+  Ô£à D├®sactiv├® : NOWME17
+  Ô£à D├®sactiv├® : NOWME18
+  Ô£à D├®sactiv├® : NOWME19
+  Ô£à D├®sactiv├® : NOWME20
+  Ô£à D├®sactiv├® : NWXKQB
+  Ô£à D├®sactiv├® : NWMTRJ
+  Ô£à D├®sactiv├® : NWBFZP
+  Ô£à D├®sactiv├® : NWHVYD
+  Ô£à D├®sactiv├® : NWCGLR
+  Ô£à D├®sactiv├® : NWSPQN
+  Ô£à D├®sactiv├® : NWJDKX
+  Ô£à D├®sactiv├® : NWVNZT
+  Ô£à D├®sactiv├® : NWRFCM
+  Ô£à D├®sactiv├® : NWKWLH
+  Ô£à D├®sactiv├® : NWYPBS
+  Ô£à D├®sactiv├® : NWDZQV
+  Ô£à D├®sactiv├® : NWTJMG
+  Ô£à D├®sactiv├® : NWEXNR
+  Ô£à D├®sactiv├® : NWUFKC
+  Ô£à D├®sactiv├® : NWLHPW
+  Ô£à D├®sactiv├® : NWAZBQ
+  Ô£à D├®sactiv├® : NWOGVT
+  Ô£à D├®sactiv├® : NWNYMX
+  Ô£à D├®sactiv├® : NWCSRD
+  ÔåÆ 40 anciens codes d├®sactiv├®s.
+
+­ƒôª Cr├®ation du coupon Stripe (-10% 1er mois)...
+Ô£à Coupon cr├®├® : iw8yiaaG
+
+­ƒÄƒ´©Å  Cr├®ation des codes + PDFs en cours...
+
+  Ô£à NWXKQB  (Stripe ID: promo_1T7dNDD3JHLNgQanhQu3LVgV)
+  ­ƒôä PDF : Kit_Partenaire_NWXKQB.pdf
+
+  Ô£à NWMTRJ  (Stripe ID: promo_1T7dNFD3JHLNgQanr229neFT)
+  ­ƒôä PDF : Kit_Partenaire_NWMTRJ.pdf
+
+  Ô£à NWBFZP  (Stripe ID: promo_1T7dNHD3JHLNgQanlX937eFB)
+  ­ƒôä PDF : Kit_Partenaire_NWBFZP.pdf
+
+  Ô£à NWHVYD  (Stripe ID: promo_1T7dNID3JHLNgQanv4943qGp)
+  ­ƒôä PDF : Kit_Partenaire_NWHVYD.pdf
+
+  Ô£à NWCGLR  (Stripe ID: promo_1T7dNKD3JHLNgQandCB9Y1LR)
+  ­ƒôä PDF : Kit_Partenaire_NWCGLR.pdf
+
+  Ô£à NWSPQN  (Stripe ID: promo_1T7dNMD3JHLNgQan8ybM11eU)
+  ­ƒôä PDF : Kit_Partenaire_NWSPQN.pdf
+
+  Ô£à NWJDKX  (Stripe ID: promo_1T7dNOD3JHLNgQanKy88xgZI)
+  ­ƒôä PDF : Kit_Partenaire_NWJDKX.pdf
+
+  Ô£à NWVNZT  (Stripe ID: promo_1T7dNQD3JHLNgQantefLsjte)
+  ­ƒôä PDF : Kit_Partenaire_NWVNZT.pdf
+
+  Ô£à NWRFCM  (Stripe ID: promo_1T7dNSD3JHLNgQangBERNC8X)
+  ­ƒôä PDF : Kit_Partenaire_NWRFCM.pdf
+
+  Ô£à NWKWLH  (Stripe ID: promo_1T7dNUD3JHLNgQanAJ2gBVZR)
+  ­ƒôä PDF : Kit_Partenaire_NWKWLH.pdf
+
+  Ô£à NWYPBS  (Stripe ID: promo_1T7dNWD3JHLNgQanvnXkH0Xy)
+  ­ƒôä PDF : Kit_Partenaire_NWYPBS.pdf
+
+  Ô£à NWDZQV  (Stripe ID: promo_1T7dNYD3JHLNgQannoUD9IdL)
+  ­ƒôä PDF : Kit_Partenaire_NWDZQV.pdf
+
+  Ô£à NWTJMG  (Stripe ID: promo_1T7dNaD3JHLNgQanAnwazYa1)
+  ­ƒôä PDF : Kit_Partenaire_NWTJMG.pdf
+
+  Ô£à NWEXNR  (Stripe ID: promo_1T7dNcD3JHLNgQanzKnM9QHa)
+  ­ƒôä PDF : Kit_Partenaire_NWEXNR.pdf
+
+  Ô£à NWUFKC  (Stripe ID: promo_1T7dNeD3JHLNgQanAMDAlNrS)
+  ­ƒôä PDF : Kit_Partenaire_NWUFKC.pdf
+
+  Ô£à NWLHPW  (Stripe ID: promo_1T7dNgD3JHLNgQan7Vz57883)
+  ­ƒôä PDF : Kit_Partenaire_NWLHPW.pdf
+
+  Ô£à NWAZBQ  (Stripe ID: promo_1T7dNiD3JHLNgQanJepaDl0i)
+Error: EBUSY: resource busy or locked, open 'C:\Users\rhodi\club-nowme-1\public\kit-influenceurs\pdf-personnalises\Kit_Partenaire_NWAZBQ.pdf'
+    at async open (node:internal/fs/promises:638:25)
+    at async Object.writeFile (node:internal/fs/promises:1212:14)
+    at async Page.pdf (C:\Users\rhodi\club-nowme-1\node_modules\playwright-core\lib\client\page.js:672:7)
+    at async generatePDF (file:///C:/Users/rhodi/club-nowme-1/generate-all-kits.js:297:3)
+    at async main (file:///C:/Users/rhodi/club-nowme-1/generate-all-kits.js:331:21) {
+  errno: -4082,
+  code: 'EBUSY',
+  syscall: 'open',
+  path: 'C:\\Users\\rhodi\\club-nowme-1\\public\\kit-influenceurs\\pdf-personnalises\\Kit_Partenaire_NWAZBQ.pdf'
+}

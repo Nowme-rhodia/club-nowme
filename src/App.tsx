@@ -42,6 +42,7 @@ const MentionsLegales = React.lazy(() => import('./pages/legal/MentionsLegales')
 const PrivacyPolicy = React.lazy(() => import('./pages/legal/PrivacyPolicy'));
 const CGV = React.lazy(() => import('./pages/legal/CGV'));
 const ConditionsPartenaires = React.lazy(() => import('./pages/legal/ConditionsPartenaires'));
+const ConditionsCreatorPartner = React.lazy(() => import('./pages/legal/ConditionsCreatorPartner'));
 const PartnersDirectory = React.lazy(() => import('./pages/PartnersDirectory'));
 
 // Auth pages
@@ -84,6 +85,7 @@ const PartnerContractView = React.lazy(() => import('./pages/partner/ContractVie
 const PartnerPublicProfile = React.lazy(() => import('./pages/PartnerPublicProfile'));
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
+const CreatorProgram = React.lazy(() => import('./pages/partner/CreatorProgram'));
 // Club pages
 
 const Agenda = React.lazy(() => import('./pages/Agenda'));
@@ -142,6 +144,7 @@ function App() {
                       <SubmitOffer />
                     </GoogleMapsLoader>
                   } />
+                  <Route path="/partenaire-creatrice" element={<CreatorProgram />} />
                   <Route path="/devenir-ambassadrice" element={
                     <PrivateRoute allowedRoles={['subscriber']}>
                       <BecomeAmbassador />
@@ -311,6 +314,7 @@ function App() {
                   <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
                   <Route path="/cgv" element={<CGV />} />
                   <Route path="/conditions-partenaires" element={<ConditionsPartenaires />} />
+                  <Route path="/conditions-partenaires-creatrices" element={<ConditionsCreatorPartner />} />
 
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />

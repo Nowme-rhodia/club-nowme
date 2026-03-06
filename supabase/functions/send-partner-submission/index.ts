@@ -19,6 +19,7 @@ type BusinessPayload = {
   password?: string; // [NEW] Password field
   mainCategoryId?: string;
   subcategoryIds?: string[];
+  isCreator?: boolean;
 };
 
 type OfferPayload = {
@@ -113,6 +114,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         subcategory_ids: business.subcategoryIds || [],
 
         terms_accepted_at: business.termsAccepted ? new Date() : null,
+        is_creator: business.isCreator || false,
         status: "pending",
       })
       .select("id, business_name, contact_name, contact_email")
@@ -180,6 +182,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
         const adminHtml = `
           <h2 style="color:#BF2778;">Nouvelle demande de partenariat 🚀</h2>
+          <p><strong>Type :</strong> ${business.isCreator ? "CRÉATRICE / INFLUENCEUSE" : "LIEU / SERVICE"}</p>
           <p><strong>Entreprise :</strong> ${business.name}</p>
           <p><strong>Contact :</strong> ${business.contactName ?? "-"}</p>
           <p><strong>Email :</strong> ${business.email}</p>

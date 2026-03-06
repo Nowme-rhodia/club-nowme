@@ -161,7 +161,10 @@ Deno.serve(async (req) => {
       .from('partners')
       .update({
         status: 'approved',
-        admin_notes: adminNotes ?? null
+        admin_notes: adminNotes ?? null,
+        referral_code: partner.is_creator && !partner.referral_code
+          ? await generateUniqueReferralCode(supabaseAdmin)
+          : partner.referral_code
       })
       .eq('id', partnerId)
       .select('*')
@@ -209,6 +212,16 @@ Deno.serve(async (req) => {
                 </ul>
             </div>
         `;
+    }
+
+    if (updatedPartner?.referral_code) {
+      commissionTermsHtml += `
+            <div style="background-color: #fce4ec; border: 2px dashed #e91e63; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
+                <h3 style="margin-top: 0; color: #e91e63;">Votre Code Partenaire Unique 🎟️</h3>
+                <p style="font-size: 24px; font-weight: bold; margin: 8px 0; letter-spacing: 2px;">${updatedPartner.referral_code}</p>
+                <p style="font-size: 14px; color: #666; margin: 0;">Offre -10% à vos abonnées sur leur 1er mois.</p>
+            </div>
+      `;
     }
 
     const commonSteps = `
@@ -336,4 +349,29 @@ function generateTempPassword(): string {
     password += charset.charAt(Math.floor(Math.random() * charset.length))
   }
   return password
+}
+
+async function generateUniqueReferralCode(supabase: any): Promise<string> {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let isUnique = false;
+  let code = '';
+
+  while (!isUnique) {
+    // Generate 3 random chars after KIF
+    let suffix = '';
+    for (let i = 0; i < 3; i++) {
+      suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    code = `KIF${suffix}`;
+
+    const { data } = await supabase
+      .from('partners')
+      .select('id')
+      .eq('referral_code', code)
+      .maybeSingle();
+
+    if (!data) isUnique = true;
+  }
+
+  return code;
 }
