@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './lib/auth';
@@ -45,6 +45,10 @@ const ConditionsPartenaires = React.lazy(() => import('./pages/legal/ConditionsP
 const ConditionsCreatorPartner = React.lazy(() => import('./pages/legal/ConditionsCreatorPartner'));
 const PartnersDirectory = React.lazy(() => import('./pages/PartnersDirectory'));
 
+// Pro pages
+const ProLayout = React.lazy(() => import('./layouts/ProLayout').then(m => ({ default: m.ProLayout })));
+const ProLanding = React.lazy(() => import('./pages/pro/ProLanding'));
+
 // Auth pages
 const SignIn = React.lazy(() => import('./pages/auth/SignIn'));
 const SignUp = React.lazy(() => import('./pages/auth/SignUp'));
@@ -71,7 +75,6 @@ const AdminBlogEditor = React.lazy(() => import('./pages/admin/BlogEditor'));
 const ContractGenerator = React.lazy(() => import('./pages/admin/ContractGenerator'));
 
 // Partner pages
-
 const PartnerLayout = React.lazy(() => import('./pages/partner/PartnerLayout'));
 const PartnerDashboard = React.lazy(() => import('./pages/partner/Dashboard'));
 const PartnerOffers = React.lazy(() => import('./pages/partner/Offers'));
@@ -87,8 +90,8 @@ const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
 const CreatorProgram = React.lazy(() => import('./pages/partner/CreatorProgram'));
 const CreatorKit = React.lazy(() => import('./pages/partner/CreatorKit'));
-// Club pages
 
+// Club pages
 const Agenda = React.lazy(() => import('./pages/Agenda'));
 const Events = React.lazy(() => import('./pages/club/Events'));
 
@@ -99,16 +102,17 @@ const CancellationFeedback = React.lazy(() => import('./pages/CancellationFeedba
 const InstagramSlides = React.lazy(() => import('./pages/InstagramSlides'));
 const InstagramEventSlides = React.lazy(() => import('./pages/InstagramEventSlides'));
 
-
-
 function App() {
+  const location = useLocation();
+  const isProRoute = location.pathname.startsWith('/pro');
+
   return (
     <HelmetProvider>
       <ErrorBoundary>
         <AuthProvider>
-          <div className="min-h-screen bg-white">
+          <div className="min-h-screen bg-white flex flex-col">
             <ScrollToTop />
-            <Header />
+            {!isProRoute && <Header />}
 
             <main className="flex-1">
               <Suspense fallback={<LoadingFallback />}>
@@ -318,6 +322,11 @@ function App() {
                   <Route path="/conditions-partenaires" element={<ConditionsPartenaires />} />
                   <Route path="/conditions-partenaires-creatrices" element={<ConditionsCreatorPartner />} />
 
+                  {/* Pro / B2B routes */}
+                  <Route path="/pro" element={<ProLayout />}>
+                    <Route index element={<ProLanding />} />
+                  </Route>
+
                   {/* 404 */}
                   <Route path="*" element={<NotFound />} />
 
@@ -328,7 +337,7 @@ function App() {
               </Suspense>
             </main>
 
-            <Footer />
+            {!isProRoute && <Footer />}
             <Toaster position="top-right" />
           </div>
         </AuthProvider>

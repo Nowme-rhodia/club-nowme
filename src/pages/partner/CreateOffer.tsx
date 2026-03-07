@@ -699,8 +699,8 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
             credit_amount: eventType === 'wallet_pack' ? parseFloat(v.price) : null,
             content: v.content
           };
-          // Only include ID if it's a real Update (not a new variant)
-          if (v.id) {
+          // Only include ID if it's a real Update (not a new variant or string "null")
+          if (v.id && v.id !== 'null') {
             variantData.id = v.id;
           }
           return variantData;
@@ -728,18 +728,22 @@ export default function CreateOffer({ offer, onClose, onSuccess }: CreateOfferPr
 
       // 7. Handle Co-organizers
       // First delete existing
-      if (offer) {
-        await supabase.from('offer_co_organizers').delete().eq('offer_id', outputOfferId);
+      if (offer && offer.id && offer.id !== 'null') {
+        await supabase.from('offer_co_organizers').delete().eq('offer_id', offer.id);
       }
 
-      if (coOrganizers.length > 0) {
-        const coOrganizersToInsert = coOrganizers.map(p => ({
-          offer_id: outputOfferId,
-          partner_id: p.id
-        }));
+      if (coOrganizers.length > 0 && outputOfferId && outputOfferId !== 'null') {
+        const coOrganizersToInsert = coOrganizers
+          .filter(p => p.id && p.id !== 'null')
+          .map(p => ({
+            offer_id: outputOfferId,
+            partner_id: p.id
+          }));
 
-        const { error: coOrgError } = await (supabase.from('offer_co_organizers') as any).insert(coOrganizersToInsert);
-        if (coOrgError) console.error("Error saving co-organizers:", coOrgError);
+        if (coOrganizersToInsert.length > 0) {
+          const { error: coOrgError } = await (supabase.from('offer_co_organizers') as any).insert(coOrganizersToInsert);
+          if (coOrgError) console.error("Error saving co-organizers:", coOrgError);
+        }
       }
 
       onSuccess();

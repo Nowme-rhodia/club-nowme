@@ -196,7 +196,7 @@ export type Database = {
           zip_code: string | null;
           department: string | null;
           city: string | null;
-          cancellation_policy: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
+          cancellation_policy: 'flexible' | 'moderate' | 'strict' | 'non_refundable' | 'custom';
           created_at: string;
           updated_at: string;
         };
@@ -217,7 +217,7 @@ export type Database = {
           zip_code?: string | null;
           department?: string | null;
           city?: string | null;
-          cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
+          cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable' | 'custom';
           created_at?: string;
           updated_at?: string;
         };
@@ -238,7 +238,7 @@ export type Database = {
           zip_code?: string | null;
           department?: string | null;
           city?: string | null;
-          cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable';
+          cancellation_policy?: 'flexible' | 'moderate' | 'strict' | 'non_refundable' | 'custom';
           created_at?: string;
           updated_at?: string;
         };
