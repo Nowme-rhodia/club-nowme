@@ -124,3 +124,6 @@ entrypoint = "./functions/send-reengagement-email/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/send-low-stock-alert/index.ts"
+
+[functions.sitemap]
+verify_jwt = false
