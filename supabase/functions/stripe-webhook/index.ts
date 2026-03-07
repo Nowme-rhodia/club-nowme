@@ -886,12 +886,12 @@ Deno.serve(async (req) => {
                 // Revoke access immediately
                 const { data: userProfile, error: findError } = await supabaseClient
                     .from('user_profiles')
-                    .select('user_id')
+                    .select('user_id, email')
                     .eq('stripe_customer_id', invoice.customer)
                     .single();
 
                 if (userProfile && userProfile.user_id) {
-                    console.log(`[INVOICE_FAILED] Revoking access for User ${userProfile.user_id}`);
+                    console.log(`[INVOICE_FAILED] Revoking access and notifying User ${userProfile.user_id}`);
                     const { error: revokeError } = await supabaseClient
                         .from('user_profiles')
                         .update({
@@ -902,9 +902,34 @@ Deno.serve(async (req) => {
 
                     if (revokeError) console.error(`[INVOICE_FAILED] Failed to revoke access:`, revokeError);
 
-                    // Optional: Trigger specific email for sub failure if needed
+                    // --- NEW: Sync Subscriptions Table ---
+                    await supabaseClient
+                        .from('subscriptions')
+                        .update({
+                            status: 'payment_failed', // or match mapSubscriptionStatus
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('user_id', userProfile.user_id);
+
+                    // --- NEW: Send Failure Notification Email ---
+                    const email = invoice.customer_email || invoice.customer_details?.email || userProfile.email;
+                    if (email) {
+                        try {
+                            await supabaseClient.functions.invoke('send-payment-failed-email', {
+                                body: {
+                                    email: email,
+                                    invoiceId: invoice.number,
+                                    amount: invoice.amount_due / 100,
+                                    retryLink: invoice.hosted_invoice_url // Direct link to pay
+                                }
+                            });
+                            console.log(`[INVOICE_FAILED] Triggered failure email to ${email}`);
+                        } catch (emailErr) {
+                            console.error(`[INVOICE_FAILED] Failed to trigger failure email:`, emailErr);
+                        }
+                    }
                 } else {
-                    console.warn(`[INVOICE_FAILED] Could not find user to revoke for customer ${invoice.customer}`);
+                    console.warn(`[INVOICE_FAILED] Could not find user to notify for customer ${invoice.customer}`);
                 }
             }
 

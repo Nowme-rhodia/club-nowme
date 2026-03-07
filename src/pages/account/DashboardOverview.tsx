@@ -5,6 +5,7 @@ import { Calendar, Wallet, ArrowRight, Clock, MapPin, User } from 'lucide-react'
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import toast from 'react-hot-toast';
 
 export default function DashboardOverview() {
     const { profile } = useAuth();
@@ -126,6 +127,41 @@ export default function DashboardOverview() {
                     Découvrir les offres
                 </Link>
             </div>
+
+            {/* Payment Failure Warning Banner */}
+            {(profile?.subscription_status === 'payment_failed' || profile?.subscription_status === 'past_due') && (
+                <div className="bg-red-50 border-2 border-red-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600 flex-shrink-0">
+                            <Clock className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-red-900 text-lg">Action requise : Ton dernier paiement a été refusé</h3>
+                            <p className="text-red-700 text-sm">
+                                Ton accès au club est restreint. Mets à jour ton moyen de paiement pour continuer à profiter de tes avantages.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={async () => {
+                            try {
+                                const toastId = toast.loading('Redirection vers le portail...');
+                                const { data, error } = await supabase.functions.invoke('create-portal-session', {
+                                    body: { returnUrl: window.location.href }
+                                });
+                                if (error) throw error;
+                                if (data?.url) window.location.href = data.url;
+                            } catch (err) {
+                                console.error('Portal error:', err);
+                                toast.error("Impossible d'accéder au portail de paiement.");
+                            }
+                        }}
+                        className="whitespace-nowrap px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-md"
+                    >
+                        Régulariser mon paiement
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Wallet Widget */}
