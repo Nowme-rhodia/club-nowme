@@ -6,3 +6,16 @@ Sitemap: https://club.nowme.fr/sitemap.xml
 Disallow: /partner/dashboard
 Disallow: /admin/*
 Disallow: /api/*
+Disallow: /connexion
+Disallow: /inscription
+Disallow: /mot-de-passe-oublie
+Disallow: /nouveau-mot-de-passe
+Disallow: /auth/
+Disallow: /mon-compte/
+Disallow: /account/
+Disallow: /reservation/
+Disallow: /le-club/
+Disallow: /soumettre-offre
+Disallow: /abonnement
+Disallow: /checkout
+Disallow: /paiement

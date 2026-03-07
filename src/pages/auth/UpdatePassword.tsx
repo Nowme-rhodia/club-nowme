@@ -299,7 +299,7 @@ export default function UpdatePassword() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <SEO title="Réinitialiser le mot de passe" description="Choisissez un nouveau mot de passe" />
+      <SEO title="Réinitialiser le mot de passe" description="Choisissez un nouveau mot de passe" noindex={true} />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <img src="https://i.imgur.com/or3q8gE.png" alt="Logo Nowme" className="mx-auto h-16 w-auto" />

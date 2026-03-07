@@ -154,7 +154,7 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <SEO title="Connexion" description="Connectez-vous à votre compte Nowme" />
+      <SEO title="Connexion" description="Connectez-vous à votre compte Nowme" noindex={true} />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <img src="https://i.imgur.com/or3q8gE.png" alt="Logo" className="mx-auto h-16 w-auto" />

@@ -118,7 +118,6 @@ export default function CreatorProgram() {
                         tiktok: formData.tiktok,
                         password: formData.password,
                         isCreator: true,
-                        mainCategoryId: 'CREATOR', // Catégorie spéciale pour les repérer
                     }
                 }
             });

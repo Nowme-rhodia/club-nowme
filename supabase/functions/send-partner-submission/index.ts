@@ -123,9 +123,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (insertError || !partner) {
       logger.error("❌ Erreur insertion partenaire:", insertError);
 
-      // If we created a user but failed to create partner, should we rollback user?
-      // For now, let's just log. Manual cleanup might be needed.
-      // But typically this shouldn't fail if validation passed.
+      if (userId) {
+        logger.info(`🔄 Rolling back Auth user ${userId} due to internal error.`);
+        await supabase.auth.admin.deleteUser(userId);
+      }
 
       return new Response(
         JSON.stringify({

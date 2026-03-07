@@ -17,7 +17,8 @@ import {
   Euro,
   TrendingUp,
   Calendar,
-  Users
+  Users,
+  Star
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
@@ -99,7 +100,8 @@ export default function Dashboard() {
   const [monthlyReports, setMonthlyReports] = useState<PartnerReport[]>([]);
 
   // 👉 Nouveaux dérivés
-
+  const [isCreator, setIsCreator] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
 
   const [hasAgenda, setHasAgenda] = useState(false);
   const [globalCalendly, setGlobalCalendly] = useState<string | null>(null);
@@ -138,7 +140,7 @@ export default function Dashboard() {
         // 👉 Récupérer le partenaire
         const { data: partnerData, error: partnerError } = await (supabase
           .from('partners') as any)
-          .select('id, business_name, commission_rate, pending_penalties')
+          .select('id, business_name, commission_rate, pending_penalties, is_creator, referral_code')
           .eq('id', profileData.partner_id)
           .single();
 
@@ -163,6 +165,8 @@ export default function Dashboard() {
         console.log('Partner data loaded:', { partnerId, businessName: businessNameValue });
 
         setBusinessName(businessNameValue);
+        setIsCreator(partnerData.is_creator || false);
+        setReferralCode(partnerData.referral_code || null);
 
         // 👉 Offres
         const { data: offersData } = await (supabase
@@ -359,18 +363,39 @@ export default function Dashboard() {
           <p className="text-gray-600">Tableau de bord</p>
         </div>
 
-        {/* 👉 Section stats revenus */}
+        {/* 👉 Section Revenus / Commissions */}
         <div className="mb-10">
-          <h2 className="text-xl font-bold mb-4">Mes Finances</h2>
+          <h2 className="text-xl font-bold mb-4">
+            {isCreator ? "Mes Commissions" : "Mes Finances"}
+          </h2>
+          {isCreator ? (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 mb-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <Star className="w-5 h-5 text-yellow-500" />
+                    Ton Code Partenaire
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">À partager à ta communauté pour déclencher tes commissions (15€/abonnée).</p>
+                </div>
+                <div className="bg-white px-6 py-3 rounded-xl border border-primary/30 shadow-sm">
+                  <span className="text-2xl font-black text-primary tracking-widest">{referralCode || "En création..."}</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <PartnerFinancials />
         </div>
+
         {/* 👉 Rapport détaillé du partenaire */}
         {partnerReport && (
           <>
             <h2 className="text-xl font-bold mb-4">{partnerReport.period_label}</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
               <div className="bg-white shadow rounded-lg p-4">
-                <p className="text-sm text-gray-500">Réservations confirmées</p>
+                <p className="text-sm text-gray-500">
+                  {isCreator ? "Abonnées utilisant ton code" : "Réservations confirmées"}
+                </p>
                 <p className="text-xl font-bold">{partnerReport.count}</p>
               </div>
               <div className="bg-white shadow rounded-lg p-4">
@@ -380,16 +405,19 @@ export default function Dashboard() {
                     .format(partnerReport.gross_total)}
                 </p>
               </div>
-              <div className="bg-white shadow rounded-lg p-4">
-                <p className="text-sm text-gray-500">Commission Nowme (HT + TVA 20%)</p>
-                <p className={`text-xl font-bold ${partnerReport.commission !== 0 ? 'text-red-600' : ''}`}>
-                  -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
-                    .format(partnerReport.commission)}
-                </p>
-              </div>
 
-              {/* Penalties Card - Only show if there are penalties */}
-              {(partnerReport.pending_penalties || 0) > 0 && (
+              {!isCreator && (
+                <div className="bg-white shadow rounded-lg p-4">
+                  <p className="text-sm text-gray-500">Commission Nowme (HT + TVA 20%)</p>
+                  <p className={`text-xl font-bold ${partnerReport.commission !== 0 ? 'text-red-600' : ''}`}>
+                    -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
+                      .format(partnerReport.commission)}
+                  </p>
+                </div>
+              )}
+
+              {/* Penalties Card - Only show if there are penalties and not creator */}
+              {!isCreator && (partnerReport.pending_penalties || 0) > 0 && (
                 <div className="bg-white shadow rounded-lg p-4">
                   <p className="text-sm text-gray-500">Pénalités (Annulations)</p>
                   <p className="text-xl font-bold text-red-600">
@@ -400,10 +428,12 @@ export default function Dashboard() {
               )}
 
               <div className="bg-white shadow rounded-lg p-4">
-                <p className="text-sm text-gray-500">Revenu net estimé</p>
+                <p className="text-sm text-gray-500">
+                  {isCreator ? "Commissions générées (Net à payer)" : "Revenu net estimé"}
+                </p>
                 <p className="text-xl font-bold text-green-600">
                   {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" })
-                    .format(partnerReport.net_total - (partnerReport.pending_penalties || 0))}
+                    .format(isCreator ? partnerReport.gross_total : partnerReport.net_total - (partnerReport.pending_penalties || 0))}
                 </p>
               </div>
             </div>
@@ -416,23 +446,25 @@ export default function Dashboard() {
                   <h3 className="text-lg font-bold mb-4 capitalize">{report.period_label}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase">Ventes</p>
-                      <p className="font-semibold">{report.count} réservations</p>
+                      <p className="text-xs text-gray-500 uppercase">{isCreator ? "Abonnées" : "Ventes"}</p>
+                      <p className="font-semibold">{report.count} {isCreator ? "" : "réservations"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 uppercase">CA Brut</p>
                       <p className="font-semibold">{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(report.gross_total)}</p>
                     </div>
+                    {!isCreator && (
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase">Pénalités</p>
+                        <p className={`font-semibold ${(report.pending_penalties || 0) > 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                          -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(report.pending_penalties || 0)}
+                        </p>
+                      </div>
+                    )}
                     <div>
-                      <p className="text-xs text-gray-500 uppercase">Pénalités</p>
-                      <p className={`font-semibold ${(report.pending_penalties || 0) > 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                        -{new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(report.pending_penalties || 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase">Net Estimé</p>
+                      <p className="text-xs text-gray-500 uppercase">{isCreator ? "Total Commissions" : "Net Estimé"}</p>
                       <p className="font-bold text-green-600">
-                        {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(report.net_total - (report.pending_penalties || 0))}
+                        {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(isCreator ? report.gross_total : report.net_total - (report.pending_penalties || 0))}
                       </p>
                     </div>
                   </div>

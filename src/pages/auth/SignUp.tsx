@@ -184,7 +184,7 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F4] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <SEO title="Créer un compte" description="Créez votre compte Nowme et accédez à des expériences exclusives" />
+      <SEO title="Créer un compte" description="Créez votre compte Nowme et accédez à des expériences exclusives" noindex={true} />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <img src="https://i.imgur.com/or3q8gE.png" alt="Logo" className="mx-auto h-16 w-auto" />

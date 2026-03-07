@@ -7,9 +7,10 @@ interface SEOProps {
   description: string;
   canonical?: string;
   image?: string;
+  noindex?: boolean;
 }
 
-export const SEO = ({ title, description, canonical, image }: SEOProps) => {
+export const SEO = ({ title, description, canonical, image, noindex = false }: SEOProps) => {
   const siteTitle = 'Nowme - Ton kiff au féminin';
   const fullTitle = `${title} | ${siteTitle}`;
   const defaultImage = 'https://i.imgur.com/or3q8gE.png';
@@ -50,7 +51,7 @@ export const SEO = ({ title, description, canonical, image }: SEOProps) => {
       {/* Autres méta-données importantes */}
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <meta name="theme-color" content="#BF2778" />
-      <meta name="robots" content="index, follow" />
+      <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
       <meta name="language" content="fr" />
     </Helmet>
   );

@@ -86,6 +86,7 @@ const PartnerPublicProfile = React.lazy(() => import('./pages/PartnerPublicProfi
 const SettingsGeneral = React.lazy(() => import('./pages/partner/SettingsGeneral'));
 const SettingsPayments = React.lazy(() => import('./pages/partner/SettingsPayments'));
 const CreatorProgram = React.lazy(() => import('./pages/partner/CreatorProgram'));
+const CreatorKit = React.lazy(() => import('./pages/partner/CreatorKit'));
 // Club pages
 
 const Agenda = React.lazy(() => import('./pages/Agenda'));
@@ -211,6 +212,7 @@ function App() {
                     <Route path="settings" element={<Navigate to="settings/general" replace />} />
                     <Route path="settings/general" element={<SettingsGeneral />} />
                     <Route path="settings/payments" element={<SettingsPayments />} />
+                    <Route path="creator-kit" element={<CreatorKit />} />
                   </Route>
 
                   <Route

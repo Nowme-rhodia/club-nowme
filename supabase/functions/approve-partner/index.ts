@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4?target=denonext"
-
+import Stripe from "https://esm.sh/stripe@17.5.0?target=denonext"
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -157,14 +157,58 @@ Deno.serve(async (req) => {
       })
     }
 
+    let generatedReferralCode = partner.referral_code;
+
+    // Si c'est une créatrice et qu'elle n'a pas de code promo, on en crée un + on le pousse sur Stripe
+    if (partner.is_creator && !generatedReferralCode) {
+      generatedReferralCode = await generateUniqueReferralCode(supabaseAdmin);
+
+      try {
+        const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
+          apiVersion: '2023-10-16',
+          httpClient: Stripe.createFetchHttpClient(),
+        });
+
+        // Verifier/Créer le coupon de base (10% de réduction 1 mois)
+        const couponId = 'CREATOR_10_OFF_1M';
+        try {
+          await stripe.coupons.retrieve(couponId);
+        } catch (err: any) {
+          if (err.statusCode === 404) {
+            console.log('Création du coupon de base pour créatrices...');
+            await stripe.coupons.create({
+              id: couponId,
+              name: 'Remise Partenaire (-10% sur le 1er mois)',
+              percent_off: 10,
+              duration: 'once',
+            });
+          } else {
+            console.error('Erreur Stripe silencieuse (coupon) :', err);
+          }
+        }
+
+        // Créer la promotion liée à ce code pour qu'il soit utilisable au checkout
+        await stripe.promotionCodes.create({
+          coupon: couponId,
+          code: generatedReferralCode,
+          metadata: {
+            partner_id: partnerId
+          }
+        });
+
+        console.log(`Code Promo Stripe ${generatedReferralCode} créé avec succès.`);
+      } catch (stripeError) {
+        console.error('Erreur lors de la création du code Stripe :', stripeError);
+        // On ne bloque pas l'update en DB si Stripe échoue, mais on laisse une trace
+      }
+    }
+
     const { data: updatedPartner, error: updateError } = await supabaseAdmin
       .from('partners')
       .update({
         status: 'approved',
         admin_notes: adminNotes ?? null,
-        referral_code: partner.is_creator && !partner.referral_code
-          ? await generateUniqueReferralCode(supabaseAdmin)
-          : partner.referral_code
+        referral_code: generatedReferralCode
       })
       .eq('id', partnerId)
       .select('*')

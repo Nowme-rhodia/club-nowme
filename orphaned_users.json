@@ -1,0 +1,26 @@
+[
+  {
+    "id": "5b1d4950-c59d-4419-b18a-1773357fe33c",
+    "email": "contact@marioncuisine.fr",
+    "created_at": "2026-03-06T16:19:01.451613Z",
+    "metadata": {
+      "email_verified": true,
+      "first_name": "Koss",
+      "last_name": "Levrard ",
+      "phone": "0663061194",
+      "role": "partner"
+    }
+  },
+  {
+    "id": "da875c70-daf5-4684-bc19-e0a938de6d2e",
+    "email": "estelle.longche@hotmail.fr",
+    "created_at": "2026-03-05T06:34:49.777524Z",
+    "metadata": {
+      "email": "estelle.longche@hotmail.fr",
+      "email_verified": true,
+      "first_name": "Estelle",
+      "phone_verified": false,
+      "sub": "da875c70-daf5-4684-bc19-e0a938de6d2e"
+    }
+  }
+]

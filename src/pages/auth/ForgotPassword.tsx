@@ -60,6 +60,7 @@ export default function ForgotPassword() {
       <SEO
         title="Mot de passe oublié"
         description="Réinitialisez votre mot de passe Nowme"
+        noindex={true}
       />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">

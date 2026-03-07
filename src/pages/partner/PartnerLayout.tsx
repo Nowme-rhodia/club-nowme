@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Briefcase, Calendar, Settings, LogOut, HelpCircle, FileText } from "lucide-react";
+import { LayoutDashboard, Briefcase, Calendar, Settings, LogOut, HelpCircle, FileText, Star } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../lib/auth";
 import MissingInfoBanner from "../../components/partner/MissingInfoBanner";
@@ -13,6 +13,7 @@ export default function PartnerLayout() {
   const [businessName, setBusinessName] = useState<string>("Chargement...");
   const [hasSignedContract, setHasSignedContract] = useState<boolean>(true); // Default true to avoid flash, validated in effect
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -54,12 +55,13 @@ export default function PartnerLayout() {
         // Récupérer les infos du partenaire
         const { data, error } = await (supabase
           .from("partners") as any)
-          .select("business_name, contract_signed_at")
+          .select("business_name, contract_signed_at, is_creator")
           .eq("id", partnerIdFound)
           .maybeSingle();
 
         if (!error && data) {
           setBusinessName(data.business_name || "Mon entreprise");
+          setIsCreator(data.is_creator || false);
           checkContract(data.contract_signed_at);
         } else {
           setBusinessName("Mon entreprise");
@@ -68,12 +70,13 @@ export default function PartnerLayout() {
         // Récupérer directement avec le partner_id du profil
         const { data, error } = await (supabase
           .from("partners") as any)
-          .select("business_name, contract_signed_at") // Added field
+          .select("business_name, contract_signed_at, is_creator") // Added field
           .eq("id", partnerId)
           .maybeSingle();
 
         if (!error && data) {
           setBusinessName(data.business_name || "Mon entreprise");
+          setIsCreator(data.is_creator || false);
           checkContract(data.contract_signed_at);
         } else {
           setBusinessName(profile?.first_name || "Mon entreprise");
@@ -121,7 +124,10 @@ export default function PartnerLayout() {
                 <div className="w-6 h-0.5 bg-gray-600"></div>
               </div>
             </button>
-            <h1 className="text-lg font-bold text-primary">{businessName}</h1>
+            <h1 className="text-lg font-bold text-primary">
+              {businessName}
+              {isCreator && <span className="ml-2 text-xs bg-pink-100 text-pink-800 px-2 py-1 rounded-full align-middle relative -top-0.5">Créatrice</span>}
+            </h1>
           </div>
           {user && (
             <p className="text-sm text-gray-500">
@@ -172,47 +178,66 @@ export default function PartnerLayout() {
                   <LayoutDashboard className="w-5 h-5" />
                   Dashboard
                 </NavLink>
-                <NavLink
-                  to="/partner/guide-partenaire"
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                    }`
-                  }
-                >
-                  <HelpCircle className="w-5 h-5" />
-                  Guide
-                </NavLink>
 
-                <NavLink
-                  to="/partner/offers"
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                    }`
-                  }
-                >
-                  <Briefcase className="w-5 h-5" />
-                  Mes offres
-                </NavLink>
-                <NavLink
-                  to="/partner/bookings"
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                    }`
-                  }
-                >
-                  <Calendar className="w-5 h-5" />
-                  Réservations
-                </NavLink>
-                <NavLink
-                  to="/partner/reviews"
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
-                    }`
-                  }
-                >
-                  <Briefcase className="w-5 h-5" />
-                  Mes Avis
-                </NavLink>
+                {isCreator ? (
+                  // Menu spécifique Créatrice
+                  <NavLink
+                    to="/partner/creator-kit"
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                      }`
+                    }
+                  >
+                    <Star className="w-5 h-5 text-yellow-500" />
+                    Mon Kit Créatrice
+                  </NavLink>
+                ) : (
+                  // Menu standard Partenaire
+                  <>
+                    <NavLink
+                      to="/partner/guide-partenaire"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                        }`
+                      }
+                    >
+                      <HelpCircle className="w-5 h-5" />
+                      Guide
+                    </NavLink>
+
+                    <NavLink
+                      to="/partner/offers"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                        }`
+                      }
+                    >
+                      <Briefcase className="w-5 h-5" />
+                      Mes offres
+                    </NavLink>
+                    <NavLink
+                      to="/partner/bookings"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                        }`
+                      }
+                    >
+                      <Calendar className="w-5 h-5" />
+                      Réservations
+                    </NavLink>
+                    <NavLink
+                      to="/partner/reviews"
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 ${isActive ? "bg-primary/10 text-primary font-semibold" : "text-gray-700"
+                        }`
+                      }
+                    >
+                      <Briefcase className="w-5 h-5" />
+                      Mes Avis
+                    </NavLink>
+                  </>
+                )}
+
                 <NavLink
                   to="/partner/settings/general"
                   className={({ isActive }) =>
