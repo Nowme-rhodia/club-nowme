@@ -1,1 +1,4 @@
+/sitemap.xml https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/sitemap 200!
+/api/admin-recreate-user https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/admin-recreate-user 200!
+/api/* https://dqfyuhwrjozoxadkccdj.supabase.co/functions/v1/:splat 200!
 /* /index.html 200
