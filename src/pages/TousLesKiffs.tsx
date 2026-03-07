@@ -69,7 +69,13 @@ export default function TousLesKiffs() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 3000]);
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'all');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(searchParams.get('subcategory') || null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+
+  useEffect(() => {
+    setActiveCategory(searchParams.get('category') || 'all');
+    setActiveSubcategory(searchParams.get('subcategory') || null);
+    setSearchTerm(searchParams.get('q') || '');
+  }, [searchParams]);
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
     lng: number;
@@ -430,11 +436,45 @@ export default function TousLesKiffs() {
     setSelectedOffer(offer);
   };
 
+  const currentCategoryName = useMemo(() => {
+    if (activeCategory === 'all') return null;
+    const cat = categories.find(c => c.slug === activeCategory);
+    return cat ? cat.name : null;
+  }, [activeCategory]);
+
+  const currentSubcategoryName = useMemo(() => {
+    if (!activeSubcategory || activeCategory === 'all') return null;
+    const cat = categories.find(c => c.slug === activeCategory);
+    if (!cat) return null;
+    const sub = cat.subcategories.find(s => s.slug === activeSubcategory);
+    return sub ? sub.name : null;
+  }, [activeCategory, activeSubcategory]);
+
+  const seoTitle = useMemo(() => {
+    if (searchTerm) return `Recherche : ${searchTerm} | Tous les kiffs`;
+    if (currentSubcategoryName) return `${currentSubcategoryName} | Tous les kiffs`;
+    if (currentCategoryName) return `${currentCategoryName} | Tous les kiffs`;
+    return 'Tous les kiffs';
+  }, [searchTerm, currentCategoryName, currentSubcategoryName]);
+
+  const seoDescription = useMemo(() => {
+    if (currentSubcategoryName) return `Découvrez nos meilleurs kiffs dans la catégorie ${currentSubcategoryName.toLowerCase()}. Expériences uniques garanties.`;
+    if (currentCategoryName) return `Découvrez nos meilleurs kiffs pour la catégorie ${currentCategoryName.toLowerCase()}. Des moments uniques à vivre et à partager.`;
+    return 'Découvrez toutes nos expériences uniques en Île-de-France : bien-être, loisirs, culture et plus encore.';
+  }, [currentCategoryName, currentSubcategoryName]);
+
+  const pageHeading = useMemo(() => {
+    if (searchTerm) return `Résultats pour "${searchTerm}"`;
+    if (currentSubcategoryName) return currentSubcategoryName;
+    if (currentCategoryName) return currentCategoryName;
+    return 'Tous les kiffs';
+  }, [searchTerm, currentCategoryName, currentSubcategoryName]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDF8F4] via-white to-[#FDF8F4]">
       <SEO
-        title="Tous les kiffs"
-        description="Découvrez toutes nos expériences uniques en Île-de-France : bien-être, loisirs, culture et plus encore."
+        title={seoTitle}
+        description={seoDescription}
       />
 
       {/* Header animé */}
@@ -448,7 +488,7 @@ export default function TousLesKiffs() {
           <Breadcrumbs items={[{ label: 'Tous les kiffs' }]} />
         </div>
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Tous les kiffs
+          {pageHeading}
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           Découvre des expériences uniques, sélectionnées avec soin pour toi.
